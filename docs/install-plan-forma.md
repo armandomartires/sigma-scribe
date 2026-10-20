@@ -78,3 +78,6 @@ NickelMenu is already installed, so only the binary changes. Host side: mount th
 
 ## Upgrade 0.2.0 → 0.2.1 (not run; needs approval)
 Same procedure as 0.1.0 → 0.2.0: back up `sigma-scribe/notes` and `.adds/sigma-scribe`, replace only `.adds/sigma-scribe/sigma-scribe` with `dist/sigma-scribe-0.2.1-kobo/.adds/sigma-scribe/sigma-scribe` (sha256 `a429e7cc63adcb58f136c0e5da16454fd83b1680aea73e03c54330f9ddec29a2`); every other package file is identical to 0.2.0. Checklist: `sprints/S2.5-full-keyboard.md` (On-device).
+
+## Upgrade 0.2.1 → 0.2.2 (not run; needs approval)
+Same procedure: back up `sigma-scribe/notes` and `.adds/sigma-scribe`, replace only `.adds/sigma-scribe/sigma-scribe` with `dist/sigma-scribe-0.2.2-kobo/.adds/sigma-scribe/sigma-scribe` (sha256 `33dc4c5a1fb6b12703533ce9498c3dc568ddeca36e111f686e86e452ba3f385e`); all other files are identical to 0.2.1. Checklist: `sprints/S2.6-touch-selection.md`.

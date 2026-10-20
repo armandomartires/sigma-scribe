@@ -9,7 +9,7 @@ pub mod fonts;
 pub mod theme;
 
 pub use canvas::{Canvas, Rect};
-pub use editor::{EditorScreen, Hit};
+pub use editor::{BarAction, EditorScreen, Hit, SelGeom, SelUi};
 pub use files::{FilesHit, FilesModel, Row};
 pub use fonts::{Face, Fonts};
 pub use theme::Theme;

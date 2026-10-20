@@ -19,6 +19,44 @@ pub struct Model<'a> {
     pub theme: Theme,
     /// Name field being edited in the title bar (rename in place).
     pub rename: Option<&'a Buffer>,
+    /// Touch selection chrome (handles and action bar), v0.2.2.
+    pub sel_ui: Option<SelUi>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub struct SelUi {
+    /// Show the action bar (hidden while a handle is dragged).
+    pub bar: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BarAction {
+    Cut,
+    Copy,
+    Paste,
+    SelectAll,
+}
+
+impl BarAction {
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Cut => "Cut",
+            Self::Copy => "Copy",
+            Self::Paste => "Paste",
+            Self::SelectAll => "Select all",
+        }
+    }
+}
+
+/// Where the selection chrome sits on screen.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SelGeom {
+    /// Touch targets of the start / end handles (None when off-screen or
+    /// when there is no selection).
+    pub handles: [Option<Rect>; 2],
+    pub bar: Option<Rect>,
+    pub buttons: Vec<(Rect, BarAction)>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -27,6 +65,9 @@ pub enum Hit {
     ToggleKeys,
     /// Byte offset in the buffer where the caret should go.
     Caret(usize),
+    /// Selection handle 0 = start, 1 = end.
+    Handle(usize),
+    Bar(BarAction),
     /// Folder icon: open the Files sheet.
     Files,
     /// Tap on the file name: rename in place.
@@ -236,9 +277,126 @@ impl EditorScreen {
         }
     }
 
+    /// Screen point (x, top of row) of a text offset, if it is on screen.
+    #[must_use]
+    pub fn point_of(&self, buffer: &Buffer, page: Rect, at: usize) -> Option<(i32, i32)> {
+        let area = self.text_area(page);
+        let rows = self.rows(buffer, page);
+        let (row, col) = caret_cell(buffer.text(), &rows, at, &self.measure());
+        (row >= self.scroll && row < self.scroll + self.visible_rows(page)).then(|| {
+            (
+                area.x + col as i32,
+                area.y + (row - self.scroll) as i32 * self.line_h(),
+            )
+        })
+    }
+
+    /// Text offset under a screen point on the page (char-snapped).
+    #[must_use]
+    pub fn offset_at_point(&self, buffer: &Buffer, page: Rect, x: i32, y: i32) -> usize {
+        let area = self.text_area(page);
+        let rows = self.rows(buffer, page);
+        let r = self.scroll + ((y - area.y).max(0) / self.line_h()) as usize;
+        let Some(&row) = rows.get(r).or(rows.last()) else {
+            return 0;
+        };
+        offset_at(
+            buffer.text(),
+            row,
+            (x - area.x).max(0) as u32,
+            &self.measure(),
+        )
+    }
+
+    #[must_use]
+    pub fn line_px(&self) -> i32 {
+        self.line_h()
+    }
+
+    /// Vertical distance from a text row's top to its handle's centre.
+    #[must_use]
+    pub fn handle_drop(&self) -> i32 {
+        self.line_h() + self.px(16.0)
+    }
+
+    /// Handles under both selection ends; the action bar above the
+    /// selection (below it near the top of the page).
+    #[must_use]
+    pub fn selection_geometry(&self, model: &Model<'_>, l: &Layout) -> SelGeom {
+        let Some(ui) = model.sel_ui else {
+            return SelGeom::default();
+        };
+        let b = model.buffer;
+        let target = self.px(48.0);
+        let mut g = SelGeom::default();
+        let (a, e) = b.selection().unwrap_or((b.caret(), b.caret()));
+        let pa = self.point_of(b, l.page, a);
+        let pe = self.point_of(b, l.page, e);
+        if b.selection().is_some() {
+            for (i, p) in [pa, pe].into_iter().enumerate() {
+                g.handles[i] = p.map(|(x, y)| {
+                    let cy = y + self.handle_drop();
+                    Rect::new(x - target / 2, cy - target / 2, target, target)
+                });
+            }
+        }
+        if !ui.bar {
+            return g;
+        }
+        let actions: &[BarAction] = if b.selection().is_some() {
+            &[
+                BarAction::Cut,
+                BarAction::Copy,
+                BarAction::Paste,
+                BarAction::SelectAll,
+            ]
+        } else {
+            &[BarAction::Paste, BarAction::SelectAll]
+        };
+        let ui_px = self.ui_px();
+        let pad = self.px(14.0);
+        let bh = self.px(52.0);
+        let widths: Vec<i32> = actions
+            .iter()
+            .map(|a| {
+                (self.fonts.width(Face::AtkinsonBold, ui_px, a.label()) as i32 + 2 * pad)
+                    .max(self.px(72.0))
+            })
+            .collect();
+        let bw: i32 = widths.iter().sum();
+        let Some((ax, ay)) = pa.or(pe) else { return g };
+        let gap = self.px(10.0);
+        let mut by = ay - gap - bh;
+        if by < l.page.y + self.px(4.0) {
+            // No room above: go below the end handle.
+            let ey = pe.map_or(ay, |p| p.1);
+            by = ey + self.handle_drop() + target / 2 + gap;
+        }
+        let bx = (ax - bw / 2).clamp(self.px(8.0), self.width as i32 - bw - self.px(8.0));
+        let bar = Rect::new(bx, by, bw, bh);
+        let mut x = bx;
+        for (w, a) in widths.iter().zip(actions) {
+            g.buttons.push((Rect::new(x, by, *w, bh), *a));
+            x += w;
+        }
+        g.bar = Some(bar);
+        g
+    }
+
     #[must_use]
     pub fn hit(&self, model: &Model<'_>, x: i32, y: i32) -> Hit {
         let l = self.layout(model.keys_on, model.keyboard);
+        if model.sel_ui.is_some() && model.rename.is_none() {
+            let g = self.selection_geometry(model, &l);
+            if let Some((_, a)) = g.buttons.iter().find(|(r, _)| r.contains(x, y)) {
+                return Hit::Bar(*a);
+            }
+            for (i, h) in g.handles.iter().enumerate() {
+                if h.is_some_and(|r| r.inset(-self.px(6.0)).contains(x, y)) {
+                    return Hit::Handle(i);
+                }
+            }
+        }
         if model.rename.is_some() {
             if l.ok_rect.contains(x, y) {
                 return Hit::RenameOk;
@@ -367,6 +525,8 @@ impl EditorScreen {
             );
         }
 
+        self.draw_selection_ui(c, model, &l);
+
         // Status bar.
         c.fill(Rect::new(0, l.status.y, l.status.w, 1), t.rule);
         let sb = l.status.y as f32
@@ -417,6 +577,62 @@ impl EditorScreen {
             self.draw_keys(c, &l, model.keyboard, t);
         }
         l
+    }
+
+    fn draw_selection_ui(&self, c: &mut Canvas, model: &Model<'_>, l: &Layout) {
+        if model.rename.is_some() {
+            return;
+        }
+        let t = model.theme;
+        let g = self.selection_geometry(model, l);
+        let r = self.px(9.0);
+        for h in g.handles.iter().flatten() {
+            let (cx, cy) = (h.x + h.w / 2, h.y + h.h / 2);
+            // Stem from the text row down to a solid dot: no animation,
+            // a few hundred pixels per handle for the partial refresh.
+            c.fill(
+                Rect::new(
+                    cx - 1,
+                    cy - self.handle_drop() + self.line_h(),
+                    2,
+                    self.handle_drop() - self.line_h() - r + 1,
+                ),
+                t.ink,
+            );
+            for dy in -r..=r {
+                for dx in -r..=r {
+                    if dx * dx + dy * dy <= r * r {
+                        c.blend(cx + dx, cy + dy, t.ink, 255);
+                    }
+                }
+            }
+        }
+        if let Some(bar) = g.bar {
+            let ui = self.ui_px();
+            c.fill(bar.inset(-2), t.paper);
+            c.fill(bar, t.ink);
+            for (i, (br, a)) in g.buttons.iter().enumerate() {
+                if i > 0 {
+                    c.fill(
+                        Rect::new(br.x, br.y + self.px(10.0), 1, br.h - self.px(20.0)),
+                        t.mute,
+                    );
+                }
+                let w = self.fonts.width(Face::AtkinsonBold, ui, a.label());
+                let base = br.y as f32
+                    + br.h as f32 / 2.0
+                    + self.fonts.ascent(Face::AtkinsonBold, ui) / 2.6;
+                self.fonts.draw(
+                    c,
+                    Face::AtkinsonBold,
+                    ui,
+                    br.x as f32 + (br.w as f32 - w) / 2.0,
+                    base,
+                    a.label(),
+                    t.paper,
+                );
+            }
+        }
     }
 
     #[must_use]
@@ -633,6 +849,7 @@ mod tests {
             save: s,
             theme: Theme::DAY,
             rename: None,
+            sel_ui: None,
         }
     }
 
@@ -699,6 +916,53 @@ mod tests {
         for (r, key) in &l.keys {
             assert_eq!(e.hit(&m, r.x + r.w / 2, r.y + r.h / 2), Hit::Key(*key));
         }
+    }
+
+    #[test]
+    fn selection_handles_and_bar_are_placed_and_hittable() {
+        let mut e = EditorScreen::new(W, H);
+        let k = Keyboard::default();
+        let s = SaveState::Saved;
+        let mut b = Buffer::new("one\ntwo\nthree\nfour\nsecond line with words\nthird");
+        let at = b.text().find("with").unwrap();
+        b.select(at, at + 4);
+        let mut m = model(&b, &k, &s);
+        m.sel_ui = Some(SelUi { bar: true });
+        let mut c = Canvas::new(W, H, 255);
+        let l = e.draw(&mut c, &m);
+        let g = e.selection_geometry(&m, &l);
+        let [Some(h0), Some(h1)] = g.handles else {
+            panic!("handles {g:?}")
+        };
+        assert!(h0.w >= 50 && h0.x < h1.x && h0.y == h1.y);
+        let labels: Vec<_> = g.buttons.iter().map(|(_, a)| a.label()).collect();
+        assert_eq!(labels, ["Cut", "Copy", "Paste", "Select all"]);
+        let bar = g.bar.unwrap();
+        assert!(bar.y + bar.h <= h0.y && bar.x >= 0 && bar.x + bar.w <= W as i32 && bar.h >= 50);
+        for (r, a) in &g.buttons {
+            assert_eq!(e.hit(&m, r.x + r.w / 2, r.y + r.h / 2), Hit::Bar(*a));
+        }
+        assert_eq!(e.hit(&m, h1.x + h1.w / 2, h1.y + h1.h / 2), Hit::Handle(1));
+        // Offsets round-trip through screen points (char snapping).
+        let (x, y) = e.point_of(&b, l.page, at).unwrap();
+        assert_eq!(e.offset_at_point(&b, l.page, x + 1, y + 5), at);
+        // First line: no room above, bar goes below the handles.
+        let mut b2 = Buffer::new("first line of text");
+        b2.select(0, 5);
+        let mut m2 = model(&b2, &k, &s);
+        m2.sel_ui = Some(SelUi { bar: true });
+        let g2 = e.selection_geometry(&m2, &l);
+        assert!(g2.bar.unwrap().y > g2.handles[1].unwrap().y);
+        // Caret only: Paste and Select all, no handles.
+        let b3 = Buffer::new("x  y");
+        let mut m3 = model(&b3, &k, &s);
+        m3.sel_ui = Some(SelUi { bar: true });
+        let g3 = e.selection_geometry(&m3, &l);
+        assert_eq!(g3.handles, [None, None]);
+        assert_eq!(
+            g3.buttons.iter().map(|(_, a)| *a).collect::<Vec<_>>(),
+            [BarAction::Paste, BarAction::SelectAll]
+        );
     }
 
     #[test]

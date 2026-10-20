@@ -34,6 +34,26 @@ pub enum Event {
     /// A physical keyboard key (desktop keyboard now, USB-OTG keyboard in S8).
     Key(HwKey),
     Quit,
+    /// Raw finger contact with a monotonic timestamp (ms). The app turns
+    /// these into taps / holds / drags with `sigma_core::gesture`.
+    Touch {
+        phase: Phase,
+        x: i32,
+        y: i32,
+        t: u64,
+    },
+    /// Clock tick while idle (≈ every 50 ms when a finger may be down), so
+    /// holds fire without movement.
+    Tick {
+        t: u64,
+    },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Phase {
+    Down,
+    Move,
+    Up,
 }
 
 pub trait Device {

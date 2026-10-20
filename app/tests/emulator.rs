@@ -185,3 +185,39 @@ fn keyboard_defaults_to_full_and_compact_choice_is_remembered() {
     drop(app);
     assert_eq!(App::new(1440, 1920, &dir).keyboard.layout, Layout::Full);
 }
+
+#[test]
+fn touch_typing_still_types_every_tap_including_fast_doubles_and_holds() {
+    use sigma_device::Phase;
+    let dir = fresh("touchtype");
+    let mut app = App::new(1440, 1920, &dir);
+    let start = app.buffer.text().len();
+    let (x, y) = app.key_centre("a").unwrap();
+    let mut t = 1000;
+    let touch = |app: &mut App, phase, dx: i32, t: u64| {
+        app.handle(Event::Touch {
+            phase,
+            x: x + dx,
+            y,
+            t,
+        });
+    };
+    // Two quick taps on the same key = "aa" (double-tap only selects on the page).
+    for _ in 0..2 {
+        touch(&mut app, Phase::Down, 0, t);
+        touch(&mut app, Phase::Up, 0, t + 60);
+        t += 120;
+    }
+    // A held key types once; a sloppy slide types where the finger lifts.
+    touch(&mut app, Phase::Down, 0, t);
+    for k in 1..12 {
+        app.handle(Event::Tick { t: t + k * 50 });
+    }
+    touch(&mut app, Phase::Up, 0, t + 700);
+    t += 900;
+    touch(&mut app, Phase::Down, 0, t);
+    touch(&mut app, Phase::Move, 35, t + 40);
+    touch(&mut app, Phase::Up, 35, t + 80);
+    assert_eq!(&app.buffer.text()[start..], "aaaa");
+    assert!(app.sel_ui.is_none());
+}

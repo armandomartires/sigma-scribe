@@ -12,6 +12,7 @@ use std::io::{self, Read};
 use std::os::fd::AsRawFd;
 use std::sync::mpsc::{channel, Receiver};
 use std::thread;
+use std::time::{Duration, Instant};
 
 extern "C" {
     fn sg_open(w: *mut u32, h: *mut u32) -> i32;
@@ -25,6 +26,7 @@ pub struct KoboDevice {
     width: u32,
     height: u32,
     events: Receiver<Event>,
+    epoch: Instant,
 }
 
 impl KoboDevice {
@@ -41,6 +43,7 @@ impl KoboDevice {
         }
         let spec = std::env::var("SIGMA_TOUCH").unwrap_or_else(|_| "swap,mirror_x".to_owned());
         let (tx, rx) = channel();
+        let epoch = Instant::now();
         for n in 0..4 {
             let Ok(mut f) = File::open(format!("/dev/input/event{n}")) else {
                 continue;
@@ -63,7 +66,8 @@ impl KoboDevice {
             thread::spawn(move || {
                 let mut buf = [0u8; EVENT_SIZE_ARM32];
                 while f.read_exact(&mut buf).is_ok() {
-                    if let Some(e) = dec.feed(decode_arm32(&buf)) {
+                    let now = epoch.elapsed().as_millis() as u64;
+                    if let Some(e) = dec.feed(decode_arm32(&buf), now) {
                         if tx.send(e).is_err() {
                             break;
                         }
@@ -75,6 +79,7 @@ impl KoboDevice {
             width: w,
             height: h,
             events: rx,
+            epoch,
         })
     }
 }
@@ -108,7 +113,14 @@ impl Device for KoboDevice {
     }
 
     fn next_event(&mut self) -> Option<Event> {
-        self.events.recv().ok()
+        // Ticks every 50 ms so a resting finger becomes a long-press.
+        match self.events.recv_timeout(Duration::from_millis(50)) {
+            Ok(e) => Some(e),
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => Some(Event::Tick {
+                t: self.epoch.elapsed().as_millis() as u64,
+            }),
+            Err(_) => None,
+        }
     }
 }
 
