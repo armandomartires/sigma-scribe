@@ -23,20 +23,27 @@ jobs:
   armv7:
     runs-on: ubuntu-latest
     needs: test
+    # musl.cc refuses GitHub runners, so the ARM musl gcc comes from this image
+    # (armv7-unknown-linux-musleabihf-*), aliased to the musl.cc names the
+    # build script and FBInk's CROSS_TC expect.
+    container: ghcr.io/rust-cross/rust-musl-cross:armv7-musleabihf
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: armv7-unknown-linux-musleabihf
-      - uses: Swatinem/rust-cache@v2
-      - name: ARM musl toolchain
+      - name: Tools
         run: |
-          mkdir -p ~/.local/toolchains && cd ~/.local/toolchains
-          curl -fsSL https://musl.cc/armv7l-linux-musleabihf-cross.tgz | tar xz
+          (command -v git && command -v file) || (apt-get update && apt-get install -y git file)
+          T=$HOME/.local/toolchains/armv7l-linux-musleabihf-cross/bin
+          mkdir -p "$T"
+          for f in $(ls "$(dirname "$(command -v armv7-unknown-linux-musleabihf-gcc)")" | grep '^armv7-unknown-linux-musleabihf-'); do
+            ln -sf "$(command -v "$f")" "$T/armv7l-linux-musleabihf-${f#armv7-unknown-linux-musleabihf-}"
+          done
+          ls "$T"
+          rustup target add armv7-unknown-linux-musleabihf || true
+      - uses: actions/checkout@v4
       - name: FBInk (pinned)
         run: |
-          git clone --recursive https://github.com/NiLuJe/FBInk ~/src/FBInk
-          cd ~/src/FBInk && git checkout 886f25f1 && git submodule update --init --recursive
+          git config --global --add safe.directory '*'
+          git clone --recursive https://github.com/NiLuJe/FBInk $HOME/src/FBInk
+          cd $HOME/src/FBInk && git checkout 886f25f1 && git submodule update --init --recursive
           PATH=$HOME/.local/toolchains/armv7l-linux-musleabihf-cross/bin:$PATH make staticlib MINIMAL=true IMAGE=true KOBO=true CROSS_TC=armv7l-linux-musleabihf
       - name: Build static ARMv7 binary
         run: ./scripts/build-armv7.sh
