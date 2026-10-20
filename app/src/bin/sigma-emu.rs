@@ -3,9 +3,9 @@
 //!
 //! Script steps, one per line (`#` comments):
 //!   tap X Y | key LABEL | type TEXT | hw TEXT | page fwd|back
-//!   shot NAME | expect TEXT | expect-status WORD | keys
+//!   shot NAME | expect TEXT | expect-status WORD | tap-on CONTROL | esc
+//!   clear-field | expect-file PATH | expect-no-file PATH | expect-open PATH
 
-use sigma_core::FsNoteStore;
 use sigma_device::desktop::DesktopDevice;
 use sigma_device::{Device, Event, HwKey};
 use sigma_scribe::App;
@@ -52,7 +52,7 @@ fn main() -> ExitCode {
     let notes = notes.unwrap_or_else(sigma_scribe::notes_dir);
     let _ = std::fs::create_dir_all(&shots);
     let mut dev = DesktopDevice::new(size.0, size.1);
-    let mut app = App::new(size.0, size.1, FsNoteStore::new(notes));
+    let mut app = App::new(size.0, size.1, notes);
     if let Err(e) = app.render(&mut dev, sigma_device::Refresh::Full) {
         eprintln!("sigma-emu: {e}");
         return ExitCode::FAILURE;
@@ -79,6 +79,39 @@ fn main() -> ExitCode {
                 }
                 events.push(Event::Tap { x: v[0], y: v[1] });
             }
+            "tap-on" => match app.control_centre(arg) {
+                Some((x, y)) => events.push(Event::Tap { x, y }),
+                None => return fail(format!("no control {arg:?} on this screen")),
+            },
+            "expect-file" => {
+                if !app.library.root().join(arg).exists() {
+                    return fail("file missing".into());
+                }
+            }
+            "expect-no-file" => {
+                if app.library.root().join(arg).exists() {
+                    return fail("file still exists".into());
+                }
+            }
+            "expect-open" => {
+                if app.current.as_str() != arg {
+                    return fail(format!("open note is {:?}", app.current.as_str()));
+                }
+            }
+            "clear-field" => {
+                let back = app.keyboard.label(sigma_core::keyboard::Key::Back);
+                // Caret to the end, then erase.
+                for _ in 0..200 {
+                    step(&mut app, &mut dev, Event::Key(HwKey::Right));
+                }
+                while app.rename_text().is_some_and(|t| !t.is_empty()) {
+                    match app.key_centre(&back) {
+                        Some((x, y)) => step(&mut app, &mut dev, Event::Tap { x, y }),
+                        None => return fail("no Back key".into()),
+                    }
+                }
+            }
+            "esc" => events.push(Event::Key(HwKey::Escape)),
             "key" => match app.key_centre(arg) {
                 Some((x, y)) => events.push(Event::Tap { x, y }),
                 None => return fail(format!("no key labelled {arg:?}")),

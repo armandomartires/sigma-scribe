@@ -1,0 +1,43 @@
+# v0.2 library walk-through on a fresh seeded library (Forma 1440x1920).
+expect-open field-notes.md
+tap-on Files
+shot v0.2-files
+tap-on drafts
+shot v0.2-folder
+tap-on chapter-01.md
+expect-open drafts/chapter-01.md
+tap-on Title
+clear-field
+type opening
+shot v0.2-rename-title
+tap-on OK
+expect-open drafts/opening.md
+expect-file drafts/opening.md
+expect-no-file drafts/chapter-01.md
+tap-on Files
+tap-on Up
+tap-on New folder
+clear-field
+type Archive
+tap-on OK
+expect-file Archive
+tap-on More:scratch.txt
+tap-on Move
+shot v0.2-move
+tap-on Archive
+expect-file Archive/scratch.txt
+expect-no-file scratch.txt
+tap-on More:field-notes.md
+tap-on Delete
+shot v0.2-delete-armed
+tap-on Delete
+expect-no-file field-notes.md
+shot v0.2-files-after
+tap-on New note
+clear-field
+type ideas
+tap-on OK
+expect-open ideas.md
+type First idea
+expect-status saved
+shot v0.2-new-note
