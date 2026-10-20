@@ -66,7 +66,7 @@ GitHub Releases of `sigma-scribe` (AGPL-3.0, Sigma Recon): `sigma-scribe-<ver>-k
 - Open from the brief: edit-in-preview; graph map vs list; Syncthing export later.
 
 ## 10. Decisions log
-1. Device Kobo Forma, fw 4.38.23697. 2. Plan B (native Rust + FBInk + NickelMenu) — 2026-10-20 after the Cobalt installer block and S0 limits. 3. Install NickelMenu + app on the Forma only after a verified backup, with the user present. 4. Keyboard: on-screen and USB-OTG; no Bluetooth. 5. v1.0 = all features, released incrementally. 6. Licence AGPL-3.0, author Sigma Recon, public screenshots OK. 7. Distribution: GitHub Releases + MobileRead (Cobalt Store dropped). 8. 2026-10-20: v0.1.0 passed on device (user report) and was tagged; v0.2 = library (scope §11). 9. 2026-10-21: v0.2.0 passed on device and tagged; v0.2.1 = Full on-screen keyboard (S2.5). 10. 2026-10-21: v0.2.1 passed and tagged (8a54ab2); v0.2.2 = touch selection (S2.6).
+1. Device Kobo Forma, fw 4.38.23697. 2. Plan B (native Rust + FBInk + NickelMenu) — 2026-10-20 after the Cobalt installer block and S0 limits. 3. Install NickelMenu + app on the Forma only after a verified backup, with the user present. 4. Keyboard: on-screen and USB-OTG; no Bluetooth. 5. v1.0 = all features, released incrementally. 6. Licence AGPL-3.0, author Sigma Recon, public screenshots OK. 7. Distribution: GitHub Releases + MobileRead (Cobalt Store dropped). 8. 2026-10-20: v0.1.0 passed on device (user report) and was tagged; v0.2 = library (scope §11). 9. 2026-10-21: v0.2.0 passed on device and tagged; v0.2.1 = Full on-screen keyboard (S2.5). 10. 2026-10-21: v0.2.1 passed and tagged (8a54ab2); v0.2.2 = touch selection (S2.6). 11. 2026-10-21: v0.2.2 skipped (refresh crash found in the device log); v0.2.3 = v0.2.2 + region fix, installed instead.
 
 ## 11. Sprints & version roadmap
 
@@ -98,7 +98,7 @@ GitHub Releases of `sigma-scribe` (AGPL-3.0, Sigma Recon): `sigma-scribe-<ver>-k
 | S1 | Editor core | **v0.1.0** ✅ | editor, OSK, autosave to .md, title/status bars, page keys, tap-to-place caret — passed on device |
 | S2 | Library | **v0.2.0** ✅ | Files sheet, folders, new/rename/move/delete (armed), title-bar rename, seed, last-opened — passed on device |
 | S2.5 | Full on-screen keyboard | **v0.2.1** ✅ | Windows-OSK style Full layout + Compact, sticky modifiers, Ctrl shortcuts, undo/redo, selection, remembered choice, Full default — passed on device |
-| S2.6 | Touch selection | **v0.2.2** 🟡 | long-press word select, handles, word-wise drag, action bar (Cut/Copy/Paste/Select all), double-tap; gesture recognizer + evdev touch phases — built; device check pending |
+| S2.6 | Touch selection | **v0.2.3** 🟡 (v0.2.2 skipped) | long-press word select, handles, word-wise drag, action bar (Cut/Copy/Paste/Select all), double-tap; gesture recognizer + evdev touch phases; v0.2.3 pads refresh regions to ≥16 px and makes refresh failures non-fatal — v0.2.2 was never installed because the v0.2.1 log showed FBInk rejecting a 1×34 region and the app exiting (2026-10-21 00:25) |
 | S3 | Markdown preview | v0.3.0 | parser + renderer, eye/pencil |
 | S4 | Options & Line mode | v0.4.0 | Day/Night, faces, steppers, Line mode, rotation + landscape keyboards |
 | S5 | Drawer | v0.5.0 | Contents, To-dos, Scratch |
