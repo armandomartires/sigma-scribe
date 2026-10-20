@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+members = ["crates/core", "crates/ui", "app"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.1"
+license = "AGPL-3.0-only"
+authors = ["Sigma Recon"]
+
+[workspace.dependencies]
+# Pinned Cobalt SDK (BandarLabs/Cobalt v0.3.27). Only crates/ui and app use it.
+kobo-sdk = { git = "https://github.com/BandarLabs/Cobalt", rev = "94f692078d7967a840872e422eb8bdf22bf5fe99" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }

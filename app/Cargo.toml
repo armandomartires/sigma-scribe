@@ -1,0 +1,21 @@
+[package]
+name = "kobo-sigma-scribe"
+description = "Sigma Scribe: a Markdown notebook for the Kobo Forma."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[[bin]]
+name = "sigma-scribe"
+path = "src/main.rs"
+
+[dependencies]
+sigma-core = { path = "../crates/core" }
+sigma-ui = { path = "../crates/ui" }
+kobo-sdk.workspace = true
+
+[lints]
+workspace = true

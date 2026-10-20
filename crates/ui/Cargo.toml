@@ -1,0 +1,16 @@
+[package]
+name = "sigma-ui"
+description = "Sigma Scribe screens (Cobalt ScreenBuilder layer)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+sigma-core = { path = "../core" }
+kobo-sdk.workspace = true
+
+[lints]
+workspace = true
