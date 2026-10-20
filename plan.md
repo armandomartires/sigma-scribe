@@ -29,7 +29,7 @@ A distraction-free Markdown/plain-text notebook for an e-reader (“the page is 
 ```
 crates/core    sigma-core   pure Rust, no platform deps: buffer, caret, measured wrap, keyboard model,
                             note store (atomic .md writes), autosave, text utils   [kept from S1]
-crates/render  sigma-render 8-bit greyscale canvas, design tokens (brief §2 → grey), Literata + Atkinson
+crates/render  sigma-render 8-bit greyscale canvas, design tokens (brief §2 → grey), Literata (+ SemiBold, Italic) + Atkinson
                             Hyperlegible (SIL OFL, embedded) via fontdue, editor screen layout/draw/hit-test
 crates/device  sigma-device `Device` trait (size, present(canvas, rect, Refresh::{Fast,Partial,Full}),
                             next_event → Tap/PageTurn/Power/Key/Quit), evdev decoder + touch transform,
@@ -63,10 +63,11 @@ GitHub Releases of `sigma-scribe` (AGPL-3.0, Sigma Recon): `sigma-scribe-<ver>-k
 - Never update the Forma to firmware 5.x.
 - v0.2.2 touch: the Forma's lift signal (tracking id / pressure) and jitter while resting are unverified; if holds fire late or drags are jumpy, tune `Config` (hold_ms, slop) or the evdev MOVE_EPS. Palm / second-finger contacts are ignored (slot 0 only).
 - Deletes are permanent in v0.2 (armed confirm only). A `.trash/` folder could be added later if wanted.
-- Open from the brief: edit-in-preview; graph map vs list; Syncthing export later.
+- Open from the brief: graph map vs list; Syncthing export later. (Edit-in-preview: decided read-only for v0.3, §10.12.)
+- v0.3 preview speed on the Forma (parse + layout on toggle, on the UI thread) is unmeasured; a 100 KB note lays out in well under 1 s on a desktop debug build.
 
 ## 10. Decisions log
-1. Device Kobo Forma, fw 4.38.23697. 2. Plan B (native Rust + FBInk + NickelMenu) — 2026-10-20 after the Cobalt installer block and S0 limits. 3. Install NickelMenu + app on the Forma only after a verified backup, with the user present. 4. Keyboard: on-screen and USB-OTG; no Bluetooth. 5. v1.0 = all features, released incrementally. 6. Licence AGPL-3.0, author Sigma Recon, public screenshots OK. 7. Distribution: GitHub Releases + MobileRead (Cobalt Store dropped). 8. 2026-10-20: v0.1.0 passed on device (user report) and was tagged; v0.2 = library (scope §11). 9. 2026-10-21: v0.2.0 passed on device and tagged; v0.2.1 = Full on-screen keyboard (S2.5). 10. 2026-10-21: v0.2.1 passed and tagged (8a54ab2); v0.2.2 = touch selection (S2.6). 11. 2026-10-21: v0.2.2 skipped (refresh crash found in the device log); v0.2.3 = v0.2.2 + region fix, installed instead; passed on device and tagged v0.2.3 (caaad3e).
+1. Device Kobo Forma, fw 4.38.23697. 2. Plan B (native Rust + FBInk + NickelMenu) — 2026-10-20 after the Cobalt installer block and S0 limits. 3. Install NickelMenu + app on the Forma only after a verified backup, with the user present. 4. Keyboard: on-screen and USB-OTG; no Bluetooth. 5. v1.0 = all features, released incrementally. 6. Licence AGPL-3.0, author Sigma Recon, public screenshots OK. 7. Distribution: GitHub Releases + MobileRead (Cobalt Store dropped). 8. 2026-10-20: v0.1.0 passed on device (user report) and was tagged; v0.2 = library (scope §11). 9. 2026-10-21: v0.2.0 passed on device and tagged; v0.2.1 = Full on-screen keyboard (S2.5). 10. 2026-10-21: v0.2.1 passed and tagged (8a54ab2); v0.2.2 = touch selection (S2.6). 11. 2026-10-21: v0.2.2 skipped (refresh crash found in the device log); v0.2.3 = v0.2.2 + region fix, installed instead; passed on device and tagged v0.2.3 (caaad3e). 12. 2026-10-21: S3 started (v0.3.0). **Preview is read-only in v0.3** — the brief's open question (tap in preview drops into write at that line?) is answered *no* for now; revisit after device use. 13. 2026-10-21: own small Markdown parser in core (no pulldown-cmark): the brief's subset plus `[[wiki]]`, source lines, literal fallbacks, dependency-free core. 14. 2026-10-21: Literata SemiBold 600 and Italic 400 static instances added (OFL, from the Literata variable fonts) for preview; no bold-italic; code in Atkinson as the mock. 15. 2026-10-21: preview status bar shows `page i of n` (not in the brief).
 
 ## 11. Sprints & version roadmap
 
@@ -90,6 +91,16 @@ GitHub Releases of `sigma-scribe` (AGPL-3.0, Sigma Recon): `sigma-scribe-<ver>-k
 - E-ink: no animation, partial fast refresh of changed regions only, drag redraws throttled to ~150 ms plus lift.
 - Device risk: hold reliability depends on the Forma reporting a steady contact; see §9.
 
+### v0.3.0 scope (S3, approved 2026-10-21)
+- Eye ↔ pencil toggle in the title bar (left of Files); Esc leaves preview.
+- Rendered with the real faces as the mock: headings (Literata 600, 1.45/1.22/1.05 em), **strong** (Literata 600), *em* (Literata Italic), ~~strike~~, lists with nesting, task boxes, quotes, inline and fenced code (Atkinson on wash), web links underlined, rules.
+- `[[wiki]]` / `[[note|label]]` shown (solid if the note exists, dashed if not); navigation, backlinks, graph stay in S6.
+- Page-turn buttons page through the preview; status shows `· preview · page i of n`.
+- Read-only (decision 12). Entering keeps the place (page of the top source line); leaving restores write mode untouched.
+- E-ink: full refresh entering/leaving preview, partial refreshes when paging.
+- Deferred: tables and images drawn (shown as text / `[image: alt]`), task box tap, Night preview (S4).
+- Details and acceptance: `sprints/S3-markdown-preview.md`, `tasks/S3-tasks.md`.
+
 ### Roadmap after v0.2 (confirmed)
 
 | # | Sprint | Release | Contents |
@@ -99,7 +110,7 @@ GitHub Releases of `sigma-scribe` (AGPL-3.0, Sigma Recon): `sigma-scribe-<ver>-k
 | S2 | Library | **v0.2.0** ✅ | Files sheet, folders, new/rename/move/delete (armed), title-bar rename, seed, last-opened — passed on device |
 | S2.5 | Full on-screen keyboard | **v0.2.1** ✅ | Windows-OSK style Full layout + Compact, sticky modifiers, Ctrl shortcuts, undo/redo, selection, remembered choice, Full default — passed on device |
 | S2.6 | Touch selection | **v0.2.3** ✅ (v0.2.2 skipped) | long-press word select, handles, word-wise drag, action bar (Cut/Copy/Paste/Select all), double-tap; gesture recognizer + evdev touch phases; v0.2.3 pads refresh regions to ≥16 px and makes refresh failures non-fatal — v0.2.2 was never installed because the v0.2.1 log showed FBInk rejecting a 1×34 region and the app exiting (2026-10-21 00:25) — passed on device 2026-10-21 |
-| S3 | Markdown preview | v0.3.0 | parser + renderer, eye/pencil |
+| S3 | Markdown preview | **v0.3.0** 🔨 | eye/pencil toggle, read-only paged preview (headings, emphasis, lists, tasks, quotes, code, links, rules; wiki links shown), own parser, Literata SemiBold/Italic — built, awaiting device check |
 | S4 | Options & Line mode | v0.4.0 | Day/Night, faces, steppers, Line mode, rotation + landscape keyboards |
 | S5 | Drawer | v0.5.0 | Contents, To-dos, Scratch |
 | S6 | Find & wiki | v0.6.0 | find/replace, wiki links, backlinks, graph |

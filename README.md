@@ -2,9 +2,9 @@
 
 A distraction-free Markdown notebook for the **Kobo Forma** — native Rust, drawn with [FBInk](https://github.com/NiLuJe/FBInk), launched from [NickelMenu](https://github.com/pgaskin/NickelMenu). Notes are plain `.md` files you can reach over USB.
 
-Licence: **AGPL-3.0** (see `LICENSE`) · Author: **Sigma Recon** · Fonts: Literata, Atkinson Hyperlegible (SIL OFL 1.1, `assets/fonts/`)
+Licence: **AGPL-3.0** (see `LICENSE`) · Author: **Sigma Recon** · Fonts: Literata (Regular, SemiBold, Italic), Atkinson Hyperlegible (SIL OFL 1.1, `assets/fonts/`)
 
-Status: **v0.1 (editor + on-screen keyboard) runs in the desktop simulator; not yet installed on the device.**
+Status: **v0.2.3 passed on the Forma (editor, keyboards, touch selection, library). v0.3.0 (Markdown preview) built; awaiting the on-device check.**
 
 ## Run it on your desktop
 ```sh

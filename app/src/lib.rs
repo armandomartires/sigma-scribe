@@ -13,7 +13,8 @@ use sigma_core::{
 use sigma_device::{Device, Event, HwKey, Phase, Refresh};
 use sigma_render::editor::Model;
 use sigma_render::{
-    BarAction, Canvas, EditorScreen, FilesHit, FilesModel, Hit, Rect, Row, SelUi, Theme,
+    BarAction, Canvas, Doc, EditorScreen, FilesHit, FilesModel, Hit, PreviewModel, Rect, Row,
+    SelUi, Theme,
 };
 use std::path::PathBuf;
 
@@ -77,6 +78,13 @@ pub struct FilesState {
     pub first: usize,
 }
 
+/// Preview mode (v0.3): the laid-out note and the page shown. Read-only.
+#[derive(Clone, Debug, Default)]
+pub struct PreviewState {
+    pub doc: Doc,
+    pub page: usize,
+}
+
 pub struct App {
     pub library: Library,
     pub current: NotePath,
@@ -94,6 +102,8 @@ pub struct App {
     /// Touch selection chrome (v0.2.2).
     pub sel_ui: Option<SelUi>,
     drag: Option<Drag>,
+    /// `Some` while the note is shown rendered (eye ↔ pencil).
+    pub preview: Option<PreviewState>,
     pub running: bool,
 }
 
@@ -133,6 +143,7 @@ impl App {
             gestures: Recognizer::default(),
             sel_ui: None,
             drag: None,
+            preview: None,
             canvas: Canvas::new(width, height, 255),
             shown: Canvas::new(width, height, 0),
             running: true,
@@ -210,7 +221,81 @@ impl App {
     }
 
     fn keys_visible(&self) -> bool {
-        self.rename.is_some() || (self.files.is_none() && self.keys_on)
+        self.rename.is_some() || (self.files.is_none() && self.preview.is_none() && self.keys_on)
+    }
+
+    /// Names a `[[wiki]]` link may use for an existing note: the file name
+    /// or the path from the library root, with or without the extension.
+    fn note_names(&self) -> std::collections::HashSet<String> {
+        let mut out = std::collections::HashSet::new();
+        for p in self.library.all_notes().unwrap_or_default() {
+            for s in [p.as_str(), p.name()] {
+                out.insert(s.to_lowercase());
+                if let Some((stem, _)) = s.rsplit_once('.') {
+                    out.insert(stem.to_lowercase());
+                }
+            }
+        }
+        out
+    }
+
+    /// Switches to preview at the page showing the top of the write page.
+    /// Full refresh: the whole page changes.
+    pub fn enter_preview(&mut self) {
+        self.save();
+        self.sel_ui = None;
+        self.drag = None;
+        let names = self.note_names();
+        let known = |n: &str| names.contains(&n.trim().to_lowercase());
+        let doc = self
+            .screen
+            .build_preview(self.buffer.text(), &self.keyboard, &known);
+        let page = self.page_rect();
+        let top = self.screen.top_source_line(&self.buffer, page);
+        let page = doc.page_of_line(top);
+        self.preview = Some(PreviewState { doc, page });
+    }
+
+    /// Back to write mode; caret, selection and scroll are as they were.
+    pub fn exit_preview(&mut self) {
+        self.preview = None;
+    }
+
+    /// Preview input: pencil, Files, page turns, Escape. Everything else is
+    /// ignored (read-only, decision S3-D1).
+    fn preview_event(&mut self, e: Event) -> Option<Refresh> {
+        match e {
+            Event::Tap { x, y } => match self.screen.preview_hit(&self.keyboard, x, y) {
+                Hit::TogglePreview => {
+                    self.exit_preview();
+                    Some(Refresh::Full)
+                }
+                Hit::Files => {
+                    self.exit_preview();
+                    self.open_files();
+                    Some(Refresh::Full)
+                }
+                _ => None,
+            },
+            Event::PageTurn { forward } => {
+                let p = self.preview.as_mut()?;
+                let last = p.doc.pages.len().saturating_sub(1);
+                let next = if forward {
+                    (p.page + 1).min(last)
+                } else {
+                    p.page.saturating_sub(1)
+                };
+                (next != p.page).then(|| {
+                    p.page = next;
+                    Refresh::Partial
+                })
+            }
+            Event::Key(HwKey::Escape) => {
+                self.exit_preview();
+                Some(Refresh::Full)
+            }
+            _ => None,
+        }
     }
 
     fn rows(&self) -> Vec<Row> {
@@ -302,7 +387,18 @@ impl App {
     /// The device could not present the frame.
     pub fn render(&mut self, dev: &mut dyn Device, refresh: Refresh) -> std::io::Result<()> {
         let mut c = std::mem::replace(&mut self.canvas, Canvas::new(1, 1, 0));
-        if self.files.is_some() {
+        if let Some(p) = &self.preview {
+            let m = PreviewModel {
+                file_name: self.current.name(),
+                doc: &p.doc,
+                page: p.page,
+                words: sigma_core::text::word_count(self.buffer.text()),
+                save: &self.autosave.state,
+                keyboard: &self.keyboard,
+                theme: Theme::DAY,
+            };
+            self.screen.draw_preview(&mut c, &m);
+        } else if self.files.is_some() {
             let rows = self.rows();
             if let Some(m) = self.files_model(&rows) {
                 self.screen.draw_files(&mut c, &m);
@@ -576,7 +672,7 @@ impl App {
 
     /// Applies one event; returns the refresh it needs (or `None`).
     fn in_editor(&self) -> bool {
-        self.files.is_none() && self.rename.is_none()
+        self.files.is_none() && self.rename.is_none() && self.preview.is_none()
     }
 
     fn apply(&mut self, gestures: Vec<Gesture>) -> Option<Refresh> {
@@ -776,6 +872,11 @@ impl App {
                 self.running = false;
                 None
             }
+            e @ (Event::Tap { .. } | Event::PageTurn { .. } | Event::Key(_))
+                if self.preview.is_some() && self.files.is_none() =>
+            {
+                self.preview_event(e)
+            }
             Event::Key(k) if self.rename.is_some() => self.hw_into_field(k),
             Event::Tap { x, y } if self.files.is_some() => self.files_tap(x, y),
             Event::PageTurn { forward } if self.files.is_some() => {
@@ -870,6 +971,10 @@ impl App {
                         self.open_files();
                         Some(Refresh::Full)
                     }
+                    Hit::TogglePreview => {
+                        self.enter_preview();
+                        Some(Refresh::Full)
+                    }
                     Hit::StartRename => {
                         self.start_rename(RenameTarget::Current);
                         Some(Refresh::Partial)
@@ -947,6 +1052,7 @@ impl App {
         let l = self.screen.layout(self.keys_visible(), &self.keyboard);
         match label {
             "Files" => Some(centre(l.files_button)),
+            "Preview" | "Pencil" | "Eye" => Some(centre(l.preview_button)),
             "Title" => Some(centre(l.name_rect)),
             "OK" => Some(centre(l.ok_rect)),
             "Cancel" => Some(centre(l.cancel_rect)),

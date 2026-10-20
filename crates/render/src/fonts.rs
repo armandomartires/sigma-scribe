@@ -1,4 +1,4 @@
-//! Embedded faces (both SIL OFL 1.1, licences in assets/fonts/) and glyph
+//! Embedded faces (all SIL OFL 1.1, licences in assets/fonts/) and glyph
 //! drawing. Measurement implements `sigma_core::TextMeasure`, so wrapping
 //! uses real advances ("measure with the real face, not a guess").
 
@@ -8,6 +8,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 static LITERATA: &[u8] = include_bytes!("../../../assets/fonts/Literata.ttf");
+static LITERATA_SEMI: &[u8] = include_bytes!("../../../assets/fonts/Literata-SemiBold.ttf");
+static LITERATA_ITALIC: &[u8] = include_bytes!("../../../assets/fonts/Literata-Italic.ttf");
 static ATKINSON: &[u8] = include_bytes!("../../../assets/fonts/AtkinsonHyperlegible-Regular.ttf");
 static ATKINSON_BOLD: &[u8] = include_bytes!("../../../assets/fonts/AtkinsonHyperlegible-Bold.ttf");
 
@@ -16,12 +18,16 @@ pub enum Face {
     Literata,
     Atkinson,
     AtkinsonBold,
+    /// Literata at weight 600 (preview headings and `**strong**`, as the mock).
+    LiterataSemi,
+    /// Literata Italic at weight 400 (preview `*em*`).
+    LiterataItalic,
 }
 
 type GlyphKey = (Face, char, u32);
 
 pub struct Fonts {
-    faces: [Font; 3],
+    faces: [Font; 5],
     cache: RefCell<HashMap<GlyphKey, (fontdue::Metrics, Vec<u8>)>>,
 }
 
@@ -39,7 +45,13 @@ impl Fonts {
         let load =
             |b: &'static [u8]| Font::from_bytes(b, FontSettings::default()).expect("embedded font");
         Self {
-            faces: [load(LITERATA), load(ATKINSON), load(ATKINSON_BOLD)],
+            faces: [
+                load(LITERATA),
+                load(ATKINSON),
+                load(ATKINSON_BOLD),
+                load(LITERATA_SEMI),
+                load(LITERATA_ITALIC),
+            ],
             cache: RefCell::default(),
         }
     }
@@ -132,6 +144,10 @@ mod tests {
         let w2 = f.width(Face::Literata, 23.0, "i");
         assert!(w1 > w2, "proportional face: m wider than i");
         assert!(f.width(Face::Atkinson, 20.0, "Writing") > 40.0);
+        // The semibold and italic instances are real, different faces.
+        let r = f.width(Face::Literata, 23.0, "Writing");
+        assert!(f.width(Face::LiterataSemi, 23.0, "Writing") > r);
+        assert!((f.width(Face::LiterataItalic, 23.0, "Writing") - r).abs() > 0.5);
     }
 
     #[test]
