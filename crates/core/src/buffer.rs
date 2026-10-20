@@ -30,7 +30,12 @@ impl Buffer {
     #[must_use]
     pub fn new(text: impl Into<String>) -> Self {
         let text = text.into();
-        Self { caret: text.len(), text, anchor: None, revision: 0 }
+        Self {
+            caret: text.len(),
+            text,
+            anchor: None,
+            revision: 0,
+        }
     }
 
     #[must_use]
@@ -74,11 +79,17 @@ impl Buffer {
     }
 
     fn prev_boundary(&self, at: usize) -> usize {
-        self.text[..at].char_indices().next_back().map_or(0, |(i, _)| i)
+        self.text[..at]
+            .char_indices()
+            .next_back()
+            .map_or(0, |(i, _)| i)
     }
 
     fn next_boundary(&self, at: usize) -> usize {
-        self.text[at..].chars().next().map_or(at, |c| at + c.len_utf8())
+        self.text[at..]
+            .chars()
+            .next()
+            .map_or(at, |c| at + c.len_utf8())
     }
 
     fn delete_selection(&mut self) -> bool {
@@ -162,7 +173,9 @@ impl Buffer {
     /// End of the logical line containing `at` (before its `\n`).
     #[must_use]
     pub fn line_end(&self, at: usize) -> usize {
-        self.text[at..].find('\n').map_or(self.text.len(), |i| at + i)
+        self.text[at..]
+            .find('\n')
+            .map_or(self.text.len(), |i| at + i)
     }
 
     /// Moves within logical lines, keeping the char column.

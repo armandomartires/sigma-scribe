@@ -13,7 +13,13 @@ pub fn word_count(text: &str) -> usize {
 pub fn clean_name(raw: &str) -> String {
     let filtered: String = raw
         .chars()
-        .map(|c| if c == '/' || c == '\\' || c.is_control() { ' ' } else { c })
+        .map(|c| {
+            if c == '/' || c == '\\' || c.is_control() {
+                ' '
+            } else {
+                c
+            }
+        })
         .collect();
     let joined = filtered.split_whitespace().collect::<Vec<_>>().join(" ");
     let trimmed = joined.trim_start_matches('.').trim();

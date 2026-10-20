@@ -12,6 +12,7 @@ authors = ["Sigma Recon"]
 [workspace.dependencies]
 # Pinned Cobalt SDK (BandarLabs/Cobalt v0.3.27). Only crates/ui and app use it.
 kobo-sdk = { git = "https://github.com/BandarLabs/Cobalt", rev = "94f692078d7967a840872e422eb8bdf22bf5fe99" }
+kobo-ui = { git = "https://github.com/BandarLabs/Cobalt", rev = "94f692078d7967a840872e422eb8bdf22bf5fe99" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

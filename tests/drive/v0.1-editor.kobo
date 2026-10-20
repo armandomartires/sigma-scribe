@@ -1,0 +1,29 @@
+# v0.1 editor + on-screen keyboard smoke test (simulator).
+wait-for Field notes
+expect saved
+tap-id kb.r3c4
+tap-id kb.r2c0
+type h
+type ello
+tap-id kb.r3c3
+type from
+tap-id kb.r3c3
+type the
+tap-id kb.r3c3
+type forma
+tap-id kb.r3c0
+tap-id kb.r0c0
+tap-id kb.r3c0
+wait-idle
+expect saved
+clean
+shot v0.1-typed
+tap Hide keys
+wait-idle
+expect-missing Space
+shot v0.1-keys-hidden
+tap Keys
+tap-id kb.r3c0
+wait-idle
+expect ABC
+shot v0.1-symbols

@@ -44,7 +44,10 @@ pub struct Keyboard {
 
 impl Default for Keyboard {
     fn default() -> Self {
-        Self { layer: Layer::Letters, shift: false }
+        Self {
+            layer: Layer::Letters,
+            shift: false,
+        }
     }
 }
 
@@ -179,8 +182,10 @@ mod tests {
     fn layout_matches_brief() {
         let k = Keyboard::default();
         let rows = k.rows();
-        let labels: Vec<Vec<String>> =
-            rows.iter().map(|r| r.iter().map(|&x| k.label(x)).collect()).collect();
+        let labels: Vec<Vec<String>> = rows
+            .iter()
+            .map(|r| r.iter().map(|&x| k.label(x)).collect())
+            .collect();
         assert_eq!(labels[0].join(" "), "q w e r t y u i o p");
         assert_eq!(labels[1].join(" "), "a s d f g h j k l");
         assert_eq!(labels[2].join(" "), "Shift z x c v b n m Back");

@@ -34,9 +34,14 @@ impl FsNoteStore {
     fn path(&self, name: &str) -> io::Result<PathBuf> {
         let rel = Path::new(name);
         if rel.is_absolute()
-            || rel.components().any(|c| !matches!(c, std::path::Component::Normal(_)))
+            || rel
+                .components()
+                .any(|c| !matches!(c, std::path::Component::Normal(_)))
         {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "note name escapes the library"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "note name escapes the library",
+            ));
         }
         Ok(self.root.join(rel))
     }
@@ -120,7 +125,10 @@ pub struct Autosave {
 impl Autosave {
     #[must_use]
     pub fn new(revision: u64) -> Self {
-        Self { saved_revision: revision, state: SaveState::Saved }
+        Self {
+            saved_revision: revision,
+            state: SaveState::Saved,
+        }
     }
 
     #[must_use]
@@ -172,9 +180,15 @@ mod tests {
         let mut s = FsNoteStore::new(&root);
         assert_eq!(s.load("a.md").unwrap(), None);
         s.save("drafts/chapter-01.md", "# One\n").unwrap();
-        assert_eq!(s.load("drafts/chapter-01.md").unwrap().as_deref(), Some("# One\n"));
+        assert_eq!(
+            s.load("drafts/chapter-01.md").unwrap().as_deref(),
+            Some("# One\n")
+        );
         s.save("drafts/chapter-01.md", "# Two\n").unwrap();
-        assert_eq!(fs::read_to_string(root.join("drafts/chapter-01.md")).unwrap(), "# Two\n");
+        assert_eq!(
+            fs::read_to_string(root.join("drafts/chapter-01.md")).unwrap(),
+            "# Two\n"
+        );
         // No temp file left behind.
         assert_eq!(fs::read_dir(root.join("drafts")).unwrap().count(), 1);
         fs::remove_dir_all(root).unwrap();

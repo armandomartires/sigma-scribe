@@ -23,7 +23,9 @@ impl Default for MonoMeasure {
 
 impl TextMeasure for MonoMeasure {
     fn width(&self, text: &str) -> u32 {
-        text.chars().map(|c| if c == '\t' { self.tab } else { 1 }).sum()
+        text.chars()
+            .map(|c| if c == '\t' { self.tab } else { 1 })
+            .sum()
     }
 }
 
@@ -50,16 +52,28 @@ pub fn wrap(text: &str, max: u32, measure: &dyn TextMeasure) -> Vec<VisualLine> 
     rows
 }
 
-fn wrap_logical(line: &str, base: usize, max: u32, m: &dyn TextMeasure, rows: &mut Vec<VisualLine>) {
+fn wrap_logical(
+    line: &str,
+    base: usize,
+    max: u32,
+    m: &dyn TextMeasure,
+    rows: &mut Vec<VisualLine>,
+) {
     if line.is_empty() {
-        rows.push(VisualLine { start: base, end: base });
+        rows.push(VisualLine {
+            start: base,
+            end: base,
+        });
         return;
     }
     let mut row_start = 0;
     while row_start < line.len() {
         let rest = &line[row_start..];
         if m.width(rest) <= max {
-            rows.push(VisualLine { start: base + row_start, end: base + line.len() });
+            rows.push(VisualLine {
+                start: base + row_start,
+                end: base + line.len(),
+            });
             return;
         }
         // Longest prefix that fits.
@@ -81,14 +95,22 @@ fn wrap_logical(line: &str, base: usize, max: u32, m: &dyn TextMeasure, rows: &m
             cut = Some(fit + spaces);
         }
         let cut = cut.filter(|&c| c > 0).unwrap_or(fit);
-        rows.push(VisualLine { start: base + row_start, end: base + row_start + cut });
+        rows.push(VisualLine {
+            start: base + row_start,
+            end: base + row_start + cut,
+        });
         row_start += cut;
     }
 }
 
 /// Row and column (in measure units) of a caret byte offset.
 #[must_use]
-pub fn caret_cell(text: &str, rows: &[VisualLine], caret: usize, m: &dyn TextMeasure) -> (usize, u32) {
+pub fn caret_cell(
+    text: &str,
+    rows: &[VisualLine],
+    caret: usize,
+    m: &dyn TextMeasure,
+) -> (usize, u32) {
     let mut found = 0;
     for (i, r) in rows.iter().enumerate() {
         if caret >= r.start && caret <= r.end {
@@ -125,7 +147,10 @@ mod tests {
     use super::*;
 
     fn rows(text: &str, max: u32) -> Vec<&str> {
-        wrap(text, max, &MonoMeasure::default()).iter().map(|r| &text[r.start..r.end]).collect()
+        wrap(text, max, &MonoMeasure::default())
+            .iter()
+            .map(|r| &text[r.start..r.end])
+            .collect()
     }
 
     #[test]
@@ -136,7 +161,10 @@ mod tests {
 
     #[test]
     fn wraps_at_spaces() {
-        assert_eq!(rows("the quick brown fox", 10), vec!["the quick ", "brown fox"]);
+        assert_eq!(
+            rows("the quick brown fox", 10),
+            vec!["the quick ", "brown fox"]
+        );
     }
 
     #[test]
@@ -176,7 +204,11 @@ mod tests {
     fn every_byte_is_covered() {
         let t = "lorem ipsum dolor sit amet, consectetur\nadipiscing elit sed do";
         let r = wrap(t, 7, &MonoMeasure::default());
-        let joined: String = r.iter().map(|x| &t[x.start..x.end]).collect::<Vec<_>>().join("");
+        let joined: String = r
+            .iter()
+            .map(|x| &t[x.start..x.end])
+            .collect::<Vec<_>>()
+            .join("");
         assert_eq!(joined, t.replace('\n', ""));
     }
 }
