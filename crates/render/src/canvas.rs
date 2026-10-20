@@ -138,11 +138,103 @@ impl Canvas {
             )
         })
     }
+
+    /// Changed areas as separate rectangles, so e-ink only refreshes what
+    /// changed (a key cap and a text row, not everything between them).
+    /// Changed rows closer than `gap` px merge into one band; each band is
+    /// then split into column clusters closer than `gap`. More than `max`
+    /// rectangles collapse into the single bounding box.
+    #[must_use]
+    pub fn diff_regions(&self, other: &Canvas, gap: i32, max: usize) -> Vec<Rect> {
+        let w = self.width as usize;
+        let row_span = |y: usize| -> Option<(usize, usize)> {
+            let a = &self.pixels[y * w..(y + 1) * w];
+            let b = &other.pixels[y * w..(y + 1) * w];
+            let x0 = a.iter().zip(b).position(|(p, q)| p != q)?;
+            let x1 = w
+                - 1
+                - a.iter()
+                    .rev()
+                    .zip(b.iter().rev())
+                    .position(|(p, q)| p != q)?;
+            Some((x0, x1))
+        };
+        let mut bands: Vec<(usize, usize)> = Vec::new();
+        for y in 0..self.height as usize {
+            if row_span(y).is_some() {
+                match bands.last_mut() {
+                    Some((_, end)) if y as i32 - *end as i32 <= gap => *end = y,
+                    _ => bands.push((y, y)),
+                }
+            }
+        }
+        let mut out = Vec::new();
+        for (y0, y1) in bands {
+            // Changed columns within the band.
+            let mut cols = vec![false; w];
+            for y in y0..=y1 {
+                let (a, b) = (
+                    &self.pixels[y * w..(y + 1) * w],
+                    &other.pixels[y * w..(y + 1) * w],
+                );
+                for x in 0..w {
+                    if a[x] != b[x] {
+                        cols[x] = true;
+                    }
+                }
+            }
+            let mut start: Option<usize> = None;
+            let mut last = 0usize;
+            for (x, &on) in cols.iter().enumerate() {
+                if on {
+                    if let Some(s0) = start {
+                        if x as i32 - last as i32 > gap {
+                            out.push(Rect::new(
+                                s0 as i32,
+                                y0 as i32,
+                                (last - s0 + 1) as i32,
+                                (y1 - y0 + 1) as i32,
+                            ));
+                            start = Some(x);
+                        }
+                    } else {
+                        start = Some(x);
+                    }
+                    last = x;
+                }
+            }
+            if let Some(s0) = start {
+                out.push(Rect::new(
+                    s0 as i32,
+                    y0 as i32,
+                    (last - s0 + 1) as i32,
+                    (y1 - y0 + 1) as i32,
+                ));
+            }
+        }
+        if out.len() > max {
+            return self.diff(other).into_iter().collect();
+        }
+        out
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn diff_regions_split_distant_changes() {
+        let a = Canvas::new(100, 100, 255);
+        let mut b = a.clone();
+        b.fill(Rect::new(5, 5, 10, 4), 0); // a text row
+        b.fill(Rect::new(60, 80, 8, 8), 0); // a key cap
+        b.fill(Rect::new(70, 82, 2, 2), 10); // next to the cap: same rect
+        let r = b.diff_regions(&a, 4, 8);
+        assert_eq!(r, vec![Rect::new(5, 5, 10, 4), Rect::new(60, 80, 12, 8)]);
+        assert_eq!(b.diff_regions(&a, 4, 1), vec![Rect::new(5, 5, 67, 83)]);
+        assert!(a.diff_regions(&a, 4, 8).is_empty());
+    }
 
     #[test]
     fn fill_clips_and_diff_finds_change() {

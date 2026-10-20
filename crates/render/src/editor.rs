@@ -123,24 +123,24 @@ impl EditorScreen {
         );
         let mut keys = Vec::new();
         if keys_on {
-            // Ten units per row; wide keys from the brief's compact board.
-            let unit = (w - 2 * pad - 9 * gap) as f32 / 10.0;
-            let width_of = |k: Key| match k {
-                Key::Shift | Key::Back => 1.5,
-                Key::SwapLayer | Key::Tab | Key::Del | Key::Return => 1.5,
-                Key::Space => 4.0,
-                Key::Char(_) => 1.0,
-            };
+            // Grid units (10 Compact, 16 Full); rows are centred, columns
+            // align because every key starts at its cumulative unit offset.
+            let grid = keyboard.grid_units();
+            let unit = (w - 2 * pad + gap) as f32 / grid;
             for (r, row) in rows.iter().enumerate() {
-                let kw_of = |k: Key| width_of(k) * unit + gap as f32 * (width_of(k) - 1.0).max(0.0);
-                let total: f32 = row.iter().map(|&k| kw_of(k)).sum::<f32>()
-                    + gap as f32 * (row.len() as f32 - 1.0);
-                let mut x = (w as f32 - total) / 2.0;
+                let total: f32 = row
+                    .iter()
+                    .enumerate()
+                    .map(|(c, &k)| keyboard.units(k, r, c))
+                    .sum();
+                let mut x = pad as f32 + (grid - total) / 2.0 * unit;
                 let y = keyboard_rect.y + pad + r as i32 * (key_h + gap);
-                for &k in row {
-                    let kw = kw_of(k);
-                    keys.push((Rect::new(x.round() as i32, y, kw.round() as i32, key_h), k));
-                    x += kw + gap as f32;
+                for (c, &k) in row.iter().enumerate() {
+                    let kw = keyboard.units(k, r, c) * unit;
+                    let x0 = x.round() as i32;
+                    let x1 = (x + kw).round() as i32 - gap;
+                    keys.push((Rect::new(x0, y, x1 - x0, key_h), k));
+                    x += kw;
                 }
             }
         }
@@ -204,6 +204,10 @@ impl EditorScreen {
 
     /// Page-turn buttons: scroll one screen and put the caret at the top row.
     pub fn page_turn(&mut self, buffer: &mut Buffer, page: Rect, forward: bool) {
+        self.page_turn_ext(buffer, page, forward, false);
+    }
+
+    pub fn page_turn_ext(&mut self, buffer: &mut Buffer, page: Rect, forward: bool, extend: bool) {
         let rows = self.rows(buffer, page);
         let n = self.visible_rows(page).saturating_sub(1).max(1);
         self.scroll = if forward {
@@ -211,17 +215,24 @@ impl EditorScreen {
         } else {
             self.scroll.saturating_sub(n)
         };
-        buffer.set_caret(rows[self.scroll].start);
+        buffer.move_to(rows[self.scroll].start, extend);
     }
 
     /// Vertical caret move by one visual row (keyboard arrows later).
     pub fn caret_row(&mut self, buffer: &mut Buffer, page: Rect, down: bool) {
+        self.caret_row_ext(buffer, page, down, false);
+    }
+
+    /// As [`Self::caret_row`]; with `extend` the selection grows (Shift+↑/↓).
+    pub fn caret_row_ext(&mut self, buffer: &mut Buffer, page: Rect, down: bool, extend: bool) {
         let rows = self.rows(buffer, page);
         let m = self.measure();
         let (row, col) = caret_cell(buffer.text(), &rows, buffer.caret(), &m);
         let target = if down { row + 1 } else { row.wrapping_sub(1) };
         if let Some(&r) = rows.get(target) {
-            buffer.set_caret(offset_at(buffer.text(), r, col, &m));
+            buffer.move_to(offset_at(buffer.text(), r, col, &m), extend);
+        } else {
+            buffer.move_to(if down { buffer.text().len() } else { 0 }, extend);
         }
     }
 
@@ -295,12 +306,41 @@ impl EditorScreen {
         let lh = self.line_h();
         let asc = self.fonts.ascent(Face::Literata, self.body());
         let top_pad = ((lh as f32 - self.body() * 1.2) / 2.0).max(0.0);
+        let sel = model.buffer.selection();
         for (i, r) in rows
             .iter()
             .skip(self.scroll)
             .take(self.visible_rows(l.page))
             .enumerate()
         {
+            if let Some((a, b)) = sel {
+                let (s0, s1) = (a.max(r.start), b.min(r.end.max(r.start)));
+                let through_newline = b > r.end && a <= r.end;
+                if s0 < s1 || through_newline {
+                    let x0 = self.fonts.width(
+                        Face::Literata,
+                        self.body(),
+                        &text[r.start..s0.min(r.end).max(r.start)],
+                    );
+                    let x1 =
+                        self.fonts
+                            .width(Face::Literata, self.body(), &text[r.start..s1.max(s0)])
+                            + if through_newline {
+                                self.body() * 0.4
+                            } else {
+                                0.0
+                            };
+                    c.fill(
+                        Rect::new(
+                            area.x + x0 as i32,
+                            area.y + i as i32 * lh,
+                            (x1 - x0).ceil() as i32,
+                            lh,
+                        ),
+                        t.wash,
+                    );
+                }
+            }
             let y = area.y as f32 + (i as i32 * lh) as f32 + top_pad + asc;
             self.fonts.draw(
                 c,
@@ -478,7 +518,7 @@ impl EditorScreen {
         c.fill(Rect::new(0, l.keyboard.y, l.keyboard.w, 1), t.rule);
         let ks = 20.0 * self.s.0;
         for &(r, k) in &l.keys {
-            let active = k == Key::Shift && keyboard.shift;
+            let active = keyboard.is_active(k);
             let (bg, fg) = if active {
                 (t.ink, t.paper)
             } else {
@@ -486,6 +526,23 @@ impl EditorScreen {
             };
             c.fill(r, bg);
             c.stroke(r, 1, if active { t.ink } else { t.rule });
+            if k == Key::Shift && keyboard.shift_lock {
+                // Locked: a bar under the label (one-shot has none).
+                c.fill(
+                    Rect::new(
+                        r.x + r.w / 4,
+                        r.y + r.h - self.px(10.0),
+                        r.w / 2,
+                        self.px(3.0),
+                    ),
+                    fg,
+                );
+            }
+            if let Key::Arrow(d) = k {
+                // Atkinson has no arrow glyphs: draw a 1.75-stroke arrow.
+                draw_arrow(c, r, d, self.s, fg);
+                continue;
+            }
             let label = keyboard.label(k);
             let (face, size) = if matches!(k, Key::Char(_)) {
                 (Face::Atkinson, ks * 1.15)
@@ -504,6 +561,37 @@ impl EditorScreen {
                 fg,
             );
         }
+    }
+}
+
+fn draw_arrow(c: &mut Canvas, r: Rect, d: sigma_core::keyboard::Dir, s: Scale, ink: u8) {
+    use sigma_core::keyboard::Dir;
+    let (cx, cy) = (r.x + r.w / 2, r.y + r.h / 2);
+    let len = s.px(10.0);
+    let head = s.px(6.0);
+    let st = s.px(1.75).max(2);
+    // Points along the shaft and the two head strokes, in arrow space
+    // (pointing +x), rotated per direction.
+    let rot = |x: i32, y: i32| match d {
+        Dir::Right => (cx + x, cy + y),
+        Dir::Left => (cx - x, cy + y),
+        Dir::Down => (cx + y, cy + x),
+        Dir::Up => (cx + y, cy - x),
+    };
+    let mut dot = |x: i32, y: i32| {
+        for a in 0..st {
+            for b in 0..st {
+                let (px, py) = rot(x, y);
+                c.blend(px + a - st / 2, py + b - st / 2, ink, 255);
+            }
+        }
+    };
+    for x in -len..=len {
+        dot(x, 0);
+    }
+    for k in 0..=head {
+        dot(len - k, k);
+        dot(len - k, -k);
     }
 }
 
@@ -554,12 +642,60 @@ mod tests {
         let k = Keyboard::default();
         let l = e.layout(true, &k);
         assert!(l.page.h > 900, "page height {}", l.page.h);
-        assert_eq!(l.keys.len(), 10 + 9 + 9 + 5);
+        assert_eq!(l.keys.len(), 10 + 9 + 9 + 6);
         for (r, _) in &l.keys {
             assert!(r.w >= 50 && r.h >= 50, "target {r:?} under 44 brief px");
             assert!(r.x >= 0 && r.x + r.w <= W as i32 && r.y + r.h <= H as i32);
         }
         assert!(l.keys_button.w >= 50 && l.keys_button.h >= 50);
+    }
+
+    #[test]
+    fn full_layout_fits_portrait_with_big_keys_and_usable_page() {
+        let e = EditorScreen::new(W, H);
+        let k = Keyboard::with_layout(sigma_core::keyboard::Layout::Full);
+        let l = e.layout(true, &k);
+        assert_eq!(l.keys.len(), 15 + 15 + 14 + 14 + 9);
+        let narrowest = l.keys.iter().map(|(r, _)| r.w).min().unwrap();
+        assert!(narrowest >= 80, "1-unit key {narrowest}px");
+        for (r, _) in &l.keys {
+            assert!(
+                r.h >= 60 && r.x >= 0 && r.x + r.w <= W as i32 && r.y + r.h <= H as i32,
+                "{r:?}"
+            );
+        }
+        // No overlaps, and ↑ sits above ↓.
+        for (i, (a, _)) in l.keys.iter().enumerate() {
+            for (b, _) in &l.keys[i + 1..] {
+                assert!(
+                    a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y,
+                    "{a:?} {b:?}"
+                );
+            }
+        }
+        let find = |d| {
+            l.keys
+                .iter()
+                .find(|(_, key)| *key == Key::Arrow(d))
+                .unwrap()
+                .0
+        };
+        use sigma_core::keyboard::Dir;
+        assert_eq!(find(Dir::Up).x, find(Dir::Down).x);
+        assert!(l.keyboard.h <= H as i32 / 4, "keyboard {}px", l.keyboard.h);
+        assert!(l.page.h >= 1300, "page {}px", l.page.h);
+        let c = e.layout(true, &Keyboard::default());
+        let none = e.layout(false, &k);
+        println!(
+            "METRICS full kb {} page {} key {}x{} | compact kb {} page {} key {}x{} | hidden page {}",
+            l.keyboard.h, l.page.h, narrowest, l.keys[0].0.h,
+            c.keyboard.h, c.page.h, c.keys[0].0.w, c.keys[0].0.h, none.page.h
+        );
+        let (b, s) = (Buffer::new(""), SaveState::Saved);
+        let m = model(&b, &k, &s);
+        for (r, key) in &l.keys {
+            assert_eq!(e.hit(&m, r.x + r.w / 2, r.y + r.h / 2), Hit::Key(*key));
+        }
     }
 
     #[test]

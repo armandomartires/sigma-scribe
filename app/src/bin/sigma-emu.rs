@@ -4,7 +4,7 @@
 //! Script steps, one per line (`#` comments):
 //!   tap X Y | key LABEL | type TEXT | hw TEXT | page fwd|back
 //!   shot NAME | expect TEXT | expect-status WORD | tap-on CONTROL | esc
-//!   clear-field | expect-file PATH | expect-no-file PATH | expect-open PATH
+//!   expect-not TEXT | expect-selection TEXT | clear-field | expect-file PATH | expect-no-file PATH | expect-open PATH
 
 use sigma_device::desktop::DesktopDevice;
 use sigma_device::{Device, Event, HwKey};
@@ -148,6 +148,16 @@ fn main() -> ExitCode {
             "expect" => {
                 if !app.buffer.text().contains(arg) {
                     return fail("text not in note".into());
+                }
+            }
+            "expect-not" => {
+                if app.buffer.text().contains(arg) {
+                    return fail("text still in note".into());
+                }
+            }
+            "expect-selection" => {
+                if app.buffer.selected_text() != Some(arg) {
+                    return fail(format!("selection is {:?}", app.buffer.selected_text()));
                 }
             }
             "expect-status" => {

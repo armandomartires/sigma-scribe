@@ -1,0 +1,49 @@
+# v0.2.1 Full keyboard: layout switch, modifiers, Ctrl shortcuts, selection.
+key Full
+shot v0.2.1-full
+type Hello world
+expect Hello world
+# Shift + Ctrl + Left selects the previous word.
+key Shift
+key Ctrl
+key ←
+expect-selection world
+shot v0.2.1-selection
+key Ctrl
+key x
+expect-not Hello world
+key Ctrl
+key v
+key Ctrl
+key v
+expect Hello worldworld
+key Ctrl
+key z
+expect-not worldworld
+expect Hello world
+key Ctrl
+key y
+expect Hello worldworld
+# Ctrl+Left word jump, Home/End, Del.
+key Ctrl
+key ←
+key End
+key Back
+expect Hello worldworl
+# Shift: one-shot, second tap locks, third releases; Caps toggles letters.
+key Shift
+key Shift
+shot v0.2.1-shift-lock
+key Shift
+key Caps
+key A
+key 1
+key Caps
+expect worldworlA1
+key Ctrl
+shot v0.2.1-ctrl
+key Ctrl
+expect-status saved
+key Compact
+shot v0.2.1-compact
+key Full

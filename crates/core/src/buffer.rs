@@ -24,6 +24,23 @@ pub struct Buffer {
     /// Selection anchor; the selection is `anchor..caret` (either order).
     anchor: Option<usize>,
     revision: u64,
+    /// Undo snapshots (text, caret), oldest first; capped at [`UNDO_LIMIT`].
+    undo: Vec<(String, usize)>,
+    redo: Vec<(String, usize)>,
+    /// Kind of the last edit, for coalescing typing into word-sized steps.
+    last: Edit,
+}
+
+/// Undo steps kept per open note.
+pub const UNDO_LIMIT: usize = 200;
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+enum Edit {
+    /// Next edit starts a new undo step.
+    #[default]
+    Break,
+    Typing,
+    Deleting,
 }
 
 impl Buffer {
@@ -35,6 +52,9 @@ impl Buffer {
             text,
             anchor: None,
             revision: 0,
+            undo: Vec::new(),
+            redo: Vec::new(),
+            last: Edit::Break,
         }
     }
 
@@ -64,6 +84,108 @@ impl Buffer {
     pub fn set_caret(&mut self, at: usize) {
         self.caret = self.floor(at.min(self.text.len()));
         self.anchor = None;
+        self.last = Edit::Break;
+    }
+
+    /// Moves the caret; with `extend` the selection grows from the anchor.
+    pub fn move_to(&mut self, at: usize, extend: bool) {
+        if extend {
+            let anchor = self.anchor.unwrap_or(self.caret);
+            self.select(anchor, at);
+        } else {
+            self.set_caret(at);
+        }
+        self.last = Edit::Break;
+    }
+
+    pub fn select_all(&mut self) {
+        self.select(0, self.text.len());
+    }
+
+    #[must_use]
+    pub fn selected_text(&self) -> Option<&str> {
+        self.selection().map(|(a, b)| &self.text[a..b])
+    }
+
+    /// Start of the previous word (Ctrl+Left).
+    #[must_use]
+    pub fn word_left(&self, at: usize) -> usize {
+        let before = &self.text[..at];
+        let trimmed = before.trim_end_matches(|c: char| !c.is_alphanumeric());
+        trimmed
+            .char_indices()
+            .rev()
+            .find(|(_, c)| !c.is_alphanumeric())
+            .map_or(0, |(i, c)| i + c.len_utf8())
+    }
+
+    /// End of the next word (Ctrl+Right).
+    #[must_use]
+    pub fn word_right(&self, at: usize) -> usize {
+        let after = &self.text[at..];
+        let skip = after.len()
+            - after
+                .trim_start_matches(|c: char| !c.is_alphanumeric())
+                .len();
+        let rest = &after[skip..];
+        at + skip
+            + rest
+                .find(|c: char| !c.is_alphanumeric())
+                .unwrap_or(rest.len())
+    }
+
+    /// Previous char boundary (for Shift+Left).
+    #[must_use]
+    pub fn prev_pos(&self, at: usize) -> usize {
+        self.prev_boundary(at)
+    }
+
+    #[must_use]
+    pub fn next_pos(&self, at: usize) -> usize {
+        self.next_boundary(at)
+    }
+
+    fn record(&mut self, kind: Edit) {
+        self.redo.clear();
+        if kind == Edit::Break || kind != self.last {
+            self.undo.push((self.text.clone(), self.caret));
+            if self.undo.len() > UNDO_LIMIT {
+                self.undo.remove(0);
+            }
+        }
+        self.last = kind;
+    }
+
+    #[must_use]
+    pub fn can_undo(&self) -> bool {
+        !self.undo.is_empty()
+    }
+
+    /// Restores the text before the last step. Returns false if none.
+    pub fn undo(&mut self) -> bool {
+        let Some((t, c)) = self.undo.pop() else {
+            return false;
+        };
+        self.redo
+            .push((std::mem::replace(&mut self.text, t), self.caret));
+        self.caret = self.floor(c.min(self.text.len()));
+        self.anchor = None;
+        self.revision += 1;
+        self.last = Edit::Break;
+        true
+    }
+
+    pub fn redo(&mut self) -> bool {
+        let Some((t, c)) = self.redo.pop() else {
+            return false;
+        };
+        self.undo
+            .push((std::mem::replace(&mut self.text, t), self.caret));
+        self.caret = self.floor(c.min(self.text.len()));
+        self.anchor = None;
+        self.revision += 1;
+        self.last = Edit::Break;
+        true
     }
 
     pub fn select(&mut self, anchor: usize, caret: usize) {
@@ -107,6 +229,15 @@ impl Buffer {
 
     /// Types text at the caret, replacing any selection.
     pub fn insert(&mut self, s: &str) {
+        if s.is_empty() && self.selection().is_none() {
+            return;
+        }
+        let word_char = s.chars().count() == 1 && s.chars().all(char::is_alphanumeric);
+        self.record(if self.selection().is_some() || !word_char {
+            Edit::Break
+        } else {
+            Edit::Typing
+        });
         self.delete_selection();
         if s.is_empty() {
             return;
@@ -129,7 +260,15 @@ impl Buffer {
 
     /// Deletes the char before the caret (or the selection).
     pub fn backspace(&mut self) {
-        if self.delete_selection() || self.caret == 0 {
+        if self.selection().is_none() && self.caret == 0 {
+            return;
+        }
+        self.record(if self.selection().is_some() {
+            Edit::Break
+        } else {
+            Edit::Deleting
+        });
+        if self.delete_selection() {
             return;
         }
         let start = self.prev_boundary(self.caret);
@@ -140,7 +279,15 @@ impl Buffer {
 
     /// Deletes the char after the caret (or the selection).
     pub fn delete_forward(&mut self) {
-        if self.delete_selection() || self.caret == self.text.len() {
+        if self.selection().is_none() && self.caret == self.text.len() {
+            return;
+        }
+        self.record(if self.selection().is_some() {
+            Edit::Break
+        } else {
+            Edit::Deleting
+        });
+        if self.delete_selection() {
             return;
         }
         let end = self.next_boundary(self.caret);
@@ -154,6 +301,7 @@ impl Buffer {
             None => self.prev_boundary(self.caret),
         };
         self.anchor = None;
+        self.last = Edit::Break;
     }
 
     pub fn right(&mut self) {
@@ -162,6 +310,7 @@ impl Buffer {
             None => self.next_boundary(self.caret),
         };
         self.anchor = None;
+        self.last = Edit::Break;
     }
 
     /// Start of the logical line containing `at`.
@@ -219,6 +368,70 @@ impl Buffer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn undo_groups_words_and_redo_restores() {
+        let mut b = Buffer::new("");
+        for c in "hello world".chars() {
+            b.insert(&c.to_string());
+        }
+        assert!(b.undo()); // "world"
+        assert_eq!(b.text(), "hello ");
+        assert!(b.undo()); // " "
+        assert!(b.undo()); // "hello"
+        assert_eq!(b.text(), "");
+        assert!(!b.undo());
+        assert!(b.redo() && b.redo() && b.redo());
+        assert_eq!(b.text(), "hello world");
+        assert_eq!(b.caret(), 11);
+        b.backspace();
+        b.backspace();
+        b.undo();
+        assert_eq!(b.text(), "hello world", "a run of backspaces is one step");
+        b.undo();
+        b.insert("X");
+        assert!(!b.redo(), "a new edit clears redo");
+    }
+
+    #[test]
+    fn undo_is_capped_and_bumps_revision() {
+        let mut b = Buffer::new("");
+        for _ in 0..UNDO_LIMIT + 50 {
+            b.insert(" ");
+        }
+        let mut n = 0;
+        let r = b.revision();
+        while b.undo() {
+            n += 1;
+        }
+        assert_eq!(n, UNDO_LIMIT);
+        assert!(b.revision() > r);
+    }
+
+    #[test]
+    fn word_jumps_and_selection_extend() {
+        let mut b = Buffer::new("one, two  three");
+        assert_eq!(b.word_left(15), 10);
+        assert_eq!(b.word_left(10), 5);
+        assert_eq!(b.word_left(5), 0);
+        assert_eq!(b.word_right(0), 3);
+        assert_eq!(b.word_right(3), 8);
+        assert_eq!(b.word_right(8), 15);
+        b.set_caret(5);
+        b.move_to(8, true);
+        b.move_to(15, true);
+        assert_eq!(b.selected_text(), Some("two  three"));
+        b.move_to(3, true);
+        assert_eq!(b.selected_text(), Some(", "));
+        b.select_all();
+        assert_eq!(b.selected_text(), Some("one, two  three"));
+        b.insert("x");
+        assert_eq!(b.text(), "x");
+        b.undo();
+        assert_eq!(b.text(), "one, two  three");
+        let u = Buffer::new("é ü");
+        assert_eq!(u.word_left(u.text().len()), 3);
+    }
 
     #[test]
     fn insert_and_backspace() {
