@@ -1,0 +1,11 @@
+target/
+**/*.rs.bk
+*.cobalt-app
+KoboRoot.tgz
+*.tgz
+backups/
+.env
+.DS_Store
+.idea/
+.vscode/
+node_modules/
