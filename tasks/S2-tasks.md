@@ -44,6 +44,6 @@ Estimates are working days. Branch `feat/v0.2-library`. Desktop/emulator status 
 - **Deps:** S2-T03…T07  **Estimate:** 0.5 d
 
 ### S2-T09 — On-device v0.2 checklist
-- **Status:** ⏸ TODO — needs the user to approve installing 0.2.0 on the Forma.
+- **Status:** ✅ PASS on Forma 2026-10-21 (user report). Tagged `v0.2.0`.
 - **Acceptance:** v0.1 note still there and opens on launch; create nested folder, move a note into it, rename from the title bar and from More, armed delete; last note cannot be deleted; reboot restores the last note; all files visible as `.md`/`.txt` on the USB mount under `sigma-scribe/notes`; names with spaces survive vfat.
 - **Deps:** S2-T08  **Estimate:** 0.5 d

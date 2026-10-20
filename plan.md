@@ -1,6 +1,6 @@
 # Plan — Sigma Scribe: a Markdown notebook on the Kobo Forma
 
-**Status:** ✅ APPROVED 2026-10-20 · **Platform: Plan B — native Rust + FBInk + NickelMenu** (decided 2026-10-20 22:14 CEST; Cobalt dropped) · **v0.1.0 passed on the Forma** (2026-10-20, tag `v0.1.0`) · v0.2.0 (library) built, awaiting on-device check.
+**Status:** ✅ APPROVED 2026-10-20 · **Platform: Plan B — native Rust + FBInk + NickelMenu** (decided 2026-10-20 22:14 CEST; Cobalt dropped) · **v0.1.0 passed on the Forma** (2026-10-20, tag `v0.1.0`) · **v0.2.0 passed on the Forma** (2026-10-21, tag `v0.2.0`).
 **Licence:** AGPL-3.0-only (`LICENSE`) · **Author:** Sigma Recon · **Repo:** `sigma-scribe`
 **Inputs:** `design-brief.md` (behaviour), `mockup/kobo-writing-mock.html` (look).
 
@@ -83,7 +83,7 @@ GitHub Releases of `sigma-scribe` (AGPL-3.0, Sigma Recon): `sigma-scribe-<ver>-k
 |---|---|---|---|
 | S0 | Foundations & Forma bring-up | — | ✅ backup, toolchain, FBInk/NickelMenu, install, device check (pass) |
 | S1 | Editor core | **v0.1.0** ✅ | editor, OSK, autosave to .md, title/status bars, page keys, tap-to-place caret — passed on device |
-| S2 | Library | **v0.2.0** 🟡 | Files sheet, folders, new/rename/move/delete (armed), title-bar rename, seed, last-opened — built; device check pending |
+| S2 | Library | **v0.2.0** ✅ | Files sheet, folders, new/rename/move/delete (armed), title-bar rename, seed, last-opened — passed on device |
 | S3 | Markdown preview | v0.3.0 | parser + renderer, eye/pencil |
 | S4 | Options & Line mode | v0.4.0 | Day/Night, faces, steppers, Line mode, rotation + landscape keyboards |
 | S5 | Drawer | v0.5.0 | Contents, To-dos, Scratch |
