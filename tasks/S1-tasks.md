@@ -1,6 +1,6 @@
 # S1 tasks — Editor core (v0.1.0)
 
-Estimates are working days. Updated 2026-10-20 21:5x CEST.
+Estimates are working days. Updated 2026-10-20 22:4x CEST — re-implemented on Plan B (FBInk / own renderer).
 
 ### S1-T01 — Text buffer with caret/selection
 - **Status:** ✅ DONE (`crates/core/src/buffer.rs`)
@@ -13,12 +13,12 @@ Estimates are working days. Updated 2026-10-20 21:5x CEST.
 - **Deps:** S1-T01  **Estimate:** 1 d
 
 ### S1-T03 — Page render (title bar, page, status bar)
-- **Status:** ✅ DONE for Cobalt grid (`crates/ui`). Fonts/tokens ✗ not possible on Cobalt (see s0-findings).
-- **Acceptance:** title bar shows file name; page is a measured grid with block caret that stays in view while typing (test with 200 lines); status shows `N words · line L · Paper · saved|saving|not saved: reason`; screen validates with no layout errors at `FORMA_METRICS`.
+- **Status:** ✅ DONE (`crates/render/src/editor.rs`) — Literata 20 px×1.139, leading 1.5, margin 28 px×1.139, brief day tokens, 1 px rules; caret 2 px ink bar.
+- **Acceptance:** fits 1440×1920; caret row kept in view; status `N words · line L   Paper · saved [Keys]`; tests in sigma-render.
 - **Deps:** S1-T02  **Estimate:** 1 d
 
 ### S1-T04 — Portrait on-screen keyboard
-- **Status:** ✅ DONE (`crates/core/src/keyboard.rs`, rendered with `grid`)
+- **Status:** ✅ DONE (`crates/core/src/keyboard.rs`, drawn by sigma-render; 33 keys ≥50 px, all hit-tested)
 - **Acceptance:** rows exactly `q…p / a…l / Shift z…m Back / 123 Tab Del Space Return`; `123`↔`ABC` symbol layer `1–0 / # * - [ ] ( ) \` / / . , ! ? : | ~ >`; Shift is one-shot and outlined while armed; Del = delete forward, Shift+Del = backspace; Tab inserts 4 spaces (default); keys addressed positionally (`kb.rRcC`), positions stable across Shift/layer. 6 core + 1 ui tests; drive script types via the keys.
 - **Deps:** S1-T01  **Estimate:** 1.5 d
 
@@ -27,25 +27,28 @@ Estimates are working days. Updated 2026-10-20 21:5x CEST.
 - **Deps:** S1-T04  **Estimate:** 0.25 d
 
 ### S1-T06 — Autosave
-- **Status:** ✅ DONE — core `Autosave` + `FsNoteStore` (atomic tmp→fsync→rename→dir fsync, path-escape refused) + Cobalt `store()` adapter in app (one write in flight, re-saves keys typed meanwhile, saves on background, `can_suspend` false while dirty).
-- **Acceptance:** status reaches `saved` after typing; text survives simulator restart (verified); failure shows `not saved: reason` and retries on next edit (unit test).
+- **Status:** ✅ DONE — core `Autosave` + `FsNoteStore` (atomic tmp→fsync→rename→dir fsync, path-escape refused) writing `field-notes.md` to `/mnt/onboard/sigma-scribe/notes` on the Kobo (`target/emu-notes` on desktop); seed written on first run; saved on every edit and on power.
+- **Acceptance:** status reaches `saved` after typing; text survives app restart (emulator test); failure shows `not saved: reason` and retries on next edit (unit test).
 - **Open:** on-device power-cut test (S1-T10).
 - **Deps:** S1-T01  **Estimate:** 1 d
 
 ### S1-T07 — Page-turn buttons scroll
-- **Status:** 🟡 CODED — `on_page_turn` moves caret one screen of visual rows; needs device check.
+- **Status:** ✅ DESKTOP (PageUp/PageDown, test) · device: evdev 193 back / 194 forward, check on Forma.
 - **Deps:** S1-T03  **Estimate:** 0.25 d
 
 ### S1-T08 — Seed content
 - **Status:** 🟡 PARTIAL — `field-notes.md` seeded on first run; `drafts/chapter-01.md`, `scratch.txt`, `.scratchpad.md` arrive with the library in S2.
 - **Deps:** S1-T06  **Estimate:** 0.25 d
 
-### S1-T09 — Caret placement by tap / arrows
-- **Status:** 🟡 STOPGAP — ← → ↑ ↓ control row (not in the brief) because Cobalt's terminal grid has no tap hit-test. Revisit after the platform decision.
+### S1-T09 — Tap-to-place caret
+- **Status:** ✅ DONE — tap on the page places the caret at the measured position (test); hardware-keyboard arrows also move it. The Cobalt-era arrow row is gone.
 - **Deps:** S1-T03  **Estimate:** 0.5 d
 
+### S1-T12 — Hardware keyboard input path
+- **Status:** ✅ DESKTOP — `HwKey` events (chars, Backspace, Delete, Return, Tab, arrows) from the window; same path for USB-OTG in S8.
+
 ### S1-T10 — On-device v0.1 checklist
-- **Status:** ⏸ BLOCKED on S0-T06…T09 (device).
+- **Status:** ⏸ after S0-T09 install (docs/install-plan-forma.md §5).
 - **Acceptance:** sprint file checklist: 500 words via OSK without missed keys; caret survives scroll; kill app mid-typing keeps last save; reboot restores note; page keys scroll; keystroke-to-ink measured.
 - **Deps:** S0-T09  **Estimate:** 0.5 d
 

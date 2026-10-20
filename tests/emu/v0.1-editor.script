@@ -1,0 +1,17 @@
+# v0.1 editor + on-screen keyboard (headless emulator, 1440x1920).
+expect-status saved
+shot v0.1-start
+key Return
+type Hello from the Forma
+expect Hello from the Forma
+expect-status saved
+shot v0.1-typed
+key 123
+shot v0.1-symbols
+key 1
+key ABC
+expect Forma1
+tap 1310 1370
+shot v0.1-keys-hidden
+hw  (typed on a hardware keyboard)
+expect hardware keyboard

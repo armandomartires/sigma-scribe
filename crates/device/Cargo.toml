@@ -1,0 +1,21 @@
+[package]
+name = "sigma-device"
+description = "Device layer for Sigma Scribe: trait, desktop PNG emulator, Kobo FBInk + evdev backend."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+build = "build.rs"
+
+[dependencies]
+sigma-render = { path = "../render" }
+png.workspace = true
+
+[build-dependencies]
+cc = "1"
+
+# FFI to FBInk needs `unsafe`; it is confined to src/fbink.rs.
+[lints.rust]
+unsafe_code = "deny"

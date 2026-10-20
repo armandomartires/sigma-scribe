@@ -1,24 +1,19 @@
-# Publishing to the Cobalt Store
+# Distribution (replaces Cobalt Store publishing)
 
-Sources: [CONTRIBUTING_APPS.md](https://github.com/BandarLabs/Cobalt/blob/main/docs/CONTRIBUTING_APPS.md), [APP_STORE.md](https://github.com/BandarLabs/Cobalt/blob/main/docs/APP_STORE.md), [DEVICES.md](https://github.com/BandarLabs/Cobalt/blob/main/docs/DEVICES.md), repo licence: AGPL-3.0 ([LICENSE](https://github.com/BandarLabs/Cobalt)). Read 2026-10-20.
+The Cobalt Store no longer applies (Plan B, 2026-10-20). Proposed distribution:
 
-## How it works
-- Store apps live **inside the Cobalt monorepo** at `apps/<app-id>/` (copied from `templates/app/`). Cargo package must be `kobo-<app-id>`; runtime id passed to `kobo_sdk::run` = `<app-id>` → `sigma-scribe`.
-- The only metadata is `apps/sigma-scribe/cobalt-app.json`: `id, display_name, short_label, summary, version, release_notes, glyph, capabilities` (+ optional `setup.steps`, `minimum_cobalt_version` floor).
-- Local check: `node tools/app-contribute.mjs --manifest apps/sigma-scribe/cobalt-app.json --dry-run` → validates, fmt/tests/strict clippy, static ARMv7 hard-float build, test-signed package + catalog, generates `docs/apps/sigma-scribe/` page (commit those outputs).
-- Open a PR with the app template **against `beta`**. Human review covers product policy: purpose, **licensing**, capabilities, setup requirements, public/demo evidence (README + `screenshots/`).
-- After merge, CI builds and **signs** (Ed25519, project key; contributors never sign) and publishes to the Beta catalog. Maintainers then promote tested Beta to Stable with a human approval.
-- Updates: bump to a strictly newer version with real release notes ("Bug fixes" is rejected).
+## GitHub Releases (primary)
+- Repo `sigma-scribe` (AGPL-3.0, author **Sigma Recon**). Tag `vX.Y.Z` per roadmap version.
+- Assets: `sigma-scribe-X.Y.Z-kobo.tar.gz` (the `.adds/` tree: binary, `launch.sh`, `touch.conf`, NickelMenu entry, `LICENSE`, OFL texts), `.sha256`, and the source archive (AGPL: source for the exact binary). Release notes = user-visible changes.
+- Built by CI (`.github/workflows/ci.yml` → later a `release.yml` on tags) so the binary is reproducible from the tagged source; FBInk version pinned.
+- Install instructions: (1) install NickelMenu from its own release, (2) unpack our tarball onto the Kobo drive root, (3) eject. Uninstall = delete two paths.
+- Public screenshots allowed (decision 2026-10-20): use `docs/screenshots/` and on-device photos.
 
-## Implications for us
-- Our repo `sigma-scribe` stays the dev home; for each Store release we sync the app crate into a fork of BandarLabs/Cobalt `apps/sigma-scribe/` and open a PR. Keep `core` dependency-light so it vendors cleanly.
-- Version cadence v0.1 → v1.0 maps to Store versions; each needs release notes.
-- Forma is not in the support matrix; consider contributing a Forma device row (probe + attended evidence) in S0/S7.
-- Capabilities: offline app; USB-OTG keyboard (raw `/dev/input`) may need a new capability or may not be allowed — raise with maintainers early (S8 risk).
+## MobileRead (announcement & support)
+- Thread in *Kobo Developer's Corner* linking the GitHub release, listing tested model/firmware (Forma 4.38.23697), NickelMenu requirement and the uninstall steps. Posting needs Armando's approval.
 
-## Decisions
-1. ✅ **Licence: AGPL-3.0** (resolved 2026-10-20) — same as the Cobalt monorepo; full text in `LICENSE`. Fonts Literata + Atkinson Hyperlegible are SIL OFL — ship their licence texts alongside.
-2. ✅ **Author: Sigma Recon** (resolved 2026-10-20) — shown in Help → App info and on the Store page.
-3. ✅ **Public screenshots/demo: allowed** (resolved 2026-10-20) — README + `screenshots/` for the Store listing.
-4. Open: display name / short label / summary / glyph (decide in S9).
-5. Forma device report (DEVICES.md row / issue): drafted in S0-T11, finalised in S9-T06 — **never posted without user approval**.
+## Licences
+- Our code: AGPL-3.0-only. FBInk (statically linked): GPL-3.0-or-later — compatible, combined work distributed under AGPL-3.0 with FBInk's notice. Fonts: SIL OFL 1.1 (texts shipped). NickelMenu is not bundled (users fetch it; MIT).
+
+## Still open
+- Display name (“Sigma Scribe”) and release cadence; whether to also offer a one-file `KoboRoot.tgz` that unpacks into `/mnt/onboard/.adds` (works, but `.adds` copy is simpler and safer).

@@ -1,6 +1,6 @@
 [package]
-name = "sigma-ui"
-description = "Sigma Scribe screens (Cobalt ScreenBuilder layer)."
+name = "sigma-render"
+description = "Software renderer and screens for Sigma Scribe (8-bit greyscale canvas, Literata/Atkinson)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,8 +10,7 @@ publish = false
 
 [dependencies]
 sigma-core = { path = "../core" }
-kobo-sdk.workspace = true
-kobo-ui.workspace = true
+fontdue.workspace = true
 
 [lints]
 workspace = true

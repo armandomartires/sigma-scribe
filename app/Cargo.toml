@@ -1,5 +1,5 @@
 [package]
-name = "kobo-sigma-scribe"
+name = "sigma-scribe"
 description = "Sigma Scribe: a Markdown notebook for the Kobo Forma."
 version.workspace = true
 edition.workspace = true
@@ -12,10 +12,17 @@ publish = false
 name = "sigma-scribe"
 path = "src/main.rs"
 
+[[bin]]
+name = "sigma-emu"
+path = "src/bin/sigma-emu.rs"
+
 [dependencies]
 sigma-core = { path = "../crates/core" }
-sigma-ui = { path = "../crates/ui" }
-kobo-sdk.workspace = true
+sigma-render = { path = "../crates/render" }
+sigma-device = { path = "../crates/device" }
+
+[target.'cfg(not(target_arch = "arm"))'.dependencies]
+minifb = { version = "0.27", default-features = false, features = ["x11"] }
 
 [lints]
 workspace = true

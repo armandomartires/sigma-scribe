@@ -1,43 +1,15 @@
-# S9 tasks — Release & Store
+# S9 tasks — Release
 
-Estimates are working days. Status: all TODO.
-
-### S9-T01 — Final regression on Forma
-- **Description:** Final regression on Forma.
-- **Acceptance:** works as specified in design-brief.md and the sprint DoD; covered by a test or on-device checklist item.
-- **Deps:** S8 done
-- **Estimate:** 1 d
-
-### S9-T02 — cobalt-app.json, README + screenshots for Store
-- **Description:** cobalt-app.json, README + screenshots for Store.
-- **Acceptance:** works as specified in design-brief.md and the sprint DoD; covered by a test or on-device checklist item.
-- **Deps:** S9-T01
-- **Estimate:** 1 d
-
-### S9-T03 — `node tools/app-contribute.mjs --dry-run` clean
-- **Description:** `node tools/app-contribute.mjs --dry-run` clean.
-- **Acceptance:** works as specified in design-brief.md and the sprint DoD; covered by a test or on-device checklist item.
-- **Deps:** S9-T02
-- **Estimate:** 0.5–1 d
-
-### S9-T04 — PR to BandarLabs/Cobalt `beta`; beta smoke; stable promotion
-- **Description:** PR to BandarLabs/Cobalt `beta`; beta smoke; stable promotion.
-- **Acceptance:** works as specified in design-brief.md and the sprint DoD; covered by a test or on-device checklist item.
-- **Deps:** S9-T03
-- **Estimate:** 0.5–1 d
-
-### S9-T05 — Install/rollback docs final
-- **Description:** Install/rollback docs final.
-- **Acceptance:** works as specified in design-brief.md and the sprint DoD; covered by a test or on-device checklist item.
-- **Deps:** S9-T04
-- **Estimate:** 0.5–1 d
-
-### S9-T06 — Finalise Forma device report (post only with approval)
-- **Description:** Update `docs/cobalt-forma-device-report.md` with full-app evidence (suspend/resume, rotation, long sessions). Prepare the issue text / DEVICES.md PR row.
-- **Acceptance:** final draft reviewed; **posted to BandarLabs/Cobalt only after explicit user approval**.
-- **Deps:** S0-T11, S9-T01  **Estimate:** 0.25 d
-
-### S9-T07 — Store listing metadata
-- **Description:** `cobalt-app.json` + Store README: licence AGPL-3.0, author Sigma Recon, public screenshots from the Forma (allowed), display name/summary/glyph.
-- **Acceptance:** dry-run passes; listing reviewed by user.
-- **Deps:** S9-T02  **Estimate:** 0.25 d
+### S9-T01 — Final regression on the Forma
+- **Acceptance:** all sprint checklists pass on fw 4.38.23697.  **Estimate:** 1 d
+### S9-T02 — Release workflow
+- **Description:** `.github/workflows/release.yml` on tags: build FBInk (pinned), ARM binary, `package-kobo.sh`, upload tarball + sha256.
+- **Acceptance:** tagged build reproduces the local package hashes.  **Deps:** S9-T01  **Estimate:** 1 d
+### S9-T03 — Docs & screenshots
+- **Acceptance:** README install/uninstall, licences (AGPL-3.0, FBInk GPL-3.0+, OFL), author Sigma Recon, screenshots.  **Estimate:** 0.5 d
+### S9-T04 — GitHub Release v1.0.0
+- **Acceptance:** release published by Armando (needs `gh auth login` + approval).  **Deps:** S9-T02  **Estimate:** 0.25 d
+### S9-T05 — MobileRead announcement draft
+- **Acceptance:** draft reviewed; **posted only with explicit approval**.  **Estimate:** 0.25 d
+### S9-T06 — Forma device notes (optional)
+- **Acceptance:** touch transform / waveform notes for other Forma devs; posted only with approval.  **Estimate:** 0.25 d

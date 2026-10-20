@@ -14,6 +14,7 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
@@ -26,11 +27,17 @@ jobs:
         with:
           targets: armv7-unknown-linux-musleabihf
       - uses: Swatinem/rust-cache@v2
-      - run: sudo apt-get update && sudo apt-get install -y gcc-arm-linux-gnueabihf
+      - name: ARM musl toolchain
+        run: |
+          mkdir -p ~/.local/toolchains && cd ~/.local/toolchains
+          curl -fsSL https://musl.cc/armv7l-linux-musleabihf-cross.tgz | tar xz
+      - name: FBInk (pinned)
+        run: |
+          git clone --recursive https://github.com/NiLuJe/FBInk ~/src/FBInk
+          cd ~/src/FBInk && git checkout 886f25f1 && git submodule update --init --recursive
+          PATH=$HOME/.local/toolchains/armv7l-linux-musleabihf-cross/bin:$PATH make staticlib MINIMAL=true IMAGE=true KOBO=true CROSS_TC=armv7l-linux-musleabihf
       - name: Build static ARMv7 binary
-        env:
-          CC_armv7_unknown_linux_musleabihf: arm-linux-gnueabihf-gcc
-        run: cargo build --release --target armv7-unknown-linux-musleabihf -p kobo-sigma-scribe
+        run: ./scripts/build-armv7.sh
       - run: file target/armv7-unknown-linux-musleabihf/release/sigma-scribe | grep -q "statically linked"
       - uses: actions/upload-artifact@v4
         with:

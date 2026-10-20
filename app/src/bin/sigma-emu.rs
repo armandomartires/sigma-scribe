@@ -1,0 +1,143 @@
+//! Headless emulator: runs a script against a 1440×1920 (or `--size WxH`)
+//! in-memory panel and writes PNG screenshots. Used by tests and docs.
+//!
+//! Script steps, one per line (`#` comments):
+//!   tap X Y | key LABEL | type TEXT | hw TEXT | page fwd|back
+//!   shot NAME | expect TEXT | expect-status WORD | keys
+
+use sigma_core::FsNoteStore;
+use sigma_device::desktop::DesktopDevice;
+use sigma_device::{Device, Event, HwKey};
+use sigma_scribe::App;
+use std::path::PathBuf;
+use std::process::ExitCode;
+
+fn main() -> ExitCode {
+    let mut args = std::env::args().skip(1);
+    let (mut script, mut shots, mut notes, mut size) = (
+        None,
+        PathBuf::from("target/shots"),
+        None,
+        (1440u32, 1920u32),
+    );
+    while let Some(a) = args.next() {
+        match a.as_str() {
+            "--script" => script = args.next(),
+            "--shots" => shots = args.next().unwrap_or_default().into(),
+            "--notes" => notes = args.next().map(PathBuf::from),
+            "--size" => {
+                let s = args.next().unwrap_or_default();
+                let (w, h) = s.split_once('x').unwrap_or(("1440", "1920"));
+                size = (w.parse().unwrap_or(1440), h.parse().unwrap_or(1920));
+            }
+            _ => {
+                eprintln!(
+                    "usage: sigma-emu --script FILE [--shots DIR] [--notes DIR] [--size WxH]"
+                );
+                return ExitCode::from(2);
+            }
+        }
+    }
+    let Some(script) = script else {
+        eprintln!("sigma-emu: --script is required");
+        return ExitCode::from(2);
+    };
+    let text = match std::fs::read_to_string(&script) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("sigma-emu: {script}: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let notes = notes.unwrap_or_else(sigma_scribe::notes_dir);
+    let _ = std::fs::create_dir_all(&shots);
+    let mut dev = DesktopDevice::new(size.0, size.1);
+    let mut app = App::new(size.0, size.1, FsNoteStore::new(notes));
+    if let Err(e) = app.render(&mut dev, sigma_device::Refresh::Full) {
+        eprintln!("sigma-emu: {e}");
+        return ExitCode::FAILURE;
+    }
+    for (n, line) in text.lines().enumerate() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let (cmd, arg) = line.split_once(' ').unwrap_or((line, ""));
+        let fail = |why: String| {
+            eprintln!("sigma-emu: line {}: {line}: {why}", n + 1);
+            ExitCode::FAILURE
+        };
+        let mut events = Vec::new();
+        match cmd {
+            "tap" => {
+                let v: Vec<i32> = arg
+                    .split_whitespace()
+                    .filter_map(|x| x.parse().ok())
+                    .collect();
+                if v.len() != 2 {
+                    return fail("expected X Y".into());
+                }
+                events.push(Event::Tap { x: v[0], y: v[1] });
+            }
+            "key" => match app.key_centre(arg) {
+                Some((x, y)) => events.push(Event::Tap { x, y }),
+                None => return fail(format!("no key labelled {arg:?}")),
+            },
+            "type" => {
+                for ch in arg.chars() {
+                    let label = if ch == ' ' {
+                        "Space".to_owned()
+                    } else {
+                        ch.to_string()
+                    };
+                    let upper = ch.is_ascii_uppercase();
+                    if upper {
+                        let (x, y) = app.key_centre("Shift").unwrap_or_default();
+                        step(&mut app, &mut dev, Event::Tap { x, y });
+                    }
+                    let want = if upper { ch.to_string() } else { label };
+                    match app.key_centre(&want) {
+                        Some((x, y)) => step(&mut app, &mut dev, Event::Tap { x, y }),
+                        None => return fail(format!("no key for {ch:?} on this layer")),
+                    }
+                }
+            }
+            "hw" => events.extend(arg.chars().map(|c| Event::Key(HwKey::Char(c)))),
+            "page" => events.push(Event::PageTurn {
+                forward: arg != "back",
+            }),
+            "shot" => {
+                if let Err(e) = dev.shot(&shots.join(format!("{arg}.png"))) {
+                    return fail(e.to_string());
+                }
+                println!("shot {}", shots.join(format!("{arg}.png")).display());
+            }
+            "expect" => {
+                if !app.buffer.text().contains(arg) {
+                    return fail("text not in note".into());
+                }
+            }
+            "expect-status" => {
+                if app.autosave.state.label() != arg {
+                    return fail(format!("status is {:?}", app.autosave.state.label()));
+                }
+            }
+            _ => return fail("unknown step".into()),
+        }
+        for e in events {
+            step(&mut app, &mut dev, e);
+        }
+    }
+    let (w, h) = dev.size();
+    println!(
+        "sigma-emu: every step passed ({w}x{h}, {} refreshes)",
+        dev.refreshes.len()
+    );
+    ExitCode::SUCCESS
+}
+
+fn step(app: &mut App, dev: &mut DesktopDevice, e: Event) {
+    if let Some(r) = app.handle(e) {
+        let _ = app.render(dev, r);
+    }
+}

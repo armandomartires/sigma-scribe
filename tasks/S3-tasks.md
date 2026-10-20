@@ -8,8 +8,8 @@ Estimates are working days. Status: all TODO.
 - **Deps:** S2 done
 - **Estimate:** 1 d
 
-### S3-T02 — Renderer to Cobalt screens
-- **Description:** Renderer to Cobalt screens.
+### S3-T02 — Renderer on sigma-render (real fonts, bold/italic faces)
+- **Description:** Renderer on sigma-render (real fonts, bold/italic faces).
 - **Acceptance:** works as specified in design-brief.md and the sprint DoD; covered by a test or on-device checklist item.
 - **Deps:** S3-T01
 - **Estimate:** 1 d

@@ -1,0 +1,144 @@
+//! Embedded faces (both SIL OFL 1.1, licences in assets/fonts/) and glyph
+//! drawing. Measurement implements `sigma_core::TextMeasure`, so wrapping
+//! uses real advances ("measure with the real face, not a guess").
+
+use crate::canvas::Canvas;
+use fontdue::{Font, FontSettings};
+use std::cell::RefCell;
+use std::collections::HashMap;
+
+static LITERATA: &[u8] = include_bytes!("../../../assets/fonts/Literata.ttf");
+static ATKINSON: &[u8] = include_bytes!("../../../assets/fonts/AtkinsonHyperlegible-Regular.ttf");
+static ATKINSON_BOLD: &[u8] = include_bytes!("../../../assets/fonts/AtkinsonHyperlegible-Bold.ttf");
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Face {
+    Literata,
+    Atkinson,
+    AtkinsonBold,
+}
+
+type GlyphKey = (Face, char, u32);
+
+pub struct Fonts {
+    faces: [Font; 3],
+    cache: RefCell<HashMap<GlyphKey, (fontdue::Metrics, Vec<u8>)>>,
+}
+
+impl Default for Fonts {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Fonts {
+    /// # Panics
+    /// Only if an embedded font file is corrupt (caught by tests).
+    #[must_use]
+    pub fn new() -> Self {
+        let load =
+            |b: &'static [u8]| Font::from_bytes(b, FontSettings::default()).expect("embedded font");
+        Self {
+            faces: [load(LITERATA), load(ATKINSON), load(ATKINSON_BOLD)],
+            cache: RefCell::default(),
+        }
+    }
+
+    fn font(&self, face: Face) -> &Font {
+        &self.faces[face as usize]
+    }
+
+    /// Advance width of `text` in pixels at `size` px. Tabs are 4 spaces.
+    #[must_use]
+    pub fn width(&self, face: Face, size: f32, text: &str) -> f32 {
+        let f = self.font(face);
+        text.chars()
+            .map(|c| {
+                if c == '\t' {
+                    4.0 * f.metrics(' ', size).advance_width
+                } else {
+                    f.metrics(c, size).advance_width
+                }
+            })
+            .sum()
+    }
+
+    /// Ascent in px for baseline placement.
+    #[must_use]
+    pub fn ascent(&self, face: Face, size: f32) -> f32 {
+        self.font(face)
+            .horizontal_line_metrics(size)
+            .map_or(size * 0.8, |m| m.ascent)
+    }
+
+    /// Draws `text` with its baseline at `y`, starting at `x`. Returns the end x.
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw(
+        &self,
+        c: &mut Canvas,
+        face: Face,
+        size: f32,
+        x: f32,
+        baseline: f32,
+        text: &str,
+        ink: u8,
+    ) -> f32 {
+        let mut pen = x;
+        let key_size = (size * 4.0) as u32;
+        for ch in text.chars() {
+            if ch == '\t' {
+                pen += self.width(face, size, "\t");
+                continue;
+            }
+            let mut cache = self.cache.borrow_mut();
+            let (m, bitmap) = cache
+                .entry((face, ch, key_size))
+                .or_insert_with(|| self.font(face).rasterize(ch, size));
+            let gx = (pen + m.xmin as f32).round() as i32;
+            let gy = (baseline - m.height as f32 - m.ymin as f32).round() as i32;
+            for row in 0..m.height {
+                for col in 0..m.width {
+                    let a = bitmap[row * m.width + col];
+                    c.blend(gx + col as i32, gy + row as i32, ink, a);
+                }
+            }
+            pen += m.advance_width;
+        }
+        pen
+    }
+}
+
+/// A `TextMeasure` for one face and size, in whole pixels.
+pub struct Measure<'a> {
+    pub fonts: &'a Fonts,
+    pub face: Face,
+    pub size: f32,
+}
+
+impl sigma_core::TextMeasure for Measure<'_> {
+    fn width(&self, text: &str) -> u32 {
+        self.fonts.width(self.face, self.size, text).ceil() as u32
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn faces_load_and_measure() {
+        let f = Fonts::new();
+        let w1 = f.width(Face::Literata, 23.0, "m");
+        let w2 = f.width(Face::Literata, 23.0, "i");
+        assert!(w1 > w2, "proportional face: m wider than i");
+        assert!(f.width(Face::Atkinson, 20.0, "Writing") > 40.0);
+    }
+
+    #[test]
+    fn draws_ink() {
+        let f = Fonts::new();
+        let mut c = Canvas::new(100, 40, 255);
+        f.draw(&mut c, Face::Atkinson, 24.0, 2.0, 30.0, "Hi", 0);
+        assert!(c.pixels.iter().any(|&p| p < 50));
+    }
+}

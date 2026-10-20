@@ -6,10 +6,10 @@
 External USB keyboard via powered hub/Y-cable, export path (step 10).
 
 ## Scope
-- evdev reader for `/dev/input/event*` (Cobalt capability or platform code; Plan B native)
+- evdev keyboard reader for `/dev/input/event*` (Forma USB host mode via powered hub)
 - Keymap, modifiers, Ctrl+F etc.
 - USB flag in status bar; in-app powered-hub note
-- Export docs (USB folder; Syncthing via Cobalt Sync optional)
+- Export docs (notes are already .md on USB; Syncthing optional later)
 
 ## Deliverables
 - v0.8.0

@@ -1,0 +1,66 @@
+//! Design tokens from design-brief.md §2, as 8-bit grey (Rec. 601 luma of
+//! the brief's hex values; the Forma is greyscale) and as a scale from the
+//! brief's 1264 px page to the actual panel width.
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Theme {
+    pub paper: u8,
+    pub ink: u8,
+    pub rule: u8,
+    pub mute: u8,
+    pub wash: u8,
+    pub gutter: u8,
+}
+
+impl Theme {
+    /// Day: paper #f3f0e8, ink #1c1c1c, rule #c9c2b4, mute #5e584e, wash #e7e1d4, gutter #e0dcd4.
+    pub const DAY: Theme = Theme {
+        paper: 240,
+        ink: 28,
+        rule: 195,
+        mute: 89,
+        wash: 226,
+        gutter: 220,
+    };
+    /// Night: the same drawing inverted (brief: not a grey card).
+    pub const NIGHT: Theme = Theme {
+        paper: 17,
+        ink: 233,
+        rule: 60,
+        mute: 161,
+        wash: 28,
+        gutter: 36,
+    };
+}
+
+/// Brief sizes are given for a 1264 px wide portrait page.
+pub const BRIEF_WIDTH: f32 = 1264.0;
+
+/// Converts brief pixels to panel pixels.
+#[derive(Clone, Copy, Debug)]
+pub struct Scale(pub f32);
+
+impl Scale {
+    #[must_use]
+    pub fn for_width(width: u32) -> Self {
+        Self(width as f32 / BRIEF_WIDTH)
+    }
+
+    #[must_use]
+    pub fn px(self, brief: f32) -> i32 {
+        (brief * self.0).round() as i32
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn forma_scale() {
+        let s = Scale::for_width(1440);
+        assert_eq!(s.px(44.0), 50); // minimum hit target
+        assert_eq!(s.px(52.0), 59); // title bar
+        assert_eq!(s.px(20.0), 23); // body text
+    }
+}

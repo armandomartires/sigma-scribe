@@ -2,8 +2,8 @@
 
 Estimates are working days. Status: all TODO.
 
-### S8-T01 — evdev reader for `/dev/input/event*` (Cobalt capability or platform code; Plan B native)
-- **Description:** evdev reader for `/dev/input/event*` (Cobalt capability or platform code; Plan B native).
+### S8-T01 — evdev keyboard reader for `/dev/input/event*` (Forma USB host mode via powered hub)
+- **Description:** evdev keyboard reader for `/dev/input/event*` (Forma USB host mode via powered hub).
 - **Acceptance:** works as specified in design-brief.md and the sprint DoD; covered by a test or on-device checklist item.
 - **Deps:** S7 done
 - **Estimate:** 1 d
@@ -20,8 +20,8 @@ Estimates are working days. Status: all TODO.
 - **Deps:** S8-T02
 - **Estimate:** 0.5–1 d
 
-### S8-T04 — Export docs (USB folder; Syncthing via Cobalt Sync optional)
-- **Description:** Export docs (USB folder; Syncthing via Cobalt Sync optional).
+### S8-T04 — Export docs (notes are already .md on USB; Syncthing optional later)
+- **Description:** Export docs (notes are already .md on USB; Syncthing optional later).
 - **Acceptance:** works as specified in design-brief.md and the sprint DoD; covered by a test or on-device checklist item.
 - **Deps:** S8-T03
 - **Estimate:** 0.5–1 d

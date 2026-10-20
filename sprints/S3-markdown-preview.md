@@ -7,7 +7,7 @@ Rendered preview with eye ↔ pencil (brief step 3).
 
 ## Scope
 - Markdown parser → AST in core (headings, emphasis, lists, tasks, quote, rule, code, images, links, tables, strike)
-- Renderer to Cobalt screens
+- Renderer on sigma-render (real fonts, bold/italic faces)
 - Preview toggle
 - Off-UI-thread parsing for long notes
 

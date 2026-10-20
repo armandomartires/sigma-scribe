@@ -43,3 +43,12 @@ From `SDK.md` and the sources at v0.3.27:
 - Editor (buffer, caret, soft wrap, page-key scroll, autosave to store) + on-screen keyboard (letters, Shift one-shot, 123 symbol layer, Tab/Del/Shift+Del/Space/Return), status bar (words · line · Paper · saved), Keys toggle.
 - Autosave survives a simulator restart (text typed in one run present in the next).
 - Tests: 23 core + 5 ui unit tests; drive script `tests/drive/v0.1-editor.kobo` passes; screenshots in `docs/screenshots/`.
+
+## 2026-10-20 22:14 CEST — Cobalt installer blocks the Forma → Plan B
+`kobo setup --dry-run --volume /media/amartires/KOBOeReader` → `unsupported Kobo hardware: model code N782 has no reviewed Cobalt profile` (hard check, no override; PORTING.md requires maintainer review and attended evidence). Together with the SDK limits above, Armando chose **Plan B: native Rust + FBInk + NickelMenu**. Cobalt layers removed from the repo; `sigma-core` kept unchanged.
+
+## Plan B bring-up (desktop)
+- FBInk `886f25f1` (v1.25.0-543) built as `Release/libfbink.a` with `make staticlib MINIMAL=true IMAGE=true KOBO=true CROSS_TC=armv7l-linux-musleabihf`; linked through a small C shim (`crates/device/csrc/sg_fbink.c`).
+- `sigma-scribe` ARMv7: static, stripped, FBInk symbols present.
+- NickelMenu v0.6.0 `KoboRoot.tgz` downloaded to `~/src/nickelmenu-v0.6.0/` (contents: `usr/local/Kobo/imageformats/libnm.so`, `mnt/onboard/.adds/nm/doc`).
+- Backup note: the earlier read-only SQLite check had created `KoboReader.sqlite-shm/-wal` in the backup; removed, backup re-verified identical to the device manifest.
