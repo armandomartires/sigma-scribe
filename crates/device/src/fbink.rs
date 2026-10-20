@@ -107,7 +107,12 @@ impl Device for KoboDevice {
         // SAFETY: plain integers.
         let rc = unsafe { sg_refresh(r.x as u32, r.y as u32, r.w as u32, r.h as u32, mode) };
         if rc < 0 {
-            return Err(io::Error::other(format!("fbink refresh failed ({rc})")));
+            // Not fatal: the pixels are already in the framebuffer and the
+            // next refresh shows them. Exiting here lost the session once.
+            eprintln!(
+                "sigma-scribe: warning: fbink refresh {}x{}@{},{} failed ({rc})",
+                r.w, r.h, r.x, r.y
+            );
         }
         Ok(())
     }

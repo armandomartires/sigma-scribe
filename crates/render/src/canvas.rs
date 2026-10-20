@@ -213,15 +213,63 @@ impl Canvas {
             }
         }
         if out.len() > max {
-            return self.diff(other).into_iter().collect();
+            return self
+                .diff(other)
+                .into_iter()
+                .map(|r| self.min_region(r))
+                .collect();
         }
-        out
+        out.into_iter().map(|r| self.min_region(r)).collect()
+    }
+
+    /// Grows a region to at least [`MIN_REGION`] px each way, inside the
+    /// canvas. FBInk on the Forma rejects 1-px-wide regions ("bogus empty
+    /// region") and the refresh fails (seen on device 2026-10-21 00:25).
+    #[must_use]
+    pub fn min_region(&self, r: Rect) -> Rect {
+        let grow = |p: i32, len: i32, max: i32| {
+            if len >= MIN_REGION {
+                return (p, len);
+            }
+            let len2 = MIN_REGION.min(max);
+            let p2 = (p - (len2 - len) / 2).clamp(0, (max - len2).max(0));
+            (p2, len2)
+        };
+        let (x, w) = grow(r.x, r.w, self.width as i32);
+        let (y, h) = grow(r.y, r.h, self.height as i32);
+        Rect::new(x, y, w, h)
     }
 }
+
+/// Smallest refresh region sent to the panel, in px.
+pub const MIN_REGION: i32 = 16;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn thin_regions_are_padded_inside_the_canvas() {
+        let a = Canvas::new(100, 100, 255);
+        let mut b = a.clone();
+        b.fill(Rect::new(40, 10, 1, 34), 0); // the 1x34 region FBInk refused
+        b.fill(Rect::new(99, 99, 1, 1), 0); // a corner pixel
+        let r = b.diff_regions(&a, 4, 8);
+        assert_eq!(
+            r,
+            vec![Rect::new(33, 10, 16, 34), Rect::new(84, 84, 16, 16)]
+        );
+        for x in r {
+            assert!(
+                x.w >= MIN_REGION
+                    && x.h >= MIN_REGION
+                    && x.x >= 0
+                    && x.y >= 0
+                    && x.x + x.w <= 100
+                    && x.y + x.h <= 100
+            );
+        }
+    }
 
     #[test]
     fn diff_regions_split_distant_changes() {
@@ -231,7 +279,7 @@ mod tests {
         b.fill(Rect::new(60, 80, 8, 8), 0); // a key cap
         b.fill(Rect::new(70, 82, 2, 2), 10); // next to the cap: same rect
         let r = b.diff_regions(&a, 4, 8);
-        assert_eq!(r, vec![Rect::new(5, 5, 10, 4), Rect::new(60, 80, 12, 8)]);
+        assert_eq!(r, vec![Rect::new(2, 0, 16, 16), Rect::new(58, 76, 16, 16)], "padded to MIN_REGION");
         assert_eq!(b.diff_regions(&a, 4, 1), vec![Rect::new(5, 5, 67, 83)]);
         assert!(a.diff_regions(&a, 4, 8).is_empty());
     }
