@@ -25,7 +25,7 @@ fn typing_on_osk_autosaves_to_a_plain_md_file_and_survives_restart() {
         dir.join("field-notes.md").exists(),
         "seed written on first run"
     );
-    for l in ["Return", "Shift", "O", "k", "Space", "123", "1"] {
+    for l in ["Enter", "Shift", "O", "k", "Space", "1"] {
         tap(&mut app, &mut dev, l);
     }
     assert!(
@@ -150,33 +150,38 @@ fn rename_from_title_bar_keeps_edits_and_cancel_changes_nothing() {
 }
 
 #[test]
-fn keyboard_layout_choice_is_remembered() {
+fn keyboard_defaults_to_full_and_compact_choice_is_remembered() {
+    use sigma_core::keyboard::Layout;
     let dir = fresh("layout");
     let mut app = App::new(1440, 1920, &dir);
-    assert_eq!(app.keyboard.layout, sigma_core::keyboard::Layout::Compact);
-    let compact_page = app.page_rect().h;
-    let (x, y) = app.key_centre("Full").unwrap();
-    app.handle(Event::Tap { x, y });
-    assert_eq!(app.keyboard.layout, sigma_core::keyboard::Layout::Full);
-    assert!(
-        app.page_rect().h >= 1300,
-        "page {} (compact {compact_page})",
-        app.page_rect().h
-    );
-    drop(app);
-    let app = App::new(1440, 1920, &dir);
     assert_eq!(
         app.keyboard.layout,
-        sigma_core::keyboard::Layout::Full,
-        "restored"
+        Layout::Full,
+        "default with no settings file"
+    );
+    assert!(!dir.join(".sigma-settings").exists());
+    assert!(app.page_rect().h >= 1300, "page {}", app.page_rect().h);
+    let (x, y) = app.key_centre("Compact").unwrap();
+    app.handle(Event::Tap { x, y });
+    assert_eq!(app.keyboard.layout, Layout::Compact);
+    drop(app);
+    let mut app = App::new(1440, 1920, &dir);
+    assert_eq!(
+        app.keyboard.layout,
+        Layout::Compact,
+        "stored Compact is kept"
     );
     assert!(std::fs::read_to_string(dir.join(".sigma-settings"))
         .unwrap()
-        .contains("keyboard=full"));
+        .contains("keyboard=compact"));
     assert!(!app
         .library
         .list(&sigma_core::NotePath::root())
         .unwrap()
         .iter()
         .any(|e| e.path.name().starts_with('.')));
+    let (x, y) = app.key_centre("Full").unwrap();
+    app.handle(Event::Tap { x, y });
+    drop(app);
+    assert_eq!(App::new(1440, 1920, &dir).keyboard.layout, Layout::Full);
 }

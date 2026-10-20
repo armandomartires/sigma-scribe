@@ -78,7 +78,7 @@ GitHub Releases of `sigma-scribe` (AGPL-3.0, Sigma Recon): `sigma-scribe-<ver>-k
 - Out of scope: preview, drawer, search, sorting options, multi-select, undo of deletes (no trash in v0.2 — see §9).
 
 ### v0.2.1 scope (S2.5, requested 2026-10-21)
-- "Full" Windows On-Screen-Keyboard style layout (Esc + number row, brackets, Caps, Enter, two Shifts, Ctrl, Alt, arrows, Home/End/PgUp/PgDn/Del) alongside the brief's Compact board; switch key on both; choice remembered.
+- "Full" Windows On-Screen-Keyboard style layout (Esc + number row, brackets, Caps, Enter, two Shifts, Ctrl, Alt, arrows, Home/End/PgUp/PgDn/Del) alongside the brief's Compact board; switch key on both; choice remembered. **Full is the default** (2026-10-21); a stored Compact choice is kept.
 - Shift one-shot / double-tap lock, Caps toggle, Ctrl/Alt one-shot; Ctrl+A/C/X/V (internal clipboard), Ctrl+Z/Y (new undo/redo in core), Ctrl+←/→, Shift+navigation selection.
 - Portrait fit: 1-unit keys 82×66 px, Full board 380 px → page 1420 px (Compact 307 → 1493). Only changed regions are refreshed.
 - S4 landscape keyboards build on the same key model and renderer (see `sprints/S2.5-full-keyboard.md`). Alt has no bindings yet.

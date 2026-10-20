@@ -23,8 +23,9 @@ pub enum Layer {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Layout {
-    #[default]
     Compact,
+    /// Default since v0.2.1 (user decision 2026-10-21).
+    #[default]
     Full,
 }
 
@@ -543,7 +544,7 @@ mod tests {
 
     #[test]
     fn layout_matches_brief() {
-        let k = Keyboard::default();
+        let k = Keyboard::with_layout(Layout::Compact);
         let rows = k.rows();
         let labels: Vec<Vec<String>> = rows
             .iter()
@@ -557,7 +558,7 @@ mod tests {
 
     #[test]
     fn symbol_layer_and_back() {
-        let mut k = Keyboard::default();
+        let mut k = Keyboard::with_layout(Layout::Compact);
         let mut b = Buffer::new("");
         k.press(Key::SwapLayer, &mut b, TabKind::default());
         assert_eq!(k.label(k.key_at(0, 0).unwrap()), "1");
@@ -570,7 +571,7 @@ mod tests {
 
     #[test]
     fn shift_is_one_shot() {
-        let mut k = Keyboard::default();
+        let mut k = Keyboard::with_layout(Layout::Compact);
         let mut b = Buffer::new("");
         k.press(Key::Shift, &mut b, TabKind::default());
         k.press(Key::Char('h'), &mut b, TabKind::default());
@@ -580,7 +581,7 @@ mod tests {
 
     #[test]
     fn del_and_shift_del() {
-        let mut k = Keyboard::default();
+        let mut k = Keyboard::with_layout(Layout::Compact);
         let mut b = Buffer::new("abc");
         b.set_caret(1);
         k.press(Key::Del, &mut b, TabKind::default());
@@ -592,7 +593,7 @@ mod tests {
 
     #[test]
     fn return_tab_space() {
-        let mut k = Keyboard::default();
+        let mut k = Keyboard::with_layout(Layout::Compact);
         let mut b = Buffer::new("");
         for key in [Key::Char('a'), Key::Space, Key::Tab, Key::Return] {
             assert_eq!(k.press(key, &mut b, TabKind::Spaces(2)), KeyAction::Edited);
@@ -602,7 +603,7 @@ mod tests {
 
     #[test]
     fn positions_are_stable_across_shift() {
-        let mut k = Keyboard::default();
+        let mut k = Keyboard::with_layout(Layout::Compact);
         let before = k.rows().iter().map(Vec::len).collect::<Vec<_>>();
         k.shift = true;
         k.caps = true;
@@ -642,7 +643,7 @@ mod tests {
                 .sum();
             assert!((sum - k.grid_units()).abs() < 1e-3, "row {r} = {sum}");
         }
-        let c = Keyboard::default();
+        let c = Keyboard::with_layout(Layout::Compact);
         for (r, row) in c.rows().iter().enumerate() {
             let sum: f32 = row
                 .iter()
@@ -768,8 +769,13 @@ mod tests {
     }
 
     #[test]
+    fn full_is_the_default() {
+        assert_eq!(Keyboard::default().layout, Layout::Full);
+    }
+
+    #[test]
     fn switch_layout_round_trip() {
-        let mut k = Keyboard::default();
+        let mut k = Keyboard::with_layout(Layout::Compact);
         let mut b = Buffer::new("");
         k.shift = true;
         assert_eq!(

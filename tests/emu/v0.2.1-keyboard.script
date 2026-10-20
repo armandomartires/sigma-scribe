@@ -1,5 +1,5 @@
 # v0.2.1 Full keyboard: layout switch, modifiers, Ctrl shortcuts, selection.
-key Full
+# Full is the default since v0.2.1
 shot v0.2.1-full
 type Hello world
 expect Hello world

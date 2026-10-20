@@ -639,7 +639,7 @@ mod tests {
     #[test]
     fn layout_fits_forma_and_targets_are_large() {
         let e = EditorScreen::new(W, H);
-        let k = Keyboard::default();
+        let k = Keyboard::with_layout(sigma_core::keyboard::Layout::Compact);
         let l = e.layout(true, &k);
         assert!(l.page.h > 900, "page height {}", l.page.h);
         assert_eq!(l.keys.len(), 10 + 9 + 9 + 6);
@@ -684,7 +684,10 @@ mod tests {
         assert_eq!(find(Dir::Up).x, find(Dir::Down).x);
         assert!(l.keyboard.h <= H as i32 / 4, "keyboard {}px", l.keyboard.h);
         assert!(l.page.h >= 1300, "page {}px", l.page.h);
-        let c = e.layout(true, &Keyboard::default());
+        let c = e.layout(
+            true,
+            &Keyboard::with_layout(sigma_core::keyboard::Layout::Compact),
+        );
         let none = e.layout(false, &k);
         println!(
             "METRICS full kb {} page {} key {}x{} | compact kb {} page {} key {}x{} | hidden page {}",
@@ -701,7 +704,11 @@ mod tests {
     #[test]
     fn every_key_is_hittable_at_its_centre() {
         let e = EditorScreen::new(W, H);
-        let (b, k, s) = (Buffer::new(""), Keyboard::default(), SaveState::Saved);
+        let (b, k, s) = (
+            Buffer::new(""),
+            Keyboard::with_layout(sigma_core::keyboard::Layout::Compact),
+            SaveState::Saved,
+        );
         let m = model(&b, &k, &s);
         for (r, key) in e.layout(true, &k).keys {
             assert_eq!(e.hit(&m, r.x + r.w / 2, r.y + r.h / 2), Hit::Key(key));
@@ -713,7 +720,7 @@ mod tests {
         let mut e = EditorScreen::new(W, H);
         let (b, k, s) = (
             Buffer::new("first line\nsecond line"),
-            Keyboard::default(),
+            Keyboard::with_layout(sigma_core::keyboard::Layout::Compact),
             SaveState::Saved,
         );
         let m = model(&b, &k, &s);
@@ -736,7 +743,14 @@ mod tests {
         let text =
             "the quick brown fox jumps over the lazy dog and keeps on running far away ".repeat(5);
         let b = Buffer::new(text.clone());
-        let rows = e.rows(&b, e.layout(true, &Keyboard::default()).page);
+        let rows = e.rows(
+            &b,
+            e.layout(
+                true,
+                &Keyboard::with_layout(sigma_core::keyboard::Layout::Compact),
+            )
+            .page,
+        );
         let words = text[rows[0].start..rows[0].end].split_whitespace().count();
         // Brief defaults (20 px at 1264, margin 28) with Line off give a long
         // measure on the 8" Forma; Line mode (S4) fits 8–16 words.
@@ -747,7 +761,7 @@ mod tests {
     fn long_note_scrolls_with_caret_and_page_turn() {
         let mut e = EditorScreen::new(W, H);
         let mut b = Buffer::new("line\n".repeat(300));
-        let k = Keyboard::default();
+        let k = Keyboard::with_layout(sigma_core::keyboard::Layout::Compact);
         let page = e.layout(true, &k).page;
         e.follow_caret(&b, page);
         assert!(e.scroll > 250);
