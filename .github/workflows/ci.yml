@@ -18,6 +18,8 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
+      - name: Emulator scripts
+        run: for s in tests/emu/*.script; do cargo run -q --release --bin sigma-emu -- --script "$s" --shots target/ci-shots --notes "target/ci-notes/$(basename "$s")"; done
   armv7:
     runs-on: ubuntu-latest
     needs: test
