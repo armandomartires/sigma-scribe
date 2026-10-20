@@ -221,3 +221,149 @@ fn touch_typing_still_types_every_tap_including_fast_doubles_and_holds() {
     assert_eq!(&app.buffer.text()[start..], "aaaa");
     assert!(app.sel_ui.is_none());
 }
+
+fn tap_control(app: &mut App, dev: &mut DesktopDevice, label: &str) {
+    let (x, y) = app
+        .control_centre(label)
+        .unwrap_or_else(|| panic!("no control {label}"));
+    if let Some(r) = app.handle(Event::Tap { x, y }) {
+        app.render(dev, r).unwrap();
+    }
+}
+
+fn step(app: &mut App, dev: &mut DesktopDevice, e: Event) -> Option<Refresh> {
+    let r = app.handle(e);
+    if let Some(r) = r {
+        app.render(dev, r).unwrap();
+    }
+    r
+}
+
+#[test]
+fn preview_toggle_is_read_only_and_uses_a_full_refresh() {
+    let dir = fresh("preview");
+    let mut dev = DesktopDevice::new(1440, 1920);
+    let mut app = App::new(1440, 1920, &dir);
+    app.render(&mut dev, Refresh::Full).unwrap();
+    let before = app.buffer.text().to_owned();
+    let caret = app.buffer.caret();
+    let n = dev.refreshes.len();
+    tap_control(&mut app, &mut dev, "Eye");
+    assert!(app.preview.is_some());
+    assert_eq!(dev.refreshes[n..], [(dev.panel.bounds(), Refresh::Full)]);
+    // Keys, taps on the page, holds and page turns past the end change nothing.
+    for e in [
+        Event::Key(HwKey::Char('z')),
+        Event::Key(HwKey::Return),
+        Event::Key(HwKey::Backspace),
+        Event::Tap { x: 700, y: 400 },
+        Event::Tap { x: 700, y: 1880 },
+        Event::PageTurn { forward: true },
+        Event::PageTurn { forward: false },
+    ] {
+        assert_eq!(step(&mut app, &mut dev, e), None, "{e:?}");
+    }
+    assert_eq!(app.buffer.text(), before);
+    assert!(app.buffer.selection().is_none());
+    // Holding on the page does not select in preview.
+    step(
+        &mut app,
+        &mut dev,
+        Event::Touch {
+            phase: sigma_device::Phase::Down,
+            x: 300,
+            y: 160,
+            t: 10_000,
+        },
+    );
+    step(&mut app, &mut dev, Event::Tick { t: 10_700 });
+    step(
+        &mut app,
+        &mut dev,
+        Event::Touch {
+            phase: sigma_device::Phase::Up,
+            x: 300,
+            y: 160,
+            t: 10_800,
+        },
+    );
+    assert!(app.buffer.selection().is_none() && app.sel_ui.is_none());
+    assert!(app.preview.is_some());
+    let n = dev.refreshes.len();
+    tap_control(&mut app, &mut dev, "Pencil");
+    assert!(app.preview.is_none());
+    assert_eq!(dev.refreshes[n..], [(dev.panel.bounds(), Refresh::Full)]);
+    assert_eq!(app.buffer.caret(), caret, "caret unchanged");
+    assert_eq!(
+        std::fs::read_to_string(dir.join("field-notes.md")).unwrap(),
+        before
+    );
+    // Write mode works as before.
+    tap(&mut app, &mut dev, "k");
+    assert!(app.buffer.text().ends_with('k'));
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn page_turns_page_the_preview_with_partial_refreshes() {
+    let dir = fresh("pages");
+    std::fs::create_dir_all(&dir).unwrap();
+    let long: String = (0..300)
+        .map(|i| format!("## Part {i}\n\nSome *text* for part {i}.\n\n"))
+        .collect();
+    std::fs::write(dir.join("long.md"), &long).unwrap();
+    let mut dev = DesktopDevice::new(1440, 1920);
+    let mut app = App::new(1440, 1920, &dir);
+    app.open(&sigma_core::NotePath::parse("long.md").unwrap());
+    app.buffer.set_caret(0);
+    app.render(&mut dev, Refresh::Full).unwrap();
+    tap_control(&mut app, &mut dev, "Eye");
+    let pages = app.preview.as_ref().unwrap().doc.pages.len();
+    assert!(pages > 5, "{pages}");
+    assert_eq!(app.preview.as_ref().unwrap().page, 0);
+    let n = dev.refreshes.len();
+    for i in 1..pages {
+        assert_eq!(
+            step(&mut app, &mut dev, Event::PageTurn { forward: true }),
+            Some(Refresh::Partial)
+        );
+        assert_eq!(app.preview.as_ref().unwrap().page, i);
+    }
+    // At the last page Next does nothing; Prev goes back.
+    assert_eq!(
+        step(&mut app, &mut dev, Event::PageTurn { forward: true }),
+        None
+    );
+    step(&mut app, &mut dev, Event::PageTurn { forward: false });
+    assert_eq!(app.preview.as_ref().unwrap().page, pages - 2);
+    assert!(dev.refreshes[n..]
+        .iter()
+        .all(|(r, k)| *k == Refresh::Partial && *r != dev.panel.bounds()));
+    // The write position is kept: back in write mode, then into preview from
+    // the end of the note lands on the last page.
+    step(&mut app, &mut dev, Event::Key(HwKey::Escape));
+    assert!(app.preview.is_none());
+    app.buffer.set_caret(app.buffer.text().len());
+    app.render(&mut dev, Refresh::Fast).unwrap();
+    tap_control(&mut app, &mut dev, "Eye");
+    let p = app.preview.as_ref().unwrap();
+    assert!(
+        p.page + 1 >= p.doc.pages.len() - 1,
+        "{} of {}",
+        p.page,
+        p.doc.pages.len()
+    );
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn files_from_preview_leaves_preview() {
+    let dir = fresh("pfiles");
+    let mut dev = DesktopDevice::new(1440, 1920);
+    let mut app = App::new(1440, 1920, &dir);
+    app.render(&mut dev, Refresh::Full).unwrap();
+    tap_control(&mut app, &mut dev, "Eye");
+    tap_control(&mut app, &mut dev, "Files");
+    assert!(app.preview.is_none() && app.files.is_some());
+    std::fs::remove_dir_all(dir).unwrap();
+}

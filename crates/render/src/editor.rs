@@ -4,6 +4,7 @@
 
 use crate::canvas::{Canvas, Rect};
 use crate::fonts::{Face, Fonts, Measure};
+use crate::preview::{self, Doc, Type};
 use crate::theme::{Scale, Theme};
 use sigma_core::keyboard::Key;
 use sigma_core::wrap::{caret_cell, offset_at, wrap, VisualLine};
@@ -70,6 +71,8 @@ pub enum Hit {
     Bar(BarAction),
     /// Folder icon: open the Files sheet.
     Files,
+    /// Eye (write mode) or pencil (preview): toggle preview, v0.3.
+    TogglePreview,
     /// Tap on the file name: rename in place.
     StartRename,
     RenameOk,
@@ -86,6 +89,8 @@ pub struct Layout {
     pub keyboard: Rect,
     pub keys: Vec<(Rect, Key)>,
     pub files_button: Rect,
+    /// Eye / pencil, left of the folder (brief §3 order: Files, Preview).
+    pub preview_button: Rect,
     pub name_rect: Rect,
     pub ok_rect: Rect,
     pub cancel_rect: Rect,
@@ -188,6 +193,7 @@ impl EditorScreen {
         let btn = self.px(44.0);
         let by = (title.h - btn) / 2;
         let files_button = Rect::new(w - self.px(12.0) - btn, by, btn, btn);
+        let preview_button = Rect::new(files_button.x - self.px(8.0) - btn, by, btn, btn);
         let name_rect = Rect::new(0, 0, w * 3 / 5, title.h);
         let okw = self.px(72.0);
         let cw = self.px(96.0);
@@ -201,6 +207,7 @@ impl EditorScreen {
             keyboard: keyboard_rect,
             keys,
             files_button,
+            preview_button,
             name_rect,
             ok_rect,
             cancel_rect,
@@ -421,6 +428,9 @@ impl EditorScreen {
         if l.files_button.inset(-self.px(4.0)).contains(x, y) {
             return Hit::Files;
         }
+        if l.preview_button.inset(-self.px(4.0)).contains(x, y) {
+            return Hit::TogglePreview;
+        }
         if l.name_rect.contains(x, y) {
             return Hit::StartRename;
         }
@@ -456,6 +466,9 @@ impl EditorScreen {
         let ui = 17.0 * self.s.0;
 
         self.draw_title(c, &l, model.file_name, model.rename, t, true);
+        if model.rename.is_none() {
+            draw_eye_icon(c, l.preview_button, self.s, t.ink);
+        }
 
         // Page.
         let area = self.text_area(l.page);
@@ -811,6 +824,173 @@ fn draw_arrow(c: &mut Canvas, r: Rect, d: sigma_core::keyboard::Dir, s: Scale, i
     }
 }
 
+/// What preview mode shows (v0.3, read-only).
+pub struct PreviewModel<'a> {
+    pub file_name: &'a str,
+    pub doc: &'a Doc,
+    pub page: usize,
+    pub words: usize,
+    pub save: &'a SaveState,
+    pub keyboard: &'a Keyboard,
+    pub theme: Theme,
+}
+
+impl EditorScreen {
+    /// The text column of the preview page (the keyboard is hidden).
+    #[must_use]
+    pub fn preview_area(&self, keyboard: &Keyboard) -> Rect {
+        self.text_area(self.layout(false, keyboard).page)
+    }
+
+    /// Parses and lays out `text` for preview at the current type settings.
+    #[must_use]
+    pub fn build_preview(
+        &self,
+        text: &str,
+        keyboard: &Keyboard,
+        known: &dyn Fn(&str) -> bool,
+    ) -> Doc {
+        let area = self.preview_area(keyboard);
+        let ty = Type {
+            body: self.body(),
+            leading: self.leading,
+            scale: self.s,
+        };
+        let lines = preview::layout(
+            &sigma_core::markdown::parse(text),
+            &self.fonts,
+            area.w,
+            ty,
+            known,
+        );
+        Doc {
+            pages: preview::paginate(&lines, area.h),
+            lines,
+            width: area.w,
+        }
+    }
+
+    /// Source line at the top of the write-mode page (keeps the place when
+    /// entering preview).
+    #[must_use]
+    pub fn top_source_line(&self, buffer: &Buffer, page: Rect) -> usize {
+        let rows = self.rows(buffer, page);
+        let at = rows.get(self.scroll).map_or(0, |r| r.start);
+        buffer.text()[..at.min(buffer.text().len())]
+            .matches('\n')
+            .count()
+    }
+
+    /// Taps in preview: only the title-bar buttons do something in v0.3.
+    #[must_use]
+    pub fn preview_hit(&self, keyboard: &Keyboard, x: i32, y: i32) -> Hit {
+        let l = self.layout(false, keyboard);
+        if l.files_button.inset(-self.px(4.0)).contains(x, y) {
+            Hit::Files
+        } else if l.preview_button.inset(-self.px(4.0)).contains(x, y) {
+            Hit::TogglePreview
+        } else {
+            Hit::Nothing
+        }
+    }
+
+    /// Draws preview mode: title with the pencil, one page, status bar.
+    pub fn draw_preview(&self, c: &mut Canvas, m: &PreviewModel<'_>) -> Layout {
+        let t = m.theme;
+        let l = self.layout(false, m.keyboard);
+        c.fill(c.bounds(), t.paper);
+        self.draw_title(c, &l, m.file_name, None, t, true);
+        draw_pencil_icon(c, l.preview_button, self.s, t.ink);
+        let area = self.text_area(l.page);
+        let page = m.page.min(m.doc.pages.len().saturating_sub(1));
+        if let Some(r) = m.doc.pages.get(page) {
+            preview::draw_page(c, &self.fonts, area, &m.doc.lines, r.clone(), t, self.s);
+        }
+        let ui = self.ui_px();
+        c.fill(Rect::new(0, l.status.y, l.status.w, 1), t.rule);
+        let sb = l.status.y as f32
+            + l.status.h as f32 / 2.0
+            + self.fonts.ascent(Face::Atkinson, ui) / 2.6;
+        let n = m.doc.pages.len();
+        let mut left = format!("{} words \u{b7} preview", m.words);
+        if n > 1 {
+            left.push_str(&format!(" \u{b7} page {} of {n}", page + 1));
+        }
+        self.fonts.draw(
+            c,
+            Face::Atkinson,
+            ui,
+            self.px(20.0) as f32,
+            sb,
+            &left,
+            t.mute,
+        );
+        let right = format!(
+            "{} \u{b7} {}",
+            if t == Theme::NIGHT { "Night" } else { "Paper" },
+            m.save.label()
+        );
+        let rw = self.fonts.width(Face::Atkinson, ui, &right);
+        let rx = (l.status.w - self.px(20.0)) as f32 - rw;
+        self.fonts
+            .draw(c, Face::Atkinson, ui, rx, sb, &right, t.mute);
+        l
+    }
+}
+
+/// Eye (brief §3: "eye in write mode"): an almond outline and a pupil.
+pub fn draw_eye_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
+    let (cx, cy) = (target.x + target.w / 2, target.y + target.h / 2);
+    let a = s.px(11.0) as f32;
+    let b = s.px(6.5) as f32;
+    let st = s.px(1.75).max(2) as f32;
+    let pr = s.px(3.0) as f32;
+    let r = a as i32 + 2;
+    for dy in -r..=r {
+        for dx in -r..=r {
+            let (x, y) = (dx as f32, dy as f32);
+            // Two arcs meeting at the corners: |y| <= b * (1 - (x/a)^2).
+            let edge = b * (1.0 - (x / a).powi(2));
+            let on_outline = x.abs() <= a && (y.abs() - edge).abs() <= st / 2.0;
+            let pupil = x * x + y * y <= pr * pr;
+            if on_outline || pupil {
+                c.blend(cx + dx, cy + dy, ink, 255);
+            }
+        }
+    }
+}
+
+/// Pencil (brief §3: "pencil in preview"): a diagonal shaft with a tip.
+pub fn draw_pencil_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
+    let (cx, cy) = (target.x + target.w / 2, target.y + target.h / 2);
+    let half = s.px(9.0);
+    let w = s.px(2.5).max(2);
+    for t in -half..=half {
+        // Shaft from top-right to bottom-left; the last quarter is the tip.
+        let tip = t > half / 2;
+        let ww = if tip {
+            w * (half - t) / (half / 2).max(1)
+        } else {
+            w
+        };
+        for k in -ww..=ww {
+            c.blend(cx - t + k, cy + t + k, ink, 255);
+            if !tip && k.abs() == ww {
+                c.blend(cx - t + k + 1, cy + t + k, ink, 255);
+            }
+        }
+    }
+    // The cap line across the top end.
+    for k in -w..=w {
+        c.blend(
+            cx + half - s.px(3.0) + k,
+            cy - half + s.px(3.0) + k,
+            ink,
+            255,
+        );
+    }
+}
+
 /// A 20 px (brief), 1.75-stroke folder outline centred in a 44 px target.
 pub fn draw_folder_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
     let w = s.px(20.0);
@@ -1034,5 +1214,40 @@ mod tests {
         assert!(e.scroll < before);
         e.page_turn(&mut b, page, true);
         assert_eq!(e.scroll, before.min(e.scroll));
+    }
+
+    #[test]
+    fn eye_and_pencil_hit_and_preview_draws_without_keys() {
+        let b = Buffer::new("# Title\n\nBody *em*");
+        let k = Keyboard::default();
+        let st = SaveState::Saved;
+        let mut e = EditorScreen::new(W, H);
+        let m = model(&b, &k, &st);
+        let l = e.layout(true, &k);
+        assert!(l.preview_button.x + l.preview_button.w < l.files_button.x);
+        assert!(l.preview_button.x > l.name_rect.x + l.name_rect.w);
+        let (cx, cy) = (l.preview_button.x + 20, l.preview_button.y + 20);
+        assert_eq!(e.hit(&m, cx, cy), Hit::TogglePreview);
+        assert_eq!(e.preview_hit(&k, cx, cy), Hit::TogglePreview);
+        assert_eq!(e.preview_hit(&k, 700, 900), Hit::Nothing);
+        let doc = e.build_preview(b.text(), &k, &|_| false);
+        assert_eq!(doc.pages.len(), 1);
+        let mut c = Canvas::new(W, H, 0);
+        let pl = e.draw_preview(
+            &mut c,
+            &PreviewModel {
+                file_name: "a.md",
+                doc: &doc,
+                page: 0,
+                words: 3,
+                save: &st,
+                keyboard: &k,
+                theme: Theme::DAY,
+            },
+        );
+        assert!(pl.keys.is_empty(), "no keyboard in preview");
+        // Page and status bar are drawn; nothing below the status bar.
+        assert!(c.pixels.iter().any(|&p| p < 80));
+        let _ = e.draw(&mut c, &m);
     }
 }

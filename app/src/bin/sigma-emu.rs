@@ -307,6 +307,51 @@ fn main() -> ExitCode {
                     return fail(format!("selection is {:?}", app.buffer.selected_text()));
                 }
             }
+            "open-fixture" => {
+                // Copies a fixture into the library root and opens it.
+                let name = std::path::Path::new(arg)
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                let body = match std::fs::read_to_string(arg) {
+                    Ok(b) => b,
+                    Err(e) => return fail(e.to_string()),
+                };
+                if let Err(e) = std::fs::write(app.library.root().join(&name), body) {
+                    return fail(e.to_string());
+                }
+                match sigma_core::NotePath::parse(&name) {
+                    Ok(p) => {
+                        app.open(&p);
+                        app.buffer.set_caret(0);
+                    }
+                    Err(e) => return fail(e.to_string()),
+                }
+                step(&mut app, &mut dev, Event::Key(HwKey::Escape));
+                let _ = app.render(&mut dev, sigma_device::Refresh::Full);
+            }
+            "expect-mode" => {
+                let mode = if app.preview.is_some() {
+                    "preview"
+                } else {
+                    "write"
+                };
+                if mode != arg {
+                    return fail(format!("mode is {mode}"));
+                }
+            }
+            "expect-page" => {
+                let page = app.preview.as_ref().map(|p| p.page + 1);
+                if page.map(|p| p.to_string()).as_deref() != Some(arg) {
+                    return fail(format!("preview page is {page:?}"));
+                }
+            }
+            "expect-pages-at-least" => {
+                let n = app.preview.as_ref().map_or(0, |p| p.doc.pages.len());
+                if n < arg.parse().unwrap_or(usize::MAX) {
+                    return fail(format!("only {n} preview pages"));
+                }
+            }
             "expect-status" => {
                 if app.autosave.state.label() != arg {
                     return fail(format!("status is {:?}", app.autosave.state.label()));

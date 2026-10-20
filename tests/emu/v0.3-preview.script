@@ -1,0 +1,36 @@
+# v0.3 Markdown preview on a fresh seeded library (Forma 1440x1920).
+expect-open field-notes.md
+expect-mode write
+tap-on Eye
+expect-mode preview
+expect-page 1
+shot v0.3-seed-preview
+# Read-only: typing, taps on the page and the Keys spot do nothing.
+hw zzz
+expect-not zzz
+tap 700 600
+tap-on Pencil
+expect-mode write
+expect-status saved
+open-fixture tests/emu/fixtures/markdown-tour.md
+expect-open markdown-tour.md
+shot v0.3-tour-write
+tap-on Eye
+expect-mode preview
+expect-pages-at-least 3
+expect-page 1
+shot v0.3-tour-page1
+page
+expect-page 2
+shot v0.3-tour-page2
+page
+expect-page 3
+shot v0.3-tour-page3
+page back
+expect-page 2
+page back
+page back
+expect-page 1
+esc
+expect-mode write
+expect-open markdown-tour.md

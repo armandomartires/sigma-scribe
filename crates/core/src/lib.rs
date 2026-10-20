@@ -8,6 +8,7 @@ pub mod buffer;
 pub mod gesture;
 pub mod keyboard;
 pub mod library;
+pub mod markdown;
 pub mod store;
 pub mod text;
 pub mod wrap;
