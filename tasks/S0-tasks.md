@@ -51,3 +51,8 @@ Estimates are working days. Status: all TODO. Order matters: nothing is written 
 - **Description:** Decide Cobalt (Plan A) vs FBInk + NickelMenu (Plan B) on S0 evidence; optionally open a Forma device thread on BandarLabs/Cobalt with the probe results (needs user OK, it's public).
 - **Acceptance:** decision + rationale written into plan.md §Decisions.
 - **Deps:** S0-T08, S0-T09  **Estimate:** 0.25 d
+
+### S0-T11 — Draft Forma device report for Cobalt (do not post)
+- **Description:** From S0-T07 evidence, draft a Forma (N782, code 377, fw 4.38.23697, kernel 4.1.15) device report in the format of Cobalt `docs/DEVICES.md` rows / device-thread issues: identity, framebuffer, touch ranges/transform, page-button codes, rotation, display stages, exit/recovery results. Save as `docs/cobalt-forma-device-report.md`.
+- **Acceptance:** draft complete and reviewed by Armando. **Must not be posted (issue/PR/comment) without explicit user approval.**
+- **Deps:** S0-T07, S0-T10  **Estimate:** 0.25 d

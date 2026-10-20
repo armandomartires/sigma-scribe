@@ -20,6 +20,7 @@ Toolchain proven end to end and a go/no-go on Cobalt for the Forma.
 - Hello-world running on simulator and on the Forma
 - `docs/s0-findings.md` with measured results
 - Go/No-go decision recorded in plan.md
+- Draft Forma device report `docs/cobalt-forma-device-report.md` (not posted without user approval)
 
 ## Definition of done
 - Backup verified (file count + sha256 manifest match)

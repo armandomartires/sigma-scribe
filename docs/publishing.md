@@ -16,8 +16,9 @@ Sources: [CONTRIBUTING_APPS.md](https://github.com/BandarLabs/Cobalt/blob/main/d
 - Forma is not in the support matrix; consider contributing a Forma device row (probe + attended evidence) in S0/S7.
 - Capabilities: offline app; USB-OTG keyboard (raw `/dev/input`) may need a new capability or may not be allowed — raise with maintainers early (S8 risk).
 
-## Decisions for Armando
-1. **Licence** — must be compatible with landing in an AGPL-3.0 monorepo (AGPL-3.0 is simplest; MIT/Apache-2.0 also combine). Fonts Literata + Atkinson Hyperlegible are SIL OFL — include licence texts.
-2. **Author name** shown in Help and the Store page.
-3. Display name / short label / summary / glyph.
-4. Whether public screenshots/demo of the app are OK.
+## Decisions
+1. ✅ **Licence: AGPL-3.0** (resolved 2026-10-20) — same as the Cobalt monorepo; full text in `LICENSE`. Fonts Literata + Atkinson Hyperlegible are SIL OFL — ship their licence texts alongside.
+2. ✅ **Author: Sigma Recon** (resolved 2026-10-20) — shown in Help → App info and on the Store page.
+3. ✅ **Public screenshots/demo: allowed** (resolved 2026-10-20) — README + `screenshots/` for the Store listing.
+4. Open: display name / short label / summary / glyph (decide in S9).
+5. Forma device report (DEVICES.md row / issue): drafted in S0-T11, finalised in S9-T06 — **never posted without user approval**.

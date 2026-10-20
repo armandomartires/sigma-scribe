@@ -31,3 +31,13 @@ Estimates are working days. Status: all TODO.
 - **Acceptance:** works as specified in design-brief.md and the sprint DoD; covered by a test or on-device checklist item.
 - **Deps:** S9-T04
 - **Estimate:** 0.5–1 d
+
+### S9-T06 — Finalise Forma device report (post only with approval)
+- **Description:** Update `docs/cobalt-forma-device-report.md` with full-app evidence (suspend/resume, rotation, long sessions). Prepare the issue text / DEVICES.md PR row.
+- **Acceptance:** final draft reviewed; **posted to BandarLabs/Cobalt only after explicit user approval**.
+- **Deps:** S0-T11, S9-T01  **Estimate:** 0.25 d
+
+### S9-T07 — Store listing metadata
+- **Description:** `cobalt-app.json` + Store README: licence AGPL-3.0, author Sigma Recon, public screenshots from the Forma (allowed), display name/summary/glyph.
+- **Acceptance:** dry-run passes; listing reviewed by user.
+- **Deps:** S9-T02  **Estimate:** 0.25 d

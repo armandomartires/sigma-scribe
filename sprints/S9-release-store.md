@@ -11,6 +11,8 @@ Package, sign via Cobalt Store pipeline, publish (step 11).
 - `node tools/app-contribute.mjs --dry-run` clean
 - PR to BandarLabs/Cobalt `beta`; beta smoke; stable promotion
 - Install/rollback docs final
+- Store metadata: licence AGPL-3.0, author Sigma Recon, public screenshots
+- Finalise Forma device report (post only with user approval)
 
 ## Deliverables
 - v1.0.0 in Cobalt Store (beta → stable)

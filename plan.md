@@ -106,7 +106,7 @@ Resolution: all layout tokens (44 px targets, 20 px body, margins, 320 px drawer
 ## 7. Deployment & rollback
 
 - **Dev:** install Cobalt once over USB; sideload dev builds per Cobalt's developer flow (USB copy or local network) — confirm method in Sprint 0.
-- **Release:** package + sign Cobalt app; optionally submit to Cobalt Store (needs licence decision).
+- **Release:** package + sign Cobalt app; optionally submit to Cobalt Store (licence AGPL-3.0, author Sigma Recon).
 - **Backup first:** before any install, copy the Kobo's whole user partition (`/mnt/onboard`, incl. `.kobo/`) to the PC.
 - **Rollback:** remove the app from Cobalt (Store/launcher); Cobalt itself is removable per its INSTALL.md recovery steps; a restart always returns to stock Nickel; Cobalt does not touch the boot chain. Notes live as plain files and are exported over USB before uninstall.
 
@@ -129,9 +129,12 @@ Risks
 5. Toolchain (Rust, Cobalt CLI) installed at S0 start. Repo: `sigma-scribe`.
 6. Scope: v1.0 = all features in the brief, released incrementally (roadmap below).
 7. Distribution: publish to the **Cobalt Store** (see §11, docs/publishing.md).
+8. ✅ Licence: **AGPL-3.0** (matches Cobalt; full text in `LICENSE`). Fonts stay SIL OFL with their own licence texts.
+9. ✅ Author (Help + Store listing): **Sigma Recon**.
+10. ✅ Public screenshots for the Store listing: **allowed**.
+11. Forma device report for the Cobalt repo: drafted after the S0 gate (S0-T11), **posted only with user approval**.
 
 ### Still open
-- Licence (must combine with AGPL-3.0 Cobalt monorepo) and author name.
 - Edit-in-preview; graph as map vs list; export path (USB folder / Syncthing).
 - Whether Cobalt Store allows a raw-input (USB-OTG) capability (ask maintainers by S8).
 
@@ -175,5 +178,5 @@ Each version goes to the Cobalt Store Beta channel once the Store submission is 
 - `node tools/app-contribute.mjs --dry-run` validates, tests, cross-builds ARMv7 and test-signs locally.
 - PR against `beta`; human review of purpose, licensing, capabilities, setup, screenshots. CI signs (Ed25519 project key) and publishes Beta; maintainers promote to Stable.
 - Every release: strictly newer version + meaningful release notes.
-- Needs from you: licence, author, display name/summary, screenshots OK.
+- Resolved: licence AGPL-3.0, author Sigma Recon, public screenshots OK. Still needed: display name / short label / summary / glyph (S9).
 
