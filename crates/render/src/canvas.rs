@@ -279,7 +279,11 @@ mod tests {
         b.fill(Rect::new(60, 80, 8, 8), 0); // a key cap
         b.fill(Rect::new(70, 82, 2, 2), 10); // next to the cap: same rect
         let r = b.diff_regions(&a, 4, 8);
-        assert_eq!(r, vec![Rect::new(2, 0, 16, 16), Rect::new(58, 76, 16, 16)], "padded to MIN_REGION");
+        assert_eq!(
+            r,
+            vec![Rect::new(2, 0, 16, 16), Rect::new(58, 76, 16, 16)],
+            "padded to MIN_REGION"
+        );
         assert_eq!(b.diff_regions(&a, 4, 1), vec![Rect::new(5, 5, 67, 83)]);
         assert!(a.diff_regions(&a, 4, 8).is_empty());
     }
