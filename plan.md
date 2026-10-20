@@ -61,11 +61,12 @@ GitHub Releases of `sigma-scribe` (AGPL-3.0, Sigma Recon): `sigma-scribe-<ver>-k
 - USB-OTG keyboard: Forma host mode + powered hub, evdev keyboard mapping — S8 (the desktop window already feeds real keystrokes through the same `HwKey` path).
 - Waveform choice for typing (AUTO vs DU) — measure on device.
 - Never update the Forma to firmware 5.x.
+- v0.2.2 touch: the Forma's lift signal (tracking id / pressure) and jitter while resting are unverified; if holds fire late or drags are jumpy, tune `Config` (hold_ms, slop) or the evdev MOVE_EPS. Palm / second-finger contacts are ignored (slot 0 only).
 - Deletes are permanent in v0.2 (armed confirm only). A `.trash/` folder could be added later if wanted.
 - Open from the brief: edit-in-preview; graph map vs list; Syncthing export later.
 
 ## 10. Decisions log
-1. Device Kobo Forma, fw 4.38.23697. 2. Plan B (native Rust + FBInk + NickelMenu) — 2026-10-20 after the Cobalt installer block and S0 limits. 3. Install NickelMenu + app on the Forma only after a verified backup, with the user present. 4. Keyboard: on-screen and USB-OTG; no Bluetooth. 5. v1.0 = all features, released incrementally. 6. Licence AGPL-3.0, author Sigma Recon, public screenshots OK. 7. Distribution: GitHub Releases + MobileRead (Cobalt Store dropped). 8. 2026-10-20: v0.1.0 passed on device (user report) and was tagged; v0.2 = library (scope §11). 9. 2026-10-21: v0.2.0 passed on device and tagged; v0.2.1 = Full on-screen keyboard (S2.5).
+1. Device Kobo Forma, fw 4.38.23697. 2. Plan B (native Rust + FBInk + NickelMenu) — 2026-10-20 after the Cobalt installer block and S0 limits. 3. Install NickelMenu + app on the Forma only after a verified backup, with the user present. 4. Keyboard: on-screen and USB-OTG; no Bluetooth. 5. v1.0 = all features, released incrementally. 6. Licence AGPL-3.0, author Sigma Recon, public screenshots OK. 7. Distribution: GitHub Releases + MobileRead (Cobalt Store dropped). 8. 2026-10-20: v0.1.0 passed on device (user report) and was tagged; v0.2 = library (scope §11). 9. 2026-10-21: v0.2.0 passed on device and tagged; v0.2.1 = Full on-screen keyboard (S2.5). 10. 2026-10-21: v0.2.1 passed and tagged (8a54ab2); v0.2.2 = touch selection (S2.6).
 
 ## 11. Sprints & version roadmap
 
@@ -83,6 +84,12 @@ GitHub Releases of `sigma-scribe` (AGPL-3.0, Sigma Recon): `sigma-scribe-<ver>-k
 - Portrait fit: 1-unit keys 82×66 px, Full board 380 px → page 1420 px (Compact 307 → 1493). Only changed regions are refreshed.
 - S4 landscape keyboards build on the same key model and renderer (see `sprints/S2.5-full-keyboard.md`). Alt has no bindings yet.
 
+### v0.2.2 scope (S2.6, requested 2026-10-21)
+- Android-style touch selection: long-press (500 ms, 30 px tolerance) selects a word, or places the caret with Paste on blank space; two draggable handles with char snapping; long-press + slide extends by words; floating action bar Cut / Copy / Paste / Select all (shared clipboard + undo); double-tap selects a word; tap elsewhere dismisses.
+- New core gesture recognizer; device events gain `Touch { Down | Move | Up, t }` and `Tick`; evdev follows MT protocol B on slot 0; desktop window simulates with mouse hold/drag.
+- E-ink: no animation, partial fast refresh of changed regions only, drag redraws throttled to ~150 ms plus lift.
+- Device risk: hold reliability depends on the Forma reporting a steady contact; see §9.
+
 ### Roadmap after v0.2 (confirmed)
 
 | # | Sprint | Release | Contents |
@@ -91,6 +98,7 @@ GitHub Releases of `sigma-scribe` (AGPL-3.0, Sigma Recon): `sigma-scribe-<ver>-k
 | S1 | Editor core | **v0.1.0** ✅ | editor, OSK, autosave to .md, title/status bars, page keys, tap-to-place caret — passed on device |
 | S2 | Library | **v0.2.0** ✅ | Files sheet, folders, new/rename/move/delete (armed), title-bar rename, seed, last-opened — passed on device |
 | S2.5 | Full on-screen keyboard | **v0.2.1** ✅ | Windows-OSK style Full layout + Compact, sticky modifiers, Ctrl shortcuts, undo/redo, selection, remembered choice, Full default — passed on device |
+| S2.6 | Touch selection | **v0.2.2** 🟡 | long-press word select, handles, word-wise drag, action bar (Cut/Copy/Paste/Select all), double-tap; gesture recognizer + evdev touch phases — built; device check pending |
 | S3 | Markdown preview | v0.3.0 | parser + renderer, eye/pencil |
 | S4 | Options & Line mode | v0.4.0 | Day/Night, faces, steppers, Line mode, rotation + landscape keyboards |
 | S5 | Drawer | v0.5.0 | Contents, To-dos, Scratch |
