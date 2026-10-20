@@ -13,14 +13,14 @@
 ### S0-T06 — Cobalt evaluation
 - **Status:** ✅ CLOSED — installer refuses N782; SDK limits → Plan B (docs/s0-findings.md)
 ### S0-T07 — FBInk + evdev backend
-- **Status:** 🟡 BUILT — compiles/links for ARM; untested on device
+- **Status:** ✅ DONE — FBInk detected the Forma on device 2026-10-20 23:04 CEST (log: Frost/Mark 7, 1440×1920, 300 dpi); app ran and exited 0
 - **Acceptance:** blank/garbled screen never; touch, page keys, power decoded; full + partial refreshes visible.
 ### S0-T08 — Kobo packaging
 - **Status:** ✅ DONE — `scripts/package-kobo.sh`, `packaging/kobo/.adds/{sigma-scribe,nm}`; launcher stops Nickel, reboots on exit
 ### S0-T09 — Install on the Forma
-- **Status:** ⏸ WAITING for Armando (docs/install-plan-forma.md §1–3)
+- **Status:** ✅ DONE 2026-10-20 — NickelMenu v0.6.0 + sigma-scribe 0.1.0 installed host-side, KoboRoot.tgz consumed by the device
 - **Deps:** S0-T01, S0-T08  **Estimate:** 0.5 h
 ### S0-T10 — On-device checklist + go/no-go
-- **Status:** ⏸ after T09 (install plan §5)
+- **Status:** ✅ PASS (user report 2026-10-20; itemised checklist results not recorded) — GO for Plan B
 ### S0-T11 — Device notes for upstream (optional)
 - **Status:** ⏸ TODO — e.g. Forma touch transform for FBInk/KOReader users; post only with explicit approval
