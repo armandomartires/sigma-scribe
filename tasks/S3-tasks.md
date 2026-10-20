@@ -1,27 +1,14 @@
-# S3 tasks — Markdown preview
+# S3 tasks — Markdown preview (v0.3.0)
 
-Estimates are working days. Status: all TODO.
+High level; acceptance made specific when S3 starts. Status: all TODO.
 
-### S3-T01 — Markdown parser → AST in core (headings, emphasis, lists, tasks, quote, rule, code, images, links, tables, strike)
-- **Description:** Markdown parser → AST in core (headings, emphasis, lists, tasks, quote, rule, code, images, links, tables, strike).
-- **Acceptance:** works as specified in design-brief.md and the sprint DoD; covered by a test or on-device checklist item.
-- **Deps:** S2 done
-- **Estimate:** 1 d
+### S3-T01 — Markdown parser → AST in core
+- Headings, emphasis/strong, strike, lists, task lists, quotes, rules, code, links, `[[wiki]]` links (as text for now), tables, images (alt text). Pure core, unit-tested; parsing a 10 k-word note under budget on the Forma.
 
-### S3-T02 — Renderer on sigma-render (real fonts, bold/italic faces)
-- **Description:** Renderer on sigma-render (real fonts, bold/italic faces).
-- **Acceptance:** works as specified in design-brief.md and the sprint DoD; covered by a test or on-device checklist item.
-- **Deps:** S3-T01
-- **Estimate:** 1 d
+### S3-T02 — Preview renderer in sigma-render
+- Literata regular/bold/italic, heading scale, list bullets, checkboxes, quote bar, code in a mono face (new OFL font), page-turn paging.
 
-### S3-T03 — Preview toggle
-- **Description:** Preview toggle.
-- **Acceptance:** works as specified in design-brief.md and the sprint DoD; covered by a test or on-device checklist item.
-- **Deps:** S3-T02
-- **Estimate:** 0.5–1 d
+### S3-T03 — Eye / pencil toggle in the title bar
+- Preview is read-only; task checkboxes tappable (writes `[x]` back to the file). Full refresh on toggle.
 
-### S3-T04 — Off-UI-thread parsing for long notes
-- **Description:** Off-UI-thread parsing for long notes.
-- **Acceptance:** works as specified in design-brief.md and the sprint DoD; covered by a test or on-device checklist item.
-- **Deps:** S3-T03
-- **Estimate:** 0.5–1 d
+### S3-T04 — Performance + emulator script + screenshots `v0.3-*.png`, on-device check.

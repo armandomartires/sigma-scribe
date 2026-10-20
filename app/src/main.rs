@@ -5,7 +5,6 @@
 #[path = "window.rs"]
 mod window;
 
-use sigma_core::FsNoteStore;
 use sigma_device::Device;
 use sigma_scribe::{notes_dir, App};
 use std::process::ExitCode;
@@ -30,7 +29,7 @@ fn main() -> ExitCode {
         }
     };
     let (w, h) = dev.size();
-    let mut app = App::new(w, h, FsNoteStore::new(notes_dir()));
+    let mut app = App::new(w, h, notes_dir());
     match app.run(dev.as_mut()) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {

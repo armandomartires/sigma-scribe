@@ -3,14 +3,16 @@
 **Release:** v0.2.0 · **Estimate:** 4–5 d · **Depends on:** S1
 
 ## Goal
-Files sheet: folders and notes (brief step 2).
+Files sheet: folders and notes, as plain files under `/mnt/onboard/sigma-scribe/notes` (brief step 2).
 
-## Scope
-- Folder/note model in core
-- Files sheet: enter, up crumb, open, More → rename/move/armed delete
-- New note / new folder (starts in rename)
-- Name cleaning, last-note protection, word counts
-- Notes stored as real files for USB export
+## Scope (v0.2.0)
+- Library model with safe paths (no escapes, hidden files ignored), `.md`/`.txt` only
+- Files sheet: folders first, word counts, enter / up crumb, open into the editor
+- More → Rename / Move / Delete with armed confirmation; folder delete removes contents
+- New note / new folder (start in rename); rename in place from the title bar
+- Name cleaning and collision suffixes; last real note cannot be deleted
+- Seed library on first run only; last-opened note restored on launch
+- v0.1 editor/OSK/autosave behaviour unchanged
 
 ## Deliverables
 - v0.2.0 on device
@@ -23,7 +25,8 @@ Files sheet: folders and notes (brief step 2).
 
 ## Test checklist
 ### Desktop / simulator
-- [ ] `cargo test` for new core logic
+- [x] `cargo test` for new core logic (library tests incl. unsafe names, collisions)
+- [x] `tests/emu/v0.2-library.script` + v0.1 script pass
 - [ ] Simulator run at Forma metrics, portrait and landscape
 ### On-device (Kobo Forma, fw 4.38.23697)
 - [ ] Create nested folder, move note into it, rename, delete (armed)

@@ -6,11 +6,13 @@
 
 pub mod buffer;
 pub mod keyboard;
+pub mod library;
 pub mod store;
 pub mod text;
 pub mod wrap;
 
 pub use buffer::Buffer;
 pub use keyboard::{Key, KeyAction, Keyboard, Layer};
+pub use library::{Entry, Kind, Library, NotePath};
 pub use store::{Autosave, FsNoteStore, MemoryNoteStore, NoteStore, SaveState};
 pub use wrap::{wrap, MonoMeasure, TextMeasure, VisualLine};

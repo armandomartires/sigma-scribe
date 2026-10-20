@@ -1,6 +1,6 @@
 # Plan — Sigma Scribe: a Markdown notebook on the Kobo Forma
 
-**Status:** ✅ APPROVED 2026-10-20 · **Platform: Plan B — native Rust + FBInk + NickelMenu** (decided 2026-10-20 22:14 CEST; Cobalt dropped) · v0.1 implemented on desktop, not yet on the device.
+**Status:** ✅ APPROVED 2026-10-20 · **Platform: Plan B — native Rust + FBInk + NickelMenu** (decided 2026-10-20 22:14 CEST; Cobalt dropped) · **v0.1.0 passed on the Forma** (2026-10-20, tag `v0.1.0`) · v0.2.0 (library) built, awaiting on-device check.
 **Licence:** AGPL-3.0-only (`LICENSE`) · **Author:** Sigma Recon · **Repo:** `sigma-scribe`
 **Inputs:** `design-brief.md` (behaviour), `mockup/kobo-writing-mock.html` (look).
 
@@ -61,17 +61,29 @@ GitHub Releases of `sigma-scribe` (AGPL-3.0, Sigma Recon): `sigma-scribe-<ver>-k
 - USB-OTG keyboard: Forma host mode + powered hub, evdev keyboard mapping — S8 (the desktop window already feeds real keystrokes through the same `HwKey` path).
 - Waveform choice for typing (AUTO vs DU) — measure on device.
 - Never update the Forma to firmware 5.x.
+- Deletes are permanent in v0.2 (armed confirm only). A `.trash/` folder could be added later if wanted.
 - Open from the brief: edit-in-preview; graph map vs list; Syncthing export later.
 
 ## 10. Decisions log
-1. Device Kobo Forma, fw 4.38.23697. 2. Plan B (native Rust + FBInk + NickelMenu) — 2026-10-20 after the Cobalt installer block and S0 limits. 3. Install NickelMenu + app on the Forma only after a verified backup, with the user present. 4. Keyboard: on-screen and USB-OTG; no Bluetooth. 5. v1.0 = all features, released incrementally. 6. Licence AGPL-3.0, author Sigma Recon, public screenshots OK. 7. Distribution: GitHub Releases + MobileRead (Cobalt Store dropped).
+1. Device Kobo Forma, fw 4.38.23697. 2. Plan B (native Rust + FBInk + NickelMenu) — 2026-10-20 after the Cobalt installer block and S0 limits. 3. Install NickelMenu + app on the Forma only after a verified backup, with the user present. 4. Keyboard: on-screen and USB-OTG; no Bluetooth. 5. v1.0 = all features, released incrementally. 6. Licence AGPL-3.0, author Sigma Recon, public screenshots OK. 7. Distribution: GitHub Releases + MobileRead (Cobalt Store dropped). 8. 2026-10-20: v0.1.0 passed on device (user report) and was tagged; v0.2 = library (scope §11).
 
 ## 11. Sprints & version roadmap
+
+### v0.2 scope (S2, decided 2026-10-20)
+- Files sheet from the title-bar folder icon: folders first, then notes with word counts; enter folders, `← Up to …` crumb; open a note into the editor (current note saved first).
+- New note / New folder (start in rename); More → Rename / Move / Delete; Delete needs a second tap (armed); folder delete removes its contents.
+- Rename in place from the editor title bar (OK / Cancel / Return / blur).
+- Safe storage: plain `.md` / `.txt` under `/mnt/onboard/sigma-scribe/notes`; paths validated (no `..`, absolute or hidden parts); names cleaned; collisions get ` 2`, ` 3`…; atomic writes; the last real note cannot be deleted; `.scratchpad.md` protected.
+- Seed library only when there are no notes (keeps the v0.1 note); last-opened note restored on launch (`notes/.sigma-last-opened`).
+- Out of scope: preview, drawer, search, sorting options, multi-select, undo of deletes (no trash in v0.2 — see §9).
+
+### Roadmap after v0.2 (confirmed)
+
 | # | Sprint | Release | Contents |
 |---|---|---|---|
-| S0 | Foundations & Forma bring-up | — | backup ✅, toolchain ✅, FBInk/NickelMenu ✅ (host), install on Forma, device checklist |
-| S1 | Editor core | **v0.1.0** | editor, OSK, autosave to .md, title/status bars, page keys, tap-to-place caret ✅ desktop |
-| S2 | Library | v0.2.0 | files/folders sheet, rename/move/delete, seed library |
+| S0 | Foundations & Forma bring-up | — | ✅ backup, toolchain, FBInk/NickelMenu, install, device check (pass) |
+| S1 | Editor core | **v0.1.0** ✅ | editor, OSK, autosave to .md, title/status bars, page keys, tap-to-place caret — passed on device |
+| S2 | Library | **v0.2.0** 🟡 | Files sheet, folders, new/rename/move/delete (armed), title-bar rename, seed, last-opened — built; device check pending |
 | S3 | Markdown preview | v0.3.0 | parser + renderer, eye/pencil |
 | S4 | Options & Line mode | v0.4.0 | Day/Night, faces, steppers, Line mode, rotation + landscape keyboards |
 | S5 | Drawer | v0.5.0 | Contents, To-dos, Scratch |

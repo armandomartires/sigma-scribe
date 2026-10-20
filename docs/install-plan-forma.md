@@ -72,3 +72,6 @@ The Forma shows "Updating…" (installs NickelMenu) and restarts. **Leave it on 
 - **GO** if 1–4, 5 (with a working `touch.conf`), 6, 10, 12–15 pass.
 - **Fix then GO** if only latency/ghosting (7) or rotation (11) need work — tune waveform/regions in S1/S4.
 - **NO-GO / rethink** if the panel stays blank or garbled, input cannot be read at all, the device fails to return to the stock reader, or any data on the Kobo is lost.
+
+## Upgrade 0.1.0 → 0.2.0 (not run; needs approval)
+NickelMenu is already installed, so only the binary changes. Host side: mount the Forma read-write, replace `.adds/sigma-scribe/sigma-scribe` with `dist/sigma-scribe-0.2.0-kobo/.adds/sigma-scribe/sigma-scribe` (sha256 `38e6955f03f1f1a100dde8dfbbea11f31433cf831afa7d5469f8156c6ec74b31`), verify the checksum, sync, unmount, eject. Nothing under `sigma-scribe/notes` is touched; on first launch 0.2.0 keeps the existing `field-notes.md` and does not re-seed. Rollback: copy the 0.1.0 binary back (`dist/sigma-scribe-0.1.0-kobo`). On-device checklist: `tasks/S2-tasks.md` S2-T09.

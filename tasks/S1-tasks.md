@@ -33,11 +33,11 @@ Estimates are working days. Updated 2026-10-20 22:4x CEST — re-implemented on 
 - **Deps:** S1-T01  **Estimate:** 1 d
 
 ### S1-T07 — Page-turn buttons scroll
-- **Status:** ✅ DESKTOP (PageUp/PageDown, test) · device: evdev 193 back / 194 forward, check on Forma.
+- **Status:** ✅ DONE — desktop test + on-device pass (user report).
 - **Deps:** S1-T03  **Estimate:** 0.25 d
 
 ### S1-T08 — Seed content
-- **Status:** 🟡 PARTIAL — `field-notes.md` seeded on first run; `drafts/chapter-01.md`, `scratch.txt`, `.scratchpad.md` arrive with the library in S2.
+- **Status:** ✅ DONE in S2 — full seed library on first run (only when the library has no notes).
 - **Deps:** S1-T06  **Estimate:** 0.25 d
 
 ### S1-T09 — Tap-to-place caret
@@ -48,9 +48,9 @@ Estimates are working days. Updated 2026-10-20 22:4x CEST — re-implemented on 
 - **Status:** ✅ DESKTOP — `HwKey` events (chars, Backspace, Delete, Return, Tab, arrows) from the window; same path for USB-OTG in S8.
 
 ### S1-T10 — On-device v0.1 checklist
-- **Status:** ⏸ after S0-T09 install (docs/install-plan-forma.md §5).
+- **Status:** ✅ PASS on Forma (user report 2026-10-20; itemised results not recorded). Note saved on device: `sigma-scribe/notes/field-notes.md`. Tagged `v0.1.0`.
 - **Acceptance:** sprint file checklist: 500 words via OSK without missed keys; caret survives scroll; kill app mid-typing keeps last save; reboot restores note; page keys scroll; keystroke-to-ink measured.
 - **Deps:** S0-T09  **Estimate:** 0.5 d
 
 ### S1-T11 — Rename in title bar
-- **Status:** ⏭ MOVED to S2 (needs the library and a text-entry screen).
+- **Status:** ✅ DONE in S2 (S2-T05)

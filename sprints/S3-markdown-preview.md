@@ -1,6 +1,6 @@
 # S3 — Markdown preview
 
-**Release:** v0.3.0 · **Estimate:** 5–6 d · **Depends on:** S2
+**Release:** v0.3.0 · **Estimate:** 5–6 d · **Depends on:** S2 (v0.2.0)
 
 ## Goal
 Rendered preview with eye ↔ pencil (brief step 3).

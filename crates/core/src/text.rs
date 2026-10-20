@@ -21,7 +21,11 @@ pub fn clean_name(raw: &str) -> String {
             }
         })
         .collect();
-    let joined = filtered.split_whitespace().collect::<Vec<_>>().join(" ");
+    let joined = filtered
+        .split_whitespace()
+        .filter(|w| !w.chars().all(|c| c == '.'))
+        .collect::<Vec<_>>()
+        .join(" ");
     let trimmed = joined.trim_start_matches('.').trim();
     if trimmed.is_empty() {
         "untitled".to_owned()
@@ -44,6 +48,7 @@ mod tests {
     fn cleans_names() {
         assert_eq!(clean_name("  my   note "), "my note");
         assert_eq!(clean_name("../etc/passwd"), "etc passwd");
+        assert_eq!(clean_name("a .. b"), "a b");
         assert_eq!(clean_name("..."), "untitled");
         assert_eq!(clean_name("a\u{0}b"), "a b");
     }

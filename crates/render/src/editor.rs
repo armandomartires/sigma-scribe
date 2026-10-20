@@ -17,6 +17,8 @@ pub struct Model<'a> {
     pub keys_on: bool,
     pub save: &'a SaveState,
     pub theme: Theme,
+    /// Name field being edited in the title bar (rename in place).
+    pub rename: Option<&'a Buffer>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -25,6 +27,12 @@ pub enum Hit {
     ToggleKeys,
     /// Byte offset in the buffer where the caret should go.
     Caret(usize),
+    /// Folder icon: open the Files sheet.
+    Files,
+    /// Tap on the file name: rename in place.
+    StartRename,
+    RenameOk,
+    RenameCancel,
     Nothing,
 }
 
@@ -36,6 +44,10 @@ pub struct Layout {
     pub keys_button: Rect,
     pub keyboard: Rect,
     pub keys: Vec<(Rect, Key)>,
+    pub files_button: Rect,
+    pub name_rect: Rect,
+    pub ok_rect: Rect,
+    pub cancel_rect: Rect,
 }
 
 pub struct EditorScreen {
@@ -132,6 +144,14 @@ impl EditorScreen {
                 }
             }
         }
+        let btn = self.px(44.0);
+        let by = (title.h - btn) / 2;
+        let files_button = Rect::new(w - self.px(12.0) - btn, by, btn, btn);
+        let name_rect = Rect::new(0, 0, w * 3 / 5, title.h);
+        let okw = self.px(72.0);
+        let cw = self.px(96.0);
+        let ok_rect = Rect::new(w - self.px(12.0) - okw, by, okw, btn);
+        let cancel_rect = Rect::new(ok_rect.x - self.px(8.0) - cw, by, cw, btn);
         Layout {
             title,
             page,
@@ -139,6 +159,10 @@ impl EditorScreen {
             keys_button,
             keyboard: keyboard_rect,
             keys,
+            files_button,
+            name_rect,
+            ok_rect,
+            cancel_rect,
         }
     }
 
@@ -204,6 +228,33 @@ impl EditorScreen {
     #[must_use]
     pub fn hit(&self, model: &Model<'_>, x: i32, y: i32) -> Hit {
         let l = self.layout(model.keys_on, model.keyboard);
+        if model.rename.is_some() {
+            if l.ok_rect.contains(x, y) {
+                return Hit::RenameOk;
+            }
+            if l.cancel_rect.contains(x, y) {
+                return Hit::RenameCancel;
+            }
+            if let Some(&(_, k)) = l
+                .keys
+                .iter()
+                .find(|(r, _)| r.inset(-self.px(3.0) / 2).contains(x, y))
+            {
+                return Hit::Key(k);
+            }
+            // Brief: blur confirms.
+            return if l.title.contains(x, y) {
+                Hit::Nothing
+            } else {
+                Hit::RenameOk
+            };
+        }
+        if l.files_button.inset(-self.px(4.0)).contains(x, y) {
+            return Hit::Files;
+        }
+        if l.name_rect.contains(x, y) {
+            return Hit::StartRename;
+        }
         if l.keys_button.inset(-self.px(4.0)).contains(x, y) {
             return Hit::ToggleKeys;
         }
@@ -235,30 +286,7 @@ impl EditorScreen {
         c.fill(c.bounds(), t.paper);
         let ui = 17.0 * self.s.0;
 
-        // Title bar: file name left (ellipsized), hairline under.
-        let name = ellipsize(
-            &self.fonts,
-            Face::AtkinsonBold,
-            ui,
-            model.file_name,
-            (l.title.w as f32) * 0.6,
-        );
-        let base = l.title.y as f32
-            + l.title.h as f32 / 2.0
-            + self.fonts.ascent(Face::AtkinsonBold, ui) / 2.6;
-        self.fonts.draw(
-            c,
-            Face::AtkinsonBold,
-            ui,
-            self.px(20.0) as f32,
-            base,
-            &name,
-            t.ink,
-        );
-        c.fill(
-            Rect::new(0, l.title.y + l.title.h - 1, l.title.w, 1),
-            t.rule,
-        );
+        self.draw_title(c, &l, model.file_name, model.rename, t, true);
 
         // Page.
         let area = self.text_area(l.page);
@@ -345,46 +373,149 @@ impl EditorScreen {
             t.ink,
         );
 
-        // Keyboard.
         if model.keys_on {
-            c.fill(l.keyboard, t.paper);
-            c.fill(Rect::new(0, l.keyboard.y, l.keyboard.w, 1), t.rule);
-            let ks = 20.0 * self.s.0;
-            for &(r, k) in &l.keys {
-                let active = k == Key::Shift && model.keyboard.shift;
-                let (bg, fg) = if active {
-                    (t.ink, t.paper)
-                } else {
-                    (t.paper, t.ink)
-                };
-                c.fill(r, bg);
-                c.stroke(r, 1, if active { t.ink } else { t.rule });
-                let label = model.keyboard.label(k);
-                let face = if matches!(k, Key::Char(_)) {
-                    Face::Atkinson
-                } else {
-                    Face::AtkinsonBold
-                };
-                let size = if matches!(k, Key::Char(_)) {
-                    ks * 1.15
-                } else {
-                    ks * 0.85
-                };
-                let lw = self.fonts.width(face, size, &label);
-                let by = r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(face, size) / 2.6;
-                self.fonts.draw(
-                    c,
-                    face,
-                    size,
-                    r.x as f32 + (r.w as f32 - lw) / 2.0,
-                    by,
-                    &label,
-                    fg,
-                );
-            }
+            self.draw_keys(c, &l, model.keyboard, t);
         }
         l
     }
+
+    #[must_use]
+    pub fn ui_px(&self) -> f32 {
+        17.0 * self.s.0
+    }
+
+    #[must_use]
+    pub fn scale(&self) -> Scale {
+        self.s
+    }
+
+    /// Title bar: a name (tap to rename) and the Files icon, or the rename
+    /// field with Cancel / OK. Hairline under.
+    pub fn draw_title(
+        &self,
+        c: &mut Canvas,
+        l: &Layout,
+        name: &str,
+        rename: Option<&Buffer>,
+        t: Theme,
+        files_icon: bool,
+    ) {
+        let ui = self.ui_px();
+        c.fill(l.title, t.paper);
+        let base = l.title.y as f32
+            + l.title.h as f32 / 2.0
+            + self.fonts.ascent(Face::AtkinsonBold, ui) / 2.6;
+        if let Some(field) = rename {
+            let fr = Rect::new(
+                self.px(12.0),
+                l.ok_rect.y,
+                l.cancel_rect.x - self.px(24.0),
+                l.ok_rect.h,
+            );
+            c.fill(fr, t.wash);
+            c.stroke(fr, 1, t.ink);
+            let x0 = fr.x as f32 + self.px(10.0) as f32;
+            let end = self
+                .fonts
+                .draw(c, Face::Atkinson, ui, x0, base, field.text(), t.ink);
+            let before = self
+                .fonts
+                .width(Face::Atkinson, ui, &field.text()[..field.caret()]);
+            let _ = end;
+            c.fill(
+                Rect::new(
+                    (x0 + before) as i32,
+                    fr.y + self.px(8.0),
+                    2,
+                    fr.h - self.px(16.0),
+                ),
+                t.ink,
+            );
+            for (r, label, primary) in [(l.cancel_rect, "Cancel", false), (l.ok_rect, "OK", true)] {
+                c.fill(r, if primary { t.ink } else { t.paper });
+                c.stroke(r, 1, t.ink);
+                let w = self.fonts.width(Face::AtkinsonBold, ui, label);
+                self.fonts.draw(
+                    c,
+                    Face::AtkinsonBold,
+                    ui,
+                    r.x as f32 + (r.w as f32 - w) / 2.0,
+                    base,
+                    label,
+                    if primary { t.paper } else { t.ink },
+                );
+            }
+        } else {
+            let shown = ellipsize(
+                &self.fonts,
+                Face::AtkinsonBold,
+                ui,
+                name,
+                l.name_rect.w as f32 - self.px(28.0) as f32,
+            );
+            self.fonts.draw(
+                c,
+                Face::AtkinsonBold,
+                ui,
+                self.px(20.0) as f32,
+                base,
+                &shown,
+                t.ink,
+            );
+            if files_icon {
+                draw_folder_icon(c, l.files_button, self.s, t.ink);
+            }
+        }
+        c.fill(
+            Rect::new(0, l.title.y + l.title.h - 1, l.title.w, 1),
+            t.rule,
+        );
+    }
+
+    /// The on-screen keyboard in `l.keyboard`.
+    pub fn draw_keys(&self, c: &mut Canvas, l: &Layout, keyboard: &Keyboard, t: Theme) {
+        c.fill(l.keyboard, t.paper);
+        c.fill(Rect::new(0, l.keyboard.y, l.keyboard.w, 1), t.rule);
+        let ks = 20.0 * self.s.0;
+        for &(r, k) in &l.keys {
+            let active = k == Key::Shift && keyboard.shift;
+            let (bg, fg) = if active {
+                (t.ink, t.paper)
+            } else {
+                (t.paper, t.ink)
+            };
+            c.fill(r, bg);
+            c.stroke(r, 1, if active { t.ink } else { t.rule });
+            let label = keyboard.label(k);
+            let (face, size) = if matches!(k, Key::Char(_)) {
+                (Face::Atkinson, ks * 1.15)
+            } else {
+                (Face::AtkinsonBold, ks * 0.85)
+            };
+            let lw = self.fonts.width(face, size, &label);
+            let by = r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(face, size) / 2.6;
+            self.fonts.draw(
+                c,
+                face,
+                size,
+                r.x as f32 + (r.w as f32 - lw) / 2.0,
+                by,
+                &label,
+                fg,
+            );
+        }
+    }
+}
+
+/// A 20 px (brief), 1.75-stroke folder outline centred in a 44 px target.
+pub fn draw_folder_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
+    let w = s.px(20.0);
+    let h = s.px(16.0);
+    let st = s.px(1.75).max(2);
+    let x = target.x + (target.w - w) / 2;
+    let y = target.y + (target.h - h) / 2 + s.px(1.0);
+    c.stroke(Rect::new(x, y + s.px(3.0), w, h - s.px(3.0)), st, ink);
+    c.stroke(Rect::new(x, y, w * 2 / 5, s.px(4.0)), st, ink);
 }
 
 fn ellipsize(f: &Fonts, face: Face, size: f32, s: &str, max: f32) -> String {
@@ -413,6 +544,7 @@ mod tests {
             keys_on: true,
             save: s,
             theme: Theme::DAY,
+            rename: None,
         }
     }
 

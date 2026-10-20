@@ -47,6 +47,29 @@ impl FsNoteStore {
     }
 }
 
+/// Temp file, fsync, rename, fsync of the directory.
+///
+/// # Errors
+/// Any filesystem error; the previous file is left intact.
+pub fn write_atomic(path: &Path, body: &str) -> io::Result<()> {
+    let dir = path
+        .parent()
+        .map_or_else(|| PathBuf::from("."), Path::to_path_buf);
+    fs::create_dir_all(&dir)?;
+    let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("note");
+    let tmp = dir.join(format!(".{file_name}.tmp"));
+    {
+        let mut f = File::create(&tmp)?;
+        f.write_all(body.as_bytes())?;
+        f.sync_all()?;
+    }
+    fs::rename(&tmp, path)?;
+    if let Ok(d) = File::open(&dir) {
+        let _ = d.sync_all();
+    }
+    Ok(())
+}
+
 impl NoteStore for FsNoteStore {
     fn load(&self, name: &str) -> io::Result<Option<String>> {
         match fs::read_to_string(self.path(name)?) {
@@ -57,21 +80,7 @@ impl NoteStore for FsNoteStore {
     }
 
     fn save(&mut self, name: &str, body: &str) -> io::Result<()> {
-        let path = self.path(name)?;
-        let dir = path.parent().unwrap_or(&self.root).to_path_buf();
-        fs::create_dir_all(&dir)?;
-        let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("note");
-        let tmp = dir.join(format!(".{file_name}.tmp"));
-        {
-            let mut f = File::create(&tmp)?;
-            f.write_all(body.as_bytes())?;
-            f.sync_all()?;
-        }
-        fs::rename(&tmp, &path)?;
-        if let Ok(d) = File::open(&dir) {
-            let _ = d.sync_all();
-        }
-        Ok(())
+        write_atomic(&self.path(name)?, body)
     }
 }
 
