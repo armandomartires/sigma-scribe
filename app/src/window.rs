@@ -1,17 +1,17 @@
 //! Live desktop window (minifb/X11): the 1440×1920 panel scaled to fit,
-//! mouse = touch, PageUp/PageDown = page-turn buttons, the real keyboard =
+//! mouse = touch (press / hold / drag), PageUp/PageDown = page-turn buttons, the real keyboard =
 //! a USB keyboard, Escape = power (save and quit). `SIGMA_EINK=1` adds an
 //! e-ink look: greyscale only, a black flash on full refreshes, and faint
 //! ghosting left behind by fast/partial refreshes.
 
 use minifb::{InputCallback, Key, KeyRepeat, MouseButton, MouseMode, Window, WindowOptions};
-use sigma_device::{Device, Event, HwKey, Refresh};
+use sigma_device::{Device, Event, HwKey, Phase, Refresh};
 use sigma_render::{Canvas, Rect};
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::io;
 use std::rc::Rc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 struct Chars(Rc<RefCell<VecDeque<char>>>);
 
@@ -35,6 +35,8 @@ pub struct WindowDevice {
     eink: bool,
     chars: Rc<RefCell<VecDeque<char>>>,
     was_down: bool,
+    last_pos: (i32, i32),
+    epoch: Instant,
     pending: VecDeque<Event>,
 }
 
@@ -71,6 +73,8 @@ impl WindowDevice {
             eink: std::env::var("SIGMA_EINK").is_ok_and(|v| v != "0"),
             chars,
             was_down: false,
+            last_pos: (i32::MIN, i32::MIN),
+            epoch: Instant::now(),
             pending: VecDeque::new(),
         })
     }
@@ -106,13 +110,20 @@ impl WindowDevice {
             self.pending.push_back(Event::Quit);
             return;
         }
+        // Mouse = one finger: press, hold still for a long-press, drag.
         let down = self.window.get_mouse_down(MouseButton::Left);
-        if self.was_down && !down {
-            if let Some((x, y)) = self.window.get_mouse_pos(MouseMode::Discard) {
-                self.pending.push_back(Event::Tap {
-                    x: (x / self.scale) as i32,
-                    y: (y / self.scale) as i32,
-                });
+        let t = self.epoch.elapsed().as_millis() as u64;
+        if let Some((x, y)) = self.window.get_mouse_pos(MouseMode::Clamp) {
+            let (x, y) = ((x / self.scale) as i32, (y / self.scale) as i32);
+            let phase = match (self.was_down, down) {
+                (false, true) => Some(Phase::Down),
+                (true, false) => Some(Phase::Up),
+                (true, true) if (x, y) != self.last_pos => Some(Phase::Move),
+                _ => None,
+            };
+            if let Some(phase) = phase {
+                self.last_pos = (x, y);
+                self.pending.push_back(Event::Touch { phase, x, y, t });
             }
         }
         self.was_down = down;
@@ -176,6 +187,9 @@ impl Device for WindowDevice {
             self.poll();
             if self.pending.is_empty() {
                 self.window.update();
+                return Some(Event::Tick {
+                    t: self.epoch.elapsed().as_millis() as u64,
+                });
             }
         }
     }

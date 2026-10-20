@@ -1,7 +1,14 @@
-//! Linux evdev decoding for the Kobo: touch (single finger, tap on lift) and
-//! page-turn / power keys. Pure logic, tested on the desktop.
+//! Linux evdev decoding for the Kobo: touch and page-turn / power keys.
+//! Pure logic, tested on the desktop.
+//!
+//! Touch (v0.2.2): one finger, reported as `Touch { Down | Move | Up }` with
+//! the caller's monotonic clock, one event per `SYN_REPORT`. Multi-touch
+//! protocol B is followed on slot 0 only (other fingers are ignored). Lift
+//! is recognised from any of: `ABS_MT_TRACKING_ID = -1`, `BTN_TOUCH = 0`,
+//! `ABS_MT_PRESSURE = 0` or `ABS_MT_TOUCH_MAJOR = 0`, because Kobo models
+//! differ in which one they send.
 
-use crate::Event;
+use crate::{Event, Phase};
 
 pub const EV_SYN: u16 = 0x00;
 pub const EV_KEY: u16 = 0x01;
@@ -11,6 +18,11 @@ pub const ABS_Y: u16 = 0x01;
 pub const ABS_MT_POSITION_X: u16 = 0x35;
 pub const ABS_MT_POSITION_Y: u16 = 0x36;
 pub const ABS_MT_TRACKING_ID: u16 = 0x39;
+pub const ABS_MT_SLOT: u16 = 0x2f;
+pub const ABS_MT_TOUCH_MAJOR: u16 = 0x30;
+pub const ABS_MT_PRESSURE: u16 = 0x3a;
+/// Moves smaller than this (screen px) are not reported.
+pub const MOVE_EPS: i32 = 3;
 pub const BTN_TOUCH: u16 = 0x14a;
 pub const KEY_POWER: u16 = 116;
 /// Kobo page-turn buttons (Libra 2 / Forma mapping: 193 back, 194 forward).
@@ -83,7 +95,7 @@ impl Transform {
     }
 }
 
-/// Turns a stream of raw events into taps and keys.
+/// Turns a stream of raw events into touches and keys.
 #[derive(Clone, Debug)]
 pub struct Decoder {
     pub transform: Transform,
@@ -91,6 +103,8 @@ pub struct Decoder {
     y: i32,
     down: bool,
     was_down: bool,
+    slot: i32,
+    sent: (i32, i32),
 }
 
 impl Decoder {
@@ -102,10 +116,14 @@ impl Decoder {
             y: 0,
             down: false,
             was_down: false,
+            slot: 0,
+            sent: (i32::MIN, i32::MIN),
         }
     }
 
-    pub fn feed(&mut self, e: RawEvent) -> Option<Event> {
+    /// Feeds one raw event; `now` is a monotonic clock in ms.
+    pub fn feed(&mut self, e: RawEvent, now: u64) -> Option<Event> {
+        let primary = self.slot == 0;
         match (e.kind, e.code) {
             (EV_KEY, KEY_PAGE_BACK) if e.value == 1 => Some(Event::PageTurn { forward: false }),
             (EV_KEY, KEY_PAGE_FWD) if e.value == 1 => Some(Event::PageTurn { forward: true }),
@@ -114,26 +132,52 @@ impl Decoder {
                 self.down = e.value != 0;
                 None
             }
-            (EV_ABS, ABS_MT_TRACKING_ID) => {
+            (EV_ABS, ABS_MT_SLOT) => {
+                self.slot = e.value;
+                None
+            }
+            (EV_ABS, ABS_MT_TRACKING_ID) if primary => {
                 self.down = e.value >= 0;
                 None
             }
-            (EV_ABS, ABS_MT_POSITION_X | ABS_X) => {
+            (EV_ABS, ABS_MT_PRESSURE | ABS_MT_TOUCH_MAJOR) if primary => {
+                if e.value == 0 {
+                    self.down = false;
+                }
+                None
+            }
+            (EV_ABS, ABS_MT_POSITION_X | ABS_X) if primary => {
                 self.x = e.value;
                 self.down = true;
                 None
             }
-            (EV_ABS, ABS_MT_POSITION_Y | ABS_Y) => {
+            (EV_ABS, ABS_MT_POSITION_Y | ABS_Y) if primary => {
                 self.y = e.value;
                 self.down = true;
                 None
             }
             (EV_SYN, 0) => {
-                let lifted = self.was_down && !self.down;
+                let (x, y) = self.transform.apply(self.x, self.y);
+                let phase = match (self.was_down, self.down) {
+                    (false, true) => Some(Phase::Down),
+                    (true, false) => Some(Phase::Up),
+                    (true, true)
+                        if (x - self.sent.0).abs() >= MOVE_EPS
+                            || (y - self.sent.1).abs() >= MOVE_EPS =>
+                    {
+                        Some(Phase::Move)
+                    }
+                    _ => None,
+                };
                 self.was_down = self.down;
-                lifted.then(|| {
-                    let (x, y) = self.transform.apply(self.x, self.y);
-                    Event::Tap { x, y }
+                phase.map(|phase| {
+                    self.sent = (x, y);
+                    Event::Touch {
+                        phase,
+                        x,
+                        y,
+                        t: now,
+                    }
                 })
             }
             _ => None,
@@ -159,7 +203,7 @@ mod tests {
     }
 
     #[test]
-    fn tap_on_lift_with_transform() {
+    fn down_and_up_with_transform() {
         let t = Transform::from_spec("swap,mirror_x", (1439, 1919), (1440, 1920));
         let mut d = Decoder::new(t);
         let seq = [
@@ -169,12 +213,24 @@ mod tests {
             ev(EV_SYN, 0, 0),
             ev(EV_ABS, ABS_MT_TRACKING_ID, -1),
         ];
-        for e in seq {
-            assert_eq!(d.feed(e), None);
-        }
+        let out: Vec<_> = seq.into_iter().filter_map(|e| d.feed(e, 5)).collect();
         assert_eq!(
-            d.feed(ev(EV_SYN, 0, 0)),
-            Some(Event::Tap { x: 100, y: 100 })
+            out,
+            vec![Event::Touch {
+                phase: Phase::Down,
+                x: 100,
+                y: 100,
+                t: 5
+            }]
+        );
+        assert_eq!(
+            d.feed(ev(EV_SYN, 0, 0), 90),
+            Some(Event::Touch {
+                phase: Phase::Up,
+                x: 100,
+                y: 100,
+                t: 90
+            })
         );
     }
 
@@ -182,10 +238,117 @@ mod tests {
     fn keys() {
         let mut d = Decoder::new(Transform::from_spec("none", (1, 1), (1, 1)));
         assert_eq!(
-            d.feed(ev(EV_KEY, KEY_PAGE_BACK, 1)),
+            d.feed(ev(EV_KEY, KEY_PAGE_BACK, 1), 0),
             Some(Event::PageTurn { forward: false })
         );
-        assert_eq!(d.feed(ev(EV_KEY, KEY_PAGE_BACK, 0)), None);
-        assert_eq!(d.feed(ev(EV_KEY, KEY_POWER, 1)), Some(Event::Power));
+        assert_eq!(d.feed(ev(EV_KEY, KEY_PAGE_BACK, 0), 0), None);
+        assert_eq!(d.feed(ev(EV_KEY, KEY_POWER, 1), 0), Some(Event::Power));
+    }
+
+    fn none() -> Decoder {
+        Decoder::new(Transform::from_spec("none", (1439, 1919), (1440, 1920)))
+    }
+
+    fn frame(d: &mut Decoder, evs: &[RawEvent], t: u64) -> Option<Event> {
+        let mut out = None;
+        for &e in evs {
+            out = out.or(d.feed(e, t));
+        }
+        out.or_else(|| d.feed(ev(EV_SYN, 0, 0), t))
+    }
+
+    #[test]
+    fn protocol_b_hold_and_drag_with_moves_and_timestamps() {
+        let mut d = none();
+        let touch = |phase, x, y, t| Some(Event::Touch { phase, x, y, t });
+        assert_eq!(
+            frame(
+                &mut d,
+                &[
+                    ev(EV_ABS, ABS_MT_SLOT, 0),
+                    ev(EV_ABS, ABS_MT_TRACKING_ID, 3),
+                    ev(EV_ABS, ABS_MT_POSITION_X, 200),
+                    ev(EV_ABS, ABS_MT_POSITION_Y, 300)
+                ],
+                0
+            ),
+            touch(Phase::Down, 200, 300, 0)
+        );
+        // Resting finger: frames with no movement report nothing.
+        assert_eq!(frame(&mut d, &[ev(EV_ABS, ABS_MT_PRESSURE, 40)], 100), None);
+        assert_eq!(
+            frame(&mut d, &[ev(EV_ABS, ABS_MT_POSITION_X, 201)], 200),
+            None,
+            "sub-pixel jitter"
+        );
+        assert_eq!(
+            frame(&mut d, &[ev(EV_ABS, ABS_MT_POSITION_X, 260)], 600),
+            touch(Phase::Move, 260, 300, 600)
+        );
+        // A second finger on slot 1 is ignored.
+        assert_eq!(
+            frame(
+                &mut d,
+                &[
+                    ev(EV_ABS, ABS_MT_SLOT, 1),
+                    ev(EV_ABS, ABS_MT_TRACKING_ID, 4),
+                    ev(EV_ABS, ABS_MT_POSITION_X, 900)
+                ],
+                650
+            ),
+            None
+        );
+        assert_eq!(
+            frame(&mut d, &[ev(EV_ABS, ABS_MT_TRACKING_ID, -1)], 660),
+            None,
+            "slot 1 lift is not our lift"
+        );
+        assert_eq!(
+            frame(
+                &mut d,
+                &[
+                    ev(EV_ABS, ABS_MT_SLOT, 0),
+                    ev(EV_ABS, ABS_MT_TRACKING_ID, -1)
+                ],
+                700
+            ),
+            touch(Phase::Up, 260, 300, 700)
+        );
+    }
+
+    #[test]
+    fn lift_by_pressure_or_btn_touch() {
+        let mut d = none();
+        frame(
+            &mut d,
+            &[
+                ev(EV_ABS, ABS_MT_POSITION_X, 10),
+                ev(EV_ABS, ABS_MT_POSITION_Y, 10),
+            ],
+            0,
+        );
+        assert!(matches!(
+            frame(&mut d, &[ev(EV_ABS, ABS_MT_PRESSURE, 0)], 50),
+            Some(Event::Touch {
+                phase: Phase::Up,
+                ..
+            })
+        ));
+        frame(
+            &mut d,
+            &[
+                ev(EV_KEY, BTN_TOUCH, 1),
+                ev(EV_ABS, ABS_X, 10),
+                ev(EV_ABS, ABS_Y, 10),
+            ],
+            100,
+        );
+        assert!(matches!(
+            frame(&mut d, &[ev(EV_KEY, BTN_TOUCH, 0)], 150),
+            Some(Event::Touch {
+                phase: Phase::Up,
+                ..
+            })
+        ));
     }
 }

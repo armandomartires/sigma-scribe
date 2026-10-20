@@ -1,0 +1,60 @@
+# v0.2.2 Android-style touch selection (headless, virtual clock).
+type quick brown fox jumps over lazy dogs
+# Long-press a word: selects it, handles + action bar.
+long-press-word brown
+expect-selection brown
+expect-bar Cut,Copy,Paste,Select all
+shot v0.2.2-long-press
+# Drag the end handle to the end of "jumps" (char-snapped).
+grab-handle end
+expect-bar none
+move-handle-end jumps
+shot v0.2.2-drag-handle
+release
+expect-selection brown fox jumps
+expect-bar Cut,Copy,Paste,Select all
+# Shrink from the start handle to just before "fox".
+grab-handle start
+move-handle-start fox
+release
+expect-selection fox jumps
+tap-on Copy
+expect-clipboard fox jumps
+expect-caret-after fox jumps
+expect-bar none
+# Long-press then slide: extends word by word.
+press-word over
+wait 600
+move-word dogs
+shot v0.2.2-word-drag
+release
+expect-selection over lazy dogs
+tap-on Cut
+expect-not over lazy dogs
+expect-status saved
+# Long-press on blank space below the text: caret + Paste / Select all.
+expect-clipboard over lazy dogs
+type end
+key Space
+press 700 1200
+wait 600
+release
+expect-bar Paste,Select all
+shot v0.2.2-paste-bar
+tap-on Paste
+expect end over lazy dogs
+expect-bar none
+key Ctrl
+key z
+expect-not end over lazy dogs
+tap-on Keys
+long-press-word end
+tap-on Select all
+expect-bar Cut,Copy,Paste,Select all
+tap-on Keys
+# Double-tap selects a word; tapping elsewhere dismisses.
+double-tap-word quick
+expect-selection quick
+shot v0.2.2-double-tap
+tap 700 600
+expect-bar none

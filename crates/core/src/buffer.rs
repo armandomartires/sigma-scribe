@@ -107,6 +107,55 @@ impl Buffer {
         self.selection().map(|(a, b)| &self.text[a..b])
     }
 
+    /// The word (alphanumeric run, plus `'` / `-` inside it) at or just
+    /// before `at`; `None` on whitespace or punctuation (long-press).
+    #[must_use]
+    pub fn word_at(&self, at: usize) -> Option<(usize, usize)> {
+        let at = self.floor(at.min(self.text.len()));
+        let is_word = |c: char| c.is_alphanumeric() || c == '_';
+        let joiner = |c: char| c == '\'' || c == '-' || c == '\u{2019}';
+        let here = self.text[at..].chars().next().filter(|&c| is_word(c));
+        let probe = if here.is_some() {
+            at
+        } else {
+            let p = self.prev_boundary(at);
+            if at > 0 && self.text[p..].chars().next().is_some_and(is_word) {
+                // Pressing just after a word's last letter still picks it.
+                p
+            } else {
+                return None;
+            }
+        };
+        let mut a = probe;
+        while a > 0 {
+            let p = self.prev_boundary(a);
+            let c = self.text[p..].chars().next().unwrap_or(' ');
+            let joined = joiner(c)
+                && p > 0
+                && self.text[self.prev_boundary(p)..]
+                    .chars()
+                    .next()
+                    .is_some_and(is_word);
+            if is_word(c) || joined {
+                a = p;
+            } else {
+                break;
+            }
+        }
+        let mut b = probe;
+        while b < self.text.len() {
+            let c = self.text[b..].chars().next().unwrap_or(' ');
+            let n = self.next_boundary(b);
+            let joined = joiner(c) && self.text[n..].chars().next().is_some_and(is_word);
+            if is_word(c) || joined {
+                b = n;
+            } else {
+                break;
+            }
+        }
+        (a < b).then_some((a, b))
+    }
+
     /// Start of the previous word (Ctrl+Left).
     #[must_use]
     pub fn word_left(&self, at: usize) -> usize {
@@ -368,6 +417,29 @@ impl Buffer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn word_at_picks_words_and_refuses_space() {
+        let b = Buffer::new("Don't stop — re-read it, ünïcode!");
+        let w = |at| b.word_at(at).map(|(x, y)| &b.text()[x..y]);
+        assert_eq!(w(0), Some("Don't"));
+        assert_eq!(w(3), Some("Don't"));
+        assert_eq!(w(5), Some("Don't"), "just after the last letter");
+        assert_eq!(w(7), Some("stop"));
+        let rr = b.text().find("re-read").unwrap();
+        assert_eq!(w(rr + 4), Some("re-read"));
+        let u = b.text().find("ünïcode").unwrap();
+        assert_eq!(w(u + 3), Some("ünïcode"));
+        let dash = b.text().find('—').unwrap();
+        assert_eq!(
+            w(dash + 1),
+            None,
+            "inside a multibyte char snaps, punctuation has no word"
+        );
+        let sp = Buffer::new("a   b");
+        assert_eq!(sp.word_at(2), None, "whitespace");
+        assert_eq!(Buffer::new("").word_at(0), None);
+    }
 
     #[test]
     fn undo_groups_words_and_redo_restores() {

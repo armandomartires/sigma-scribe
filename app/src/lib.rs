@@ -4,14 +4,17 @@
 //! window and the headless emulator run the same code.
 
 use sigma_core::buffer::TabKind;
+use sigma_core::gesture::{Gesture, Recognizer};
 use sigma_core::keyboard::{Dir, Key, Layout};
 use sigma_core::library::SCRATCH;
 use sigma_core::{
     Autosave, Buffer, Entry, FsNoteStore, KeyAction, Keyboard, Kind, Library, NotePath, NoteStore,
 };
-use sigma_device::{Device, Event, HwKey, Refresh};
+use sigma_device::{Device, Event, HwKey, Phase, Refresh};
 use sigma_render::editor::Model;
-use sigma_render::{Canvas, EditorScreen, FilesHit, FilesModel, Hit, Rect, Row, Theme};
+use sigma_render::{
+    BarAction, Canvas, EditorScreen, FilesHit, FilesModel, Hit, Rect, Row, SelUi, Theme,
+};
 use std::path::PathBuf;
 
 pub const NOTE: &str = "field-notes.md";
@@ -37,6 +40,22 @@ pub fn notes_dir() -> PathBuf {
         "/mnt/onboard/sigma-scribe/notes".into()
     } else {
         "target/emu-notes".into()
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Drag {
+    /// Dragging a handle; the other end stays put.
+    Handle { fixed: usize },
+    /// Moving after a long-press on a word: extend word by word.
+    Word { a: usize, b: usize },
+}
+
+fn rank(r: Refresh) -> u8 {
+    match r {
+        Refresh::Fast => 0,
+        Refresh::Partial => 1,
+        Refresh::Full => 2,
     }
 }
 
@@ -71,6 +90,10 @@ pub struct App {
     rename: Option<(RenameTarget, Buffer)>,
     pub canvas: Canvas,
     shown: Canvas,
+    gestures: Recognizer,
+    /// Touch selection chrome (v0.2.2).
+    pub sel_ui: Option<SelUi>,
+    drag: Option<Drag>,
     pub running: bool,
 }
 
@@ -107,6 +130,9 @@ impl App {
             store,
             files: None,
             rename: None,
+            gestures: Recognizer::default(),
+            sel_ui: None,
+            drag: None,
             canvas: Canvas::new(width, height, 255),
             shown: Canvas::new(width, height, 0),
             running: true,
@@ -290,6 +316,11 @@ impl App {
                 keys_on: self.keys_visible(),
                 save: &self.autosave.state,
                 theme: Theme::DAY,
+                sel_ui: if self.rename.is_some() {
+                    None
+                } else {
+                    self.sel_ui
+                },
                 rename: if renaming_current {
                     self.rename.as_ref().map(|(_, b)| b)
                 } else {
@@ -544,9 +575,202 @@ impl App {
     }
 
     /// Applies one event; returns the refresh it needs (or `None`).
+    fn in_editor(&self) -> bool {
+        self.files.is_none() && self.rename.is_none()
+    }
+
+    fn apply(&mut self, gestures: Vec<Gesture>) -> Option<Refresh> {
+        let mut out: Option<Refresh> = None;
+        for g in gestures {
+            if let Some(r) = self.gesture(g) {
+                out = Some(match out {
+                    Some(o) if rank(o) >= rank(r) => o,
+                    _ => r,
+                });
+            }
+        }
+        out
+    }
+
+    fn select_word_at(&mut self, x: i32, y: i32) -> Option<(usize, usize)> {
+        let page = self.page_rect();
+        let o = self.screen.offset_at_point(&self.buffer, page, x, y);
+        match self.buffer.word_at(o) {
+            Some((a, b)) => {
+                self.buffer.select(a, b);
+                Some((a, b))
+            }
+            None => {
+                self.buffer.set_caret(o);
+                None
+            }
+        }
+    }
+
+    fn gesture(&mut self, g: Gesture) -> Option<Refresh> {
+        let page = self.page_rect();
+        let on_page = |x: i32, y: i32| page.contains(x, y);
+        match g {
+            Gesture::Press { x, y } => {
+                self.drag = None;
+                if self.in_editor() && self.sel_ui.is_some() {
+                    if let (Hit::Handle(i), Some((a, b))) =
+                        (self.editor_hit(x, y), self.buffer.selection())
+                    {
+                        self.drag = Some(Drag::Handle {
+                            fixed: if i == 0 { b } else { a },
+                        });
+                        self.sel_ui = Some(SelUi { bar: false });
+                        return Some(Refresh::Fast);
+                    }
+                }
+                None
+            }
+            Gesture::Tap { x, y } => {
+                if self.drag.take().is_some() {
+                    self.sel_ui = Some(SelUi { bar: true });
+                    return Some(Refresh::Fast);
+                }
+                self.handle(Event::Tap { x, y })
+            }
+            Gesture::DoubleTap { x, y }
+                if self.in_editor() && on_page(x, y) && self.sel_ui.is_none() =>
+            {
+                self.select_word_at(x, y);
+                self.sel_ui = Some(SelUi { bar: true });
+                Some(Refresh::Fast)
+            }
+            Gesture::DoubleTap { x, y } => self.handle(Event::Tap { x, y }),
+            Gesture::LongPress { .. } if self.drag.is_some() => None,
+            Gesture::LongPress { x, y } if self.in_editor() && on_page(x, y) => {
+                self.drag = self.select_word_at(x, y).map(|(a, b)| Drag::Word { a, b });
+                self.sel_ui = Some(SelUi { bar: true });
+                Some(Refresh::Fast)
+            }
+            // A held key or row still counts as one tap.
+            Gesture::LongPress { x, y } => self.handle(Event::Tap { x, y }),
+            Gesture::Drag { x, y, .. } => {
+                let drag = self.drag?;
+                let o = |app: &Self, yy: i32| app.screen.offset_at_point(&app.buffer, page, x, yy);
+                match drag {
+                    Drag::Handle { fixed } => {
+                        // The finger is below the handle; aim at the text row.
+                        let at = o(
+                            self,
+                            y - self.screen.handle_drop() + self.screen.line_px() / 2,
+                        );
+                        if at != fixed {
+                            self.buffer.select(fixed, at);
+                        }
+                    }
+                    Drag::Word { a, b } => {
+                        let at = o(self, y);
+                        let (s0, e0) = if at >= b {
+                            (a, self.buffer.word_at(at).map_or(at, |w| w.1).max(b))
+                        } else if at < a {
+                            (self.buffer.word_at(at).map_or(at, |w| w.0), b)
+                        } else {
+                            (a, b)
+                        };
+                        if at < a {
+                            self.buffer.select(e0, s0);
+                        } else {
+                            self.buffer.select(s0, e0);
+                        }
+                    }
+                }
+                self.sel_ui = Some(SelUi { bar: false });
+                Some(Refresh::Fast)
+            }
+            Gesture::Release { x, y, held } => {
+                // Throttled drags: the lift position is always applied.
+                if self.drag.is_some() {
+                    self.gesture(Gesture::Drag { x, y, held });
+                }
+                if self.drag.take().is_some() || (held && self.sel_ui.is_some()) {
+                    self.sel_ui = Some(SelUi { bar: true });
+                    Some(Refresh::Fast)
+                } else if held {
+                    None
+                } else {
+                    // A slide that never held: a tap where the finger lifted
+                    // (keeps fast typing as forgiving as v0.2.1).
+                    self.handle(Event::Tap { x, y })
+                }
+            }
+        }
+    }
+
+    fn editor_hit(&self, x: i32, y: i32) -> Hit {
+        let model = Model {
+            file_name: self.current.name(),
+            buffer: &self.buffer,
+            keyboard: &self.keyboard,
+            keys_on: self.keys_visible(),
+            save: &self.autosave.state,
+            theme: Theme::DAY,
+            sel_ui: self.sel_ui,
+            rename: None,
+        };
+        self.screen.hit(&model, x, y)
+    }
+
+    fn bar_action(&mut self, a: BarAction) -> Option<Refresh> {
+        let sel = self.buffer.selected_text().map(str::to_owned);
+        match a {
+            BarAction::Cut => {
+                if let Some(t) = sel {
+                    self.keyboard.clipboard = t;
+                    self.buffer.backspace();
+                    self.save();
+                }
+                self.sel_ui = None;
+            }
+            BarAction::Copy => {
+                if let Some(t) = sel {
+                    self.keyboard.clipboard = t;
+                }
+                let end = self
+                    .buffer
+                    .selection()
+                    .map_or(self.buffer.caret(), |(_, b)| b);
+                self.buffer.set_caret(end);
+                self.sel_ui = None;
+            }
+            BarAction::Paste => {
+                if !self.keyboard.clipboard.is_empty() {
+                    let t = self.keyboard.clipboard.clone();
+                    self.buffer.insert(&t);
+                    self.save();
+                }
+                self.sel_ui = None;
+            }
+            BarAction::SelectAll => {
+                self.buffer.select_all();
+                self.sel_ui = Some(SelUi { bar: true });
+            }
+        }
+        Some(Refresh::Fast)
+    }
+
     pub fn handle(&mut self, e: Event) -> Option<Refresh> {
         let page = self.screen.layout(self.keys_visible(), &self.keyboard).page;
         match e {
+            Event::Touch { phase, x, y, t } => {
+                let g = match phase {
+                    Phase::Down => self.gestures.down(x, y, t),
+                    Phase::Move => self.gestures.moved(x, y, t),
+                    Phase::Up => self.gestures.up(x, y, t),
+                };
+                self.apply(g)
+            }
+            Event::Tick { t } => {
+                if !self.gestures.finger_down() {
+                    return None;
+                }
+                let g = self.gestures.tick(t);
+                self.apply(g)
+            }
             Event::Quit | Event::Power => {
                 self.save();
                 self.running = false;
@@ -592,8 +816,12 @@ impl App {
                     HwKey::Right => self.buffer.right(),
                     HwKey::Up => self.screen.caret_row(&mut self.buffer, page, false),
                     HwKey::Down => self.screen.caret_row(&mut self.buffer, page, true),
-                    HwKey::Escape => return None,
+                    HwKey::Escape => {
+                        let had = self.sel_ui.take().is_some();
+                        return had.then_some(Refresh::Fast);
+                    }
                 }
+                self.sel_ui = None;
                 self.save();
                 Some(Refresh::Fast)
             }
@@ -606,13 +834,25 @@ impl App {
                     keys_on: self.keys_visible(),
                     save: &self.autosave.state,
                     theme: Theme::DAY,
+                    sel_ui: if self.rename.is_some() {
+                        None
+                    } else {
+                        self.sel_ui
+                    },
                     rename: if renaming {
                         self.rename.as_ref().map(|(_, b)| b)
                     } else {
                         None
                     },
                 };
-                match self.screen.hit(&model, x, y) {
+                let hit = self.screen.hit(&model, x, y);
+                if !matches!(hit, Hit::Bar(_) | Hit::Handle(_)) {
+                    // Tapping elsewhere dismisses the selection chrome.
+                    self.sel_ui = None;
+                }
+                match hit {
+                    Hit::Bar(a) => self.bar_action(a),
+                    Hit::Handle(_) => None,
                     Hit::Key(k) if self.rename.is_some() => self.type_into_field(k),
                     Hit::Key(k) => {
                         let a = self.keyboard.press(k, &mut self.buffer, TabKind::default());
@@ -701,6 +941,9 @@ impl App {
                 s => find_row(s).map(|(_, r, _)| (r.x + r.w / 3, r.y + r.h / 2)),
             };
         }
+        if let Some((_, p)) = self.bar_buttons().into_iter().find(|(l, _)| *l == label) {
+            return Some(p);
+        }
         let l = self.screen.layout(self.keys_visible(), &self.keyboard);
         match label {
             "Files" => Some(centre(l.files_button)),
@@ -710,6 +953,70 @@ impl App {
             "Keys" => Some(centre(l.keys_button)),
             _ => None,
         }
+    }
+
+    /// Screen point in the middle of the last occurrence of `word`.
+    #[must_use]
+    pub fn word_point(&self, word: &str) -> Option<(i32, i32)> {
+        let at = self.buffer.text().rfind(word)?;
+        let page = self.page_rect();
+        let (x0, y) = self.screen.point_of(&self.buffer, page, at)?;
+        let (x1, _) = self.screen.point_of(&self.buffer, page, at + word.len())?;
+        Some(((x0 + x1) / 2, y + self.screen.line_px() / 2))
+    }
+
+    /// Where a finger dragging a handle sits to put that end just after
+    /// (`end`) or before the last occurrence of `word`.
+    #[must_use]
+    pub fn handle_point(&self, word: &str, end: bool) -> Option<(i32, i32)> {
+        let at = self.buffer.text().rfind(word)? + if end { word.len() } else { 0 };
+        let (x, y) = self.screen.point_of(&self.buffer, self.page_rect(), at)?;
+        Some((x, y + self.screen.handle_drop()))
+    }
+
+    /// Centre of selection handle 0 (start) or 1 (end), if shown.
+    #[must_use]
+    pub fn handle_centre(&self, i: usize) -> Option<(i32, i32)> {
+        let l = self.screen.layout(self.keys_visible(), &self.keyboard);
+        let model = Model {
+            file_name: self.current.name(),
+            buffer: &self.buffer,
+            keyboard: &self.keyboard,
+            keys_on: self.keys_visible(),
+            save: &self.autosave.state,
+            theme: Theme::DAY,
+            sel_ui: self.sel_ui,
+            rename: None,
+        };
+        self.screen
+            .selection_geometry(&model, &l)
+            .handles
+            .get(i)
+            .copied()
+            .flatten()
+            .map(centre)
+    }
+
+    /// Labels of the action bar buttons, and their centres.
+    #[must_use]
+    pub fn bar_buttons(&self) -> Vec<(&'static str, (i32, i32))> {
+        let l = self.screen.layout(self.keys_visible(), &self.keyboard);
+        let model = Model {
+            file_name: self.current.name(),
+            buffer: &self.buffer,
+            keyboard: &self.keyboard,
+            keys_on: self.keys_visible(),
+            save: &self.autosave.state,
+            theme: Theme::DAY,
+            sel_ui: self.sel_ui,
+            rename: None,
+        };
+        self.screen
+            .selection_geometry(&model, &l)
+            .buttons
+            .into_iter()
+            .map(|(r, a)| (a.label(), centre(r)))
+            .collect()
     }
 
     #[must_use]
