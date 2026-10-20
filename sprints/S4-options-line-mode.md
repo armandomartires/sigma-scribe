@@ -9,7 +9,7 @@ Options sheet, themes, typography, Line mode, landscape keyboards (steps 4–5).
 - Options sheet rows (Paper, Type, Size, Leading, Margin, Tab, Tab width, Keyboard tone, Drawer, USB keyboard)
 - Day/Night with full refresh
 - Line mode fitting with real measurement; locked 1440 column + gutter in landscape
-- Landscape keyboard: Centre / Split / Full + num/arrow pad
+- Landscape keyboard: Centre / Split / Full + num/arrow pad — built on the S2.5 key model, modifiers and unit-grid renderer; Options "Keyboard" row (Compact/Full/…) supersedes the toggle key as the main switch
 - Persist all settings
 
 ## Deliverables
