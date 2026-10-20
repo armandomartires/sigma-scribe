@@ -85,5 +85,5 @@ Same procedure: back up `sigma-scribe/notes` and `.adds/sigma-scribe`, replace o
 ## v0.2.2 skipped → upgrade 0.2.1 → 0.2.3
 0.2.2 was never installed: the v0.2.1 log showed FBInk refusing a 1×34 refresh region and the app exiting with code 1 (2026-10-21 00:25 CEST), and 0.2.2 shares that code. 0.2.3 = 0.2.2 + the fix. Same procedure; replace only `.adds/sigma-scribe/sigma-scribe` with `dist/sigma-scribe-0.2.3-kobo/.adds/sigma-scribe/sigma-scribe` (sha256 `c6631dc3a13233132d729dd9db3676458c4afcb7b3105c2751b8e00d7afeefe6`). Checklist: `sprints/S2.6-touch-selection.md`.
 
-## Upgrade 0.2.3 → 0.3.0 (not yet approved)
+## Upgrade 0.2.3 → 0.3.0 (APPROVED 2026-10-21 01:35 CEST)
 Same procedure as 0.2.3: read the log first, back up, then replace only `.adds/sigma-scribe/sigma-scribe` with `dist/sigma-scribe-0.3.0-kobo/.adds/sigma-scribe/sigma-scribe` (sha256 `d86b3d5a9abefb95d55b6ac124ffbb307539744dcadce848615376168ba18716`). The new fonts are embedded in the binary. Checklist: `sprints/S3-markdown-preview.md`.
