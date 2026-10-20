@@ -75,3 +75,6 @@ The Forma shows "Updating…" (installs NickelMenu) and restarts. **Leave it on 
 
 ## Upgrade 0.1.0 → 0.2.0 (not run; needs approval)
 NickelMenu is already installed, so only the binary changes. Host side: mount the Forma read-write, replace `.adds/sigma-scribe/sigma-scribe` with `dist/sigma-scribe-0.2.0-kobo/.adds/sigma-scribe/sigma-scribe` (sha256 `38e6955f03f1f1a100dde8dfbbea11f31433cf831afa7d5469f8156c6ec74b31`), verify the checksum, sync, unmount, eject. Nothing under `sigma-scribe/notes` is touched; on first launch 0.2.0 keeps the existing `field-notes.md` and does not re-seed. Rollback: copy the 0.1.0 binary back (`dist/sigma-scribe-0.1.0-kobo`). On-device checklist: `tasks/S2-tasks.md` S2-T09.
+
+## Upgrade 0.2.0 → 0.2.1 (not run; needs approval)
+Same procedure as 0.1.0 → 0.2.0: back up `sigma-scribe/notes` and `.adds/sigma-scribe`, replace only `.adds/sigma-scribe/sigma-scribe` with `dist/sigma-scribe-0.2.1-kobo/.adds/sigma-scribe/sigma-scribe` (sha256 `c23468b1f40503f83845cf16ad722fd680f5eb2d100ab0ee51c6f1fff539f5cf`); every other package file is identical to 0.2.0. Checklist: `sprints/S2.5-full-keyboard.md` (On-device).

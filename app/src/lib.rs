@@ -4,7 +4,7 @@
 //! window and the headless emulator run the same code.
 
 use sigma_core::buffer::TabKind;
-use sigma_core::keyboard::Key;
+use sigma_core::keyboard::{Dir, Key, Layout};
 use sigma_core::library::SCRATCH;
 use sigma_core::{
     Autosave, Buffer, Entry, FsNoteStore, KeyAction, Keyboard, Kind, Library, NotePath, NoteStore,
@@ -95,12 +95,13 @@ impl App {
             .unwrap_or_default();
         let buffer = Buffer::new(body);
         let _ = library.set_last_opened(&current);
+        let layout = load_layout(&root);
         Self {
             autosave: Autosave::new(buffer.revision()),
             library,
             current,
             buffer,
-            keyboard: Keyboard::default(),
+            keyboard: Keyboard::with_layout(layout),
             keys_on: true,
             screen: EditorScreen::new(width, height),
             store,
@@ -109,6 +110,40 @@ impl App {
             canvas: Canvas::new(width, height, 255),
             shown: Canvas::new(width, height, 0),
             running: true,
+        }
+    }
+
+    /// Remembers Full / Compact in `notes/.sigma-settings`.
+    fn save_settings(&self) {
+        let _ = sigma_core::store::write_atomic(
+            &self.library.root().join(SETTINGS),
+            &format!("keyboard={}\n", self.keyboard.layout.name()),
+        );
+    }
+
+    fn after_key(&mut self, action: KeyAction) -> Option<Refresh> {
+        let page = self.screen.layout(self.keys_visible(), &self.keyboard).page;
+        match action {
+            KeyAction::Edited => {
+                self.save();
+                Some(Refresh::Fast)
+            }
+            KeyAction::Moved | KeyAction::Relabelled => Some(Refresh::Fast),
+            KeyAction::Vertical { down, extend } => {
+                self.screen
+                    .caret_row_ext(&mut self.buffer, page, down, extend);
+                Some(Refresh::Fast)
+            }
+            KeyAction::Page { forward, extend } => {
+                self.screen
+                    .page_turn_ext(&mut self.buffer, page, forward, extend);
+                Some(Refresh::Partial)
+            }
+            KeyAction::Relayout => {
+                self.save_settings();
+                Some(Refresh::Full)
+            }
+            KeyAction::Escape | KeyAction::Ignored => None,
         }
     }
 
@@ -264,13 +299,17 @@ impl App {
             self.screen.draw(&mut c, &model);
         }
         self.canvas = c;
-        let region = if refresh == Refresh::Full {
-            Some(self.canvas.bounds())
+        // Only what changed goes to the panel: a pressed modifier redraws its
+        // cap, a typed letter its text row and the word count.
+        let regions = if refresh == Refresh::Full {
+            vec![self.canvas.bounds()]
         } else {
-            self.canvas.diff(&self.shown)
+            self.canvas.diff_regions(&self.shown, 24, 8)
         };
-        if let Some(r) = region {
-            dev.present(&self.canvas, r, refresh)?;
+        for r in &regions {
+            dev.present(&self.canvas, *r, refresh)?;
+        }
+        if !regions.is_empty() {
             self.shown.pixels.copy_from_slice(&self.canvas.pixels);
         }
         Ok(())
@@ -281,7 +320,12 @@ impl App {
             RenameTarget::Current => self.current.name().to_owned(),
             RenameTarget::Entry(p) => p.name().to_owned(),
         };
-        self.keyboard = Keyboard::default();
+        let k = &self.keyboard;
+        self.keyboard = Keyboard {
+            layout: k.layout,
+            clipboard: k.clipboard.clone(),
+            ..Keyboard::default()
+        };
         self.rename = Some((target, Buffer::new(name)));
     }
 
@@ -328,9 +372,16 @@ impl App {
                 self.finish_rename(true);
                 return Some(Refresh::Full);
             }
-            Key::Tab => {}
+            Key::Tab | Key::PgUp | Key::PgDn | Key::Arrow(Dir::Up | Dir::Down) => {}
+            Key::Esc => {
+                self.finish_rename(false);
+                return Some(Refresh::Full);
+            }
             k => {
-                self.keyboard.press(k, field, TabKind::Spaces(0));
+                if self.keyboard.press(k, field, TabKind::Spaces(0)) == KeyAction::Relayout {
+                    self.save_settings();
+                    return Some(Refresh::Full);
+                }
             }
         }
         Some(Refresh::Fast)
@@ -564,12 +615,8 @@ impl App {
                 match self.screen.hit(&model, x, y) {
                     Hit::Key(k) if self.rename.is_some() => self.type_into_field(k),
                     Hit::Key(k) => {
-                        if self.keyboard.press(k, &mut self.buffer, TabKind::default())
-                            == KeyAction::Edited
-                        {
-                            self.save();
-                        }
-                        Some(Refresh::Fast)
+                        let a = self.keyboard.press(k, &mut self.buffer, TabKind::default());
+                        self.after_key(a)
                     }
                     Hit::ToggleKeys => {
                         self.keys_on = !self.keys_on;
@@ -669,6 +716,18 @@ impl App {
     pub fn page_rect(&self) -> Rect {
         self.screen.layout(self.keys_visible(), &self.keyboard).page
     }
+}
+
+const SETTINGS: &str = ".sigma-settings";
+
+fn load_layout(root: &std::path::Path) -> Layout {
+    std::fs::read_to_string(root.join(SETTINGS))
+        .ok()
+        .and_then(|s| {
+            s.lines()
+                .find_map(|l| l.strip_prefix("keyboard=").and_then(Layout::parse))
+        })
+        .unwrap_or_default()
 }
 
 fn centre(r: Rect) -> (i32, i32) {

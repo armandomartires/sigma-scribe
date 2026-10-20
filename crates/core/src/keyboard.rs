@@ -1,14 +1,58 @@
 //! The on-screen keyboard model (brief §7, portrait / landscape Centre).
 //!
+//! Two layouts. **Compact** is the brief's four-row board with a symbol
+//! layer. **Full** (v0.2.1) is a Windows On-Screen-Keyboard style board:
+//! Esc and a number row, brackets, Caps, Enter, both Shifts, Ctrl, Alt,
+//! arrows, Home/End/PgUp/PgDn/Del.
+//!
 //! Positional: a key is addressed by row and column and keeps its place when
-//! Shift or the symbol layer relabels it.
+//! Shift or the symbol layer relabels it. Widths are in grid units
+//! ([`Keyboard::grid_units`] per row) so the renderer can align columns.
+//!
+//! Modifiers are sticky for touch: Shift is one-shot, a second tap locks it,
+//! a third releases; Caps toggles letters only; Ctrl and Alt are one-shot.
 
 use crate::buffer::{Buffer, TabKind};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Layer {
+    #[default]
     Letters,
     Symbols,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Layout {
+    #[default]
+    Compact,
+    Full,
+}
+
+impl Layout {
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Compact => "compact",
+            Self::Full => "full",
+        }
+    }
+
+    #[must_use]
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.trim() {
+            "compact" => Some(Self::Compact),
+            "full" => Some(Self::Full),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Dir {
+    Left,
+    Right,
+    Up,
+    Down,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -20,8 +64,19 @@ pub enum Key {
     Tab,
     Space,
     Return,
-    /// `123` on letters, `ABC` on symbols.
+    /// `123` on letters, `ABC` on symbols (Compact).
     SwapLayer,
+    /// Switch Full ⇄ Compact.
+    SwitchLayout,
+    Esc,
+    Caps,
+    Ctrl,
+    Alt,
+    Arrow(Dir),
+    Home,
+    End,
+    PgUp,
+    PgDn,
 }
 
 /// What the app should do after a key.
@@ -31,26 +86,43 @@ pub enum KeyAction {
     Edited,
     /// Only the keyboard changed (shift / layer): repaint the keys.
     Relabelled,
+    /// Caret or selection moved; nothing to save.
+    Moved,
+    /// Needs the screen (visual rows): move one row; `extend` = Shift.
+    Vertical {
+        down: bool,
+        extend: bool,
+    },
+    /// PgUp / PgDn: one screen.
+    Page {
+        forward: bool,
+        extend: bool,
+    },
+    /// Layout switched: re-layout and remember the choice.
+    Relayout,
+    Escape,
+    /// A Ctrl shortcut with no binding; nothing happened.
+    Ignored,
 }
 
 const LETTERS: [&str; 3] = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
 const SYMBOLS: [&str; 3] = ["1234567890", "#*-[]()`/", ".,!?:|~>"];
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Keyboard {
     pub layer: Layer,
+    pub layout: Layout,
+    /// One-shot Shift (or locked when `shift_lock`).
     pub shift: bool,
+    pub shift_lock: bool,
+    pub caps: bool,
+    pub ctrl: bool,
+    pub alt: bool,
+    /// Internal clipboard for Ctrl+C / X / V.
+    pub clipboard: String,
 }
 
-impl Default for Keyboard {
-    fn default() -> Self {
-        Self {
-            layer: Layer::Letters,
-            shift: false,
-        }
-    }
-}
-
+/// Compact symbol-layer shift map (brief).
 fn shifted(c: char) -> char {
     match c {
         '1' => '!',
@@ -80,40 +152,182 @@ fn shifted(c: char) -> char {
     }
 }
 
+/// US layout shift map (Full).
+fn us_shifted(c: char) -> char {
+    const FROM: &str = "`1234567890-=[]\\;',./";
+    const TO: &str = "~!@#$%^&*()_+{}|:\"<>?";
+    FROM.chars()
+        .position(|x| x == c)
+        .and_then(|i| TO.chars().nth(i))
+        .unwrap_or(c)
+}
+
+fn chars(s: &str) -> Vec<Key> {
+    s.chars().map(Key::Char).collect()
+}
+
 impl Keyboard {
-    /// Rows of keys for the current layer, top to bottom.
+    #[must_use]
+    pub fn with_layout(layout: Layout) -> Self {
+        Self {
+            layout,
+            ..Self::default()
+        }
+    }
+
+    /// Rows of keys for the current layout and layer, top to bottom.
     #[must_use]
     pub fn rows(&self) -> Vec<Vec<Key>> {
-        let src = match self.layer {
-            Layer::Letters => LETTERS,
-            Layer::Symbols => SYMBOLS,
-        };
-        let chars = |s: &str| s.chars().map(Key::Char).collect::<Vec<_>>();
-        let mut third = vec![Key::Shift];
-        third.extend(chars(src[2]));
-        third.push(Key::Back);
-        vec![
-            chars(src[0]),
-            chars(src[1]),
-            third,
-            vec![Key::SwapLayer, Key::Tab, Key::Del, Key::Space, Key::Return],
-        ]
+        match self.layout {
+            Layout::Full => Self::full_rows(),
+            Layout::Compact => {
+                let src = match self.layer {
+                    Layer::Letters => LETTERS,
+                    Layer::Symbols => SYMBOLS,
+                };
+                let mut third = vec![Key::Shift];
+                third.extend(chars(src[2]));
+                third.push(Key::Back);
+                vec![
+                    chars(src[0]),
+                    chars(src[1]),
+                    third,
+                    vec![
+                        Key::SwapLayer,
+                        Key::SwitchLayout,
+                        Key::Tab,
+                        Key::Del,
+                        Key::Space,
+                        Key::Return,
+                    ],
+                ]
+            }
+        }
+    }
+
+    fn full_rows() -> Vec<Vec<Key>> {
+        let mut r0 = vec![Key::Esc];
+        r0.extend(chars("`1234567890-="));
+        r0.push(Key::Back);
+        let mut r1 = vec![Key::Tab];
+        r1.extend(chars("qwertyuiop[]\\"));
+        r1.push(Key::Del);
+        let mut r2 = vec![Key::Caps];
+        r2.extend(chars("asdfghjkl;'"));
+        r2.extend([Key::Return, Key::PgUp]);
+        let mut r3 = vec![Key::Shift];
+        r3.extend(chars("zxcvbnm,./"));
+        r3.extend([Key::Shift, Key::Arrow(Dir::Up), Key::PgDn]);
+        let r4 = vec![
+            Key::Ctrl,
+            Key::Alt,
+            Key::SwitchLayout,
+            Key::Space,
+            Key::Home,
+            Key::End,
+            Key::Arrow(Dir::Left),
+            Key::Arrow(Dir::Down),
+            Key::Arrow(Dir::Right),
+        ];
+        vec![r0, r1, r2, r3, r4]
+    }
+
+    /// Row width in units (every row adds up to this).
+    #[must_use]
+    pub fn grid_units(&self) -> f32 {
+        match self.layout {
+            Layout::Compact => 10.0,
+            Layout::Full => 16.0,
+        }
+    }
+
+    /// Width of a key in grid units; `col` disambiguates the two Shifts.
+    #[must_use]
+    pub fn units(&self, key: Key, row: usize, col: usize) -> f32 {
+        match self.layout {
+            Layout::Compact => match key {
+                Key::Shift | Key::Back => 1.5,
+                Key::Space => 3.5,
+                Key::Return => 1.5,
+                Key::SwapLayer | Key::SwitchLayout | Key::Tab | Key::Del => 1.25,
+                _ => 1.0,
+            },
+            Layout::Full => match (key, row) {
+                (Key::Back, _) => 2.0,
+                (Key::Tab, _) => 1.5,
+                (Key::Char('\\'), _) => 1.5,
+                (Key::Caps, _) => 1.75,
+                (Key::Return, _) => 2.25,
+                (Key::Shift, _) if col == 0 => 2.25,
+                (Key::Shift, _) => 1.75,
+                (Key::Ctrl | Key::Alt | Key::SwitchLayout, _) => 1.5,
+                (Key::Space, _) => 6.5,
+                _ => 1.0,
+            },
+        }
+    }
+
+    fn shift_on(&self) -> bool {
+        self.shift || self.shift_lock
     }
 
     #[must_use]
     pub fn label(&self, key: Key) -> String {
         match key {
-            Key::Char(c) => (if self.shift { shifted(c) } else { c }).to_string(),
+            Key::Char(c) if self.layout == Layout::Full => {
+                if c.is_ascii_alphabetic() {
+                    (if self.shift_on() != self.caps {
+                        c.to_ascii_uppercase()
+                    } else {
+                        c
+                    })
+                    .to_string()
+                } else if self.shift_on() {
+                    us_shifted(c).to_string()
+                } else {
+                    c.to_string()
+                }
+            }
+            Key::Char(c) => (if self.shift_on() { shifted(c) } else { c }).to_string(),
             Key::Shift => "Shift".into(),
             Key::Back => "Back".into(),
             Key::Del => "Del".into(),
             Key::Tab => "Tab".into(),
             Key::Space => "Space".into(),
+            Key::Return if self.layout == Layout::Full => "Enter".into(),
             Key::Return => "Return".into(),
             Key::SwapLayer => match self.layer {
                 Layer::Letters => "123".into(),
                 Layer::Symbols => "ABC".into(),
             },
+            Key::SwitchLayout => match self.layout {
+                Layout::Compact => "Full".into(),
+                Layout::Full => "Compact".into(),
+            },
+            Key::Esc => "Esc".into(),
+            Key::Caps => "Caps".into(),
+            Key::Ctrl => "Ctrl".into(),
+            Key::Alt => "Alt".into(),
+            Key::Arrow(Dir::Left) => "\u{2190}".into(),
+            Key::Arrow(Dir::Up) => "\u{2191}".into(),
+            Key::Arrow(Dir::Right) => "\u{2192}".into(),
+            Key::Arrow(Dir::Down) => "\u{2193}".into(),
+            Key::Home => "Home".into(),
+            Key::End => "End".into(),
+            Key::PgUp => "PgUp".into(),
+            Key::PgDn => "PgDn".into(),
+        }
+    }
+
+    /// Modifier keys drawn inverted while active.
+    #[must_use]
+    pub fn is_active(&self, key: Key) -> bool {
+        match key {
+            Key::Shift => self.shift_on(),
+            Key::Caps => self.caps,
+            Key::Ctrl => self.ctrl,
+            Key::Alt => self.alt,
+            _ => false,
         }
     }
 
@@ -123,12 +337,56 @@ impl Keyboard {
         self.rows().get(row).and_then(|r| r.get(col)).copied()
     }
 
-    /// Applies a key to the focused buffer. Shift releases after one key.
+    fn release(&mut self) {
+        self.shift = false;
+        self.ctrl = false;
+        self.alt = false;
+    }
+
+    fn char_for(&self, c: char) -> char {
+        match self.layout {
+            Layout::Full if c.is_ascii_alphabetic() => {
+                if self.shift_on() != self.caps {
+                    c.to_ascii_uppercase()
+                } else {
+                    c
+                }
+            }
+            Layout::Full if self.shift_on() => us_shifted(c),
+            Layout::Full => c,
+            Layout::Compact if self.shift_on() => shifted(c),
+            Layout::Compact => c,
+        }
+    }
+
+    /// Applies a key to the focused buffer.
     pub fn press(&mut self, key: Key, buffer: &mut Buffer, tab: TabKind) -> KeyAction {
-        let shift = self.shift;
+        let extend = self.shift_on();
+        let ctrl = self.ctrl;
         let action = match key {
             Key::Shift => {
-                self.shift = !self.shift;
+                // off → one-shot → locked → off
+                if self.shift_lock {
+                    self.shift_lock = false;
+                    self.shift = false;
+                } else if self.shift {
+                    self.shift = false;
+                    self.shift_lock = true;
+                } else {
+                    self.shift = true;
+                }
+                return KeyAction::Relabelled;
+            }
+            Key::Caps => {
+                self.caps = !self.caps;
+                return KeyAction::Relabelled;
+            }
+            Key::Ctrl => {
+                self.ctrl = !self.ctrl;
+                return KeyAction::Relabelled;
+            }
+            Key::Alt => {
+                self.alt = !self.alt;
                 return KeyAction::Relabelled;
             }
             Key::SwapLayer => {
@@ -139,16 +397,29 @@ impl Keyboard {
                 self.shift = false;
                 return KeyAction::Relabelled;
             }
+            Key::SwitchLayout => {
+                self.layout = match self.layout {
+                    Layout::Compact => Layout::Full,
+                    Layout::Full => Layout::Compact,
+                };
+                self.layer = Layer::Letters;
+                self.shift = false;
+                self.shift_lock = false;
+                self.caps = false;
+                self.release();
+                return KeyAction::Relayout;
+            }
+            Key::Char(c) if ctrl => self.shortcut(c.to_ascii_lowercase(), buffer),
             Key::Char(c) => {
-                buffer.insert(&(if shift { shifted(c) } else { c }).to_string());
+                buffer.insert(&self.char_for(c).to_string());
                 KeyAction::Edited
             }
             Key::Back => {
                 buffer.backspace();
                 KeyAction::Edited
             }
-            // Brief: "Del is Delete; with Shift held it is Backspace."
-            Key::Del if shift => {
+            // Brief: "Del is Delete; with Shift held it is Backspace" (Compact).
+            Key::Del if extend && self.layout == Layout::Compact => {
                 buffer.backspace();
                 KeyAction::Edited
             }
@@ -168,9 +439,101 @@ impl Keyboard {
                 buffer.newline();
                 KeyAction::Edited
             }
+            Key::Esc => KeyAction::Escape,
+            Key::Arrow(Dir::Left) => {
+                let at = match (ctrl, extend, buffer.selection()) {
+                    (true, _, _) => buffer.word_left(buffer.caret()),
+                    (false, false, Some((a, _))) => a,
+                    _ => buffer.prev_pos(buffer.caret()),
+                };
+                buffer.move_to(at, extend);
+                KeyAction::Moved
+            }
+            Key::Arrow(Dir::Right) => {
+                let at = match (ctrl, extend, buffer.selection()) {
+                    (true, _, _) => buffer.word_right(buffer.caret()),
+                    (false, false, Some((_, b))) => b,
+                    _ => buffer.next_pos(buffer.caret()),
+                };
+                buffer.move_to(at, extend);
+                KeyAction::Moved
+            }
+            Key::Arrow(d) => KeyAction::Vertical {
+                down: d == Dir::Down,
+                extend,
+            },
+            Key::Home => {
+                let at = if ctrl {
+                    0
+                } else {
+                    buffer.line_start(buffer.caret())
+                };
+                buffer.move_to(at, extend);
+                KeyAction::Moved
+            }
+            Key::End => {
+                let at = if ctrl {
+                    buffer.text().len()
+                } else {
+                    buffer.line_end(buffer.caret())
+                };
+                buffer.move_to(at, extend);
+                KeyAction::Moved
+            }
+            Key::PgUp => KeyAction::Page {
+                forward: false,
+                extend,
+            },
+            Key::PgDn => KeyAction::Page {
+                forward: true,
+                extend,
+            },
         };
-        self.shift = false;
+        self.release();
         action
+    }
+
+    fn shortcut(&mut self, c: char, buffer: &mut Buffer) -> KeyAction {
+        match c {
+            'a' => {
+                buffer.select_all();
+                KeyAction::Moved
+            }
+            'c' => {
+                if let Some(t) = buffer.selected_text() {
+                    self.clipboard = t.to_owned();
+                }
+                KeyAction::Moved
+            }
+            'x' => {
+                if let Some(t) = buffer.selected_text() {
+                    self.clipboard = t.to_owned();
+                    buffer.backspace();
+                    return KeyAction::Edited;
+                }
+                KeyAction::Moved
+            }
+            'v' if !self.clipboard.is_empty() => {
+                let t = self.clipboard.clone();
+                buffer.insert(&t);
+                KeyAction::Edited
+            }
+            'z' => {
+                if buffer.undo() {
+                    KeyAction::Edited
+                } else {
+                    KeyAction::Ignored
+                }
+            }
+            'y' => {
+                if buffer.redo() {
+                    KeyAction::Edited
+                } else {
+                    KeyAction::Ignored
+                }
+            }
+            _ => KeyAction::Ignored,
+        }
     }
 }
 
@@ -189,7 +552,7 @@ mod tests {
         assert_eq!(labels[0].join(" "), "q w e r t y u i o p");
         assert_eq!(labels[1].join(" "), "a s d f g h j k l");
         assert_eq!(labels[2].join(" "), "Shift z x c v b n m Back");
-        assert_eq!(labels[3].join(" "), "123 Tab Del Space Return");
+        assert_eq!(labels[3].join(" "), "123 Full Tab Del Space Return");
     }
 
     #[test]
@@ -242,7 +605,182 @@ mod tests {
         let mut k = Keyboard::default();
         let before = k.rows().iter().map(Vec::len).collect::<Vec<_>>();
         k.shift = true;
+        k.caps = true;
         let after = k.rows().iter().map(Vec::len).collect::<Vec<_>>();
         assert_eq!(before, after);
+    }
+
+    fn full() -> (Keyboard, Buffer) {
+        (Keyboard::with_layout(Layout::Full), Buffer::new(""))
+    }
+
+    fn labels(k: &Keyboard) -> Vec<String> {
+        k.rows()
+            .iter()
+            .map(|r| r.iter().map(|&x| k.label(x)).collect::<Vec<_>>().join(" "))
+            .collect()
+    }
+
+    #[test]
+    fn full_layout_matches_windows_osk_and_rows_fill_the_grid() {
+        let k = Keyboard::with_layout(Layout::Full);
+        assert_eq!(
+            labels(&k),
+            [
+                "Esc ` 1 2 3 4 5 6 7 8 9 0 - = Back",
+                "Tab q w e r t y u i o p [ ] \\ Del",
+                "Caps a s d f g h j k l ; ' Enter PgUp",
+                "Shift z x c v b n m , . / Shift \u{2191} PgDn",
+                "Ctrl Alt Compact Space Home End \u{2190} \u{2193} \u{2192}",
+            ]
+        );
+        for (r, row) in k.rows().iter().enumerate() {
+            let sum: f32 = row
+                .iter()
+                .enumerate()
+                .map(|(c, &key)| k.units(key, r, c))
+                .sum();
+            assert!((sum - k.grid_units()).abs() < 1e-3, "row {r} = {sum}");
+        }
+        let c = Keyboard::default();
+        for (r, row) in c.rows().iter().enumerate() {
+            let sum: f32 = row
+                .iter()
+                .enumerate()
+                .map(|(i, &key)| c.units(key, r, i))
+                .sum();
+            assert!(sum <= c.grid_units() + 1e-3, "compact row {r} = {sum}");
+        }
+    }
+
+    #[test]
+    fn full_shift_one_shot_double_tap_lock_and_caps() {
+        let (mut k, mut b) = full();
+        let t = TabKind::default();
+        k.press(Key::Shift, &mut b, t);
+        assert_eq!(labels(&k)[0], "Esc ~ ! @ # $ % ^ & * ( ) _ + Back");
+        for c in "1ab".chars() {
+            k.press(Key::Char(c), &mut b, t);
+        }
+        assert_eq!(b.text(), "!ab", "one-shot");
+        k.press(Key::Shift, &mut b, t);
+        k.press(Key::Shift, &mut b, t);
+        assert!(k.shift_lock);
+        for c in "ab;".chars() {
+            k.press(Key::Char(c), &mut b, t);
+        }
+        assert_eq!(b.text(), "!abAB:", "locked");
+        k.press(Key::Shift, &mut b, t);
+        assert!(!k.is_active(Key::Shift));
+        k.press(Key::Caps, &mut b, t);
+        for c in "a1".chars() {
+            k.press(Key::Char(c), &mut b, t);
+        }
+        k.press(Key::Shift, &mut b, t);
+        k.press(Key::Char('a'), &mut b, t);
+        assert_eq!(
+            b.text(),
+            "!abAB:A1a",
+            "caps letters only; shift inverts caps"
+        );
+        assert!(k.caps && k.is_active(Key::Caps));
+    }
+
+    #[test]
+    fn ctrl_shortcuts_clipboard_undo() {
+        let (mut k, mut b) = full();
+        let t = TabKind::default();
+        for c in "hello world".chars() {
+            k.press(if c == ' ' { Key::Space } else { Key::Char(c) }, &mut b, t);
+        }
+        // Shift+Ctrl+Left selects the last word.
+        k.press(Key::Shift, &mut b, t);
+        k.press(Key::Ctrl, &mut b, t);
+        assert_eq!(k.press(Key::Arrow(Dir::Left), &mut b, t), KeyAction::Moved);
+        assert_eq!(b.selected_text(), Some("world"));
+        assert!(!k.ctrl && !k.shift, "modifiers are one-shot");
+        k.press(Key::Ctrl, &mut b, t);
+        k.press(Key::Char('x'), &mut b, t);
+        assert_eq!((b.text(), k.clipboard.as_str()), ("hello ", "world"));
+        k.press(Key::Ctrl, &mut b, t);
+        k.press(Key::Char('v'), &mut b, t);
+        k.press(Key::Ctrl, &mut b, t);
+        k.press(Key::Char('v'), &mut b, t);
+        assert_eq!(b.text(), "hello worldworld");
+        k.press(Key::Ctrl, &mut b, t);
+        k.press(Key::Char('z'), &mut b, t);
+        assert_eq!(b.text(), "hello world");
+        k.press(Key::Ctrl, &mut b, t);
+        k.press(Key::Char('y'), &mut b, t);
+        assert_eq!(b.text(), "hello worldworld");
+        k.press(Key::Ctrl, &mut b, t);
+        k.press(Key::Char('a'), &mut b, t);
+        k.press(Key::Ctrl, &mut b, t);
+        k.press(Key::Char('c'), &mut b, t);
+        assert_eq!(k.clipboard, "hello worldworld");
+        k.press(Key::Ctrl, &mut b, t);
+        assert_eq!(k.press(Key::Char('q'), &mut b, t), KeyAction::Ignored);
+        assert_eq!(b.text(), "hello worldworld");
+    }
+
+    #[test]
+    fn nav_keys_and_selection() {
+        let mut k = Keyboard::with_layout(Layout::Full);
+        let t = TabKind::default();
+        let mut b = Buffer::new("ab\ncd");
+        k.press(Key::Home, &mut b, t);
+        assert_eq!(b.caret(), 3);
+        k.press(Key::Shift, &mut b, t);
+        k.press(Key::End, &mut b, t);
+        assert_eq!(b.selected_text(), Some("cd"));
+        k.press(Key::Arrow(Dir::Left), &mut b, t);
+        assert_eq!(
+            (b.caret(), b.selection()),
+            (3, None),
+            "Left collapses a selection"
+        );
+        k.press(Key::Shift, &mut b, t);
+        k.press(Key::Shift, &mut b, t); // lock: extend repeatedly
+        k.press(Key::Arrow(Dir::Right), &mut b, t);
+        k.press(Key::Arrow(Dir::Right), &mut b, t);
+        assert_eq!(b.selected_text(), Some("cd"));
+        assert_eq!(
+            k.press(Key::Arrow(Dir::Up), &mut b, t),
+            KeyAction::Vertical {
+                down: false,
+                extend: true
+            }
+        );
+        assert_eq!(
+            k.press(Key::PgDn, &mut b, t),
+            KeyAction::Page {
+                forward: true,
+                extend: true
+            }
+        );
+        k.press(Key::Shift, &mut b, t);
+        k.press(Key::Ctrl, &mut b, t);
+        k.press(Key::Home, &mut b, t);
+        assert_eq!(b.caret(), 0);
+        k.press(Key::Del, &mut b, t);
+        assert_eq!(b.text(), "b\ncd", "Full Del is always forward delete");
+        assert_eq!(k.press(Key::Esc, &mut b, t), KeyAction::Escape);
+    }
+
+    #[test]
+    fn switch_layout_round_trip() {
+        let mut k = Keyboard::default();
+        let mut b = Buffer::new("");
+        k.shift = true;
+        assert_eq!(
+            k.press(Key::SwitchLayout, &mut b, TabKind::default()),
+            KeyAction::Relayout
+        );
+        assert_eq!((k.layout, k.shift), (Layout::Full, false));
+        k.press(Key::SwitchLayout, &mut b, TabKind::default());
+        assert_eq!(k.layout, Layout::Compact);
+        assert_eq!(Layout::parse("full"), Some(Layout::Full));
+        assert_eq!(Layout::parse(Layout::Compact.name()), Some(Layout::Compact));
+        assert_eq!(Layout::parse("x"), None);
     }
 }

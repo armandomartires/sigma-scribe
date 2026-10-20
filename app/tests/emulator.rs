@@ -148,3 +148,35 @@ fn rename_from_title_bar_keeps_edits_and_cancel_changes_nothing() {
         .unwrap()
         .contains('Z'));
 }
+
+#[test]
+fn keyboard_layout_choice_is_remembered() {
+    let dir = fresh("layout");
+    let mut app = App::new(1440, 1920, &dir);
+    assert_eq!(app.keyboard.layout, sigma_core::keyboard::Layout::Compact);
+    let compact_page = app.page_rect().h;
+    let (x, y) = app.key_centre("Full").unwrap();
+    app.handle(Event::Tap { x, y });
+    assert_eq!(app.keyboard.layout, sigma_core::keyboard::Layout::Full);
+    assert!(
+        app.page_rect().h >= 1300,
+        "page {} (compact {compact_page})",
+        app.page_rect().h
+    );
+    drop(app);
+    let app = App::new(1440, 1920, &dir);
+    assert_eq!(
+        app.keyboard.layout,
+        sigma_core::keyboard::Layout::Full,
+        "restored"
+    );
+    assert!(std::fs::read_to_string(dir.join(".sigma-settings"))
+        .unwrap()
+        .contains("keyboard=full"));
+    assert!(!app
+        .library
+        .list(&sigma_core::NotePath::root())
+        .unwrap()
+        .iter()
+        .any(|e| e.path.name().starts_with('.')));
+}
