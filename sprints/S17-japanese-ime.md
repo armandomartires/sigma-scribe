@@ -13,6 +13,7 @@
 | **SKK** style + **SKK-JISYO.L** | dict GPL-2.0-or-later | yes (as GPL-3) | ~4 MB text | small | **easy** (own Rust) | user marks word boundaries (SKK habit); good fallback/first step |
 | **librime** + rime-japanese | BSD-3 / data varies | yes | ~20 MB + deps | ~30–60 MB | hard (Boost, leveldb, yaml-cpp, OpenCC) | Japanese support weak |
 
+**Decision (31): SKK-style first** — the user marks word boundaries (SKK habit), conversion per word from SKK-JISYO.L; Mozc-dictionary sentence conversion follows within v1.7 or as v1.7.x. Fonts: common-character subset by default + optional full font (default kept). ja UI strings machine-drafted, best effort.
 **Recommendation:** shared Rust IME framework (composer + candidate bar from v1.3) with (1) romaji→kana tables, (2) **SKK-style conversion first** (fast to ship, tiny), then (3) **sentence conversion on the Mozc OSS dictionary with an own Viterbi converter**. Learning (user history) stored next to the notes.
 **Speed on the A9:** dictionary lookups are fast; a Viterbi over a 20-character segment is milliseconds to tens of ms; loading must be mmap'd (no 50 MB parse at start).
 

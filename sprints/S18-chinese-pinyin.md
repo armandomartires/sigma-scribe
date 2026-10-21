@@ -12,4 +12,5 @@
 | **Own Rust converter** on luna_pinyin/essay frequency data | LGPL-3 data | yes | ~10–20 MB | ~20–40 MB | medium (reuses v1.7 Viterbi) |
 
 **Recommendation:** reuse the v1.7 Rust converter with pinyin syllable segmentation and Rime's LGPL word-frequency data; consider embedding librime only if quality is insufficient. **Font:** Noto Sans SC GB2312 subset (~6 800 hanzi) ≈ 2.5–3.5 MB/weight as a separate file; full SC ~8–16 MB optional.
+**Defaults kept:** GB2312 subset + optional full font; zh UI strings machine-drafted, best effort (decision 31).
 **Estimate:** 2–3 wk on top of v1.7. **Risks:** medium — data licence audit, candidate ranking quality, font size.
