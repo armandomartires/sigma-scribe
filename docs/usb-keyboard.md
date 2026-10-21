@@ -2,7 +2,8 @@
 
 ## Hardware
 - Kobo Forma micro-USB port + OTG adapter + **powered** USB hub (or an OTG Y-cable with external power). The Forma does not supply VBUS.
-- **Known to work on this Forma (user report, 2026-10-21):** a **Logitech K400 Plus** (keyboard + touchpad, Unifying receiver) used on this Forma, fw 4.38.23697, with other Kobo software — so the port's host mode, enumeration through the receiver and HID input work on this firmware. Not yet tried with Sigma Scribe; record the power arrangement (hub or powered OTG cable) and the `usb:` log lines at the first session.
+- **Known to work on this Forma (user report, corrected 2026-10-21 13:55):** a **regular wired 60% USB keyboard**, used on this Forma (fw 4.38.23697) most likely with KOReader. So host mode on the micro-USB port, enumeration and HID keyboard input work on this firmware. Power arrangement used then: to be recorded at the first session.
+- **Not tested on the device:** the **Logitech K400 Plus** (Unifying receiver, keyboard + touchpad). Its receiver, its touchpad and its scroll behaviour are unverified.
 
 ## How it works
 1. Options → USB keyboard On → `Device::usb_host(true)`: on the Kobo, `OtgSwitch` writes `host` to `/sys/kernel/debug/ci_hdrc.0/role` if it reads `gadget` (debugfs mounted first if missing). Off / exit → `gadget`, only if the app made the switch (`crates/device/src/otg.rs`).
@@ -12,7 +13,7 @@
 5. A read error (unplug) ends that reader and sends `Event::Usb(false)` when none are left.
 
 ## Unverified on the device
-That this app's debugfs role switch reaches host mode the same way the other software did (host mode itself is known to work, see Hardware); enumeration delay; Nickel also reading the keyboard (no EVIOCGRAB); Apple-mode keyboards (`hid ignore_special_drivers`). Each failure degrades to "no keyboard" with a log line.
+That this app reaches host mode the way KOReader did (host mode itself is known to work with a wired keyboard, see Hardware; the method matches KOReader's, see below); enumeration delay; Nickel also reading the keyboard (no EVIOCGRAB); Apple-mode keyboards (`hid ignore_special_drivers`). Each failure degrades to "no keyboard" with a log line.
 
 ## Export
 Notes are plain `.md` files in `/mnt/onboard/sigma-scribe/notes` (shown as `sigma-scribe/notes` on the computer). Leave the app, connect over USB, tap Connect, copy the folder. Syncthing or similar: later, optional (brief: no cloud account).
@@ -24,3 +25,17 @@ Notes are plain `.md` files in `/mnt/onboard/sigma-scribe/notes` (shown as `sigm
 - Click = tap at the press point; drag from the note selects (anchor at press); double-click (≤ 400 ms, ≤ 8 px) selects the word; right/middle click and long-press: nothing new.
 - Wheel: note 3 rows per notch (the caret follows, so the view scrolls); preview, Files, Graph, Help: one page per wheel event; Options: nothing.
 - No pointer acceleration; raw counts are screen pixels.
+
+## Comparison with KOReader's ExternalKeyboard plugin (checked 2026-10-21, koreader master 24cf0b3)
+KOReader: `plugins/externalkeyboard.koplugin/main.lua` + `frontend/device/kobo/device.lua` (`setupDebugFS`, `getOTGRole`, `setOTGRole`).
+
+| Step | KOReader | Sigma Scribe | Difference |
+|---|---|---|---|
+| Role file | `/sys/kernel/debug/ci_hdrc.0/role` (Chipidea; sunxi path for Elipsa/Sage) | same Chipidea path | none for the Forma |
+| debugfs | if `/sys/kernel/debug` exists: check `/proc/mounts`, if not mounted and root, `mount -t debugfs none /sys/kernel/debug` | if the role file is missing: `mount -t debugfs none /sys/kernel/debug` (no `/proc/mounts` or uid check) | equivalent result; ours may run a redundant `mount` that fails harmlessly |
+| Switch on | writes `host` when role is `gadget`, at start only if "Always enable OTG mode", else from its menu | writes `host` when role is `gadget`, while Options → USB keyboard is On (at start and when turned on) | same write; trigger differs |
+| Switch off | `onExit`: writes `gadget` whenever the role is `host` | writes `gadget` on Off / exit **only if we made the switch** | a port already in host mode before launch stays in host mode; `launch.sh` reboots on exit anyway, which resets the role |
+| Detecting keyboards | FBInk `fbink_input_scan(INPUT_KEYBOARD)` (ioctl capability bits), hot-plug via uevents (0.5 s delay) | `/proc/bus/input/devices` bitmap (EV_KEY + A, Z, Space, Enter), polled every 1 s | different classifier: a wired 60% keyboard has these keys, so both should accept it |
+| Apple-mode keyboards | not handled (forum workaround: `hid ignore_special_drivers=1`) | not handled | none |
+| Nickel | KOReader stops Nickel before running | `launch.sh` stops Nickel too (same kill list) and reboots on exit | none — Nickel does not see the keys |
+| Layouts | several layout files | US only (decision 23) | by design |

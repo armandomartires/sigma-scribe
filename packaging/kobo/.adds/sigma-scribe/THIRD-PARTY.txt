@@ -1,0 +1,17 @@
+Sigma Scribe for Kobo — third-party notices
+
+Sigma Scribe is free software by Sigma Recon, licensed under the GNU Affero
+General Public License v3.0 only (see LICENSE). Source code:
+https://github.com/armandomartires/sigma-scribe (the tag of this release).
+
+This binary statically links:
+- FBInk by NiLuJe — GPL-3.0-or-later — https://github.com/NiLuJe/FBInk
+  (commit 886f25f1, built with MINIMAL=true IMAGE=true KOBO=true).
+  FBInk's own bundled components keep their licences, listed in its source.
+- The Rust standard library and musl libc (MIT / Apache-2.0, MIT).
+
+Fonts (SIL Open Font License 1.1, texts in OFL-*.txt):
+- Literata (Regular, SemiBold, Italic)
+- Atkinson Hyperlegible
+
+Not included: NickelMenu by pgaskin (MIT) — install it from its own release.

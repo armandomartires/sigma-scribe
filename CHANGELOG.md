@@ -2,6 +2,13 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.0.0 — 2026-10-21 (release candidate: built, not installed, not tagged, not released)
+- Release prep (sprint S9): reproducible tarball (fixed order, owner, mode, time; `gzip -n`), `scripts/check-package.sh` (only `.adds/`, no notes, required files, ARM static, hash list), `THIRD-PARTY.txt` in the package (AGPL, FBInk GPL-3.0+ at 886f25f1, OFL fonts, NickelMenu not included).
+- `.github/workflows/release.yml`: builds and checks the package with the pinned FBInk on every PR and push to main (artifact = release candidate); on a `v*` tag pushed by the maintainer it checks tag = Cargo version and creates a **draft** GitHub Release. It never tags or publishes.
+- README rewritten (features, screenshots, install/update/uninstall), `docs/install.md` for users, `docs/release/` (release notes draft, MobileRead draft, Forma developer notes draft, release checklist), v1.0 screenshot tour `tests/emu/v1.0-tour.script`.
+- Docs corrected: the keyboard that worked on this Forma before was a wired 60% keyboard (most likely with KOReader), not the K400 Plus; host-mode switch compared with KOReader's.
+- Device binary sha256 (CI build, the release candidate) `f242411492ab40269b173e48ec5081d36d2011b24eaa37fb7853c97280f093d4`; local build `b3fdaf0ea929bf4cf8ad027cea87564c85dab4400b45b1ae007cf2a89de50f9e`.
+
 ## 0.8.1 — 2026-10-21 (built, not yet installed or tagged)
 - USB mouse and touchpad (sprint S8.1), including the touchpad half of a combined device such as the Logitech K400 Plus on its Unifying receiver: detected by EV_REL + REL_X/REL_Y; one reader per device feeds both keymap and pointer decoder. Touch panel and buttons are never pointers.
 - On-screen arrow (outlined, Paper and Night): Fast partial refreshes of the changed area only (≥ 16×16), at most one redraw per 150 ms, hidden after 3 s still and when typing or touching.
