@@ -15,7 +15,7 @@ use sigma_core::{
     Autosave, Buffer, Change, Entry, FsNoteStore, KeyAction, Keyboard, Kind, Library, NotePath,
     NoteStore, Settings,
 };
-use sigma_device::{Device, Event, HwKey, Mods, Phase, Refresh};
+use sigma_device::{Button, Device, Event, HwKey, Mods, Phase, Refresh};
 use sigma_render::editor::Model;
 use sigma_render::{
     BarAction, Canvas, Doc, DrawerHit, DrawerModel, EditorScreen, FilesHit, FilesModel, FindField,
@@ -56,6 +56,47 @@ enum Drag {
     Handle { fixed: usize },
     /// Moving after a long-press on a word: extend word by word.
     Word { a: usize, b: usize },
+}
+
+/// Pointer redraws at most this often (ms): e-ink friendly (v0.8.1).
+pub const POINTER_THROTTLE_MS: u64 = 150;
+/// The pointer hides after this long without movement (ms).
+pub const POINTER_HIDE_MS: u64 = 3000;
+/// Two presses within this time and distance are a double-click.
+pub const DOUBLE_CLICK_MS: u64 = 400;
+pub const DOUBLE_CLICK_PX: i32 = 8;
+
+/// A left button held down (v0.8.1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MouseDown {
+    pub x: i32,
+    pub y: i32,
+    /// Text offset under the press, when it was on the note.
+    pub anchor: Option<usize>,
+    pub dragged: bool,
+}
+
+/// USB mouse / touchpad state (v0.8.1).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct PointerState {
+    pub live: bool,
+    pub x: i32,
+    pub y: i32,
+    pub visible: bool,
+    pub last_move: u64,
+    pub last_draw: u64,
+    /// Moved since the last redraw (throttled); flushed on the tick.
+    pub pending: bool,
+    pub down: Option<MouseDown>,
+    pub last_press: Option<(i32, i32, u64)>,
+}
+
+fn merge(a: Option<Refresh>, b: Option<Refresh>) -> Option<Refresh> {
+    match (a, b) {
+        (Some(x), Some(y)) => Some(if rank(x) >= rank(y) { x } else { y }),
+        (x, None) => x,
+        (None, y) => y,
+    }
 }
 
 fn rank(r: Refresh) -> u8 {
@@ -191,6 +232,8 @@ pub struct App {
     pub usb_live: bool,
     /// The USB host-mode state last asked of the device (v0.8).
     pub usb_host: bool,
+    /// USB mouse / touchpad (v0.8.1).
+    pub pointer: PointerState,
     pub perf: Perf,
     pub running: bool,
 }
@@ -257,6 +300,7 @@ impl App {
             read_only: unreadable,
             usb_live: false,
             usb_host: false,
+            pointer: PointerState::default(),
             perf: Perf::default(),
             running: true,
         }
@@ -691,6 +735,147 @@ impl App {
         dev.present(&self.phys_canvas, pr, refresh)
     }
 
+    /// Redraw for the pointer, at most every `POINTER_THROTTLE_MS`.
+    fn pointer_redraw(&mut self, t: u64) -> Option<Refresh> {
+        if t.saturating_sub(self.pointer.last_draw) >= POINTER_THROTTLE_MS {
+            self.pointer.last_draw = t;
+            self.pointer.pending = false;
+            Some(Refresh::Fast)
+        } else {
+            self.pointer.pending = true;
+            None
+        }
+    }
+
+    /// Ticks: flush a throttled move, hide after `POINTER_HIDE_MS` idle.
+    fn pointer_tick(&mut self, t: u64) -> Option<Refresh> {
+        let p = &mut self.pointer;
+        if !p.visible {
+            return None;
+        }
+        if p.down.is_none() && t.saturating_sub(p.last_move) >= POINTER_HIDE_MS {
+            p.visible = false;
+            p.pending = false;
+            return Some(Refresh::Fast);
+        }
+        if p.pending {
+            return self.pointer_redraw(t);
+        }
+        None
+    }
+
+    fn pointer_move(&mut self, dx: i32, dy: i32, t: u64) -> Option<Refresh> {
+        // A report racing an unplug is dropped.
+        if !self.pointer.live {
+            return None;
+        }
+        let (w, h) = (self.canvas.width as i32, self.canvas.height as i32);
+        let p = &mut self.pointer;
+        p.x = (p.x + dx).clamp(0, w - 1);
+        p.y = (p.y + dy).clamp(0, h - 1);
+        p.last_move = t;
+        let was = std::mem::replace(&mut p.visible, true);
+        let (x, y) = (p.x, p.y);
+        if let Some(d) = &mut self.pointer.down {
+            if (x - d.x).abs() + (y - d.y).abs() > DOUBLE_CLICK_PX / 2 {
+                d.dragged = true;
+            }
+            if let (Some(a), true) = (d.anchor, d.dragged) {
+                let at = self
+                    .screen
+                    .offset_at_point(&self.buffer, self.page_rect(), x, y);
+                if at == a {
+                    self.buffer.set_caret(a);
+                } else {
+                    self.buffer.select(a, at);
+                }
+                self.sel_ui = Some(SelUi { bar: false });
+            }
+        }
+        if was {
+            self.pointer_redraw(t)
+        } else {
+            self.pointer.last_draw = t;
+            Some(Refresh::Fast)
+        }
+    }
+
+    /// Left click = a tap at the pointer; drag on the note selects;
+    /// double-click on the note selects the word. Other buttons: nothing.
+    fn pointer_button(&mut self, button: Button, down: bool, t: u64) -> Option<Refresh> {
+        if button != Button::Left || !self.pointer.live {
+            return None;
+        }
+        let (x, y) = (self.pointer.x, self.pointer.y);
+        self.pointer.visible = true;
+        self.pointer.last_move = t;
+        let on_note = self.in_editor()
+            && self.rename.is_none()
+            && self.page_rect().contains(x, y)
+            && !self.in_drawer(x, y)
+            && !self.in_find_bar(x, y);
+        if down {
+            let double = self.pointer.last_press.is_some_and(|(px, py, pt)| {
+                t.saturating_sub(pt) <= DOUBLE_CLICK_MS
+                    && (x - px).abs() <= DOUBLE_CLICK_PX
+                    && (y - py).abs() <= DOUBLE_CLICK_PX
+            });
+            if double && on_note {
+                self.pointer.last_press = None;
+                self.pointer.down = None;
+                self.select_word_at(x, y);
+                self.sel_ui = Some(SelUi { bar: true });
+                return Some(Refresh::Fast);
+            }
+            self.pointer.last_press = Some((x, y, t));
+            let anchor = on_note.then(|| {
+                self.screen
+                    .offset_at_point(&self.buffer, self.page_rect(), x, y)
+            });
+            self.pointer.down = Some(MouseDown {
+                x,
+                y,
+                anchor,
+                dragged: false,
+            });
+            return None;
+        }
+        let d = self.pointer.down.take()?;
+        if d.dragged && d.anchor.is_some() {
+            self.sel_ui = self.buffer.selection().map(|_| SelUi { bar: true });
+            self.pointer.last_draw = t;
+            self.pointer.pending = false;
+            return Some(Refresh::Fast);
+        }
+        let r = self.handle_inner(Event::Tap { x: d.x, y: d.y });
+        merge(Some(Refresh::Fast), r)
+    }
+
+    /// Wheel: the note moves 3 rows per notch (the caret follows); preview
+    /// and the scrolling sheets turn one page per event.
+    fn wheel(&mut self, notches: i32) -> Option<Refresh> {
+        if notches == 0 || self.options {
+            return None;
+        }
+        let forward = notches < 0;
+        if self.preview.is_some()
+            || self.files.is_some()
+            || self.graph.is_some()
+            || self.help.is_some()
+        {
+            return self.handle_inner(Event::PageTurn { forward });
+        }
+        if !self.in_editor() {
+            return None;
+        }
+        let page = self.page_rect();
+        for _ in 0..(notches.unsigned_abs() * 3).min(15) {
+            self.screen.caret_row(&mut self.buffer, page, forward);
+        }
+        self.sel_ui = None;
+        Some(Refresh::Partial)
+    }
+
     /// A physical key with modifiers (USB keyboard, v0.8). Routed through
     /// the on-screen keyboard's own key and shortcut code (S2.5) with the
     /// chord's modifiers, so Ctrl+Z/Y/A/C/X/V/F and Shift/Ctrl+arrows behave
@@ -1087,6 +1272,16 @@ impl App {
                 self.screen
                     .draw_drawer(&mut c, &l, &self.drawer_model(&hs, &todos));
             }
+        }
+        if self.pointer.visible && self.pointer.live {
+            let cell = sigma_render::pointer::pointer_cell(self.screen.scale().px(1.0) as f32);
+            sigma_render::pointer::draw_pointer(
+                &mut c,
+                self.pointer.x,
+                self.pointer.y,
+                cell,
+                self.theme(),
+            );
         }
         self.canvas = c;
         // Only what changed goes to the panel: a pressed modifier redraws its
@@ -1529,6 +1724,27 @@ impl App {
     }
 
     pub fn handle(&mut self, e: Event) -> Option<Refresh> {
+        match e {
+            Event::Tick { t } => {
+                let p = self.pointer_tick(t);
+                let r = self.handle_inner(e);
+                return merge(p, r);
+            }
+            // Typing or touching hides the pointer (v0.8.1).
+            Event::Key(_) | Event::Chord { .. } | Event::Touch { .. } | Event::Tap { .. }
+                if self.pointer.visible =>
+            {
+                self.pointer.visible = false;
+                self.pointer.pending = false;
+                let r = self.handle_inner(e);
+                return merge(Some(Refresh::Fast), r);
+            }
+            _ => {}
+        }
+        self.handle_inner(e)
+    }
+
+    fn handle_inner(&mut self, e: Event) -> Option<Refresh> {
         let page = self.screen.layout(self.keys_visible(), &self.keyboard).page;
         match e {
             Event::Touch { phase, x, y, t } => {
@@ -1555,9 +1771,25 @@ impl App {
             }
             Event::Usb(on) => {
                 self.usb_live = on;
-                self.screen.usb_live = on;
+                self.screen.usb_live = on || self.pointer.live;
                 Some(Refresh::Partial)
             }
+            Event::PointerPlug(on) => {
+                self.pointer.live = on;
+                if !on {
+                    self.pointer.visible = false;
+                    self.pointer.down = None;
+                    self.pointer.pending = false;
+                } else if self.pointer.x == 0 && self.pointer.y == 0 {
+                    self.pointer.x = self.canvas.width as i32 / 2;
+                    self.pointer.y = self.canvas.height as i32 / 2;
+                }
+                self.screen.usb_live = self.usb_live || on;
+                Some(Refresh::Partial)
+            }
+            Event::PointerMove { dx, dy, t } => self.pointer_move(dx, dy, t),
+            Event::PointerButton { button, down, t } => self.pointer_button(button, down, t),
+            Event::Wheel { notches } => self.wheel(notches),
             Event::Chord { key, mods } => self.chord(key, mods),
             // Nav keys only a USB keyboard has: the on-screen key path.
             Event::Key(k @ (HwKey::Home | HwKey::End | HwKey::PageUp | HwKey::PageDown)) => {
@@ -1879,6 +2111,15 @@ impl App {
                 .find(|(_, b)| self.screen.kb_button_label(*b) == s)
                 .map(|(r, _)| centre(*r)),
         }
+    }
+
+    /// Point just before (`end = false`) or after a word, on its text row
+    /// (emulator pointer drags).
+    #[must_use]
+    pub fn text_point(&self, word: &str, end: bool) -> Option<(i32, i32)> {
+        let at = self.buffer.text().rfind(word)? + if end { word.len() } else { 0 };
+        let (x, y) = self.screen.point_of(&self.buffer, self.page_rect(), at)?;
+        Some((x, y + self.screen.line_px() / 2))
     }
 
     /// Screen point in the middle of the last occurrence of `word`.

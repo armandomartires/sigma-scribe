@@ -6,6 +6,7 @@ pub mod evdev;
 #[cfg(target_arch = "arm")]
 pub mod fbink;
 pub mod otg;
+pub mod pointer;
 pub mod usbkbd;
 
 use sigma_render::{Canvas, Rect};
@@ -44,6 +45,23 @@ pub enum Event {
     },
     /// A USB keyboard appeared (`true`) or went away (`false`).
     Usb(bool),
+    /// A USB mouse / touchpad appeared or went away (v0.8.1).
+    PointerPlug(bool),
+    /// Relative pointer motion in screen pixels (v0.8.1).
+    PointerMove {
+        dx: i32,
+        dy: i32,
+        t: u64,
+    },
+    PointerButton {
+        button: Button,
+        down: bool,
+        t: u64,
+    },
+    /// Wheel / two-finger scroll; positive = away from the user (up).
+    Wheel {
+        notches: i32,
+    },
     Quit,
     /// Raw finger contact with a monotonic timestamp (ms). The app turns
     /// these into taps / holds / drags with `sigma_core::gesture`.
@@ -101,6 +119,14 @@ pub enum HwKey {
     End,
     PageUp,
     PageDown,
+}
+
+/// Mouse buttons (v0.8.1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Button {
+    Left,
+    Right,
+    Middle,
 }
 
 /// Modifiers held with a physical key.

@@ -7,7 +7,7 @@
 //! / `hid-generic` built in), and the `eventN` number it gets. Everything
 //! here degrades to "no keyboard": the touch screen and buttons are unchanged.
 
-use crate::evdev::{RawEvent, EV_KEY};
+use crate::evdev::{RawEvent, EV_KEY, EV_REL};
 use crate::{Event, HwKey, Mods};
 
 /// One `/proc/bus/input/devices` entry.
@@ -17,6 +17,9 @@ pub struct InputDev {
     /// `eventN` handler number, if any.
     pub event: Option<u32>,
     pub keyboard: bool,
+    /// Relative pointer: mouse, touchpad, or the mouse half of a combined
+    /// device such as a Logitech Unifying receiver (v0.8.1).
+    pub pointer: bool,
 }
 
 const KEY_A: u32 = 30;
@@ -35,6 +38,7 @@ pub fn parse_devices(text: &str) -> Vec<InputDev> {
         let mut event = None;
         let mut ev_key = false;
         let mut keys: Vec<u64> = Vec::new();
+        let (mut ev_rel, mut rel_xy) = (false, false);
         for line in block.lines() {
             if let Some(n) = line.strip_prefix("N: Name=") {
                 name = n.trim().trim_matches('"').to_owned();
@@ -43,7 +47,16 @@ pub fn parse_devices(text: &str) -> Vec<InputDev> {
                     .split_whitespace()
                     .find_map(|w| w.strip_prefix("event").and_then(|n| n.parse().ok()));
             } else if let Some(b) = line.strip_prefix("B: EV=") {
-                ev_key = u64::from_str_radix(b.trim(), 16).is_ok_and(|v| v & (1 << EV_KEY) != 0);
+                let v = u64::from_str_radix(b.trim(), 16).unwrap_or(0);
+                ev_key = v & (1 << EV_KEY) != 0;
+                ev_rel = v & (1 << EV_REL) != 0;
+            } else if let Some(b) = line.strip_prefix("B: REL=") {
+                // REL_X (0) and REL_Y (1) live in the lowest word.
+                rel_xy = b
+                    .split_whitespace()
+                    .last()
+                    .and_then(|w| u64::from_str_radix(w, 16).ok())
+                    .is_some_and(|v| v & 0b11 == 0b11);
             } else if let Some(b) = line.strip_prefix("B: KEY=") {
                 // Words are printed most significant first; each is one
                 // `long` (32 bits on the Kobo, 64 on a desktop). Reading them
@@ -77,6 +90,7 @@ pub fn parse_devices(text: &str) -> Vec<InputDev> {
             name,
             event,
             keyboard,
+            pointer: ev_rel && rel_xy,
         });
     }
     out
@@ -325,6 +339,38 @@ B: KEY=1000000000007 ff9f207ac14057ff febeffdfffefffff fffffffffffffffe
         assert!(d[2].keyboard);
         assert_eq!(d[2].event, Some(3));
         assert_eq!(d[2].name, "Logitech USB Keyboard");
+    }
+
+    #[test]
+    fn finds_pointers_and_combined_receivers() {
+        // A Unifying receiver with hid-logitech-dj: one device per paired
+        // product, the K400 Plus being keys + touchpad in one; and the same
+        // receiver without the dj driver: separate keyboard and mouse nodes.
+        let t = "N: Name=\"Logitech K400 Plus\"
+H: Handlers=sysrq kbd leds mouse0 event3
+B: EV=12001f
+B: KEY=1f0000 0 0 0 0 0 0 0 7 ff9f207ac14057ff febeffdfffefffff fffffffffffffffe
+B: REL=1943
+
+N: Name=\"Logitech USB Receiver Mouse\"
+H: Handlers=mouse1 event5
+B: EV=17
+B: KEY=ffff0000 0 0 0 0
+B: REL=1943
+B: MSC=10
+
+N: Name=\"cyttsp5_mt\"
+H: Handlers=event1
+B: EV=b
+B: KEY=400 0 0 0 0 0 0 0 0 0 0
+B: ABS=6e18000 0
+";
+        let d = parse_devices(t);
+        assert!(d[0].keyboard && d[0].pointer, "{:?}", d[0]);
+        assert!(!d[1].keyboard && d[1].pointer);
+        assert_eq!(d[1].event, Some(5));
+        assert!(!d[2].keyboard && !d[2].pointer, "touch is never a pointer");
+        assert!(parse_devices(PROC).iter().all(|d| !d.pointer));
     }
 
     #[test]

@@ -50,7 +50,7 @@ pub const MENU: [(&str, &str, HelpPage); 3] = [
 ];
 
 /// The USB keyboard and export page (v0.8): heading, text, optional code.
-pub const KEYBOARD_HELP: [(&str, &str, &str); 6] = [
+pub const KEYBOARD_HELP: [(&str, &str, &str); 7] = [
     (
         "Powered hub",
         "The Forma does not power its USB port. Plug the keyboard into a powered USB hub, or a Y-cable with its own power supply, and the hub into the reader with a micro-USB OTG adapter.",
@@ -65,6 +65,11 @@ pub const KEYBOARD_HELP: [(&str, &str, &str); 6] = [
         "Shortcuts",
         "The same as the on-screen Ctrl key.",
         "Ctrl+Z  undo      Ctrl+Y  redo\nCtrl+A  select all\nCtrl+C  copy      Ctrl+X  cut\nCtrl+V  paste     Ctrl+F  find\nShift+arrows      select\nCtrl+Left/Right   word by word\nHome / End        line start / end\nCtrl+Home / End   top / end of note\nPgUp / PgDn       one screen",
+    ),
+    (
+        "Mouse and touchpad",
+        "A USB mouse or touchpad (also the touchpad of a keyboard such as the Logitech K400 Plus) shows a small arrow. Click = tap; drag on the note selects; double-click selects a word; the wheel or two-finger scroll moves the note and turns pages in preview and lists. The arrow hides after 3 seconds still and when you type. Right click does nothing.",
+        "",
     ),
     ("Layout", "US layout. Esc closes Find, sheets and selections.", ""),
     (
