@@ -277,7 +277,7 @@ impl EditorScreen {
             out.push((band, cells));
         }
         OptionsLayout {
-            close: base.files_button,
+            close: base.close_button,
             base,
             rows: out,
         }
@@ -325,9 +325,9 @@ impl EditorScreen {
         c.fill(c.bounds(), t.paper);
         self.draw_title(c, &l.base, "Options", None, t, false);
         let r = l.close;
-        let (cx, cy, d) = (r.x + r.w / 2, r.y + r.h / 2, s.px(8.0));
+        let (cx, cy, d) = (r.x + r.w / 2, r.y + r.h / 2, s.px(16.0));
         for k in -d..=d {
-            for th in 0..s.px(1.75).max(2) {
+            for th in 0..s.px(3.5).max(3) {
                 c.blend(cx + k, cy + k + th, t.ink, 255);
                 c.blend(cx + k, cy - k + th, t.ink, 255);
             }
