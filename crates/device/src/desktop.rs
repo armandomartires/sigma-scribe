@@ -18,6 +18,8 @@ pub struct DesktopDevice {
     pub refreshes: Vec<(Rect, Refresh)>,
     /// Every `usb_host` call (v0.8), for tests.
     pub usb_host: Vec<bool>,
+    /// Pretend an accelerometer is present (v1.2 emulator `sensor on`).
+    pub gsensor: bool,
 }
 
 impl DesktopDevice {
@@ -29,6 +31,7 @@ impl DesktopDevice {
             events: VecDeque::new(),
             refreshes: Vec::new(),
             usb_host: Vec::new(),
+            gsensor: false,
         }
     }
 
@@ -67,6 +70,10 @@ pub fn eink_pixel(old: u8, new: u8, refresh: Refresh) -> u8 {
 }
 
 impl Device for DesktopDevice {
+    fn has_gsensor(&self) -> bool {
+        self.gsensor
+    }
+
     fn size(&self) -> (u32, u32) {
         (self.panel.width, self.panel.height)
     }

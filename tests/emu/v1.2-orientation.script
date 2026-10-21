@@ -1,0 +1,42 @@
+# v1.2 (S12): four rotations + Auto. The Kobo build has the sensor off;
+# here a pretend sensor shows Auto, then the manual choices.
+copy-notes tests/test-notes/_test
+expect-rotation Portrait
+expect-orientation-status Auto (no sensor) — Portrait
+tap-on Options
+shot v1.2-options-auto-no-sensor
+tap-on Close
+sensor on
+expect-orientation-status Auto — Portrait
+tilt cw
+wait 300
+expect-rotation Portrait
+wait 600
+expect-rotation Landscape
+shot v1.2-auto-landscape
+tilt 180
+wait 900
+expect-rotation Portrait inverted
+shot v1.2-auto-portrait-inverted
+tilt ccw
+wait 900
+expect-rotation Landscape inverted
+shot v1.2-auto-landscape-inverted
+tap-on Options
+shot v1.2-options-auto-landscape-inverted
+tap-on Orientation/Portrait
+expect-rotation Portrait
+tap-on Upside down/On
+expect-rotation Portrait inverted
+expect-setting rotation=180
+tap-on Close
+tilt upright
+wait 1500
+expect-rotation Portrait inverted
+restart
+expect-rotation Portrait inverted
+tap-on Options
+tap-on Upside down/Off
+tap-on Orientation/Auto
+tap-on Close
+expect-rotation Portrait

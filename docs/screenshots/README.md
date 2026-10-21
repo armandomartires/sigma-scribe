@@ -133,3 +133,8 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.1 | [v1.1-files-200.png](v1.1/v1.1-files-200.png) | Files at 200 % | [eink](v1.1/eink/v1.1-files-200.png) |
 | v1.1 | [v1.1-drawer-200.png](v1.1/v1.1-drawer-200.png) | Contents drawer at 200 % | [eink](v1.1/eink/v1.1-drawer-200.png) |
 | v1.1 | [v1.1-landscape-200.png](v1.1/v1.1-landscape-200.png) | landscape at 200 %, keyboard capped at 45 % | [eink](v1.1/eink/v1.1-landscape-200.png) |
+| v1.2 | [v1.2-options-auto-no-sensor.png](v1.2/v1.2-options-auto-no-sensor.png) | Options: Orientation Auto with no sensor (Kobo build), Upside down row | [eink](v1.2/eink/v1.2-options-auto-no-sensor.png) |
+| v1.2 | [v1.2-auto-landscape.png](v1.2/v1.2-auto-landscape.png) | Auto turned to landscape after 0.6 s (pretend sensor) | [eink](v1.2/eink/v1.2-auto-landscape.png) |
+| v1.2 | [v1.2-auto-portrait-inverted.png](v1.2/v1.2-auto-portrait-inverted.png) | Auto: portrait inverted (shown turned back) | [eink](v1.2/eink/v1.2-auto-portrait-inverted.png) |
+| v1.2 | [v1.2-auto-landscape-inverted.png](v1.2/v1.2-auto-landscape-inverted.png) | Auto: landscape inverted | [eink](v1.2/eink/v1.2-auto-landscape-inverted.png) |
+| v1.2 | [v1.2-options-auto-landscape-inverted.png](v1.2/v1.2-options-auto-landscape-inverted.png) | Options in landscape inverted: "Auto — Landscape inverted" | [eink](v1.2/eink/v1.2-options-auto-landscape-inverted.png) |

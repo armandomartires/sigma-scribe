@@ -223,8 +223,13 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
         },
         OptRow {
             label: "Orientation",
-            hint: "Turn the page sideways",
+            hint: "Auto follows how you hold it",
             cells: vec![
+                choice(
+                    "Auto",
+                    Change::Orientation(Orientation::Auto),
+                    s.orientation == Orientation::Auto,
+                ),
                 choice(
                     "Portrait",
                     Change::Orientation(Orientation::Portrait),
@@ -237,6 +242,14 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
                 ),
             ],
         },
+        OptRow {
+            label: "Upside down",
+            hint: "Turns Portrait or Landscape 180°",
+            cells: vec![
+                choice("Off", Change::UpsideDown(false), !s.upside_down),
+                choice("On", Change::UpsideDown(true), s.upside_down),
+            ],
+        },
     ]
 }
 
@@ -244,6 +257,9 @@ pub struct OptionsModel<'a> {
     pub settings: &'a Settings,
     pub theme: Theme,
     pub keyboard: &'a Keyboard,
+    /// What Orientation is doing, shown as its hint (v1.2), e.g.
+    /// "Auto (no sensor) — Portrait".
+    pub orientation_status: &'a str,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -359,7 +375,11 @@ impl EditorScreen {
                 small,
                 lx,
                 label_base + small * 1.35,
-                row.hint,
+                if row.label == "Orientation" {
+                    m.orientation_status
+                } else {
+                    row.hint
+                },
                 t.mute,
             );
             for (r, cell) in cells.iter().zip(&row.cells) {
@@ -407,6 +427,7 @@ mod tests {
             settings: &st,
             theme: Theme::DAY,
             keyboard: &k,
+            orientation_status: "Auto (no sensor) — Portrait",
         };
         let l = e.options_layout(&m);
         let rows = option_rows(&st);
@@ -463,7 +484,8 @@ mod tests {
                 "Drawer",
                 "USB keyboard & mouse",
                 "Scroll",
-                "Orientation"
+                "Orientation",
+                "Upside down"
             ]
         );
     }

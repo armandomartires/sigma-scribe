@@ -11,7 +11,7 @@ use sigma_core::library::SCRATCH;
 use sigma_core::linefit::Anchor;
 use sigma_core::links::{self, Graph};
 use sigma_core::outline::{self, Filter, Heading, Indexer, TodoItem};
-use sigma_core::settings::{Orientation, Pad, Side};
+use sigma_core::settings::{Orientation, Pad, Rotation, Side};
 use sigma_core::{
     Autosave, Buffer, Change, Entry, FsNoteStore, KeyAction, Keyboard, Kind, Library, NotePath,
     NoteStore, Settings,
@@ -64,6 +64,10 @@ enum Drag {
 pub const POINTER_THROTTLE_MS: u64 = 150;
 /// The pointer hides after this long without movement (ms).
 pub const POINTER_HIDE_MS: u64 = 3000;
+/// Auto orientation: a reading must hold this long before it is applied.
+pub const TILT_STABLE_MS: u64 = 600;
+/// Auto orientation waits this long after typing or touching.
+pub const TILT_TYPING_PAUSE_MS: u64 = 1000;
 /// Two presses within this time and distance are a double-click.
 pub const DOUBLE_CLICK_MS: u64 = 400;
 pub const DOUBLE_CLICK_PX: i32 = 8;
@@ -273,6 +277,16 @@ pub struct App {
     /// The next `Refresh::Pointer` render only moves the arrow: nothing
     /// else changed since the last full frame (v1.0.4).
     pointer_fast: bool,
+    /// An accelerometer is present (v1.2; the Kobo build reports none
+    /// until the device check, `sigma_device::gsensor::ENABLED`).
+    gsensor: bool,
+    /// `orientation_status()`, kept for the Options model borrow.
+    orientation_label: String,
+    /// A sensor reading waiting for 0.6 s of stability (Auto).
+    tilt: Option<(Rotation, u64)>,
+    /// Latest event time seen and the last typing time, ms (Auto pause).
+    now: u64,
+    last_typed: Option<u64>,
     gestures: Recognizer,
     /// Touch selection chrome (v0.2.2).
     pub sel_ui: Option<SelUi>,
@@ -341,11 +355,11 @@ impl App {
         let buffer = Buffer::new(body);
         let _ = library.set_last_opened(&current);
         let mut settings = load_settings(&root);
-        let (lw, lh) = logical_size((width, height), settings.orientation);
+        let (lw, lh) = logical_size((width, height), settings.rotation);
         let mut screen = EditorScreen::new(lw, lh);
         screen.configure(&mut settings, None);
         let scratch = Buffer::new(store.load(SCRATCH).ok().flatten().unwrap_or_default());
-        Self {
+        let mut app = Self {
             autosave: if unreadable {
                 let mut a = Autosave::new(buffer.revision());
                 a.failed("could not read the note");
@@ -372,6 +386,11 @@ impl App {
             shown: Canvas::new(lw, lh, 0),
             base: Canvas::new(1, 1, 0),
             pointer_fast: false,
+            gsensor: false,
+            orientation_label: String::new(),
+            tilt: None,
+            now: 0,
+            last_typed: None,
             settings,
             options: false,
             phys: (width, height),
@@ -393,7 +412,9 @@ impl App {
             history: Vec::new(),
             perf: Perf::default(),
             running: true,
-        }
+        };
+        app.set_gsensor(false);
+        app
     }
 
     /// Writes every setting to `notes/.sigma-settings` (atomic).
@@ -413,7 +434,71 @@ impl App {
 
     #[must_use]
     pub fn is_landscape(&self) -> bool {
-        self.settings.orientation == Orientation::Landscape
+        self.settings.rotation.is_landscape()
+    }
+
+    /// The rotation the screen is drawn in (v1.2).
+    #[must_use]
+    pub fn rotation(&self) -> Rotation {
+        self.settings.rotation
+    }
+
+    /// Auto orientation: a sensor reading becomes pending; it is applied by
+    /// [`App::tilt_tick`] after it has been stable for `TILT_STABLE_MS`.
+    fn tilt_event(&mut self, tilt: sigma_device::gsensor::Tilt, t: u64) -> Option<Refresh> {
+        use sigma_device::gsensor::Tilt;
+        if self.settings.orientation != Orientation::Auto || !self.gsensor {
+            return None;
+        }
+        let r = match tilt {
+            Tilt::Upright => Rotation::R0,
+            Tilt::Clockwise => Rotation::R90,
+            Tilt::UpsideDown => Rotation::R180,
+            Tilt::CounterClockwise => Rotation::R270,
+        };
+        self.tilt = match self.tilt {
+            _ if r == self.settings.rotation => None,
+            Some((p, t0)) if p == r => Some((p, t0)),
+            _ => Some((r, t)),
+        };
+        self.tilt_tick(t)
+    }
+
+    /// Applies a stable pending reading unless a finger is down or the
+    /// user typed in the last `TILT_TYPING_PAUSE_MS` (S12: no turning
+    /// mid-sentence). One full refresh.
+    fn tilt_tick(&mut self, t: u64) -> Option<Refresh> {
+        let (r, t0) = self.tilt?;
+        if self.settings.orientation != Orientation::Auto {
+            self.tilt = None;
+            return None;
+        }
+        let typing = self
+            .last_typed
+            .is_some_and(|k| t.saturating_sub(k) < TILT_TYPING_PAUSE_MS);
+        if t.saturating_sub(t0) < TILT_STABLE_MS || self.gestures.finger_down() || typing {
+            return None;
+        }
+        self.tilt = None;
+        Some(self.change(Change::Rotate(r)))
+    }
+
+    /// An accelerometer is present (from `Device::has_gsensor`).
+    pub fn set_gsensor(&mut self, on: bool) {
+        self.gsensor = on;
+        self.orientation_label = self.orientation_status();
+    }
+
+    /// Options → Orientation hint: what Auto is doing (v1.2).
+    #[must_use]
+    pub fn orientation_status(&self) -> String {
+        match (self.settings.orientation, self.gsensor) {
+            (Orientation::Auto, true) => format!("Auto — {}", self.settings.rotation.name()),
+            (Orientation::Auto, false) => {
+                format!("Auto (no sensor) — {}", self.settings.rotation.name())
+            }
+            _ => self.settings.rotation.name().to_owned(),
+        }
     }
 
     /// Applies one Options / keyboard-bar change: refits Line mode,
@@ -433,7 +518,7 @@ impl App {
             Some(Some(false)) => Some(Anchor::Margin),
             _ => None,
         };
-        let (w, h) = logical_size(self.phys, self.settings.orientation);
+        let (w, h) = logical_size(self.phys, self.settings.rotation);
         if (self.screen.width, self.screen.height) != (w, h) {
             self.screen.resize(w, h);
             self.canvas = Canvas::new(w, h, 255);
@@ -441,6 +526,7 @@ impl App {
             self.sel_ui = None;
         }
         self.screen.configure(&mut self.settings, anchor);
+        self.orientation_label = self.orientation_status();
         self.save_settings();
         if c.needs_full_refresh() {
             Refresh::Full
@@ -821,6 +907,7 @@ impl App {
             settings: &self.settings,
             theme: self.theme(),
             keyboard: &self.keyboard,
+            orientation_status: &self.orientation_label,
         }
     }
 
@@ -855,11 +942,14 @@ impl App {
     /// picture 90° clockwise on the portrait panel).
     #[must_use]
     pub fn to_logical(&self, e: Event) -> Event {
-        if !self.is_landscape() {
-            return e;
-        }
-        let lh = self.canvas.height as i32;
-        let m = |x: i32, y: i32| (y, lh - 1 - x);
+        let (lw, lh) = (self.canvas.width as i32, self.canvas.height as i32);
+        let rot = self.settings.rotation;
+        let m = |x: i32, y: i32| match rot {
+            Rotation::R0 => (x, y),
+            Rotation::R90 => (y, lh - 1 - x),
+            Rotation::R180 => (lw - 1 - x, lh - 1 - y),
+            Rotation::R270 => (lw - 1 - y, x),
+        };
         match e {
             Event::Tap { x, y } => {
                 let (x, y) = m(x, y);
@@ -869,7 +959,22 @@ impl App {
                 let (x, y) = m(x, y);
                 Event::Touch { phase, x, y, t }
             }
+            // Upside down, the page buttons swap ends (v1.2).
+            Event::PageTurn { forward } if rot.is_inverted() => {
+                Event::PageTurn { forward: !forward }
+            }
             e => e,
+        }
+    }
+
+    /// Screen pixel (x, y) → panel pixel, for the rotation in force.
+    fn to_panel(&self, x: i32, y: i32) -> (i32, i32) {
+        let (lw, lh) = (self.canvas.width as i32, self.canvas.height as i32);
+        match self.settings.rotation {
+            Rotation::R0 => (x, y),
+            Rotation::R90 => (lh - 1 - y, x),
+            Rotation::R180 => (lw - 1 - x, lh - 1 - y),
+            Rotation::R270 => (y, lw - 1 - x),
         }
     }
 
@@ -877,22 +982,24 @@ impl App {
     /// (emulator screenshots).
     #[must_use]
     pub fn view(&self, panel: &Canvas) -> Canvas {
-        if !self.is_landscape() {
+        if self.settings.rotation == Rotation::R0 {
             return panel.clone();
         }
-        let (lw, lh) = (self.canvas.width as usize, self.canvas.height as usize);
+        let (lw, lh) = (self.canvas.width as i32, self.canvas.height as i32);
         let pw = panel.width as usize;
         let mut out = Canvas::new(lw as u32, lh as u32, 255);
         for y in 0..lh {
             for x in 0..lw {
-                out.pixels[y * lw + x] = panel.pixels[x * pw + (lh - 1 - y)];
+                let (px, py) = self.to_panel(x, y);
+                out.pixels[(y * lw + x) as usize] = panel.pixels[py as usize * pw + px as usize];
             }
         }
         out
     }
 
     fn present(&mut self, dev: &mut dyn Device, r: Rect, refresh: Refresh) -> std::io::Result<()> {
-        if !self.is_landscape() {
+        let rot = self.settings.rotation;
+        if rot == Rotation::R0 {
             return dev.present(&self.canvas, r, refresh);
         }
         let (lw, lh) = (self.canvas.width as i32, self.canvas.height as i32);
@@ -902,12 +1009,17 @@ impl App {
         for y in y0..y1 {
             for x in x0..x1 {
                 let v = self.canvas.pixels[(y * lw + x) as usize];
-                let (px, py) = ((lh - 1 - y) as usize, x as usize);
-                self.phys_canvas.pixels[py * pw + px] = v;
+                let (px, py) = self.to_panel(x, y);
+                self.phys_canvas.pixels[py as usize * pw + px as usize] = v;
             }
         }
-        // Width and height swap, so the >= 16 px minimum still holds.
-        let pr = Rect::new(lh - y1, x0, y1 - y0, x1 - x0);
+        // Landscape swaps width and height, so the >= 16 px minimum holds.
+        let pr = match rot {
+            Rotation::R0 => r,
+            Rotation::R90 => Rect::new(lh - y1, x0, y1 - y0, x1 - x0),
+            Rotation::R180 => Rect::new(lw - x1, lh - y1, x1 - x0, y1 - y0),
+            Rotation::R270 => Rect::new(y0, lw - x1, y1 - y0, x1 - x0),
+        };
         dev.present(&self.phys_canvas, pr, refresh)
     }
 
@@ -2044,6 +2156,29 @@ impl App {
 
     pub fn handle(&mut self, e: Event) -> Option<Refresh> {
         match e {
+            Event::Tilt { tilt, t } => {
+                self.now = self.now.max(t);
+                self.pointer_fast = false;
+                return self.tilt_event(tilt, t);
+            }
+            Event::Key(_) | Event::Chord { .. } => self.last_typed = Some(self.now),
+            // Touching (on-screen keys included) also pauses Auto for 1 s.
+            Event::Touch { t, .. } => {
+                self.now = self.now.max(t);
+                self.last_typed = Some(self.now);
+            }
+            Event::Tap { .. } => self.last_typed = Some(self.now),
+            _ => {}
+        }
+        if let Event::Tick { t } = e {
+            self.now = self.now.max(t);
+            if let Some(r) = self.tilt_tick(t) {
+                self.pointer_fast = false;
+                let rest = self.handle_inner(e);
+                return merge(Some(r), rest);
+            }
+        }
+        match e {
             Event::Tick { t } => {
                 let p = self.pointer_tick(t);
                 let r = self.handle_inner(e);
@@ -2084,6 +2219,7 @@ impl App {
     fn handle_inner(&mut self, e: Event) -> Option<Refresh> {
         let page = self.screen.layout(self.keys_visible(), &self.keyboard).page;
         match e {
+            Event::Tilt { .. } => None,
             Event::Touch { phase, x, y, t } => {
                 let g = match phase {
                     Phase::Down => self.gestures.down(x, y, t),
@@ -2329,6 +2465,7 @@ impl App {
     /// # Errors
     /// The device failed to present a frame.
     pub fn run(&mut self, dev: &mut dyn Device) -> std::io::Result<()> {
+        self.set_gsensor(dev.has_gsensor());
         self.render(dev, Refresh::Full)?;
         while self.running {
             self.sync_usb_host(dev);
@@ -2569,11 +2706,12 @@ fn load_settings(root: &std::path::Path) -> Settings {
 }
 
 /// Screen size for an orientation on a panel of `phys` size.
-fn logical_size(phys: (u32, u32), o: Orientation) -> (u32, u32) {
+fn logical_size(phys: (u32, u32), r: Rotation) -> (u32, u32) {
     let (short, long) = (phys.0.min(phys.1), phys.0.max(phys.1));
-    match o {
-        Orientation::Portrait => (short, long),
-        Orientation::Landscape => (long, short),
+    if r.is_landscape() {
+        (long, short)
+    } else {
+        (short, long)
     }
 }
 
