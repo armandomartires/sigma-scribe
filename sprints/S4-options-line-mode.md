@@ -1,6 +1,6 @@
 # S4 — Options & Line mode
 
-**Status:** 🔨 BUILT 2026-10-21 (desktop/emulator green; awaiting install approval and on-device check) · **Release:** v0.4.0 · **Estimate:** 6–8 d · **Depends on:** S3 (v0.3.0) · **Branch:** `feat/v0.4-options-line-mode`
+**Status:** ✅ DONE 2026-10-21 (passed on device, tagged `v0.4.0` on 89f3928) · **Release:** v0.4.0 · **Estimate:** 6–8 d · **Depends on:** S3 (v0.3.0) · **Branch:** `feat/v0.4-options-line-mode`
 
 ## Goal
 Options sheet, themes, typography, Line mode, landscape keyboards (steps 4–5).
@@ -25,10 +25,10 @@ Options sheet, themes, typography, Line mode, landscape keyboards (steps 4–5).
 ### Desktop / simulator
 - [ ] `cargo test` for new core logic
 - [ ] Simulator run at Forma metrics, portrait and landscape
-### On-device (Kobo Forma, fw 4.38.23697)
-- [ ] Night mode: no grey card, full refresh on switch
-- [ ] Rotate with Line on: column locked, gutter shown
-- [ ] Each landscape keyboard layout types correctly
+### On-device (Kobo Forma, fw 4.38.23697) — ✅ passed 2026-10-21
+- [x] Night mode: no grey card, full refresh on switch
+- [x] Rotate with Line on: column locked, gutter shown (landscape direction confirmed)
+- [x] Each landscape keyboard layout types correctly
 
 Tasks: `tasks/S4-tasks.md`
 
@@ -42,7 +42,7 @@ Tasks: `tasks/S4-tasks.md`
 
 ### Decisions
 - **S4-D1** Orientation is an Options row (manual), not the gyro: reading the Forma's accelerometer is device-specific and untested; auto-rotation can follow later.
-- **S4-D2** Landscape turns the picture 90° clockwise on the panel. Which way the user holds the Forma is to be confirmed on device; the other direction is a small change (mapping in `App::present` / `App::to_logical`).
+- **S4-D2** Landscape turns the picture 90° clockwise on the panel. ✅ Confirmed correct on the Forma 2026-10-21 (user check).
 - **S4-D3** Preview keeps Literata faces even when Type = Atkinson (preview typography from the mock); preview follows Night, Size, Leading, Margin and Line.
 - **S4-D4** Keyboard (Compact/Full) is an Options row; the on-board switch key stays as a shortcut.
 - **S4-D5** Side-by-side check against `mockup/kobo-writing-mock.html` not done (no browser render of the mock in this run); screenshots in `docs/screenshots/v0.4/`.

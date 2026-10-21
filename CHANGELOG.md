@@ -2,7 +2,7 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
-## 0.4.0 — unreleased (built 2026-10-21, awaiting device check)
+## 0.4.0 — 2026-10-21
 - Options sheet (`Aa` in the title bar): Paper, Type, Line, Size, Leading, Margin, Tab key, Tab width, Keyboard, Keyboard tone, Drawer, USB keyboard, Orientation.
 - Night mode: the same page inverted, full refresh on switch; keyboard tone Theme / Light / Dark.
 - Line mode: 8–16 words per line, fitted with the real face; Size and Margin move each other.
