@@ -116,32 +116,40 @@ pub struct Layout {
     pub keys_button: Rect,
     pub keyboard: Rect,
     pub keys: Vec<(Rect, Key)>,
+    /// Title-bar icons, v1.0 (S9.2): twice the brief's size, in the
+    /// mockup's order left to right after the title: Files, Preview, Find,
+    /// Scratch, To-dos, Contents, Graph, Options, Help.
     pub files_button: Rect,
-    /// Eye / pencil, left of the folder (brief §3 order: Files, Preview).
+    /// Eye / pencil, right of the folder.
     pub preview_button: Rect,
+    /// Close X of the sheets (Files, Graph, Help, Options): the rightmost
+    /// slot, where Help sits in write mode.
+    pub close_button: Rect,
     pub name_rect: Rect,
     pub ok_rect: Rect,
     pub cancel_rect: Rect,
-    /// "Aa" Options button, left of the drawer icons.
+    /// "Aa" Options button, between Graph and Help.
     pub options_button: Rect,
-    /// Drawer pane icons, right to left after the eye: Scratch, To-dos,
-    /// Contents (brief §3 order, Find comes in S6).
+    /// Drawer pane icons after Find: Scratch, To-dos, Contents.
     pub scratch_button: Rect,
     pub todos_button: Rect,
     pub contents_button: Rect,
     /// Find (between the eye and Scratch) and Graph (between Contents and
-    /// Options), brief §3 order (v0.6).
+    /// Options).
     pub find_button: Rect,
     pub graph_button: Rect,
     /// The Find bar under the title bar when open (zero height otherwise).
     pub find_bar: Rect,
-    /// Help, the leftmost icon (brief §3 order, v0.7).
+    /// Help, the rightmost icon (mockup order, S9.2).
     pub help_button: Rect,
     /// The text column inside the page: the page itself, or the locked
     /// portrait-width column (Line on, landscape) with gutters beside it.
     pub column: Rect,
     pub kb_buttons: Vec<(Rect, KbButton)>,
 }
+
+/// Icons in the title bar (S9.2).
+pub const TITLE_ICONS: i32 = 9;
 
 pub struct EditorScreen {
     pub width: u32,
@@ -300,7 +308,8 @@ impl EditorScreen {
     #[must_use]
     pub fn layout(&self, keys_on: bool, keyboard: &Keyboard) -> Layout {
         let (w, h) = (self.width as i32, self.height as i32);
-        let title = Rect::new(0, 0, w, self.px(52.0).max(self.px(44.0) + 2 * self.px(4.0)));
+        let (btn, icon_gap) = self.title_icons(w);
+        let title = Rect::new(0, 0, w, btn + 2 * self.px(6.0));
         let key_h = self.px(58.0);
         let gap = self.px(6.0);
         let pad = self.px(10.0);
@@ -334,25 +343,28 @@ impl EditorScreen {
         } else {
             (Vec::new(), Vec::new())
         };
-        let btn = self.px(44.0);
         let by = (title.h - btn) / 2;
-        let files_button = Rect::new(w - self.px(12.0) - btn, by, btn, btn);
-        let preview_button = Rect::new(files_button.x - self.px(8.0) - btn, by, btn, btn);
-        let left_of = |r: Rect| Rect::new(r.x - self.px(8.0) - btn, by, btn, btn);
-        let find_button = left_of(preview_button);
-        let scratch_button = left_of(find_button);
-        let todos_button = left_of(scratch_button);
-        let contents_button = left_of(todos_button);
-        let graph_button = left_of(contents_button);
-        let options_button = left_of(graph_button);
-        let help_button = left_of(options_button);
-        let name_rect = Rect::new(0, 0, (w * 3 / 5).min(help_button.x - self.px(8.0)), title.h);
+        // Right-aligned group, mockup order left to right.
+        let x0 = w - self.px(12.0) - TITLE_ICONS * btn - (TITLE_ICONS - 1) * icon_gap;
+        let slot = |i: i32| Rect::new(x0 + i * (btn + icon_gap), by, btn, btn);
+        let files_button = slot(0);
+        let preview_button = slot(1);
+        let find_button = slot(2);
+        let scratch_button = slot(3);
+        let todos_button = slot(4);
+        let contents_button = slot(5);
+        let graph_button = slot(6);
+        let options_button = slot(7);
+        let help_button = slot(8);
+        let close_button = help_button;
+        let name_rect = Rect::new(0, 0, (files_button.x - self.px(8.0)).max(0), title.h);
         let column = if self.landscape() && self.cfg.line_on {
             let cw = w.min(h);
             Rect::new(page.x + (page.w - cw) / 2, page.y, cw, page.h)
         } else {
             page
         };
+        let btn = self.px(44.0).max(btn / 2);
         let okw = self.px(72.0);
         let cw = self.px(96.0);
         let ok_rect = Rect::new(w - self.px(12.0) - okw, by, okw, btn);
@@ -366,6 +378,7 @@ impl EditorScreen {
             keys,
             files_button,
             preview_button,
+            close_button,
             name_rect,
             ok_rect,
             cancel_rect,
@@ -380,6 +393,32 @@ impl EditorScreen {
             column,
             kb_buttons,
         }
+    }
+
+    /// Title-bar icon size and spacing (S9.2): 88 brief px (twice the
+    /// brief's 44) with 8 px gaps. Overflow rule if the bar is too narrow
+    /// to keep a title of at least 200 brief px: first the gaps shrink to
+    /// 2 px, then the icons shrink, never below 44 brief px (the minimum
+    /// target). The Forma (1440 portrait, 1920 landscape) needs neither.
+    #[must_use]
+    pub fn title_icons(&self, w: i32) -> (i32, i32) {
+        let n = TITLE_ICONS;
+        let room = w - self.px(12.0) - self.px(200.0);
+        let (mut btn, mut gap) = (self.px(88.0), self.px(8.0));
+        if n * btn + (n - 1) * gap > room {
+            gap = self.px(2.0);
+        }
+        if n * btn + (n - 1) * gap > room {
+            btn = ((room - (n - 1) * gap) / n).max(self.px(44.0));
+        }
+        (btn, gap)
+    }
+
+    /// Scale for title-bar glyphs: twice the page scale (S9.2), or less
+    /// when the overflow rule shrank the icons.
+    #[must_use]
+    pub fn icon_scale(&self, l: &Layout) -> Scale {
+        Scale(self.s.0 * l.files_button.w as f32 / self.px(44.0) as f32)
     }
 
     /// Keys and landscape bar buttons inside the keyboard rectangle.
@@ -850,15 +889,15 @@ impl EditorScreen {
 
         self.draw_title(c, &l, model.file_name, model.rename, t, true);
         if model.rename.is_none() {
-            draw_eye_icon(c, l.preview_button, self.s, t.ink);
+            let is = self.icon_scale(&l);
+            draw_eye_icon(c, l.preview_button, is, t.ink);
             self.draw_options_icon(c, l.options_button, t);
             if self.find_open {
                 c.fill(l.find_button, t.wash);
-                c.stroke(l.find_button, 1, t.ink);
+                c.stroke(l.find_button, 2, t.ink);
             }
-            draw_find_icon(c, l.find_button, self.s, t.ink);
-            draw_graph_icon(c, l.graph_button, self.s, t.ink);
-            crate::help::draw_help_icon(self, c, l.help_button, t.ink);
+            draw_find_icon(c, l.find_button, is, t.ink);
+            draw_graph_icon(c, l.graph_button, is, t.ink);
             crate::help::draw_help_icon(self, c, l.help_button, t.ink);
             for (i, r) in [l.contents_button, l.todos_button, l.scratch_button]
                 .into_iter()
@@ -866,12 +905,12 @@ impl EditorScreen {
             {
                 if self.drawer_open[i] {
                     c.fill(r, t.wash);
-                    c.stroke(r, 1, t.ink);
+                    c.stroke(r, 2, t.ink);
                 }
                 match i {
-                    0 => crate::drawer::draw_contents_icon(c, r, self.s, t.ink),
-                    1 => crate::drawer::draw_todos_icon(c, r, self.s, t.ink),
-                    _ => crate::drawer::draw_scratch_icon(c, r, self.s, t.ink),
+                    0 => crate::drawer::draw_contents_icon(c, r, is, t.ink),
+                    1 => crate::drawer::draw_todos_icon(c, r, is, t.ink),
+                    _ => crate::drawer::draw_scratch_icon(c, r, is, t.ink),
                 }
             }
         }
@@ -1069,7 +1108,7 @@ impl EditorScreen {
 
     /// "Aa" in a 44 px target: the Options sheet.
     pub fn draw_options_icon(&self, c: &mut Canvas, r: Rect, t: Theme) {
-        let size = self.ui_px() * 1.1;
+        let size = self.ui_px() * 1.1 * r.w as f32 / self.px(44.0) as f32;
         let w = self.fonts.width(Face::AtkinsonBold, size, "Aa");
         let base =
             r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(Face::AtkinsonBold, size) / 2.6;
@@ -1168,7 +1207,7 @@ impl EditorScreen {
                 t.ink,
             );
             if files_icon {
-                draw_folder_icon(c, l.files_button, self.s, t.ink);
+                draw_folder_icon(c, l.files_button, self.icon_scale(l), t.ink);
             }
         }
         c.fill(
@@ -1526,10 +1565,13 @@ impl EditorScreen {
         c.fill(c.bounds(), t.paper);
         draw_gutters(c, &l, t);
         self.draw_title(c, &l, m.file_name, None, t, true);
-        draw_pencil_icon(c, l.preview_button, self.s, t.ink);
+        let is = self.icon_scale(&l);
+        draw_pencil_icon(c, l.preview_button, is, t.ink);
         self.draw_options_icon(c, l.options_button, t);
-        draw_find_icon(c, l.find_button, self.s, t.ink);
-        draw_graph_icon(c, l.graph_button, self.s, t.ink);
+        draw_find_icon(c, l.find_button, is, t.ink);
+        draw_graph_icon(c, l.graph_button, is, t.ink);
+        // Help was tappable but not drawn in preview before S9.2.
+        crate::help::draw_help_icon(self, c, l.help_button, t.ink);
         let area = self.text_area(l.page);
         let page = m.page.min(m.doc.pages.len().saturating_sub(1));
         if let Some(r) = m.doc.pages.get(page) {
@@ -1903,6 +1945,73 @@ mod tests {
     }
 
     #[test]
+    fn title_icons_doubled_in_mockup_order_both_orientations() {
+        let k = Keyboard::default();
+        for (w, h) in [(W, H), (H, W)] {
+            let e = EditorScreen::new(w, h);
+            let s = e.scale();
+            let l = e.layout(true, &k);
+            let order = [
+                l.files_button,
+                l.preview_button,
+                l.find_button,
+                l.scratch_button,
+                l.todos_button,
+                l.contents_button,
+                l.graph_button,
+                l.options_button,
+                l.help_button,
+            ];
+            for r in order {
+                assert_eq!((r.w, r.h), (s.px(88.0), s.px(88.0)), "{w}x{h}: doubled");
+                assert!(r.w >= 44 && r.y >= 0 && r.y + r.h <= l.title.h);
+            }
+            for p in order.windows(2) {
+                assert!(p[0].x + p[0].w < p[1].x, "left to right, no overlap");
+            }
+            assert_eq!(l.close_button, l.help_button);
+            assert!(l.help_button.x + l.help_button.w <= w as i32 - s.px(12.0));
+            assert!(l.name_rect.w >= s.px(200.0), "{w}: title keeps room");
+            assert!(l.title.h >= s.px(88.0) && l.page.y >= l.title.h);
+            // Every icon hits itself in write and preview mode.
+            let b = Buffer::new("x");
+            let st = SaveState::Saved;
+            let m = model(&b, &k, &st);
+            let want = [
+                Hit::Files,
+                Hit::TogglePreview,
+                Hit::Find,
+                Hit::Drawer(crate::drawer::Pane::Scratch),
+                Hit::Drawer(crate::drawer::Pane::Todos),
+                Hit::Drawer(crate::drawer::Pane::Contents),
+                Hit::Graph,
+                Hit::Options,
+                Hit::Help,
+            ];
+            for (r, h) in order.iter().zip(want) {
+                let (x, y) = (r.x + r.w / 2, r.y + r.h / 2);
+                assert_eq!(e.hit(&m, x, y), h, "{w}x{h:?}");
+            }
+            for (r, h) in order.iter().zip(want) {
+                if !matches!(h, Hit::Drawer(_)) {
+                    assert_eq!(e.preview_hit(&k, r.x + r.w / 2, r.y + r.h / 2), h);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn title_icon_overflow_shrinks_gaps_then_icons_never_below_44() {
+        let e = EditorScreen::new(W, H);
+        let s = e.scale();
+        assert_eq!(e.title_icons(W as i32), (s.px(88.0), s.px(8.0)));
+        let (b, g) = e.title_icons(1100);
+        assert_eq!(g, s.px(2.0));
+        assert!(b < s.px(88.0) && b >= s.px(44.0));
+        assert_eq!(e.title_icons(300).0, s.px(44.0));
+    }
+
+    #[test]
     fn eye_and_pencil_hit_and_preview_draws_without_keys() {
         let b = Buffer::new("# Title\n\nBody *em*");
         let k = Keyboard::default();
@@ -1910,8 +2019,8 @@ mod tests {
         let mut e = EditorScreen::new(W, H);
         let m = model(&b, &k, &st);
         let l = e.layout(true, &k);
-        assert!(l.preview_button.x + l.preview_button.w < l.files_button.x);
-        assert!(l.preview_button.x > l.name_rect.x + l.name_rect.w);
+        assert!(l.files_button.x + l.files_button.w < l.preview_button.x);
+        assert!(l.files_button.x > l.name_rect.x + l.name_rect.w);
         let (cx, cy) = (l.preview_button.x + 20, l.preview_button.y + 20);
         assert_eq!(e.hit(&m, cx, cy), Hit::TogglePreview);
         assert_eq!(e.preview_hit(&k, cx, cy), Hit::TogglePreview);

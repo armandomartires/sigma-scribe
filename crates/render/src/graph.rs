@@ -83,7 +83,7 @@ impl EditorScreen {
             let area = Rect::new(0, base.title.h + bar_h, w, foot.y - base.title.h - bar_h);
             let (scale, centre, nodes) = self.map_nodes(m, v, area);
             return GraphLayout {
-                close: base.files_button,
+                close: base.close_button,
                 foot,
                 base,
                 rows: Vec::new(),
@@ -100,7 +100,7 @@ impl EditorScreen {
             .map(|(k, i)| (i, Rect::new(0, top + k as i32 * row_h, w, row_h)))
             .collect();
         GraphLayout {
-            close: base.files_button,
+            close: base.close_button,
             foot,
             base,
             rows,
@@ -150,9 +150,9 @@ impl EditorScreen {
         self.draw_title(c, &l.base, "Graph", None, t, false);
         self.draw_graph_toolbar(c, m, &l);
         let r = l.close;
-        let (cx, cy, d) = (r.x + r.w / 2, r.y + r.h / 2, s.px(8.0));
+        let (cx, cy, d) = (r.x + r.w / 2, r.y + r.h / 2, s.px(16.0));
         for k in -d..=d {
-            for th in 0..s.px(1.75).max(2) {
+            for th in 0..s.px(3.5).max(3) {
                 c.blend(cx + k, cy + k + th, t.ink, 255);
                 c.blend(cx + k, cy - k + th, t.ink, 255);
             }

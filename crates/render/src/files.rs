@@ -76,7 +76,7 @@ impl EditorScreen {
         let w = self.width as i32;
         let btn = self.files_px(44.0);
         let pad = self.files_px(20.0);
-        let close = base.files_button;
+        let close = base.close_button;
         let mut y = base.title.h;
         let crumb = if m.crumb.is_some() && m.moving.is_none() {
             let r = Rect::new(0, y, w, btn + self.files_px(8.0));
@@ -214,9 +214,9 @@ impl EditorScreen {
         if m.rename.is_none() {
             // Close mark: an X in a 44 px target.
             let r = l.close;
-            let (cx, cy, d) = (r.x + r.w / 2, r.y + r.h / 2, s.px(8.0));
+            let (cx, cy, d) = (r.x + r.w / 2, r.y + r.h / 2, s.px(16.0));
             for k in -d..=d {
-                for th in 0..s.px(1.75).max(2) {
+                for th in 0..s.px(3.5).max(3) {
                     c.blend(cx + k, cy + k + th, t.ink, 255);
                     c.blend(cx + k, cy - k + th, t.ink, 255);
                 }
