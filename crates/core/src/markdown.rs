@@ -217,7 +217,7 @@ fn quote_of(t: &str) -> Option<&str> {
     Some(rest.strip_prefix(' ').unwrap_or(rest).trim_start())
 }
 
-fn item_of(t: &str) -> Option<(Option<u32>, Option<bool>, &str)> {
+pub(crate) fn item_of(t: &str) -> Option<(Option<u32>, Option<bool>, &str)> {
     let (marker, rest) = if let Some(r) = t
         .strip_prefix("- ")
         .or_else(|| t.strip_prefix("* "))

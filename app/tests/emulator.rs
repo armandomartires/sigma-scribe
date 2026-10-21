@@ -453,3 +453,78 @@ mod v04 {
         assert!(app.buffer.text().ends_with("  \t"));
     }
 }
+
+fn dstep(app: &mut App, dev: &mut DesktopDevice, label: &str) {
+    tap_on(app, label);
+    let _ = app.render(dev, Refresh::Partial);
+    app.settle();
+}
+
+#[test]
+fn checking_a_todo_in_another_note_rewrites_only_that_line() {
+    let dir = fresh("todo");
+    let mut dev = DesktopDevice::new(1440, 1920);
+    let mut app = App::new(1440, 1920, &dir);
+    let _ = app.render(&mut dev, Refresh::Full);
+    let before = std::fs::read_to_string(dir.join("drafts/chapter-01.md")).unwrap();
+    dstep(&mut app, &mut dev, "To-dos");
+    dstep(&mut app, &mut dev, "TodoBox:Name the conductor");
+    let after = std::fs::read_to_string(dir.join("drafts/chapter-01.md")).unwrap();
+    assert_eq!(
+        after,
+        before.replace("- [ ] Name the conductor", "- [x] Name the conductor")
+    );
+    dstep(&mut app, &mut dev, "TodoBox:Name the conductor");
+    assert_eq!(
+        std::fs::read_to_string(dir.join("drafts/chapter-01.md")).unwrap(),
+        before
+    );
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn scratch_persists_and_is_not_a_listed_note() {
+    let dir = fresh("scratch");
+    let mut dev = DesktopDevice::new(1440, 1920);
+    let mut app = App::new(1440, 1920, &dir);
+    let _ = app.render(&mut dev, Refresh::Full);
+    dstep(&mut app, &mut dev, "Scratch");
+    dstep(&mut app, &mut dev, "ScratchPane");
+    for c in ["a", "b", "c"] {
+        tap(&mut app, &mut dev, c);
+    }
+    assert!(app.scratch.text().contains("abc"));
+    assert!(!app.buffer.text().contains("abc"));
+    app.handle(Event::Power);
+    let restarted = App::new(1440, 1920, &dir);
+    assert!(restarted.scratch.text().contains("abc"));
+    // The scratch pad never shows up as a note, so it cannot be deleted.
+    let notes = restarted.library.all_notes().unwrap();
+    assert!(notes.iter().all(|n| !n.as_str().contains("scratchpad")));
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn drawer_refresh_regions_are_at_least_16px() {
+    let dir = fresh("regions");
+    let mut dev = DesktopDevice::new(1440, 1920);
+    let mut app = App::new(1440, 1920, &dir);
+    let _ = app.render(&mut dev, Refresh::Full);
+    for l in [
+        "Contents",
+        "To-dos",
+        "Scratch",
+        "ScratchPane",
+        "Filter",
+        "Contents",
+    ] {
+        dstep(&mut app, &mut dev, l);
+    }
+    tap(&mut app, &mut dev, "x");
+    assert!(app.scratch.text().contains('x'));
+    assert!(dev.refreshes.len() > 3);
+    for (r, _) in &dev.refreshes {
+        assert!(r.w >= 16 && r.h >= 16, "region {r:?}");
+    }
+    let _ = std::fs::remove_dir_all(dir);
+}

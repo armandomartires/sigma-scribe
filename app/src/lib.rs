@@ -8,6 +8,7 @@ use sigma_core::gesture::{Gesture, Recognizer};
 use sigma_core::keyboard::{Dir, Key};
 use sigma_core::library::SCRATCH;
 use sigma_core::linefit::Anchor;
+use sigma_core::outline::{self, Filter, Heading, Indexer, TodoItem};
 use sigma_core::settings::{Orientation, Pad, Side};
 use sigma_core::{
     Autosave, Buffer, Change, Entry, FsNoteStore, KeyAction, Keyboard, Kind, Library, NotePath,
@@ -16,8 +17,8 @@ use sigma_core::{
 use sigma_device::{Device, Event, HwKey, Phase, Refresh};
 use sigma_render::editor::Model;
 use sigma_render::{
-    BarAction, Canvas, Doc, EditorScreen, FilesHit, FilesModel, Hit, KbButton, OptionsHit,
-    OptionsModel, PreviewModel, Rect, Row, SelUi, Theme,
+    BarAction, Canvas, Doc, DrawerHit, DrawerModel, EditorScreen, FilesHit, FilesModel, Hit,
+    KbButton, OptionsHit, OptionsModel, Pane, PreviewModel, Rect, Row, SelUi, Theme,
 };
 use std::path::PathBuf;
 
@@ -115,6 +116,17 @@ pub struct App {
     phys: (u32, u32),
     /// Rotated copy of the canvas sent to the panel in landscape.
     phys_canvas: Canvas,
+    /// Side drawer (v0.5): open panes (Contents, To-dos, Scratch).
+    pub drawer: [bool; 3],
+    pub filter: Filter,
+    /// The scratch pad (`.scratchpad.md`), always loaded.
+    pub scratch: Buffer,
+    scratch_save: Autosave,
+    /// The keyboard types into the scratch pad instead of the page.
+    pub scratch_focus: bool,
+    indexer: Indexer,
+    /// To-dos of every note on disk (from the background indexer).
+    disk_todos: Vec<TodoItem>,
     pub running: bool,
 }
 
@@ -143,6 +155,7 @@ impl App {
         let (lw, lh) = logical_size((width, height), settings.orientation);
         let mut screen = EditorScreen::new(lw, lh);
         screen.configure(&mut settings, None);
+        let scratch = Buffer::new(store.load(SCRATCH).ok().flatten().unwrap_or_default());
         Self {
             autosave: Autosave::new(buffer.revision()),
             library,
@@ -164,6 +177,13 @@ impl App {
             options: false,
             phys: (width, height),
             phys_canvas: Canvas::new(width, height, 255),
+            drawer: [false; 3],
+            filter: Filter::All,
+            scratch_save: Autosave::new(scratch.revision()),
+            scratch,
+            scratch_focus: false,
+            indexer: Indexer::new(),
+            disk_todos: Vec::new(),
             running: true,
         }
     }
@@ -219,6 +239,268 @@ impl App {
         } else {
             Refresh::Partial
         }
+    }
+
+    fn save_scratch(&mut self) {
+        let rev = self.scratch.revision();
+        self.scratch_save
+            .sync(&mut self.store, SCRATCH, self.scratch.text(), rev);
+    }
+
+    /// The drawer is drawn and takes taps (write mode, no sheet).
+    #[must_use]
+    pub fn drawer_visible(&self) -> bool {
+        self.drawer.iter().any(|&o| o) && self.in_editor()
+    }
+
+    fn scratch_focused(&self) -> bool {
+        self.scratch_focus && self.drawer[2] && self.drawer_visible()
+    }
+
+    /// Headings of the open note (Contents).
+    #[must_use]
+    pub fn headings(&self) -> Vec<Heading> {
+        outline::headings(self.buffer.text())
+    }
+
+    /// Every to-do: the indexer's view of the disk, with the open note and
+    /// the scratch pad taken live from their buffers.
+    #[must_use]
+    pub fn todo_list(&self) -> Vec<TodoItem> {
+        let live = |note: &NotePath, text: &str| -> Vec<TodoItem> {
+            outline::todos(text)
+                .into_iter()
+                .map(|todo| TodoItem {
+                    note: note.clone(),
+                    todo,
+                })
+                .collect()
+        };
+        let scratch = NotePath::parse(SCRATCH).unwrap_or_default();
+        let mut out = Vec::new();
+        let mut placed = false;
+        for it in &self.disk_todos {
+            if it.note == self.current {
+                if !placed {
+                    out.extend(live(&self.current, self.buffer.text()));
+                    placed = true;
+                }
+            } else if it.note != scratch {
+                out.push(it.clone());
+            }
+        }
+        if !placed {
+            let mut cur = live(&self.current, self.buffer.text());
+            cur.extend(out);
+            out = cur;
+        }
+        out.extend(live(&scratch, self.scratch.text()));
+        out
+    }
+
+    fn drawer_model<'a>(&'a self, hs: &'a [Heading], todos: &'a [TodoItem]) -> DrawerModel<'a> {
+        DrawerModel {
+            side: self.settings.drawer,
+            contents: self.drawer[0].then_some(hs),
+            todos: self.drawer[1].then_some((todos, self.filter)),
+            scratch: self.drawer[2].then_some((&self.scratch, self.scratch_focused())),
+            theme: self.theme(),
+        }
+    }
+
+    fn drawer_hit_at(&self, x: i32, y: i32) -> DrawerHit {
+        if !self.drawer_visible() {
+            return DrawerHit::Outside;
+        }
+        let (hs, todos) = (self.headings(), self.todo_list());
+        let base = self.screen.layout(self.keys_visible(), &self.keyboard);
+        self.screen
+            .drawer_hit(&base, &self.drawer_model(&hs, &todos), x, y)
+    }
+
+    fn in_drawer(&self, x: i32, y: i32) -> bool {
+        self.drawer_hit_at(x, y) != DrawerHit::Outside
+    }
+
+    /// Opens or closes one drawer pane (no animation, partial refresh).
+    pub fn toggle_pane(&mut self, p: Pane) -> Refresh {
+        let i = match p {
+            Pane::Contents => 0,
+            Pane::Todos => 1,
+            Pane::Scratch => 2,
+        };
+        self.drawer[i] = !self.drawer[i];
+        if p == Pane::Todos && self.drawer[1] {
+            self.reindex();
+        }
+        if p == Pane::Scratch {
+            self.scratch_focus = self.drawer[2];
+            self.save_scratch();
+        }
+        self.sel_ui = None;
+        Refresh::Partial
+    }
+
+    fn reindex(&mut self) {
+        self.save();
+        self.save_scratch();
+        self.indexer.request(self.library.root().to_path_buf());
+    }
+
+    /// Blocks until the background index is current (emulator, tests).
+    /// Returns whether the to-do list changed.
+    pub fn settle(&mut self) -> bool {
+        match self.indexer.wait() {
+            Some(items) => {
+                let changed = items != self.disk_todos;
+                self.disk_todos = items;
+                changed
+            }
+            None => false,
+        }
+    }
+
+    /// Checks / unchecks a to-do: the open note and the scratch pad are
+    /// edited in their buffers (undo works, autosave writes them); any
+    /// other note is rewritten on disk, only that line.
+    pub fn toggle_todo(&mut self, it: &TodoItem) -> Option<Refresh> {
+        let line = it.todo.line;
+        let flip = |b: &mut Buffer| -> bool {
+            let Some((at, done)) = outline::box_at(b.text(), line) else {
+                return false;
+            };
+            let (caret, sel) = (b.caret(), b.selection());
+            b.select(at, at + 3);
+            b.insert(if done { "[ ]" } else { "[x]" });
+            match sel {
+                Some((x, y)) => b.select(x, y),
+                None => b.set_caret(caret),
+            }
+            true
+        };
+        if it.note == self.current {
+            if flip(&mut self.buffer) {
+                self.save();
+            }
+        } else if it.note.as_str() == SCRATCH {
+            if flip(&mut self.scratch) {
+                self.save_scratch();
+            }
+        } else {
+            let path = self.library.fs_path(&it.note);
+            let body = std::fs::read_to_string(&path).ok()?;
+            let new = outline::toggle(&body, line)?;
+            sigma_core::store::write_atomic(&path, &new).ok()?;
+            if let Some(d) = self
+                .disk_todos
+                .iter_mut()
+                .find(|d| d.note == it.note && d.todo.line == line)
+            {
+                d.todo.done = !d.todo.done;
+            }
+            self.reindex();
+        }
+        Some(Refresh::Partial)
+    }
+
+    fn drawer_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
+        let hit = self.drawer_hit_at(x, y);
+        self.sel_ui = None;
+        let page = self.page_rect();
+        match hit {
+            DrawerHit::Heading(line) => {
+                self.scratch_focus = false;
+                self.screen.jump_to_line(&mut self.buffer, page, line);
+                Some(Refresh::Partial)
+            }
+            DrawerHit::TodoBox(i) => {
+                let it = self.todo_list().get(i)?.clone();
+                self.toggle_todo(&it)
+            }
+            DrawerHit::TodoOpen(i) => {
+                let it = self.todo_list().get(i)?.clone();
+                if it.note.as_str() == SCRATCH {
+                    self.drawer[2] = true;
+                    self.scratch_focus = true;
+                    let at =
+                        outline::line_range(self.scratch.text(), it.todo.line).map_or(0, |r| r.1);
+                    self.scratch.set_caret(at);
+                    return Some(Refresh::Partial);
+                }
+                let full = it.note != self.current;
+                if full {
+                    self.open(&it.note);
+                }
+                self.scratch_focus = false;
+                let page = self.page_rect();
+                self.screen
+                    .jump_to_line(&mut self.buffer, page, it.todo.line);
+                Some(if full {
+                    Refresh::Full
+                } else {
+                    Refresh::Partial
+                })
+            }
+            DrawerHit::Filter => {
+                self.filter = self.filter.next();
+                Some(Refresh::Partial)
+            }
+            DrawerHit::Scratch(at) => {
+                self.scratch_focus = true;
+                self.scratch.set_caret(at);
+                Some(Refresh::Fast)
+            }
+            DrawerHit::Inside | DrawerHit::Outside => None,
+        }
+    }
+
+    fn scratch_key(&mut self, k: Key) -> Option<Refresh> {
+        let tab = self.settings.tab_kind();
+        match self.keyboard.press(k, &mut self.scratch, tab) {
+            KeyAction::Edited => {
+                self.save_scratch();
+                Some(Refresh::Fast)
+            }
+            KeyAction::Vertical { down, .. } => {
+                if down {
+                    self.scratch.down();
+                } else {
+                    self.scratch.up();
+                }
+                Some(Refresh::Fast)
+            }
+            KeyAction::Relayout => {
+                self.save_settings();
+                Some(Refresh::Full)
+            }
+            KeyAction::Escape => {
+                self.scratch_focus = false;
+                Some(Refresh::Fast)
+            }
+            KeyAction::Moved | KeyAction::Relabelled => Some(Refresh::Fast),
+            KeyAction::Page { .. } | KeyAction::Ignored => None,
+        }
+    }
+
+    fn scratch_hw(&mut self, k: HwKey) -> Option<Refresh> {
+        let b = &mut self.scratch;
+        match k {
+            HwKey::Char(c) => b.insert(&c.to_string()),
+            HwKey::Backspace => b.backspace(),
+            HwKey::Delete => b.delete_forward(),
+            HwKey::Return => b.newline(),
+            HwKey::Tab => b.insert_tab(self.settings.tab_kind()),
+            HwKey::Left => b.left(),
+            HwKey::Right => b.right(),
+            HwKey::Up => b.up(),
+            HwKey::Down => b.down(),
+            HwKey::Escape => {
+                self.scratch_focus = false;
+                return Some(Refresh::Fast);
+            }
+        }
+        self.save_scratch();
+        Some(Refresh::Fast)
     }
 
     /// Opens the Options sheet (closes preview and selection chrome).
@@ -375,6 +657,9 @@ impl App {
         self.autosave = Autosave::new(self.buffer.revision());
         self.screen.scroll = 0;
         let _ = self.library.set_last_opened(p);
+        if self.drawer[1] {
+            self.reindex();
+        }
     }
 
     #[must_use]
@@ -597,7 +882,17 @@ impl App {
                     None
                 },
             };
-            self.screen.draw(&mut c, &model);
+            self.screen.drawer_open = if self.drawer_visible() {
+                self.drawer
+            } else {
+                [false; 3]
+            };
+            let l = self.screen.draw(&mut c, &model);
+            if self.drawer_visible() {
+                let (hs, todos) = (self.headings(), self.todo_list());
+                self.screen
+                    .draw_drawer(&mut c, &l, &self.drawer_model(&hs, &todos));
+            }
         }
         self.canvas = c;
         // Only what changed goes to the panel: a pressed modifier redraws its
@@ -904,7 +1199,10 @@ impl App {
                 self.handle(Event::Tap { x, y })
             }
             Gesture::DoubleTap { x, y }
-                if self.in_editor() && on_page(x, y) && self.sel_ui.is_none() =>
+                if self.in_editor()
+                    && on_page(x, y)
+                    && !self.in_drawer(x, y)
+                    && self.sel_ui.is_none() =>
             {
                 self.select_word_at(x, y);
                 self.sel_ui = Some(SelUi { bar: true });
@@ -912,7 +1210,9 @@ impl App {
             }
             Gesture::DoubleTap { x, y } => self.handle(Event::Tap { x, y }),
             Gesture::LongPress { .. } if self.drag.is_some() => None,
-            Gesture::LongPress { x, y } if self.in_editor() && on_page(x, y) => {
+            Gesture::LongPress { x, y }
+                if self.in_editor() && on_page(x, y) && !self.in_drawer(x, y) =>
+            {
                 self.drag = self.select_word_at(x, y).map(|(a, b)| Drag::Word { a, b });
                 self.sel_ui = Some(SelUi { bar: true });
                 Some(Refresh::Fast)
@@ -1035,6 +1335,13 @@ impl App {
                 self.apply(g)
             }
             Event::Tick { t } => {
+                if let Some(items) = self.indexer.poll() {
+                    let changed = items != self.disk_todos;
+                    self.disk_todos = items;
+                    if changed && self.drawer[1] && self.drawer_visible() {
+                        return Some(Refresh::Partial);
+                    }
+                }
                 if !self.gestures.finger_down() {
                     return None;
                 }
@@ -1043,6 +1350,7 @@ impl App {
             }
             Event::Quit | Event::Power => {
                 self.save();
+                self.save_scratch();
                 self.running = false;
                 None
             }
@@ -1086,6 +1394,8 @@ impl App {
                 self.screen.page_turn(&mut self.buffer, page, forward);
                 Some(Refresh::Partial)
             }
+            Event::Key(k) if self.scratch_focused() => self.scratch_hw(k),
+            Event::Tap { x, y } if self.in_drawer(x, y) => self.drawer_tap(x, y),
             Event::Key(k) => {
                 match k {
                     HwKey::Char(c) => self.buffer.insert(&c.to_string()),
@@ -1135,6 +1445,8 @@ impl App {
                     Hit::Bar(a) => self.bar_action(a),
                     Hit::Handle(_) => None,
                     Hit::Key(k) if self.rename.is_some() => self.type_into_field(k),
+                    Hit::Key(k) if self.scratch_focused() => self.scratch_key(k),
+                    Hit::Drawer(p) => Some(self.toggle_pane(p)),
                     Hit::Key(k) => {
                         let tab = self.settings.tab_kind();
                         let a = self.keyboard.press(k, &mut self.buffer, tab);
@@ -1145,6 +1457,7 @@ impl App {
                         Some(Refresh::Partial)
                     }
                     Hit::Caret(at) => {
+                        self.scratch_focus = false;
                         self.buffer.set_caret(at);
                         Some(Refresh::Fast)
                     }
@@ -1248,6 +1561,17 @@ impl App {
             "Cancel" => Some(centre(l.cancel_rect)),
             "Keys" => Some(centre(l.keys_button)),
             "Options" => Some(centre(l.options_button)),
+            "Contents" => Some(centre(l.contents_button)),
+            "To-dos" => Some(centre(l.todos_button)),
+            "Scratch" => Some(centre(l.scratch_button)),
+            s if s.starts_with("Heading:")
+                || s.starts_with("Todo:")
+                || s.starts_with("TodoBox:")
+                || s == "Filter"
+                || s == "ScratchPane" =>
+            {
+                self.drawer_control(s)
+            }
             s => l
                 .kb_buttons
                 .iter()
@@ -1351,4 +1675,42 @@ pub fn words_per_row(app: &App) -> usize {
 
 fn centre(r: Rect) -> (i32, i32) {
     (r.x + r.w / 2, r.y + r.h / 2)
+}
+
+impl App {
+    /// Drawer controls for emulator scripts: `Heading:TEXT`, `Todo:TEXT`
+    /// (opens), `TodoBox:TEXT` (checks), `Filter`, `ScratchPane` (end of
+    /// the scratch text).
+    fn drawer_control(&self, name: &str) -> Option<(i32, i32)> {
+        if !self.drawer_visible() {
+            return None;
+        }
+        let (hs, todos) = (self.headings(), self.todo_list());
+        let base = self.screen.layout(self.keys_visible(), &self.keyboard);
+        let l = self
+            .screen
+            .drawer_layout(&base, &self.drawer_model(&hs, &todos));
+        if name == "Filter" {
+            return l.filter.map(centre);
+        }
+        if name == "ScratchPane" {
+            return l.scratch.map(|r| (r.x + r.w - 4, r.y + r.h - 4));
+        }
+        if let Some(t) = name.strip_prefix("Heading:") {
+            let line = hs.iter().find(|h| h.text == t)?.line;
+            return l
+                .headings
+                .iter()
+                .find(|(_, ln)| *ln == line)
+                .map(|(r, _)| centre(*r));
+        }
+        let (boxed, t) = match name.strip_prefix("TodoBox:") {
+            Some(t) => (true, t),
+            None => (false, name.strip_prefix("Todo:")?),
+        };
+        l.todos
+            .iter()
+            .find(|(_, _, i)| todos[*i].todo.text == t)
+            .map(|(b, tx, _)| centre(if boxed { *b } else { *tx }))
+    }
 }

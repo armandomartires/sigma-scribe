@@ -80,6 +80,8 @@ pub enum Hit {
     StartRename,
     /// "Aa" in the title bar: the Options sheet (v0.4).
     Options,
+    /// Contents / To-dos / Scratch icon: toggle that drawer pane (v0.5).
+    Drawer(crate::drawer::Pane),
     /// Landscape keyboard bar: Split / Full / Centre, pad toggles (v0.4).
     KbButton(KbButton),
     RenameOk,
@@ -114,8 +116,13 @@ pub struct Layout {
     pub name_rect: Rect,
     pub ok_rect: Rect,
     pub cancel_rect: Rect,
-    /// "Aa" Options button, left of the eye.
+    /// "Aa" Options button, left of the drawer icons.
     pub options_button: Rect,
+    /// Drawer pane icons, right to left after the eye: Scratch, To-dos,
+    /// Contents (brief §3 order, Find comes in S6).
+    pub scratch_button: Rect,
+    pub todos_button: Rect,
+    pub contents_button: Rect,
     /// The text column inside the page: the page itself, or the locked
     /// portrait-width column (Line on, landscape) with gutters beside it.
     pub column: Rect,
@@ -138,6 +145,8 @@ pub struct EditorScreen {
     pub key_theme: Option<Theme>,
     /// The settings in force (landscape keyboard, Line, USB flag).
     pub cfg: Settings,
+    /// Open drawer panes (Contents, To-dos, Scratch): their icons draw active.
+    pub drawer_open: [bool; 3],
 }
 
 /// Real-face measurement for Line mode.
@@ -167,7 +176,17 @@ impl EditorScreen {
             face: Face::Literata,
             key_theme: None,
             cfg: Settings::default(),
+            drawer_open: [false; 3],
         }
+    }
+
+    /// Scrolls so logical line `line` is the top row and puts the caret at
+    /// its start (Contents jump, to-do open).
+    pub fn jump_to_line(&mut self, buffer: &mut Buffer, page: Rect, line: usize) {
+        let at = sigma_core::outline::line_range(buffer.text(), line).map_or(0, |r| r.0);
+        buffer.set_caret(at);
+        let rows = self.rows(buffer, page);
+        self.scroll = rows.iter().position(|r| r.start == at).unwrap_or(0);
     }
 
     /// New panel size (orientation change). The scale follows the short
@@ -296,7 +315,11 @@ impl EditorScreen {
         let by = (title.h - btn) / 2;
         let files_button = Rect::new(w - self.px(12.0) - btn, by, btn, btn);
         let preview_button = Rect::new(files_button.x - self.px(8.0) - btn, by, btn, btn);
-        let options_button = Rect::new(preview_button.x - self.px(8.0) - btn, by, btn, btn);
+        let left_of = |r: Rect| Rect::new(r.x - self.px(8.0) - btn, by, btn, btn);
+        let scratch_button = left_of(preview_button);
+        let todos_button = left_of(scratch_button);
+        let contents_button = left_of(todos_button);
+        let options_button = left_of(contents_button);
         let name_rect = Rect::new(
             0,
             0,
@@ -326,6 +349,9 @@ impl EditorScreen {
             ok_rect,
             cancel_rect,
             options_button,
+            scratch_button,
+            todos_button,
+            contents_button,
             column,
             kb_buttons,
         }
@@ -741,6 +767,15 @@ impl EditorScreen {
         if l.options_button.inset(-self.px(4.0)).contains(x, y) {
             return Hit::Options;
         }
+        for (r, p) in [
+            (l.contents_button, crate::drawer::Pane::Contents),
+            (l.todos_button, crate::drawer::Pane::Todos),
+            (l.scratch_button, crate::drawer::Pane::Scratch),
+        ] {
+            if r.inset(-self.px(4.0)).contains(x, y) {
+                return Hit::Drawer(p);
+            }
+        }
         if let Some((_, b)) = l.kb_buttons.iter().find(|(r, _)| r.contains(x, y)) {
             return Hit::KbButton(*b);
         }
@@ -783,6 +818,20 @@ impl EditorScreen {
         if model.rename.is_none() {
             draw_eye_icon(c, l.preview_button, self.s, t.ink);
             self.draw_options_icon(c, l.options_button, t);
+            for (i, r) in [l.contents_button, l.todos_button, l.scratch_button]
+                .into_iter()
+                .enumerate()
+            {
+                if self.drawer_open[i] {
+                    c.fill(r, t.wash);
+                    c.stroke(r, 1, t.ink);
+                }
+                match i {
+                    0 => crate::drawer::draw_contents_icon(c, r, self.s, t.ink),
+                    1 => crate::drawer::draw_todos_icon(c, r, self.s, t.ink),
+                    _ => crate::drawer::draw_scratch_icon(c, r, self.s, t.ink),
+                }
+            }
         }
 
         // Page.

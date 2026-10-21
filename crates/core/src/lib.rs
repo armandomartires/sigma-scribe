@@ -10,6 +10,7 @@ pub mod keyboard;
 pub mod library;
 pub mod linefit;
 pub mod markdown;
+pub mod outline;
 pub mod settings;
 pub mod store;
 pub mod text;

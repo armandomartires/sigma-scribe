@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/core", "crates/render", "crates/device", "app"]
 
 [workspace.package]
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 rust-version = "1.85.1"
 license = "AGPL-3.0-only"
