@@ -367,3 +367,89 @@ fn files_from_preview_leaves_preview() {
     assert!(app.preview.is_none() && app.files.is_some());
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+mod v04 {
+    use super::*;
+    use sigma_core::settings::{Orientation, Paper};
+    use sigma_core::Change;
+
+    fn fresh(tag: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("sigma-v04-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        dir
+    }
+
+    #[test]
+    fn night_is_a_full_refresh_and_settings_survive_restart() {
+        let dir = fresh("persist");
+        let mut dev = DesktopDevice::new(1440, 1920);
+        let mut app = App::new(1440, 1920, &dir);
+        app.render(&mut dev, Refresh::Full).unwrap();
+        assert_eq!(app.change(Change::Paper(Paper::Night)), Refresh::Full);
+        assert_eq!(app.change(Change::LineOn(true)), Refresh::Partial);
+        app.change(Change::LineWords(2));
+        app.change(Change::TabSpaces(false));
+        app.change(Change::Usb(true));
+        let before = app.settings;
+        drop(app);
+        let app = App::new(1440, 1920, &dir);
+        assert_eq!(app.settings, before);
+        assert_eq!(sigma_scribe::words_per_row(&app), 14);
+        let file = std::fs::read_to_string(dir.join(".sigma-settings")).unwrap();
+        assert!(file.contains("paper=night\n") && file.contains("tab=tab\n"));
+    }
+
+    #[test]
+    fn old_v021_settings_file_still_loads() {
+        let dir = fresh("old");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(".sigma-settings"), "keyboard=compact\n").unwrap();
+        let app = App::new(1440, 1920, &dir);
+        assert_eq!(app.keyboard.layout, sigma_core::keyboard::Layout::Compact);
+        assert_eq!(app.settings.paper, Paper::Day);
+    }
+
+    #[test]
+    fn landscape_rotates_onto_the_portrait_panel_with_safe_regions() {
+        let dir = fresh("rot");
+        let mut dev = DesktopDevice::new(1440, 1920);
+        let mut app = App::new(1440, 1920, &dir);
+        app.render(&mut dev, Refresh::Full).unwrap();
+        let r = app.change(Change::Orientation(Orientation::Landscape));
+        assert_eq!(r, Refresh::Full);
+        assert_eq!((app.canvas.width, app.canvas.height), (1920, 1440));
+        app.render(&mut dev, r).unwrap();
+        assert_eq!(
+            dev.refreshes.last().unwrap().0,
+            sigma_render::Rect::new(0, 0, 1440, 1920)
+        );
+        // The panel, turned back, is exactly what the app drew.
+        assert_eq!(app.view(&dev.panel).pixels, app.canvas.pixels);
+        // A device tap lands on the logical key under it.
+        let (x, y) = app.key_centre("k").unwrap();
+        let phys = Event::Tap { x: 1439 - y, y: x };
+        assert_eq!(app.to_logical(phys), Event::Tap { x, y });
+        let n = dev.refreshes.len();
+        if let Some(r) = app.handle(app.to_logical(phys)) {
+            app.render(&mut dev, r).unwrap();
+        }
+        assert!(app.buffer.text().ends_with('k'));
+        for (r, _) in &dev.refreshes[n..] {
+            assert!(r.w >= 16 && r.h >= 16, "{r:?}");
+            assert!(r.x >= 0 && r.y >= 0 && r.x + r.w <= 1440 && r.y + r.h <= 1920);
+        }
+        assert_eq!(app.view(&dev.panel).pixels, app.canvas.pixels);
+    }
+
+    #[test]
+    fn tab_key_follows_options() {
+        let dir = fresh("tab");
+        let mut app = App::new(1440, 1920, &dir);
+        app.change(Change::TabWidth(2));
+        app.handle(Event::Key(HwKey::Tab));
+        assert!(app.buffer.text().ends_with("  "));
+        app.change(Change::TabSpaces(false));
+        app.handle(Event::Key(HwKey::Tab));
+        assert!(app.buffer.text().ends_with("  \t"));
+    }
+}

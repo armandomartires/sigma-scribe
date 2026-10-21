@@ -87,3 +87,17 @@ Same procedure: back up `sigma-scribe/notes` and `.adds/sigma-scribe`, replace o
 
 ## Upgrade 0.2.3 → 0.3.0 (APPROVED 2026-10-21 01:35 CEST)
 Same procedure as 0.2.3: read the log first, back up, then replace only `.adds/sigma-scribe/sigma-scribe` with `dist/sigma-scribe-0.3.0-kobo/.adds/sigma-scribe/sigma-scribe` (sha256 `d86b3d5a9abefb95d55b6ac124ffbb307539744dcadce848615376168ba18716`). The new fonts are embedded in the binary. Checklist: `sprints/S3-markdown-preview.md`.
+
+## Upgrade 0.3.0 → 0.4.0 (PENDING APPROVAL — not run)
+Same procedure as 0.3.0: confirm it is the same Forma (serial <FORMA-SERIAL>), read `.adds/sigma-scribe/sigma-scribe.log` read-only, make a checksum-verified backup into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-0.4.0`, then replace **only** `.adds/sigma-scribe/sigma-scribe` with `dist/sigma-scribe-0.4.0-kobo/.adds/sigma-scribe/sigma-scribe` (sha256 `689b84c4e763119cbdfa19eb07ade52d5709cdf034bf971fc2e5116e97c02043`), verify the sha256 on the device copy, sync and eject cleanly. `launch.sh`, `touch.conf`, the NickelMenu entry and the licences are unchanged from 0.3.0 (same checksums). The settings file `notes/.sigma-settings` from 0.2.1+ is read as-is (Keyboard choice kept); new settings start at the brief's defaults.
+
+Rollback: copy the 0.3.0 binary (sha256 `d86b3d5a9abefb95d55b6ac124ffbb307539744dcadce848615376168ba18716`) back; an 0.4 settings file is harmless to 0.3.0 (it only reads `keyboard=`).
+
+On-device checklist (`sprints/S4-options-line-mode.md`):
+- `Aa` opens Options; every row changes and stays after leaving the app and relaunching from NickelMenu.
+- Night: white ink on a black page, no grey card, one full flash on switch; Files, preview and Options follow it; Keyboard tone Light/Dark works.
+- Line on: about N words per line (8–16); Size moves Margin and Margin moves Size; the count holds after Orientation → Landscape (column locked, gutters).
+- Landscape: picture upright when held sideways (note which way round), taps land where touched, Split / Full / Centre and the number/arrow pads type correctly, Pad left/right moves the pad; back to Portrait.
+- Tab key: Spaces 2/4/8 and Tab.
+- No regressions: typing, selection, Files, preview; the log shows exit 0 and no refresh failures.
+
