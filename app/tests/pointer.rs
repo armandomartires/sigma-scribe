@@ -214,7 +214,7 @@ fn moves_are_one_merged_region_and_hide_cleans_the_path() {
     assert!(!r.app.pointer.visible);
     let cleanup: Vec<_> = r.dev.refreshes[before..]
         .iter()
-        .filter(|(_, k)| *k == Refresh::Partial)
+        .filter(|(_, k)| *k == Refresh::PointerCleanup)
         .collect();
     assert_eq!(cleanup.len(), 1, "{:?}", &r.dev.refreshes[before..]);
     let c = cleanup[0].0;
@@ -230,7 +230,7 @@ fn moves_are_one_merged_region_and_hide_cleans_the_path() {
     r.send(Event::Key(sigma_device::HwKey::Char('x')));
     assert!(r.dev.refreshes[before..]
         .iter()
-        .any(|(_, k)| *k == Refresh::Partial));
+        .any(|(_, k)| *k == Refresh::PointerCleanup));
 }
 
 /// Emulator latency for the pointer path (app side: draw + diff + merge).
@@ -274,4 +274,55 @@ fn reverse_scroll_flips_wheel_notches() {
     let s = r.app.settings.serialize();
     assert!(s.contains("scroll=natural"), "{s}");
     assert!(sigma_core::settings::Settings::parse(&s).natural_scroll);
+}
+
+#[test]
+fn v103_moves_are_du_and_cleanup_is_one_gl16_on_hide() {
+    let mut r = Rig::new("du");
+    r.to(400, 400);
+    let n = r.dev.refreshes.len();
+    for _ in 0..5 {
+        r.to(r.app.pointer.x + 30, 400);
+    }
+    let moves = &r.dev.refreshes[n..];
+    assert!(!moves.is_empty());
+    assert!(moves.iter().all(|(_, k)| *k == Refresh::Pointer));
+    assert!(Refresh::Pointer.fbink_mode() == 3 && !Refresh::Pointer.waits_for_completion());
+    let n = r.dev.refreshes.len();
+    r.tick(POINTER_HIDE_MS + 100);
+    let cleanups: Vec<_> = r.dev.refreshes[n..]
+        .iter()
+        .filter(|(_, k)| *k == Refresh::PointerCleanup)
+        .collect();
+    assert_eq!(cleanups.len(), 1, "one GL16 pass on hide");
+    let (c, _) = cleanups[0];
+    assert!(c.w >= 16 && c.h >= 16);
+    assert!(c.w >= 150, "covers the whole path: {c:?}");
+}
+
+#[test]
+fn v103_pointer_never_blocks_typing() {
+    let mut r = Rig::new("typing");
+    r.to(600, 600);
+    // Interleave moves and keys: every key is handled at once with a Fast
+    // refresh, the text lands, and no refresh class waits for the panel.
+    for (i, c) in "abcdef".chars().enumerate() {
+        r.t += 20;
+        r.raw(raw_move(5, 0));
+        let got = r.app.handle(Event::Key(sigma_device::HwKey::Char(c)));
+        assert_eq!(got, Some(Refresh::Fast), "key {i}");
+        r.app.render(&mut r.dev, Refresh::Fast).unwrap();
+        assert!(!r.app.pointer.visible, "typing hides the pointer");
+    }
+    assert!(r.app.buffer.text().starts_with("abcdef"));
+    assert!(r
+        .dev
+        .refreshes
+        .iter()
+        .all(|(_, k)| !k.waits_for_completion()));
+    assert!(r
+        .dev
+        .refreshes
+        .iter()
+        .any(|(_, k)| *k == Refresh::PointerCleanup));
 }

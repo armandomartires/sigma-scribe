@@ -114,3 +114,11 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.0.2 | [v1.0.2-back-button.png](v1.0.2/v1.0.2-back-button.png) | preview after opening from the Graph: Back arrow before Files | [eink](v1.0.2/eink/v1.0.2-back-button.png) |
 | v1.0.2 | [v1.0.2-back-write.png](v1.0.2/v1.0.2-back-write.png) | write mode after Files → note: Back arrow | [eink](v1.0.2/eink/v1.0.2-back-write.png) |
 | v1.0.2 | [v1.0.2-graph-map-landscape-night.png](v1.0.2/v1.0.2-graph-map-landscape-night.png) | map in landscape, Night, a selection pill | [eink](v1.0.2/eink/v1.0.2-graph-map-landscape-night.png) |
+| v1.0.3 | [v1.0.3-preview-contents.png](v1.0.3/v1.0.3-preview-contents.png) | preview with Contents open: page laid out beside the drawer | [eink](v1.0.3/eink/v1.0.3-preview-contents.png) |
+| v1.0.3 | [v1.0.3-preview-contents-jump.png](v1.0.3/v1.0.3-preview-contents-jump.png) | Contents tap in preview jumped to page 2 (Detail 4.2.a) | [eink](v1.0.3/eink/v1.0.3-preview-contents-jump.png) |
+| v1.0.3 | [v1.0.3-preview-todos.png](v1.0.3/v1.0.3-preview-todos.png) | preview with To-dos open | [eink](v1.0.3/eink/v1.0.3-preview-todos.png) |
+| v1.0.3 | [v1.0.3-preview-todo-toggled.png](v1.0.3/v1.0.3-preview-todo-toggled.png) | to-do checked from preview: file written, preview re-rendered | [eink](v1.0.3/eink/v1.0.3-preview-todo-toggled.png) |
+| v1.0.3 | [v1.0.3-preview-todos-scratch.png](v1.0.3/v1.0.3-preview-todos-scratch.png) | To-dos + Scratch in preview; scratch typed while the note stays read-only | [eink](v1.0.3/eink/v1.0.3-preview-todos-scratch.png) |
+| v1.0.3 | [v1.0.3-pointer-du.png](v1.0.3/v1.0.3-pointer-du.png) | USB pointer moving (DU updates) | [eink](v1.0.3/eink/v1.0.3-pointer-du.png) |
+| v1.0.3 | [v1.0.3-pointer-cleaned.png](v1.0.3/v1.0.3-pointer-cleaned.png) | pointer hidden after 3 s: one GL16 cleanup pass | [eink](v1.0.3/eink/v1.0.3-pointer-cleaned.png) |
+| v1.0.3 | [v1.0.3-preview-landscape-night.png](v1.0.3/v1.0.3-preview-landscape-night.png) | Contents in preview, landscape, Night | [eink](v1.0.3/eink/v1.0.3-preview-landscape-night.png) |

@@ -120,12 +120,7 @@ impl Device for KoboDevice {
         if r.w <= 0 || r.h <= 0 {
             return Ok(());
         }
-        let mode = match refresh {
-            Refresh::Fast => 0,
-            Refresh::Partial => 1,
-            Refresh::Full => 2,
-            Refresh::Pointer => 3,
-        };
+        let mode = refresh.fbink_mode();
         let started = std::time::Instant::now();
         // SAFETY: px holds exactly r.w*r.h bytes for the duration of the call.
         let rc = unsafe { sg_blit(px.as_ptr(), r.w, r.h, r.x, r.y) };
@@ -142,20 +137,25 @@ impl Device for KoboDevice {
                 r.w, r.h, r.x, r.y
             );
         }
-        // v1.0.1: log the pointer's GL16 latency every 20th update (waiting
-        // for completion only then, so the arrow is not slowed down).
-        if refresh == Refresh::Pointer {
-            self.pointer_updates += 1;
-            if self.pointer_updates % 20 == 1 {
-                // SAFETY: no arguments.
-                let _ = unsafe { sg_wait() };
-                eprintln!(
-                    "perf pointer: gl16 {}x{} submit+complete {} ms",
-                    r.w,
-                    r.h,
-                    started.elapsed().as_millis()
-                );
+        // v1.0.3 (S10.3-D2): never wait for completion here; this runs on
+        // the input loop. Log the submit time: every 20th pointer move and
+        // every cleanup pass.
+        let log = match refresh {
+            Refresh::Pointer => {
+                self.pointer_updates += 1;
+                self.pointer_updates % 20 == 1
             }
+            Refresh::PointerCleanup => true,
+            _ => false,
+        };
+        if log {
+            eprintln!(
+                "perf pointer: {} {}x{} submit {} ms",
+                refresh.perf_name(),
+                r.w,
+                r.h,
+                started.elapsed().as_millis()
+            );
         }
         Ok(())
     }

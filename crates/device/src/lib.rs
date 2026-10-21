@@ -17,13 +17,72 @@ use std::io;
 pub enum Refresh {
     /// Keystrokes and caret: smallest region, fastest waveform.
     Fast,
-    /// The mouse pointer (v1.0.1): one merged old+new region with the
-    /// grey-accurate, non-flashing GL16 waveform (DU left trails on greys).
+    /// The moving mouse pointer: one merged old+new region with the fast
+    /// DU waveform, never waited for (v1.0.3, S10.3-D2; 1.0.1 used GL16,
+    /// which lagged and held up typing).
     Pointer,
+    /// When the pointer hides: one non-flashing GL16 pass over its path,
+    /// clearing the DU trails (v1.0.3).
+    PointerCleanup,
     /// Larger partial changes (keyboard toggled, scrolled page).
     Partial,
     /// Theme, orientation, opening a sheet, first paint: flashing full refresh.
     Full,
+}
+
+impl Refresh {
+    /// The `sg_refresh` mode code: 0 fast (AUTO), 1 partial (GC16_FAST),
+    /// 2 full (flashing GC16), 3 pointer (DU), 4 pointer cleanup (GL16).
+    #[must_use]
+    pub fn fbink_mode(self) -> i32 {
+        match self {
+            Self::Fast => 0,
+            Self::Partial => 1,
+            Self::Full => 2,
+            Self::Pointer => 3,
+            Self::PointerCleanup => 4,
+        }
+    }
+
+    /// Whether the device waits for this refresh to complete. Never: the
+    /// input loop must not block on the panel (v1.0.3, S10.3-D2).
+    #[must_use]
+    pub fn waits_for_completion(self) -> bool {
+        false
+    }
+
+    /// Short name for the device log.
+    #[must_use]
+    pub fn perf_name(self) -> &'static str {
+        match self {
+            Self::Fast => "fast",
+            Self::Partial => "partial",
+            Self::Full => "full",
+            Self::Pointer => "du",
+            Self::PointerCleanup => "gl16-cleanup",
+        }
+    }
+}
+
+#[cfg(test)]
+mod refresh_tests {
+    use super::Refresh;
+
+    #[test]
+    fn pointer_is_du_cleanup_is_gl16_and_nothing_waits() {
+        assert_eq!(Refresh::Pointer.fbink_mode(), 3);
+        assert_eq!(Refresh::PointerCleanup.fbink_mode(), 4);
+        for r in [
+            Refresh::Fast,
+            Refresh::Pointer,
+            Refresh::PointerCleanup,
+            Refresh::Partial,
+            Refresh::Full,
+        ] {
+            assert!(!r.waits_for_completion(), "{r:?}");
+        }
+        assert_eq!(Refresh::Pointer.perf_name(), "du");
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

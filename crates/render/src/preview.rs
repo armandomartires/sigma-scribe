@@ -77,6 +77,19 @@ pub struct Doc {
 }
 
 impl Doc {
+    /// Source lines of the rendered headings (v1.0.3 Contents in preview).
+    #[must_use]
+    pub fn heading_lines(&self) -> Vec<usize> {
+        let mut v: Vec<usize> = self
+            .lines
+            .iter()
+            .filter(|l| !l.spacer && is_heading(l))
+            .map(|l| l.src)
+            .collect();
+        v.dedup();
+        v
+    }
+
     /// Page that shows source line `src` (or the last page before it).
     #[must_use]
     pub fn page_of_line(&self, src: usize) -> usize {

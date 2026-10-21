@@ -1,0 +1,69 @@
+# v1.0.3 (S10.3): the drawer stays open in preview (Contents jump, to-do
+# toggle, scratch typing; note read-only) and the pointer is DU with one
+# GL16 cleanup on hide, on the test notes pack (Forma 1440x1920).
+copy-notes tests/test-notes/_test
+tap-on Files
+tap-on test-headings.md
+expect-open _test/test-headings.md
+tap-on Contents
+tap-on Preview
+expect-mode preview
+shot v1.0.3-preview-contents
+tap-on Heading:Detail 4.2.a
+expect-page 2
+expect-mode preview
+shot v1.0.3-preview-contents-jump
+tap-on Contents
+# To-dos in preview: tapping a box writes the file and re-renders.
+tap-on Back
+tap-on Files
+tap-on test-todos.md
+expect-open _test/test-todos.md
+tap-on To-dos
+tap-on Preview
+expect-mode preview
+shot v1.0.3-preview-todos
+tap-on TodoBox:Open task one
+expect-mode preview
+expect-file-contains _test/test-todos.md|- [x] Open task one
+shot v1.0.3-preview-todo-toggled
+tap-on TodoBox:Open task one
+expect-file-contains _test/test-todos.md|- [ ] Open task one
+# Scratch stays editable in preview; the note does not change.
+tap-on Scratch
+usb plug
+tap-on ScratchPane
+usb-type in preview
+expect-scratch in preview
+expect-mode preview
+shot v1.0.3-preview-todos-scratch
+# A sheet hides the drawer; closing it brings it back.
+tap-on Graph
+expect-graph map
+tap-on Close
+# Pointer: moves are DU, hiding runs one GL16 cleanup.
+tap-on To-dos
+tap-on Scratch
+tap-on Pencil
+pointer plug
+pointer-to 700 900
+pointer-move 120 40
+expect-pointer visible
+shot v1.0.3-pointer-du
+wait 3200
+expect-pointer hidden
+shot v1.0.3-pointer-cleaned
+# Landscape + Night with the drawer in preview.
+tap-on Options
+tap-on Paper/Night
+tap-on Orientation/Landscape
+tap-on Close
+tap-on Contents
+tap-on Preview
+shot v1.0.3-preview-landscape-night
+tap-on Pencil
+tap-on Contents
+tap-on Options
+tap-on Paper/Day
+tap-on Orientation/Portrait
+tap-on Close
