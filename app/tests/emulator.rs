@@ -528,3 +528,73 @@ fn drawer_refresh_regions_are_at_least_16px() {
     }
     let _ = std::fs::remove_dir_all(dir);
 }
+
+fn ktap(app: &mut App, dev: &mut DesktopDevice, label: &str) {
+    tap(app, dev, label);
+}
+
+#[test]
+fn replace_all_fifty_is_one_undo_step_and_saved() {
+    let dir = fresh("find");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("cats.md"), "cat ".repeat(50)).unwrap();
+    let mut dev = DesktopDevice::new(1440, 1920);
+    let mut app = App::new(1440, 1920, &dir);
+    app.open(&sigma_core::NotePath::parse("cats.md").unwrap());
+    let _ = app.render(&mut dev, Refresh::Full);
+    dstep(&mut app, &mut dev, "Find");
+    for c in ["c", "a", "t"] {
+        ktap(&mut app, &mut dev, c);
+    }
+    assert_eq!(app.find_label(), "1 of 50");
+    assert_eq!(
+        app.buffer.text(),
+        "cat ".repeat(50),
+        "typing went to the field"
+    );
+    dstep(&mut app, &mut dev, "Aa");
+    assert_eq!(app.find_label(), "1 of 50", "all lower case: Aa keeps them");
+    dstep(&mut app, &mut dev, "Aa");
+    dstep(&mut app, &mut dev, "ReplaceField");
+    for c in ["d", "o", "g"] {
+        ktap(&mut app, &mut dev, c);
+    }
+    dstep(&mut app, &mut dev, "All");
+    assert_eq!(app.buffer.text(), "dog ".repeat(50));
+    assert_eq!(app.find_label(), "None");
+    assert_eq!(
+        std::fs::read_to_string(dir.join("cats.md")).unwrap(),
+        "dog ".repeat(50)
+    );
+    assert!(app.buffer.undo());
+    assert_eq!(app.buffer.text(), "cat ".repeat(50));
+    for (r, _) in &dev.refreshes {
+        assert!(r.w >= 16 && r.h >= 16, "region {r:?}");
+    }
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn missing_wiki_link_creates_the_note_and_backlinks_follow() {
+    let dir = fresh("wiki");
+    let mut dev = DesktopDevice::new(1440, 1920);
+    let mut app = App::new(1440, 1920, &dir);
+    let _ = app.render(&mut dev, Refresh::Full);
+    // field-notes links to chapter-01 and chapter-01 links back.
+    let g = app.link_graph();
+    let fnp = sigma_core::NotePath::parse("field-notes.md").unwrap();
+    let ch = sigma_core::NotePath::parse("drafts/chapter-01.md").unwrap();
+    assert_eq!(g.backlinks(&fnp), vec![ch.clone()]);
+    assert_eq!(g.backlinks(&ch), vec![fnp.clone()]);
+    assert!(g.notes.iter().all(|n| !n.as_str().contains("scratchpad")));
+    app.open(&ch);
+    let r = app.follow_link("Mara's parcel");
+    assert_eq!(r, Some(Refresh::Full));
+    assert_eq!(app.current.as_str(), "drafts/Mara's parcel.md");
+    assert!(dir.join("drafts/Mara's parcel.md").exists());
+    // An existing note opens in preview instead.
+    app.follow_link("FIELD-NOTES");
+    assert_eq!(app.current, fnp);
+    assert!(app.preview.is_some());
+    let _ = std::fs::remove_dir_all(dir);
+}

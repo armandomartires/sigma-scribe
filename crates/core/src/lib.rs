@@ -5,10 +5,12 @@
 //! The Cobalt (Plan A) and FBInk (Plan B) front ends both sit on top of this.
 
 pub mod buffer;
+pub mod find;
 pub mod gesture;
 pub mod keyboard;
 pub mod library;
 pub mod linefit;
+pub mod links;
 pub mod markdown;
 pub mod outline;
 pub mod settings;

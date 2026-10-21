@@ -8,6 +8,7 @@ use sigma_core::gesture::{Gesture, Recognizer};
 use sigma_core::keyboard::{Dir, Key};
 use sigma_core::library::SCRATCH;
 use sigma_core::linefit::Anchor;
+use sigma_core::links::{self, Graph};
 use sigma_core::outline::{self, Filter, Heading, Indexer, TodoItem};
 use sigma_core::settings::{Orientation, Pad, Side};
 use sigma_core::{
@@ -17,8 +18,9 @@ use sigma_core::{
 use sigma_device::{Device, Event, HwKey, Phase, Refresh};
 use sigma_render::editor::Model;
 use sigma_render::{
-    BarAction, Canvas, Doc, DrawerHit, DrawerModel, EditorScreen, FilesHit, FilesModel, Hit,
-    KbButton, OptionsHit, OptionsModel, Pane, PreviewModel, Rect, Row, SelUi, Theme,
+    BarAction, Canvas, Doc, DrawerHit, DrawerModel, EditorScreen, FilesHit, FilesModel, FindField,
+    FindHit, FindModel, GraphHit, GraphModel, GraphRow, Hit, KbButton, OptionsHit, OptionsModel,
+    Pane, PreviewModel, Rect, Row, SelUi, Theme,
 };
 use std::path::PathBuf;
 
@@ -82,6 +84,26 @@ pub struct FilesState {
     pub first: usize,
 }
 
+/// The Find bar (v0.6). The query is not persisted (brief §8).
+#[derive(Clone, Debug, Default)]
+pub struct FindState {
+    pub query: Buffer,
+    pub replace: Buffer,
+    /// Field the keyboard types into; `None` when the page has the caret.
+    pub focus: Option<FindField>,
+    /// Aa: match case (off by default).
+    pub case: bool,
+}
+
+/// The Graph sheet (v0.6): rows built when it opens.
+#[derive(Clone, Debug, Default)]
+pub struct GraphState {
+    pub notes: Vec<NotePath>,
+    pub rows: Vec<GraphRow>,
+    pub edges: usize,
+    pub first: usize,
+}
+
 /// Preview mode (v0.3): the laid-out note and the page shown. Read-only.
 #[derive(Clone, Debug, Default)]
 pub struct PreviewState {
@@ -127,6 +149,10 @@ pub struct App {
     indexer: Indexer,
     /// To-dos of every note on disk (from the background indexer).
     disk_todos: Vec<TodoItem>,
+    /// Find bar (v0.6).
+    pub find: Option<FindState>,
+    /// Graph sheet (v0.6).
+    pub graph: Option<GraphState>,
     pub running: bool,
 }
 
@@ -184,6 +210,8 @@ impl App {
             scratch_focus: false,
             indexer: Indexer::new(),
             disk_todos: Vec::new(),
+            find: None,
+            graph: None,
             running: true,
         }
     }
@@ -422,6 +450,9 @@ impl App {
                 if it.note.as_str() == SCRATCH {
                     self.drawer[2] = true;
                     self.scratch_focus = true;
+                    if let Some(f) = &mut self.find {
+                        f.focus = None;
+                    }
                     let at =
                         outline::line_range(self.scratch.text(), it.todo.line).map_or(0, |r| r.1);
                     self.scratch.set_caret(at);
@@ -447,6 +478,9 @@ impl App {
             }
             DrawerHit::Scratch(at) => {
                 self.scratch_focus = true;
+                if let Some(f) = &mut self.find {
+                    f.focus = None;
+                }
                 self.scratch.set_caret(at);
                 Some(Refresh::Fast)
             }
@@ -478,7 +512,7 @@ impl App {
                 Some(Refresh::Fast)
             }
             KeyAction::Moved | KeyAction::Relabelled => Some(Refresh::Fast),
-            KeyAction::Page { .. } | KeyAction::Ignored => None,
+            KeyAction::Page { .. } | KeyAction::Ignored | KeyAction::Find => None,
         }
     }
 
@@ -505,6 +539,8 @@ impl App {
 
     /// Opens the Options sheet (closes preview and selection chrome).
     pub fn open_options(&mut self) {
+        self.close_find();
+        self.graph = None;
         self.save();
         self.preview = None;
         self.sel_ui = None;
@@ -629,6 +665,11 @@ impl App {
                 self.save_settings();
                 Some(Refresh::Full)
             }
+            KeyAction::Find => Some(self.open_find()),
+            KeyAction::Escape if self.find.is_some() => {
+                self.close_find();
+                Some(Refresh::Full)
+            }
             KeyAction::Escape | KeyAction::Ignored => None,
         }
     }
@@ -674,7 +715,11 @@ impl App {
 
     fn keys_visible(&self) -> bool {
         self.rename.is_some()
-            || (self.files.is_none() && self.preview.is_none() && !self.options && self.keys_on)
+            || (self.files.is_none()
+                && self.preview.is_none()
+                && !self.options
+                && self.graph.is_none()
+                && self.keys_on)
     }
 
     /// Names a `[[wiki]]` link may use for an existing note: the file name
@@ -695,14 +740,21 @@ impl App {
     /// Switches to preview at the page showing the top of the write page.
     /// Full refresh: the whole page changes.
     pub fn enter_preview(&mut self) {
+        self.close_find();
         self.save();
         self.sel_ui = None;
         self.drag = None;
         let names = self.note_names();
         let known = |n: &str| names.contains(&n.trim().to_lowercase());
-        let doc = self
-            .screen
-            .build_preview(self.buffer.text(), &self.keyboard, &known);
+        let back: Vec<(String, String)> = self
+            .link_graph()
+            .backlinks(&self.current)
+            .iter()
+            .map(|p| (stem(p.as_str()).to_owned(), p.as_str().to_owned()))
+            .collect();
+        let doc =
+            self.screen
+                .build_preview_with(self.buffer.text(), &self.keyboard, &known, Some(&back));
         let page = self.page_rect();
         let top = self.screen.top_source_line(&self.buffer, page);
         let page = doc.page_of_line(top);
@@ -732,7 +784,23 @@ impl App {
                     self.open_options();
                     Some(Refresh::Full)
                 }
-                _ => None,
+                Hit::Find => {
+                    self.exit_preview();
+                    self.open_find();
+                    Some(Refresh::Full)
+                }
+                Hit::Graph => {
+                    self.exit_preview();
+                    self.open_graph();
+                    Some(Refresh::Full)
+                }
+                _ => {
+                    let p = self.preview.as_ref()?;
+                    let target =
+                        self.screen
+                            .preview_link_at(&self.keyboard, &p.doc, p.page, x, y)?;
+                    self.follow_link(&target)
+                }
             },
             Event::PageTurn { forward } => {
                 let p = self.preview.as_mut()?;
@@ -830,6 +898,8 @@ impl App {
 
     /// Opens the Files sheet at the current note's folder.
     pub fn open_files(&mut self) {
+        self.close_find();
+        self.graph = None;
         self.save();
         self.files = Some(FilesState {
             folder: self.current.parent(),
@@ -846,6 +916,8 @@ impl App {
         let mut c = std::mem::replace(&mut self.canvas, Canvas::new(1, 1, 0));
         if self.options {
             self.screen.draw_options(&mut c, &self.options_model());
+        } else if let Some(g) = &self.graph {
+            self.screen.draw_graph(&mut c, &self.graph_model(g));
         } else if let Some(p) = &self.preview {
             let m = PreviewModel {
                 file_name: self.current.name(),
@@ -888,6 +960,21 @@ impl App {
                 [false; 3]
             };
             let l = self.screen.draw(&mut c, &model);
+            if let Some(f) = &self.find {
+                let label = self.find_label();
+                self.screen.draw_find(
+                    &mut c,
+                    &l,
+                    &FindModel {
+                        query: &f.query,
+                        replace: &f.replace,
+                        focus: f.focus,
+                        case: f.case,
+                        label: &label,
+                        theme: self.theme(),
+                    },
+                );
+            }
             if self.drawer_visible() {
                 let (hs, todos) = (self.headings(), self.todo_list());
                 self.screen
@@ -1141,7 +1228,11 @@ impl App {
 
     /// Applies one event; returns the refresh it needs (or `None`).
     fn in_editor(&self) -> bool {
-        self.files.is_none() && self.rename.is_none() && self.preview.is_none() && !self.options
+        self.files.is_none()
+            && self.rename.is_none()
+            && self.preview.is_none()
+            && !self.options
+            && self.graph.is_none()
     }
 
     fn apply(&mut self, gestures: Vec<Gesture>) -> Option<Refresh> {
@@ -1360,6 +1451,13 @@ impl App {
                 Some(Refresh::Full)
             }
             Event::Key(_) | Event::PageTurn { .. } if self.options => None,
+            Event::Tap { x, y } if self.graph.is_some() => self.graph_tap(x, y),
+            Event::PageTurn { forward } if self.graph.is_some() => self.graph_page(forward),
+            Event::Key(HwKey::Escape) if self.graph.is_some() => {
+                self.graph = None;
+                Some(Refresh::Full)
+            }
+            Event::Key(_) if self.graph.is_some() => None,
             e @ (Event::Tap { .. } | Event::PageTurn { .. } | Event::Key(_))
                 if self.preview.is_some() && self.files.is_none() =>
             {
@@ -1394,7 +1492,9 @@ impl App {
                 self.screen.page_turn(&mut self.buffer, page, forward);
                 Some(Refresh::Partial)
             }
+            Event::Key(k) if self.find_typing() => self.find_hw(k),
             Event::Key(k) if self.scratch_focused() => self.scratch_hw(k),
+            Event::Tap { x, y } if self.in_find_bar(x, y) => self.find_tap(x, y),
             Event::Tap { x, y } if self.in_drawer(x, y) => self.drawer_tap(x, y),
             Event::Key(k) => {
                 match k {
@@ -1445,7 +1545,18 @@ impl App {
                     Hit::Bar(a) => self.bar_action(a),
                     Hit::Handle(_) => None,
                     Hit::Key(k) if self.rename.is_some() => self.type_into_field(k),
+                    Hit::Key(k) if self.find_typing() => self.find_key(k),
                     Hit::Key(k) if self.scratch_focused() => self.scratch_key(k),
+                    Hit::Find => Some(if self.find.is_some() {
+                        self.close_find();
+                        Refresh::Full
+                    } else {
+                        self.open_find()
+                    }),
+                    Hit::Graph => {
+                        self.open_graph();
+                        Some(Refresh::Full)
+                    }
                     Hit::Drawer(p) => Some(self.toggle_pane(p)),
                     Hit::Key(k) => {
                         let tab = self.settings.tab_kind();
@@ -1458,6 +1569,9 @@ impl App {
                     }
                     Hit::Caret(at) => {
                         self.scratch_focus = false;
+                        if let Some(f) = &mut self.find {
+                            f.focus = None;
+                        }
                         self.buffer.set_caret(at);
                         Some(Refresh::Fast)
                     }
@@ -1530,6 +1644,24 @@ impl App {
         if self.options {
             return self.screen.options_control(&self.options_model(), label);
         }
+        if let Some(g) = &self.graph {
+            let m = self.graph_model(g);
+            let l = self.screen.graph_layout(&m);
+            if label == "Close" {
+                return Some(centre(l.close));
+            }
+            let name = label.strip_prefix("Graph:")?;
+            return l
+                .rows
+                .iter()
+                .find(|(i, _)| g.rows[*i].name == name)
+                .map(|(_, r)| (r.x + r.w / 3, r.y + r.h / 2));
+        }
+        if let (Some(p), Some(name)) = (&self.preview, label.strip_prefix("Link:")) {
+            return self
+                .screen
+                .preview_link_point(&self.keyboard, &p.doc, p.page, name);
+        }
         let rows = self.rows();
         if let Some(m) = self.files_model(&rows) {
             let l = self.screen.files_layout(&m);
@@ -1564,6 +1696,10 @@ impl App {
             "Contents" => Some(centre(l.contents_button)),
             "To-dos" => Some(centre(l.todos_button)),
             "Scratch" => Some(centre(l.scratch_button)),
+            "Find" => Some(centre(l.find_button)),
+            "Graph" => Some(centre(l.graph_button)),
+            "FindField" | "ReplaceField" | "FindClose" | "Prev" | "Next" | "Replace" | "All"
+            | "Aa" => self.screen.find_control(&l, label),
             s if s.starts_with("Heading:")
                 || s.starts_with("Todo:")
                 || s.starts_with("TodoBox:")
@@ -1712,5 +1848,378 @@ impl App {
             .iter()
             .find(|(_, _, i)| todos[*i].todo.text == t)
             .map(|(b, tx, _)| centre(if boxed { *b } else { *tx }))
+    }
+}
+
+/// A note path without its extension (link labels).
+fn stem(s: &str) -> &str {
+    s.rsplit_once('.').map_or(s, |(a, _)| a)
+}
+
+/// Find bar and wiki links (v0.6).
+impl App {
+    /// The link graph of the library, with the open note's live text.
+    #[must_use]
+    pub fn link_graph(&self) -> Graph {
+        Graph::build(&self.library, Some((&self.current, self.buffer.text())))
+    }
+
+    fn find_typing(&self) -> bool {
+        self.in_editor() && self.find.as_ref().is_some_and(|f| f.focus.is_some())
+    }
+
+    fn in_find_bar(&self, x: i32, y: i32) -> bool {
+        self.in_editor() && self.find.is_some() && self.page_layout().find_bar.contains(x, y)
+    }
+
+    fn page_layout(&self) -> sigma_render::editor::Layout {
+        self.screen.layout(self.keys_visible(), &self.keyboard)
+    }
+
+    /// Opens the Find bar (Ctrl+F or the magnifier). A one-line selection
+    /// seeds the query. Full refresh: the page moves down.
+    pub fn open_find(&mut self) -> Refresh {
+        let seed = self
+            .buffer
+            .selected_text()
+            .filter(|t| !t.contains('\n'))
+            .map(str::to_owned);
+        let f = self.find.get_or_insert_with(FindState::default);
+        if let Some(t) = seed {
+            f.query = Buffer::new(t);
+        }
+        f.focus = Some(FindField::Find);
+        self.scratch_focus = false;
+        self.sel_ui = None;
+        self.screen.find_open = true;
+        // Show the seeded / previous query's match at the caret.
+        let from = self.buffer.selection().map_or(self.buffer.caret(), |s| s.0);
+        self.select_match(sigma_core::find::at_or_after(&self.find_matches(), from));
+        Refresh::Full
+    }
+
+    pub fn close_find(&mut self) {
+        self.find = None;
+        self.screen.find_open = false;
+    }
+
+    /// Matches of the query in the open note.
+    #[must_use]
+    pub fn find_matches(&self) -> Vec<(usize, usize)> {
+        self.find.as_ref().map_or_else(Vec::new, |f| {
+            sigma_core::find::matches(self.buffer.text(), f.query.text(), f.case)
+        })
+    }
+
+    /// `Find`, `None`, or `i of n`.
+    #[must_use]
+    pub fn find_label(&self) -> String {
+        let ms = self.find_matches();
+        let q = self.find.as_ref().map_or("", |f| f.query.text());
+        let cur = sigma_core::find::selected(&ms, self.buffer.selection());
+        sigma_core::find::count_label(q, &ms, cur)
+    }
+
+    fn select_match(&mut self, i: Option<usize>) {
+        if let Some(&(a, b)) = i.and_then(|i| self.find_matches().get(i).copied()).as_ref() {
+            self.buffer.select(a, b);
+            self.screen.follow_caret(&self.buffer, self.page_rect());
+        }
+    }
+
+    fn find_step(&mut self, forward: bool) -> Option<Refresh> {
+        let ms = self.find_matches();
+        let (a, b) = self
+            .buffer
+            .selection()
+            .unwrap_or((self.buffer.caret(), self.buffer.caret()));
+        let i = if forward {
+            // After the selected match, or from the caret.
+            let from = if sigma_core::find::selected(&ms, Some((a, b))).is_some() {
+                b.max(a + 1)
+            } else {
+                a
+            };
+            sigma_core::find::next(&ms, from)
+        } else {
+            sigma_core::find::prev(&ms, a)
+        };
+        i?;
+        self.select_match(i);
+        Some(Refresh::Partial)
+    }
+
+    fn find_replace_one(&mut self) -> Option<Refresh> {
+        let ms = self.find_matches();
+        if sigma_core::find::selected(&ms, self.buffer.selection()).is_none() {
+            return self.find_step(true);
+        }
+        let with = self.find.as_ref()?.replace.text().to_owned();
+        // An empty replacement deletes the match (still one undo step).
+        self.buffer.insert(&with);
+        self.save();
+        let at = self.buffer.caret();
+        let next = sigma_core::find::at_or_after(&self.find_matches(), at);
+        self.select_match(next);
+        Some(Refresh::Partial)
+    }
+
+    fn find_replace_all(&mut self) -> Option<Refresh> {
+        let ms = self.find_matches();
+        if ms.is_empty() {
+            return None;
+        }
+        let with = self.find.as_ref()?.replace.text().to_owned();
+        let text = sigma_core::find::replace_all(self.buffer.text(), &ms, &with);
+        // Keep the caret near where it was: count the bytes the replaced
+        // matches before it gained or lost.
+        let at = self.buffer.selection().map_or(self.buffer.caret(), |s| s.0);
+        let shift: isize = ms
+            .iter()
+            .filter(|m| m.1 <= at)
+            .map(|m| with.len() as isize - (m.1 - m.0) as isize)
+            .sum();
+        let caret = (at as isize + shift).max(0) as usize;
+        self.buffer.replace_text(text, caret);
+        self.save();
+        self.screen.follow_caret(&self.buffer, self.page_rect());
+        Some(Refresh::Partial)
+    }
+
+    fn find_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
+        let l = self.page_layout();
+        match self.screen.find_hit(&l, x, y) {
+            FindHit::Field(fld) => {
+                self.scratch_focus = false;
+                let f = self.find.as_mut()?;
+                f.focus = Some(fld);
+                let b = match fld {
+                    FindField::Find => &mut f.query,
+                    FindField::Replace => &mut f.replace,
+                };
+                let len = b.text().len();
+                b.set_caret(len);
+                Some(Refresh::Fast)
+            }
+            FindHit::Close => {
+                self.close_find();
+                Some(Refresh::Full)
+            }
+            FindHit::Prev => self.find_step(false),
+            FindHit::Next => self.find_step(true),
+            FindHit::Replace => self.find_replace_one(),
+            FindHit::All => self.find_replace_all(),
+            FindHit::Case => {
+                let f = self.find.as_mut()?;
+                f.case = !f.case;
+                let from = self.buffer.selection().map_or(self.buffer.caret(), |s| s.0);
+                self.select_match(sigma_core::find::at_or_after(&self.find_matches(), from));
+                Some(Refresh::Partial)
+            }
+            FindHit::Bar | FindHit::Outside => None,
+        }
+    }
+
+    /// After the query changed: select the first match from the start of
+    /// the current selection (incremental search).
+    fn query_changed(&mut self) {
+        let from = self.buffer.selection().map_or(self.buffer.caret(), |s| s.0);
+        let ms = self.find_matches();
+        match sigma_core::find::at_or_after(&ms, from) {
+            Some(i) => self.select_match(Some(i)),
+            None => {
+                let c = self.buffer.caret().min(from);
+                self.buffer.set_caret(c);
+            }
+        }
+    }
+
+    fn find_field(&mut self) -> Option<(&mut Buffer, FindField)> {
+        let f = self.find.as_mut()?;
+        let fld = f.focus?;
+        Some((
+            match fld {
+                FindField::Find => &mut f.query,
+                FindField::Replace => &mut f.replace,
+            },
+            fld,
+        ))
+    }
+
+    /// On-screen key while a Find field has focus.
+    fn find_key(&mut self, k: Key) -> Option<Refresh> {
+        match k {
+            Key::Return => return self.find_step(true),
+            Key::Esc => {
+                self.close_find();
+                return Some(Refresh::Full);
+            }
+            Key::Tab => {
+                let f = self.find.as_mut()?;
+                f.focus = Some(match f.focus {
+                    Some(FindField::Find) => FindField::Replace,
+                    _ => FindField::Find,
+                });
+                return Some(Refresh::Fast);
+            }
+            Key::PgUp | Key::PgDn | Key::Arrow(Dir::Up | Dir::Down) => return None,
+            _ => {}
+        }
+        let mut kb = std::mem::take(&mut self.keyboard);
+        let (field, fld) = self.find_field()?;
+        let before = field.revision();
+        let action = kb.press(k, field, TabKind::Spaces(0));
+        let edited = field.revision() != before;
+        self.keyboard = kb;
+        if action == KeyAction::Relayout {
+            self.save_settings();
+            return Some(Refresh::Full);
+        }
+        if edited && fld == FindField::Find {
+            self.query_changed();
+            return Some(Refresh::Partial);
+        }
+        Some(Refresh::Fast)
+    }
+
+    /// Hardware (USB) key while a Find field has focus.
+    fn find_hw(&mut self, k: HwKey) -> Option<Refresh> {
+        let key = match k {
+            HwKey::Char(c) => Key::Char(c),
+            HwKey::Backspace => Key::Back,
+            HwKey::Delete => Key::Del,
+            HwKey::Return => Key::Return,
+            HwKey::Tab => Key::Tab,
+            HwKey::Left => Key::Arrow(Dir::Left),
+            HwKey::Right => Key::Arrow(Dir::Right),
+            HwKey::Up | HwKey::Down => return None,
+            HwKey::Escape => Key::Esc,
+        };
+        if let Key::Char(c) = key {
+            let (field, fld) = self.find_field()?;
+            field.insert(&c.to_string());
+            if fld == FindField::Find {
+                self.query_changed();
+                return Some(Refresh::Partial);
+            }
+            return Some(Refresh::Fast);
+        }
+        self.find_key(key)
+    }
+
+    /// Opens the Graph sheet with fresh rows.
+    pub fn open_graph(&mut self) {
+        self.close_find();
+        self.save();
+        self.sel_ui = None;
+        self.drag = None;
+        let g = self.link_graph();
+        let name = |i: usize| stem(g.notes[i].name()).to_owned();
+        let rows = (0..g.notes.len())
+            .map(|i| {
+                let to: Vec<String> = g.out[i]
+                    .iter()
+                    .map(|l| match l.to {
+                        Some(j) => name(j),
+                        None => format!("{} (new)", l.target),
+                    })
+                    .collect();
+                let from: Vec<String> = g
+                    .backlinks(&g.notes[i])
+                    .iter()
+                    .map(|p| stem(p.name()).to_owned())
+                    .collect();
+                let mut parts = Vec::new();
+                if !to.is_empty() {
+                    parts.push(format!("\u{2192} {}", to.join(", ")));
+                }
+                if !from.is_empty() {
+                    parts.push(format!("\u{2190} {}", from.join(", ")));
+                }
+                GraphRow {
+                    name: g.notes[i].as_str().to_owned(),
+                    detail: if parts.is_empty() {
+                        "No links".into()
+                    } else {
+                        parts.join("  \u{b7}  ")
+                    },
+                    current: g.notes[i] == self.current,
+                }
+            })
+            .collect();
+        self.graph = Some(GraphState {
+            edges: g.edges(),
+            notes: g.notes,
+            rows,
+            first: 0,
+        });
+    }
+
+    fn graph_model<'a>(&'a self, g: &'a GraphState) -> GraphModel<'a> {
+        GraphModel {
+            rows: &g.rows,
+            first: g.first,
+            edges: g.edges,
+            theme: self.theme(),
+            keyboard: &self.keyboard,
+        }
+    }
+
+    fn graph_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
+        let g = self.graph.as_ref()?;
+        match self.screen.graph_hit(&self.graph_model(g), x, y) {
+            GraphHit::Close => {
+                self.graph = None;
+                Some(Refresh::Full)
+            }
+            GraphHit::Row(i) => {
+                let p = g.notes.get(i)?.clone();
+                self.graph = None;
+                self.open(&p);
+                Some(Refresh::Full)
+            }
+            GraphHit::Nothing => None,
+        }
+    }
+
+    fn graph_page(&mut self, forward: bool) -> Option<Refresh> {
+        let g = self.graph.as_ref()?;
+        let visible = self
+            .screen
+            .graph_layout(&self.graph_model(g))
+            .visible
+            .max(1);
+        let n = g.rows.len();
+        let g = self.graph.as_mut()?;
+        let next = if forward {
+            if g.first + visible < n {
+                g.first + visible
+            } else {
+                g.first
+            }
+        } else {
+            g.first.saturating_sub(visible)
+        };
+        (next != g.first).then(|| {
+            g.first = next;
+            Refresh::Partial
+        })
+    }
+
+    /// A tapped `[[wiki]]` link: an existing note opens in preview; a
+    /// missing one is created (empty) and opens in write mode.
+    pub fn follow_link(&mut self, target: &str) -> Option<Refresh> {
+        let notes = self.library.all_notes().unwrap_or_default();
+        if let Some(p) = links::resolve(target, &notes).cloned() {
+            self.exit_preview();
+            self.open(&p);
+            self.enter_preview();
+            return Some(Refresh::Full);
+        }
+        let (folder, name) = links::new_note_place(&self.library, &self.current, target);
+        let p = self.library.create_note(&folder, &name).ok()?;
+        self.exit_preview();
+        self.open(&p);
+        Some(Refresh::Full)
     }
 }

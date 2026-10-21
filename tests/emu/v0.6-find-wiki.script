@@ -1,0 +1,99 @@
+# v0.6 Find & replace, wiki links, backlinks, Graph (Forma 1440x1920).
+open-fixture tests/emu/fixtures/lamps.md
+tap-on Find
+expect-mode find
+expect-find Find
+type lamp
+expect-find 1 of 50
+shot v0.6-find
+tap-on Next
+expect-find 2 of 50
+tap-on Prev
+tap-on Prev
+expect-find 50 of 50
+# Aa: match case.
+tap-on Aa
+expect-find 1 of 48
+shot v0.6-find-case
+tap-on Aa
+expect-find 2 of 50
+# Replace the current match, then all of them (50 matches).
+tap-on ReplaceField
+type light
+tap-on Replace
+expect counted the lights on
+expect-find 2 of 49
+tap-on All
+expect-find None
+expect - light 47
+expect-not lamp
+expect-file-contains lamps.md|Last light.
+shot v0.6-replaced-all
+# Esc closes; a one-line selection seeds the query; Ctrl+F opens.
+esc
+expect-mode write
+double-tap-word Mara
+tap-on Find
+expect-find 1 of 1
+tap-on FindClose
+expect-mode write
+key Ctrl
+key f
+expect-mode find
+esc
+expect-mode write
+# Wiki links in preview: known = solid, missing = dashed; backlinks.
+tap-on Preview
+expect-mode preview
+shot v0.6-preview-links
+tap-on Link:The Parcel
+expect-open The Parcel.md
+expect-mode write
+expect-file The Parcel.md
+tap-on Graph
+expect-mode graph
+shot v0.6-graph
+tap-on Graph:field-notes.md
+expect-open field-notes.md
+expect-mode write
+tap-on Preview
+shot v0.6-backlinks
+tap-on Link:lamps
+expect-open lamps.md
+expect-mode preview
+tap-on Link:field-notes
+expect-open field-notes.md
+tap-on Link:chapter-01
+expect-open drafts/chapter-01.md
+expect-mode preview
+# Find from preview switches to write.
+tap-on Find
+expect-mode find
+type mara
+expect-find 1 of 1
+shot v0.6-find-from-preview
+tap-on FindClose
+# Night and landscape.
+tap-on Options
+tap-on Paper/Night
+tap-on Close
+tap-on Find
+expect-find 1 of 1
+shot v0.6-find-night
+tap-on FindClose
+tap-on Options
+tap-on Orientation/Landscape
+tap-on Close
+expect-screen 1920x1440
+tap-on Find
+expect-find 1 of 1
+shot v0.6-find-landscape
+tap-on FindClose
+tap-on Graph
+shot v0.6-graph-landscape-night
+tap-on Close
+tap-on Options
+tap-on Paper/Day
+tap-on Orientation/Portrait
+tap-on Close
+expect-status saved
