@@ -130,6 +130,8 @@ Risks (only the device can confirm) and the fallback if it fails:
 4. Pointer motion is raw relative counts (no acceleration curve); speed on the 1440×1920 panel may feel slow or fast — note it.
 5. Battery: host mode and the receiver may drain faster; the setting is Off by default.
 
+**Device results (user, 2026-10-21 ~21:00 CEST, 1.0.0):** Logitech K400 Plus on a USB splitter that also charges the Forma: **keyboard works, pointer works, two-finger scroll works (up and down)** ✅. Bug found: the **pointer leaves ghost trails** (planned fix in v1.0.1, `sprints/S10-pointer-scroll-usb.md`). The other checklist items below were not reported yet.
+
 On-device checklist — v0.5 (drawer, never tested on the device):
 - The Contents, To-dos and Scratch icons open/close their panes in any combination; panes share the height; Options → Drawer Left/Right moves the drawer; no drawer in preview; long lists end in "N more…".
 - Contents lists the headings; tapping one jumps the caret there.
@@ -156,13 +158,13 @@ On-device checklist — v0.8 (USB keyboard) — **first with the wired 60% keybo
 - **Shortcuts**: Ctrl+Z / Ctrl+Y, Ctrl+A, Ctrl+C / X / V, Ctrl+F (opens Find, typing goes into the field, Esc closes), Shift+arrows select, Ctrl+Left/Right by word, Home/End, Ctrl+Home/End, PgUp/PgDn.
 - Scratch pane takes USB typing; the on-screen keyboard keeps working alongside (one-shot Shift unaffected).
 - **Unplug** while typing (and while holding Ctrl) → no crash, status back to `no USB`; re-plug works again.
-- **Then the K400 Plus receiver**: record the `usb:` lines (one combined device or separate keyboard/mouse), repeat typing, shortcuts and unplug.
+- ✅ 2026-10-21 (user): K400 Plus keyboard verified on the device. **Then the K400 Plus receiver**: record the `usb:` lines (one combined device or separate keyboard/mouse), repeat typing, shortcuts and unplug.
 - Help → USB keyboard & export reads correctly; landscape typing works.
 - Export: copy `sigma-scribe/notes` to a computer over USB; files open as plain Markdown.
 
 On-device checklist — v0.8.1 (mouse / touchpad — K400 Plus touchpad, never tested on the device; a plain USB mouse too if available):
 - With USB keyboard On and the receiver plugged in: the log shows a pointer; status `USB`.
-- Touchpad moves a small arrow; it redraws in small steps (no full-screen flashes), with no trail left behind; it hides after ~3 s still and as soon as you type (USB or on-screen).
+- ✅ 2026-10-21 (user): K400 pointer and two-finger scroll (up/down) work. ❌ The arrow leaves ghost trails (v1.0.1 fix). Touchpad moves a small arrow; it redraws in small steps (no full-screen flashes), with no trail left behind; it hides after ~3 s still and as soon as you type (USB or on-screen).
 - Left click places the caret, presses title-bar icons, keyboard keys, drawer rows, Files rows, Options cells, Help rows and Close.
 - Click-and-drag on the note selects text and the Cut/Copy/Paste bar appears; double-click selects a word; right click does nothing.
 - Two-finger scroll (if the receiver sends wheel events; the K400's may not — note it) and a mouse wheel: note moves 3 rows per notch; preview, Files, Graph and Help turn a page per scroll.
