@@ -25,3 +25,6 @@
 
 **Mitigations:** key-height cap (keyboard ≤ 45 % of the screen height in landscape, ≤ 42 % portrait); cyclers for 5-value rows; S9.2 overflow rule generalised (gaps, then size, never < 100 % size); pseudo-layout tests at every scale × orientation × theme for overlap and ≥ 7 mm targets.
 **Estimate:** 4–5 d. **Risks:** medium — touches every layout; landscape writing space with the Full keyboard at 200 %; screenshot/emulator churn.
+
+## Note (2026-10-22): Lucide icons (plan decision 35)
+User-approved, not urgent, done alongside or right after this sprint: replace the ~11 custom `draw_*_icon` functions in `crates/render` with Lucide icons (ISC). Bake the SVGs with resvg at build time into small greyscale images, one per icon per UI-scale step (100/125/150/175/200 %, no runtime scaling), embed them and draw with one blit function. Keep the Options 'Aa' letters. Stroke ~2 px at device size, avoid fine detail (e-ink). Add Lucide's ISC LICENSE (repo + package THIRD-PARTY) and a credit line in README and About.
