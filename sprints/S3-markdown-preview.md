@@ -38,7 +38,7 @@ Read a note rendered (brief §4 "Preview mode", step 3 of §11): eye ↔ pencil 
 
 ## Deliverables
 - v0.3.0 package `dist/sigma-scribe-0.3.0-kobo/` (binary sha256 `d86b3d5a9abefb95d55b6ac124ffbb307539744dcadce848615376168ba18716`)
-- Screenshots `docs/screenshots/v0.3-*.png`; script `tests/emu/v0.3-preview.script` with fixture `tests/emu/fixtures/markdown-tour.md`
+- Screenshots `docs/screenshots/v0.3/v0.3-*.png`; script `tests/emu/v0.3-preview.script` with fixture `tests/emu/fixtures/markdown-tour.md`
 
 ## Definition of done
 - Unit tests: parser (every construct, nesting, literals, escapes, fuzz, 100 KB speed), layout (faces, decorations, wrapping, indents, pagination, place keeping, drawing), screen (eye/pencil hits, no keyboard in preview), app (read-only, full refresh on toggle, partial on paging, Files from preview); all emulator scripts; ARMv7 build — CI green
@@ -50,7 +50,7 @@ Read a note rendered (brief §4 "Preview mode", step 3 of §11): eye ↔ pencil 
 - [x] `tests/emu/v0.3-preview.script` and all earlier scripts
 - [x] Screenshots compared with the mock's preview styles
 ### On-device (Kobo Forma, fw 4.38.23697)
-- [ ] Eye opens preview with one full flash; the seed note looks like `docs/screenshots/v0.3-seed-preview.png`
+- [ ] Eye opens preview with one full flash; the seed note looks like `docs/screenshots/v0.3/v0.3-seed-preview.png`
 - [ ] Headings, bold, italic, lists, tasks, quote, code, links, rule are crisp in the real faces
 - [ ] Next / Prev page through a long note with partial refreshes; no ghosting storm; ends do nothing
 - [ ] Typing / tapping the page in preview changes nothing; pencil returns to write with the caret where it was

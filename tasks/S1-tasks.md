@@ -23,7 +23,7 @@ Estimates are working days. Updated 2026-10-20 22:4x CEST — re-implemented on 
 - **Deps:** S1-T01  **Estimate:** 1.5 d
 
 ### S1-T05 — Keys toggle
-- **Status:** ✅ DONE — top-bar `Keys` / `Hide keys`; page grows when hidden (screenshot `v0.1-keys-hidden.png`).
+- **Status:** ✅ DONE — top-bar `Keys` / `Hide keys`; page grows when hidden (screenshot `docs/screenshots/v0.1/v0.1-keys-hidden.png`).
 - **Deps:** S1-T04  **Estimate:** 0.25 d
 
 ### S1-T06 — Autosave
