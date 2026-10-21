@@ -2,6 +2,15 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 0.8.1 — 2026-10-21 (built, not yet installed or tagged)
+- USB mouse and touchpad (sprint S8.1), including the touchpad half of a combined device such as the Logitech K400 Plus on its Unifying receiver: detected by EV_REL + REL_X/REL_Y; one reader per device feeds both keymap and pointer decoder. Touch panel and buttons are never pointers.
+- On-screen arrow (outlined, Paper and Night): Fast partial refreshes of the changed area only (≥ 16×16), at most one redraw per 150 ms, hidden after 3 s still and when typing or touching.
+- Left click = tap everywhere; drag on the note selects (same selection and bar as touch); double-click selects a word; right/middle click do nothing.
+- Wheel / two-finger scroll (when sent as REL_WHEEL): note moves 3 rows per notch; preview, Files, Graph and Help turn a page.
+- Unplug safe (also mid-drag); Help → USB keyboard & export has a Mouse and touchpad section.
+- Emulator: `pointer plug|unplug`, `pointer-to`, `pointer-to-word`, `pointer-before`, `pointer-after`, `pointer-to-control`, `pointer-move`, `click`, `double-click`, `right-click`, `mouse-down`, `mouse-up`, `wheel`, `expect-pointer`; script `tests/emu/v0.8.1-pointer.script`.
+- Device binary sha256 `21103122de5602e77c954ffb6dc0c303d645bf5cf91e6ea1f2129f048579f562`.
+
 ## 0.8.0 — 2026-10-21 (built, not yet installed or tagged)
 - USB keyboard (Options → USB keyboard On): switches the Forma's port to USB host mode while on (back to normal on Off or exit), finds keyboards in `/proc/bus/input/devices` with hot-plug (1 s poll), reads them through a US keymap with Shift, Caps Lock, Ctrl, Alt and auto-repeat.
 - Ctrl / Shift / Alt combinations go through the on-screen keyboard's shortcut code: Ctrl+Z/Y/A/C/X/V/F, Shift+arrows, Ctrl+arrows, Home/End, Ctrl+Home/End, PgUp/PgDn; in the note, Scratch, Find and rename fields. The on-screen keyboard is unaffected.

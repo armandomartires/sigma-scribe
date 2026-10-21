@@ -1,0 +1,92 @@
+# v0.8.1 USB mouse / touchpad (K400 Plus style), through the evdev decoder.
+open-fixture tests/emu/fixtures/markdown-tour.md
+pointer plug
+expect-pointer hidden
+pointer-to 700 700
+expect-pointer visible
+wait 200
+shot v0.8.1-pointer
+# Hides after 3 s still, and when typing.
+wait 3100
+expect-pointer hidden
+pointer-move 10 10
+expect-pointer visible
+type a
+expect-pointer hidden
+key Back
+# Click = tap: the Help button, then Close.
+pointer-to-control Help
+click
+expect-mode help
+pointer-to-control Close
+click
+expect-mode write
+# Drag on the note selects (anchor at the press).
+pointer-before hanging
+mouse-down
+pointer-after hanging
+wait 200
+mouse-up
+expect-selection hanging
+shot v0.8.1-drag-select
+# Click elsewhere on the note drops the selection.
+pointer-to-word typed
+click
+expect-bar none
+# Double-click selects a word.
+pointer-to-word Literata
+double-click
+expect-selection Literata
+shot v0.8.1-double-click
+# Right click: nothing new.
+right-click
+expect-selection Literata
+# Wheel: note, then preview pages, then a sheet.
+wheel -3
+wheel 3
+pointer-to-control Preview
+click
+expect-mode preview
+wheel -1
+expect-page 2
+shot v0.8.1-preview-wheel
+wheel 1
+expect-page 1
+pointer-to-control Preview
+click
+expect-mode write
+pointer-to-control Help
+click
+pointer-to-control Markdown reference
+click
+wheel -1
+expect-page 2
+pointer-to-control Close
+click
+# Night and landscape.
+pointer-to-control Options
+click
+pointer-to-control Paper/Night
+click
+pointer-to-control Orientation/Landscape
+click
+pointer-to-control Close
+click
+expect-screen 1920x1440
+pointer-to 900 600
+wait 200
+shot v0.8.1-landscape-night
+pointer-to-control Options
+click
+pointer-to-control Paper/Day
+click
+pointer-to-control Orientation/Portrait
+click
+pointer-to-control Close
+click
+# Unplug while the button is held: safe.
+mouse-down
+pointer unplug
+expect-pointer hidden
+type ok
+expect-status saved

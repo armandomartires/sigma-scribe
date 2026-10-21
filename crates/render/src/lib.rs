@@ -11,6 +11,7 @@ pub mod fonts;
 pub mod graph;
 pub mod help;
 pub mod options;
+pub mod pointer;
 pub mod preview;
 pub mod theme;
 

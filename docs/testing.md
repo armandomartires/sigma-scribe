@@ -34,3 +34,8 @@ FBInk has **no emulator or preview window**. Its README notes it "works perfectl
 - `usb-key CHORD` — e.g. `ctrl+f`, `shift+left`, `ctrl+home`, `pgdn`, `esc` (pressed in order, released in reverse).
 - Script: `tests/emu/v0.8-usb-keyboard.script` (screenshots in `docs/screenshots/v0.8/`, `eink/`).
 - The live window (`scripts/sim.sh`) sends the same chords for Ctrl+letter, Shift/Ctrl+arrows, Home/End.
+
+## v0.8.1 emulator commands (pointer)
+- `pointer plug|unplug`; `pointer-to X Y`, `pointer-to-word W`, `pointer-before W`, `pointer-after W`, `pointer-to-control NAME`, `pointer-move DX DY` — all sent as raw `REL_X/REL_Y` through the evdev pointer decoder.
+- `click`, `double-click`, `right-click`, `mouse-down`, `mouse-up`, `wheel N` (+ = up); `expect-pointer visible|hidden`; `wait MS` drives the throttle and the 3 s hide.
+- Script: `tests/emu/v0.8.1-pointer.script` (screenshots in `docs/screenshots/v0.8.1/`, `eink/`).

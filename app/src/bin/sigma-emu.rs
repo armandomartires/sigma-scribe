@@ -23,12 +23,17 @@
 //!   v0.8: usb plug|unplug (hot-plug event) | usb-type TEXT (raw evdev key
 //!   codes through the USB keymap, US layout) | usb-key CHORD (e.g. ctrl+f,
 //!   shift+left, ctrl+shift+end, pgdn) | expect-usb on|off
+//!   v0.8.1: pointer plug|unplug | pointer-to X Y | pointer-to-word W |
+//!   pointer-before W | pointer-after W | pointer-to-control NAME | pointer-move DX DY | click | double-click |
+//!   right-click | mouse-down | mouse-up | wheel N (+ = up) |
+//!   expect-pointer visible|hidden (all through the evdev pointer decoder)
 //! The background to-do index is settled after every step (deterministic).
 //! Coordinates are screen coordinates (landscape is 1920×1440); shots are
 //! written the way the reader sees them, turned upright.
 
 use sigma_device::desktop::DesktopDevice;
 use sigma_device::evdev::{RawEvent, EV_KEY};
+use sigma_device::pointer::{raw_button, raw_move, raw_wheel, PointerDecoder, BTN_LEFT, BTN_RIGHT};
 use sigma_device::usbkbd::{code_for_name, raw_for_char, KeyMapper};
 use sigma_device::Phase;
 use sigma_device::{Device, Event, HwKey};
@@ -87,6 +92,7 @@ fn main() -> ExitCode {
     let mut finger: (i32, i32) = (0, 0);
     // The USB keyboard's modifier state, as on the device (v0.8).
     let mut usb = KeyMapper::default();
+    let mut mouse = PointerDecoder::default();
     for (n, line) in text.lines().enumerate() {
         clock += 16;
         let line = line.trim();
@@ -327,6 +333,71 @@ fn main() -> ExitCode {
                     println!(
                         "perf: {n} keystrokes, keystroke-to-refresh p50 {p50:.1} ms, p95 {p95:.1} ms, max {max:.1} ms"
                     );
+                }
+            }
+            "pointer" => match arg {
+                "plug" => events.push(Event::PointerPlug(true)),
+                "unplug" => {
+                    mouse = PointerDecoder::default();
+                    events.push(Event::PointerPlug(false));
+                }
+                _ => return fail("pointer plug|unplug".into()),
+            },
+            "pointer-to" | "pointer-to-word" | "pointer-to-control" | "pointer-move"
+            | "pointer-before" | "pointer-after" => {
+                let v: Vec<i32> = arg
+                    .split_whitespace()
+                    .filter_map(|x| x.parse().ok())
+                    .collect();
+                let target = match cmd {
+                    "pointer-to-word" => app.word_point(arg),
+                    "pointer-before" => app.text_point(arg, false),
+                    "pointer-after" => app.text_point(arg, true),
+                    "pointer-to-control" => app.control_centre(arg),
+                    _ => (v.len() == 2).then(|| (v[0], v[1])),
+                };
+                let Some((x, y)) = target else {
+                    return fail("nothing to aim at".into());
+                };
+                let (dx, dy) = if cmd == "pointer-move" {
+                    (x, y)
+                } else {
+                    (x - app.pointer.x, y - app.pointer.y)
+                };
+                for r in raw_move(dx, dy) {
+                    events.extend(mouse.feed(r, clock));
+                }
+            }
+            "click" | "double-click" | "right-click" | "mouse-down" | "mouse-up" => {
+                let code = if cmd == "right-click" {
+                    BTN_RIGHT
+                } else {
+                    BTN_LEFT
+                };
+                let presses = match cmd {
+                    "double-click" => vec![true, false, true, false],
+                    "mouse-down" => vec![true],
+                    "mouse-up" => vec![false],
+                    _ => vec![true, false],
+                };
+                for down in presses {
+                    clock += 30;
+                    for r in raw_button(code, down) {
+                        for e in mouse.feed(r, clock) {
+                            step(&mut app, &mut dev, e);
+                        }
+                    }
+                }
+            }
+            "wheel" => {
+                for r in raw_wheel(arg.parse().unwrap_or(0)) {
+                    events.extend(mouse.feed(r, clock));
+                }
+            }
+            "expect-pointer" => {
+                let p = &app.pointer;
+                if (p.visible && p.live) != (arg == "visible") {
+                    return fail(format!("pointer {p:?}"));
                 }
             }
             "usb" => match arg {

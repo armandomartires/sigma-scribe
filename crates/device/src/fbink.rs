@@ -6,10 +6,11 @@ use crate::evdev::{
     decode_arm32, Decoder, Transform, ABS_MT_POSITION_X, ABS_MT_POSITION_Y, EVENT_SIZE_ARM32,
 };
 use crate::otg::{OtgSwitch, CHIPIDEA_ROLE};
+use crate::pointer::PointerDecoder;
 use crate::usbkbd::{parse_devices, KeyMapper};
 use crate::{Device, Event, Refresh};
 use sigma_render::{Canvas, Rect};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{self, Read};
 use std::os::fd::AsRawFd;
@@ -54,7 +55,7 @@ impl KoboDevice {
         let keyboards = |t: &str| -> HashSet<u32> {
             parse_devices(t)
                 .into_iter()
-                .filter(|d| d.keyboard)
+                .filter(|d| d.keyboard || d.pointer)
                 .filter_map(|d| d.event)
                 .collect()
         };
@@ -95,7 +96,7 @@ impl KoboDevice {
                 }
             });
         }
-        spawn_usb_watcher(tx);
+        spawn_usb_watcher(tx, epoch);
         Ok(Self {
             otg: OtgSwitch::new(CHIPIDEA_ROLE),
             width: w,
@@ -183,47 +184,74 @@ impl Drop for KoboDevice {
 
 const PROC_DEVICES: &str = "/proc/bus/input/devices";
 
-/// Polls `/proc/bus/input/devices` once a second for USB keyboards (hot
-/// plug), opens each new one and feeds it through a `KeyMapper`. A read
-/// error (unplug) closes that reader. Sends `Event::Usb(any connected)`
-/// on every change. Any failure (no /proc, no permission) just means no
-/// keyboard; touch and buttons are unaffected.
-fn spawn_usb_watcher(tx: Sender<Event>) {
-    let open: Arc<Mutex<HashSet<u32>>> = Arc::default();
+/// Polls `/proc/bus/input/devices` once a second for USB keyboards and
+/// pointers (hot plug), opens each new one and feeds it through a
+/// `KeyMapper` and, for pointers, a `PointerDecoder` (a combined device
+/// such as a Unifying receiver gets both from one reader). A read error
+/// (unplug) closes that reader. Sends `Usb(any keyboard)` and
+/// `PointerPlug(any pointer)` on every change. Any failure (no /proc, no
+/// permission) just means no device; touch and buttons are unaffected.
+fn spawn_usb_watcher(tx: Sender<Event>, epoch: Instant) {
+    // eventN -> (keyboard, pointer)
+    let open: Arc<Mutex<HashMap<u32, (bool, bool)>>> = Arc::default();
     thread::spawn(move || loop {
         if let Ok(t) = std::fs::read_to_string(PROC_DEVICES) {
-            for d in parse_devices(&t).into_iter().filter(|d| d.keyboard) {
+            for d in parse_devices(&t)
+                .into_iter()
+                .filter(|d| d.keyboard || d.pointer)
+            {
                 let Some(n) = d.event else { continue };
-                if open.lock().map_or(true, |o| o.contains(&n)) {
+                if open.lock().map_or(true, |o| o.contains_key(&n)) {
                     continue;
                 }
                 let Ok(mut f) = File::open(format!("/dev/input/event{n}")) else {
                     continue;
                 };
-                eprintln!("usb: keyboard \"{}\" on event{n}", d.name);
+                let (kbd, ptr) = (d.keyboard, d.pointer);
+                eprintln!(
+                    "usb: \"{}\" on event{n} (keyboard {kbd}, pointer {ptr})",
+                    d.name
+                );
                 if let Ok(mut o) = open.lock() {
-                    o.insert(n);
+                    o.insert(n, (kbd, ptr));
                 }
-                if tx.send(Event::Usb(true)).is_err() {
+                if (kbd && tx.send(Event::Usb(true)).is_err())
+                    || (ptr && tx.send(Event::PointerPlug(true)).is_err())
+                {
                     return;
                 }
                 let (tx, open) = (tx.clone(), Arc::clone(&open));
                 thread::spawn(move || {
                     let mut map = KeyMapper::default();
+                    let mut mouse = PointerDecoder::default();
                     let mut buf = [0u8; EVENT_SIZE_ARM32];
                     while f.read_exact(&mut buf).is_ok() {
-                        if let Some(e) = map.feed(decode_arm32(&buf)) {
+                        let raw = decode_arm32(&buf);
+                        let now = epoch.elapsed().as_millis() as u64;
+                        let mut out = Vec::new();
+                        if kbd {
+                            out.extend(map.feed(raw));
+                        }
+                        if ptr {
+                            out.extend(mouse.feed(raw, now));
+                        }
+                        for e in out {
                             if tx.send(e).is_err() {
                                 return;
                             }
                         }
                     }
                     eprintln!("usb: event{n} gone");
-                    let any = open.lock().map_or(false, |mut o| {
+                    let (k, p) = open.lock().map_or((false, false), |mut o| {
                         o.remove(&n);
-                        !o.is_empty()
+                        (o.values().any(|v| v.0), o.values().any(|v| v.1))
                     });
-                    let _ = tx.send(Event::Usb(any));
+                    if kbd {
+                        let _ = tx.send(Event::Usb(k));
+                    }
+                    if ptr {
+                        let _ = tx.send(Event::PointerPlug(p));
+                    }
                 });
             }
         }
