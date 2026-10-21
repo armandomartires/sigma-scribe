@@ -1,8 +1,8 @@
-# S10 — Pointer trails, Reverse scroll, USB label (draft)
+# S10 — v1.0.1: pointer trails, Reverse scroll, USB label (draft)
 
-> **DRAFT — planning only (2026-10-21). No development until the user approves.**
+> **DRAFT — planning only (updated 2026-10-21 21:24 with the user's answers). No development until the user approves.**
 
-**Release:** v1.1.0 (or v1.0.1 on its own) · **Estimate:** 1.75 d · **Depends on:** 1.0.0 device results
+**Release:** **v1.0.1** on its own (user decision 2026-10-21) · **Estimate:** 1.75 d + device check · **Depends on:** 1.0.0 device results
 
 ## 1. Bug: the pointer leaves ghost trails (device, K400 Plus, 1.0.0)
 **Cause (from the code):** each move is a `Refresh::Fast`, which FBInk maps to `WFM_AUTO`; on the Forma's EPDC that picks DU/A2 for small updates. DU drives pixels only to black or white, so (a) erasing the arrow back to the grey paper (#f0, 240) and the anti-aliased/grey outline leaves residue, and (b) the old and new rects can go out as separate regions from `diff_regions` (gap 24, up to 8), so the erase and the draw use different update markers.
