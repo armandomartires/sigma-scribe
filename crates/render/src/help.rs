@@ -319,14 +319,7 @@ impl EditorScreen {
         let ui = self.ui_px();
         c.fill(c.bounds(), t.paper);
         self.draw_title(c, &l.base, m.page.title(), None, t, false);
-        let r = l.close;
-        let (cx, cy, d) = (r.x + r.w / 2, r.y + r.h / 2, s.px(16.0));
-        for k in -d..=d {
-            for th in 0..s.px(3.5).max(3) {
-                c.blend(cx + k, cy + k + th, t.ink, 255);
-                c.blend(cx + k, cy - k + th, t.ink, 255);
-            }
-        }
+        crate::icons::draw_icon(c, crate::icons::Icon::Close, l.close, t.ink);
         let tx = s.px(28.0) as f32;
         if m.page == HelpPage::Menu {
             for (r, (label, hint, _)) in l.rows.iter().zip(MENU) {
@@ -385,36 +378,6 @@ impl EditorScreen {
         }
         l
     }
-}
-
-/// "?" in a circle (brief §3 icon 9).
-pub fn draw_help_icon(screen: &EditorScreen, c: &mut Canvas, r: Rect, ink: u8) {
-    // Glyph scales with the target (twice the brief in the title bar, S9.2).
-    let k2 = r.w as f32 / screen.scale().px(44.0) as f32;
-    let s = crate::theme::Scale(screen.scale().0 * k2);
-    let (cx, cy) = (r.x + r.w / 2, r.y + r.h / 2);
-    let rad = s.px(10.0) as f32;
-    let st = s.px(1.75).max(2) as f32;
-    let k = s.px(12.0);
-    for dy in -k..=k {
-        for dx in -k..=k {
-            let d = ((dx * dx + dy * dy) as f32).sqrt();
-            if (d - rad).abs() <= st / 2.0 {
-                c.blend(cx + dx, cy + dy, ink, 255);
-            }
-        }
-    }
-    let size = screen.ui_px() * k2;
-    let w = screen.fonts.width(Face::AtkinsonBold, size, "?");
-    screen.fonts.draw(
-        c,
-        Face::AtkinsonBold,
-        size,
-        cx as f32 - w / 2.0,
-        cy as f32 + screen.fonts.ascent(Face::AtkinsonBold, size) / 2.6,
-        "?",
-        ink,
-    );
 }
 
 #[cfg(test)]

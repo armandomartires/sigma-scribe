@@ -72,6 +72,15 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
     ));
     vec![
         OptRow {
+            label: "UI scale",
+            hint: "Buttons, menus and keys; the note keeps its Size",
+            cells: stepper(
+                format!("{} %", s.ui_scale),
+                Change::UiScale(-1),
+                Change::UiScale(1),
+            ),
+        },
+        OptRow {
             label: "Paper",
             hint: "Night is the same page, inverted",
             cells: vec![
@@ -336,14 +345,7 @@ impl EditorScreen {
         let ui = self.ui_px();
         c.fill(c.bounds(), t.paper);
         self.draw_title(c, &l.base, "Options", None, t, false);
-        let r = l.close;
-        let (cx, cy, d) = (r.x + r.w / 2, r.y + r.h / 2, s.px(16.0));
-        for k in -d..=d {
-            for th in 0..s.px(3.5).max(3) {
-                c.blend(cx + k, cy + k + th, t.ink, 255);
-                c.blend(cx + k, cy - k + th, t.ink, 255);
-            }
-        }
+        crate::icons::draw_icon(c, crate::icons::Icon::Close, l.close, t.ink);
         let rows = option_rows(m.settings);
         let small = ui * 0.82;
         for ((band, cells), row) in l.rows.iter().zip(&rows) {
@@ -447,6 +449,7 @@ mod tests {
         assert_eq!(
             labels,
             [
+                "UI scale",
                 "Paper",
                 "Type",
                 "Line",

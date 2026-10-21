@@ -14,3 +14,7 @@ fontdue.workspace = true
 
 [lints]
 workspace = true
+
+# v1.1: Lucide SVG icons are baked into greyscale masks at build time.
+[build-dependencies]
+resvg = { version = "0.45", default-features = false }

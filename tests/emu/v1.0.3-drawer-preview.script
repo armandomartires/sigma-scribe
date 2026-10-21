@@ -2,6 +2,8 @@
 # toggle, scratch typing; note read-only) and the pointer is DU with one
 # GL16 cleanup on hide, on the test notes pack (Forma 1440x1920).
 copy-notes tests/test-notes/_test
+# Written for the 1.0 layout: run at UI scale 100 % (v1.1 default is 200 %).
+ui-scale 100
 tap-on Files
 tap-on test-headings.md
 expect-open _test/test-headings.md

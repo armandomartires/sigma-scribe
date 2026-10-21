@@ -149,14 +149,7 @@ impl EditorScreen {
         }
         self.draw_title(c, &l.base, "Graph", None, t, false);
         self.draw_graph_toolbar(c, m, &l);
-        let r = l.close;
-        let (cx, cy, d) = (r.x + r.w / 2, r.y + r.h / 2, s.px(16.0));
-        for k in -d..=d {
-            for th in 0..s.px(3.5).max(3) {
-                c.blend(cx + k, cy + k + th, t.ink, 255);
-                c.blend(cx + k, cy - k + th, t.ink, 255);
-            }
-        }
+        crate::icons::draw_icon(c, crate::icons::Icon::Close, l.close, t.ink);
         let tx = s.px(28.0) as f32;
         if let Some(v) = &m.map {
             let foot = self.map_footer(m, v);

@@ -3258,7 +3258,7 @@ impl App {
             ),
             (
                 "Credits".into(),
-                "Literata and Atkinson Hyperlegible fonts (SIL Open Font License 1.1). FBInk by NiLuJe (GPL-3.0-or-later). NickelMenu by pgaskin.".into(),
+                "Literata and Atkinson Hyperlegible fonts (SIL Open Font License 1.1). FBInk by NiLuJe (GPL-3.0-or-later). NickelMenu by pgaskin. Icons: Lucide (ISC licence), lucide.dev.".into(),
             ),
         ]
     }
@@ -3462,6 +3462,7 @@ impl App {
     /// The smallest side a target may have: 44 px at the screen's scale.
     #[must_use]
     pub fn min_target(&self) -> i32 {
-        self.screen.scale().px(44.0)
+        // 44 px at the device scale; the UI scale only ever enlarges.
+        self.screen.page_scale().px(44.0)
     }
 }

@@ -95,7 +95,13 @@ pub struct Settings {
     pub land_keys: LandKeys,
     pub pad: Pad,
     pub pad_side: Side,
+    /// UI scale in percent (v1.1): 100, 125, 150, 175 or 200 (default).
+    /// Scales the interface; the note text Size stays separate.
+    pub ui_scale: u16,
 }
+
+/// UI scale steps (v1.1, S11).
+pub const UI_SCALES: [u16; 5] = [100, 125, 150, 175, 200];
 
 impl Default for Settings {
     fn default() -> Self {
@@ -118,6 +124,7 @@ impl Default for Settings {
             land_keys: LandKeys::Centre,
             pad: Pad::Numbers,
             pad_side: Side::Right,
+            ui_scale: 200,
         }
     }
 }
@@ -145,6 +152,8 @@ pub enum Change {
     LandKeys(LandKeys),
     Pad(Pad),
     PadSide(Side),
+    /// One UI-scale step up (+1) or down (-1).
+    UiScale(i8),
 }
 
 impl Change {
@@ -230,6 +239,14 @@ impl Settings {
             Change::LandKeys(k) => self.land_keys = k,
             Change::Pad(p) => self.pad = p,
             Change::PadSide(s) => self.pad_side = s,
+            Change::UiScale(d) => {
+                let i = UI_SCALES
+                    .iter()
+                    .position(|&v| v == self.ui_scale)
+                    .unwrap_or(4) as i32;
+                let j = (i + i32::from(d)).clamp(0, UI_SCALES.len() as i32 - 1);
+                self.ui_scale = UI_SCALES[j as usize];
+            }
         }
     }
 
@@ -315,6 +332,13 @@ impl Settings {
                 }
                 "drawer" => s.drawer = parse_side(v).unwrap_or(s.drawer),
                 "usb" => s.usb = b().unwrap_or(s.usb),
+                "ui_scale" => {
+                    if let Ok(n) = v.parse::<u16>() {
+                        if UI_SCALES.contains(&n) {
+                            s.ui_scale = n;
+                        }
+                    }
+                }
                 "scroll" => {
                     s.natural_scroll = match v {
                         "natural" => true,
@@ -362,7 +386,7 @@ impl Settings {
         format!(
             "keyboard={}\npaper={}\ntype={}\nline={}\nline_words={}\nsize={}\nleading={}\nmargin={}\n\
              tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\nusb={}\nscroll={}\norientation={}\n\
-             landscape_keys={}\npad={}\npad_side={}\n",
+             landscape_keys={}\npad={}\npad_side={}\nui_scale={}\n",
             self.keyboard.name(),
             match self.paper {
                 Paper::Day => "day",
@@ -401,6 +425,7 @@ impl Settings {
                 Pad::Arrows => "arrows",
             },
             side(self.pad_side),
+            self.ui_scale,
         )
     }
 }

@@ -160,7 +160,8 @@ fn keyboard_defaults_to_full_and_compact_choice_is_remembered() {
         "default with no settings file"
     );
     assert!(!dir.join(".sigma-settings").exists());
-    assert!(app.page_rect().h >= 1300, "page {}", app.page_rect().h);
+    // v1.1: 200 % UI scale, keyboard capped at 42 %.
+    assert!(app.page_rect().h >= 800, "page {}", app.page_rect().h);
     let (x, y) = app.key_centre("Compact").unwrap();
     app.handle(Event::Tap { x, y });
     assert_eq!(app.keyboard.layout, Layout::Compact);

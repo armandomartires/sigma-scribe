@@ -1,0 +1,31 @@
+# v1.1 (S11): UI scale 100-200 % (200 default) and Lucide icons.
+copy-notes tests/test-notes/_test
+shot v1.1-write-200
+tap-on Options
+shot v1.1-options-200
+tap-on UI scale/-
+tap-on UI scale/-
+tap-on UI scale/-
+tap-on UI scale/-
+shot v1.1-options-100
+tap-on Close
+shot v1.1-write-100
+tap-on Files
+shot v1.1-files-100
+tap-on Close
+tap-on Options
+tap-on UI scale/+
+tap-on UI scale/+
+tap-on UI scale/+
+tap-on UI scale/+
+tap-on Close
+tap-on Files
+shot v1.1-files-200
+tap-on Close
+tap-on Contents
+shot v1.1-drawer-200
+tap-on Contents
+tap-on Options
+tap-on Orientation/Landscape
+tap-on Close
+shot v1.1-landscape-200

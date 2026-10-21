@@ -11,6 +11,7 @@ pub mod fonts;
 pub mod graph;
 pub mod graphmap;
 pub mod help;
+pub mod icons;
 pub mod options;
 pub mod pointer;
 pub mod preview;
