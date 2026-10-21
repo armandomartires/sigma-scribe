@@ -22,3 +22,8 @@ FBInk has **no emulator or preview window**. Its README notes it "works perfectl
 - `tap-on Link:LABEL` (a wiki link or backlink on the shown preview page); `tap-on Graph:PATH` (a Graph row), `tap-on Close` on the Graph sheet.
 - `expect-find LABEL` (`Find`, `None`, `i of n`); `expect-mode` also knows `find` and `graph`.
 - Fixture `tests/emu/fixtures/lamps.md`: 50 matches of "lamp" and a missing link.
+
+## v0.7 emulator commands
+- `expect-mode help`, `expect-help TITLE` (e.g. `Help / App info`); `expect-page N` also checks Help pages.
+- `perf-type N` — taps N keys and prints p50/p95/max handling time (use a release build; see `docs/perf.md`).
+- Script: `tests/emu/v0.7-help-hardening.script` (screenshots in `docs/screenshots/v0.7/`, `eink/` versions with `--eink`).

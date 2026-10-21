@@ -84,6 +84,8 @@ pub enum Hit {
     Find,
     /// Connected nodes: the Graph sheet (v0.6).
     Graph,
+    /// Question mark: the Help sheet (v0.7).
+    Help,
     /// Contents / To-dos / Scratch icon: toggle that drawer pane (v0.5).
     Drawer(crate::drawer::Pane),
     /// Landscape keyboard bar: Split / Full / Centre, pad toggles (v0.4).
@@ -133,6 +135,8 @@ pub struct Layout {
     pub graph_button: Rect,
     /// The Find bar under the title bar when open (zero height otherwise).
     pub find_bar: Rect,
+    /// Help, the leftmost icon (brief §3 order, v0.7).
+    pub help_button: Rect,
     /// The text column inside the page: the page itself, or the locked
     /// portrait-width column (Line on, landscape) with gutters beside it.
     pub column: Rect,
@@ -338,12 +342,8 @@ impl EditorScreen {
         let contents_button = left_of(todos_button);
         let graph_button = left_of(contents_button);
         let options_button = left_of(graph_button);
-        let name_rect = Rect::new(
-            0,
-            0,
-            (w * 3 / 5).min(options_button.x - self.px(8.0)),
-            title.h,
-        );
+        let help_button = left_of(options_button);
+        let name_rect = Rect::new(0, 0, (w * 3 / 5).min(help_button.x - self.px(8.0)), title.h);
         let column = if self.landscape() && self.cfg.line_on {
             let cw = w.min(h);
             Rect::new(page.x + (page.w - cw) / 2, page.y, cw, page.h)
@@ -373,6 +373,7 @@ impl EditorScreen {
             find_button,
             graph_button,
             find_bar,
+            help_button,
             column,
             kb_buttons,
         }
@@ -794,6 +795,9 @@ impl EditorScreen {
         if l.graph_button.inset(-self.px(4.0)).contains(x, y) {
             return Hit::Graph;
         }
+        if l.help_button.inset(-self.px(4.0)).contains(x, y) {
+            return Hit::Help;
+        }
         for (r, p) in [
             (l.contents_button, crate::drawer::Pane::Contents),
             (l.todos_button, crate::drawer::Pane::Todos),
@@ -851,6 +855,8 @@ impl EditorScreen {
             }
             draw_find_icon(c, l.find_button, self.s, t.ink);
             draw_graph_icon(c, l.graph_button, self.s, t.ink);
+            crate::help::draw_help_icon(self, c, l.help_button, t.ink);
+            crate::help::draw_help_icon(self, c, l.help_button, t.ink);
             for (i, r) in [l.contents_button, l.todos_button, l.scratch_button]
                 .into_iter()
                 .enumerate()
@@ -1497,6 +1503,8 @@ impl EditorScreen {
             Hit::Find
         } else if l.graph_button.inset(-self.px(4.0)).contains(x, y) {
             Hit::Graph
+        } else if l.help_button.inset(-self.px(4.0)).contains(x, y) {
+            Hit::Help
         } else {
             Hit::Nothing
         }

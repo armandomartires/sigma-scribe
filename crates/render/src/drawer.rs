@@ -143,7 +143,8 @@ impl EditorScreen {
             l.panes.push((*pane, header, body));
             match pane {
                 Pane::Contents => {
-                    let row_h = self.d(40.0);
+                    // 44 px rows: the touch-target minimum (S7 audit).
+                    let row_h = self.d(44.0);
                     let hs = m.contents.unwrap_or_default();
                     let fit = (body.h / row_h).max(0) as usize;
                     for (k, h) in hs.iter().take(fit).enumerate() {
@@ -157,12 +158,7 @@ impl EditorScreen {
                 Pane::Todos => {
                     let (items, filter) = m.todos.unwrap_or((&[], Filter::All));
                     let fw = self.d(72.0);
-                    l.filter = Some(Rect::new(
-                        rect.x + rect.w - pad - fw,
-                        y0 + (head_h - self.d(36.0)) / 2,
-                        fw,
-                        self.d(36.0),
-                    ));
+                    l.filter = Some(Rect::new(rect.x + rect.w - pad - fw, y0, fw, head_h));
                     let row_h = self.d(58.0);
                     let fit = (body.h / row_h).max(0) as usize;
                     let shown: Vec<usize> = (0..items.len())

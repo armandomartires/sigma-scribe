@@ -104,37 +104,30 @@ On-device checklist (`sprints/S4-options-line-mode.md`):
 - No regressions: typing, selection, Files, preview; the log shows exit 0 and no refresh failures.
 
 
-## Upgrade 0.4.0 → 0.5.0 (PENDING APPROVAL — not run)
-Same procedure as 0.4.0: confirm it is the same Forma (serial <FORMA-SERIAL>) and touch no other disk; read `.adds/sigma-scribe/sigma-scribe.log` read-only; make a checksum-verified backup into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v0.5.0`; replace **only** `.adds/sigma-scribe/sigma-scribe` with `dist/sigma-scribe-0.5.0-kobo/.adds/sigma-scribe/sigma-scribe` (sha256 `1ada5ae93504d287bb685e15e9cb3a15288cb65073dc233b220cd4293ec01f8f`) via `.new` + sync + rename; verify the sha256 of the device copy; sync, unmount and power off with udisksctl. `launch.sh`, `touch.conf`, the NickelMenu entry and the licences are unchanged (same checksums). 0.5 creates `notes/.scratchpad.md` on first use of Scratch.
+## Upgrade 0.4.0 → 0.7.0 (PENDING APPROVAL — not run)
+The device runs **0.4.0**. **0.5.0 and 0.6.0 were never installed or tested on the device.** This single section replaces the earlier pending 0.4.0 → 0.5.0 and 0.4.0 → 0.6.0 sections: the upgrade goes straight from 0.4.0 to 0.7.0, so the checklists below cover v0.5, v0.6 and v0.7.
 
-Rollback: copy the 0.4.0 binary back (sha256 `689b84c4e763119cbdfa19eb07ade52d5709cdf034bf971fc2e5116e97c02043`); `.scratchpad.md` is ignored by 0.4.0 (hidden file) and can stay.
+Procedure (same as 0.4.0): confirm it is the same Forma (serial <FORMA-SERIAL>) and touch no other disk (in particular not sdb, the 64 GB stick); read `.adds/sigma-scribe/sigma-scribe.log` read-only; make a checksum-verified backup into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v0.7.0` (`.adds/sigma-scribe` + `notes`); replace **only** `.adds/sigma-scribe/sigma-scribe` with `dist/sigma-scribe-0.7.0-kobo/.adds/sigma-scribe/sigma-scribe` (sha256 `b8d76998234d71b6cf5e8bb626dda66738365f14ab198b0e8cbdfba7fe2f7789`) via `.new` + sync + rename; verify the sha256 of the device copy; sync, unmount and power off with udisksctl. `launch.sh`, `touch.conf`, the NickelMenu entry and the licences are unchanged since 0.3.0 (same checksums). Settings from 0.4.0 are read as-is. 0.7 may create `notes/.scratchpad.md` (Scratch) and new empty notes when a missing `[[link]]` is tapped.
 
-On-device checklist (`sprints/S5-side-drawer.md`):
-- The three drawer icons open/close their panes in any combination; panes share the height; Options → Drawer Left/Right moves the drawer.
-- Contents lists the headings; tapping one jumps the caret there.
-- To-dos lists boxes from all notes; filter All/Open/Done; checking a box in another note changes only that line (check the file in Files/preview); tapping the text opens that note at the line.
-- Scratch: type into it, switch notes, leave and relaunch from NickelMenu — the text is still there; it is not in Files.
-- Landscape and Night with the drawer open; no ghosting after closing panes.
-- No regressions; the log shows exit 0 and no refresh failures.
-
-## Upgrade 0.4.0 → 0.6.0 (PENDING APPROVAL — not run)
-The device runs **0.4.0**. **0.5.0 was never installed or tested on the device** (the 0.4.0 → 0.5.0 section above stays pending and is superseded by this one if this one is approved). This upgrade goes straight from 0.4.0 to 0.6.0, so the on-device checklist below covers both the v0.5 and the v0.6 features.
-
-Same procedure as 0.4.0: confirm it is the same Forma (serial <FORMA-SERIAL>) and touch no other disk; read `.adds/sigma-scribe/sigma-scribe.log` read-only; make a checksum-verified backup into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v0.6.0` (`.adds/sigma-scribe` + `notes`); replace **only** `.adds/sigma-scribe/sigma-scribe` with `dist/sigma-scribe-0.6.0-kobo/.adds/sigma-scribe/sigma-scribe` (sha256 `a9c2922daceefbbeae9b870e11ceb12e04cf5e1bbd2030733f59d361cf8f734c`) via `.new` + sync + rename; verify the sha256 of the device copy; sync, unmount and power off with udisksctl. `launch.sh`, `touch.conf`, the NickelMenu entry and the licences are unchanged since 0.3.0 (same checksums). Settings from 0.4.0 are read as-is. 0.6 may create `notes/.scratchpad.md` (Scratch) and new empty notes when a missing `[[link]]` is tapped.
-
-Rollback: copy the 0.4.0 binary back (sha256 `689b84c4e763119cbdfa19eb07ade52d5709cdf034bf971fc2e5116e97c02043`, also in the pre-v0.6.0 backup). `.scratchpad.md` is hidden and ignored by 0.4.0; notes created from links are ordinary `.md` files and stay.
+Rollback: copy the 0.4.0 binary back (sha256 `689b84c4e763119cbdfa19eb07ade52d5709cdf034bf971fc2e5116e97c02043`, also in the pre-v0.7.0 backup). `.scratchpad.md` is hidden and ignored by 0.4.0; notes created from links are ordinary `.md` files and stay.
 
 On-device checklist — v0.5 (drawer, never tested on the device):
-- The Contents, To-dos and Scratch icons open/close their panes in any combination; panes share the height; Options → Drawer Left/Right moves the drawer; no drawer in preview.
+- The Contents, To-dos and Scratch icons open/close their panes in any combination; panes share the height; Options → Drawer Left/Right moves the drawer; no drawer in preview; long lists end in "N more…".
 - Contents lists the headings; tapping one jumps the caret there.
 - To-dos lists boxes from all notes; filter All/Open/Done; checking a box in another note changes only that line; tapping the text opens that note at the line.
 - Scratch: type into it, switch notes, leave and relaunch from NickelMenu — the text is still there; it is not in Files.
 - Landscape and Night with the drawer open; no ghosting after closing panes.
 
-On-device checklist — v0.6 (find & wiki):
-- Title bar icons in order Files, Preview, Find, Scratch, To-dos, Contents, Graph, Options; all reachable with a finger.
-- Find: the magnifier opens the bar under the title bar (one full refresh); typing goes into the Find field, the count reads `i of n`, Prev/Next select and scroll to the match; Aa changes the count for mixed-case text; Replace changes one; **Replace All across 50 matches** (open a note with 50 copies of a word) and one Undo (Ctrl+Z) brings them back; a one-line selection seeds the query; Esc / X closes; from preview it switches to write.
-- Wiki links in preview: a known `[[note]]` (solid underline) opens it; **tapping a missing `[[note]]` (dashed) creates it** and opens it in write mode; it shows in Files.
-- **Backlinks** at the end of the preview list the right notes (field-notes ← chapter-01 and the reverse with the seed library); each opens.
-- Graph: one row per note with → / ← links, the current note marked, page-turn scrolls, tap opens; the scratch pad is not listed.
-- No regressions (typing, selection, Files, preview paging, Options, landscape); the log shows exit 0 and no refresh failures.
+On-device checklist — v0.6 (find & wiki, never tested on the device):
+- Find: the magnifier (or Ctrl+F) opens the bar; count `i of n`; Prev/Next; Aa; Replace; **Replace All across 50 matches** and one Undo brings them back; a one-line selection seeds the query; Esc / X closes; from preview it switches to write.
+- Wiki links in preview: a known `[[note]]` opens it in preview; **a missing `[[note]]` (dashed) is created next to the linking note** and opens in write mode; it shows in Files.
+- Backlinks at the end of the preview list the right notes; each opens.
+- Graph: a list, one row per note with → / ← links; page-turn scrolls; tap opens; the scratch pad is not listed.
+
+On-device checklist — v0.7 (help & hardening):
+- Help (`?`, leftmost title-bar icon, in write and preview): menu → App info (version 0.7.0, licence, notes path, buttons, USB hint, credits) and Markdown reference (pages turn with the page buttons, `page i of n`); "← Back to Help" and Esc go back; X closes.
+- **Pull power (hold power / force off) during a save ×10** (type, then cut power right after the status shows "saving") → after each restart the note opens and is a complete old or new version; no `.tmp` debris shown in Files.
+- All controls hittable with a finger: title bar, drawer rows and Filter, Find bar, Files rows and More, Graph, Options, Help — portrait and landscape.
+- Both orientations: switch to Landscape and back with Help, Files, Options and the drawer; text and caret survive; no ghosting.
+- Typing feel: after a few minutes of typing, exit and read the log — the last `perf:` line shows key events with **p95 < 150 ms** (report the numbers; see `docs/perf.md`).
+- No regressions (typing, selection, Files, preview, Options, landscape, Night); the log shows exit 0 and no refresh failures.

@@ -18,6 +18,8 @@
 //!   v0.6: tap-on Find|Graph (icons) | tap-on FindField|ReplaceField|Prev|Next|
 //!   Replace|All|Aa|FindClose | tap-on Link:LABEL (preview) | tap-on
 //!   Graph:PATH | expect-find LABEL | expect-mode write|preview|find|graph
+//!   v0.7: tap-on Help | tap-on App info|Markdown reference|Back|Close (Help)
+//!   | perf-type N (time N key taps) | expect-help TITLE | expect-mode help | expect-page N (Help pages too)
 //! The background to-do index is settled after every step (deterministic).
 //! Coordinates are screen coordinates (landscape is 1920×1440); shots are
 //! written the way the reader sees them, turned upright.
@@ -295,6 +297,31 @@ fn main() -> ExitCode {
                     }
                 }
             }
+            "perf-type" => {
+                // Times each on-screen key tap (handle + render + present)
+                // and prints p50 / p95 / max; `perf-type N` types N letters.
+                let n: usize = arg.parse().unwrap_or(200);
+                let mut perf = sigma_scribe::Perf::default();
+                for i in 0..n {
+                    let label = if i % 6 == 5 {
+                        "Space".to_owned()
+                    } else {
+                        ((b'a' + (i % 26) as u8) as char).to_string()
+                    };
+                    let Some((x, y)) = app.key_centre(&label) else {
+                        return fail(format!("no key {label}"));
+                    };
+                    let t0 = std::time::Instant::now();
+                    step(&mut app, &mut dev, Event::Tap { x, y });
+                    perf.samples
+                        .push(t0.elapsed().as_micros().min(u128::from(u32::MAX)) as u32);
+                }
+                if let Some((n, p50, p95, max)) = perf.summary() {
+                    println!(
+                        "perf: {n} keystrokes, keystroke-to-refresh p50 {p50:.1} ms, p95 {p95:.1} ms, max {max:.1} ms"
+                    );
+                }
+            }
             "hw" => events.extend(arg.chars().map(|c| Event::Key(HwKey::Char(c)))),
             "page" => events.push(Event::PageTurn {
                 forward: arg != "back",
@@ -353,7 +380,9 @@ fn main() -> ExitCode {
                 }
             }
             "expect-mode" => {
-                let mode = if app.graph.is_some() {
+                let mode = if app.help.is_some() {
+                    "help"
+                } else if app.graph.is_some() {
                     "graph"
                 } else if app.find.is_some() && app.preview.is_none() {
                     "find"
@@ -366,8 +395,18 @@ fn main() -> ExitCode {
                     return fail(format!("mode is {mode}"));
                 }
             }
+            "expect-help" => {
+                let got = app.help.as_ref().map(|h| h.page.title());
+                if got != Some(arg) {
+                    return fail(format!("help shows {got:?}"));
+                }
+            }
             "expect-page" => {
-                let page = app.preview.as_ref().map(|p| p.page + 1);
+                let page = app
+                    .help
+                    .as_ref()
+                    .map(|h| h.at + 1)
+                    .or(app.preview.as_ref().map(|p| p.page + 1));
                 if page.map(|p| p.to_string()).as_deref() != Some(arg) {
                     return fail(format!("preview page is {page:?}"));
                 }
