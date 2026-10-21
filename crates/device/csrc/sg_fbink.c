@@ -35,11 +35,13 @@ int sg_blit(const unsigned char* data, int w, int h, int x, int y)
 	return r;
 }
 
-/* mode 0 = fast (typing), 1 = partial auto, 2 = full flashing GC16. */
+/* mode 0 = fast (typing), 1 = partial GC16_FAST, 2 = full flashing GC16,
+ * 3 = moving pointer (DU, v1.0.3), 4 = pointer cleanup (GL16, v1.0.3).
+ * Never waits for completion; sg_wait is not used on the input loop. */
 int sg_refresh(uint32_t x, uint32_t y, uint32_t w, uint32_t h, int mode)
 {
 	g_cfg.is_flashing = (mode == 2);
-	g_cfg.wfm_mode    = mode == 0 ? WFM_AUTO : (mode == 1 ? WFM_GC16_FAST : (mode == 3 ? WFM_GL16 : WFM_GC16));
+	g_cfg.wfm_mode    = mode == 0 ? WFM_AUTO : (mode == 1 ? WFM_GC16_FAST : (mode == 3 ? WFM_DU : (mode == 4 ? WFM_GL16 : WFM_GC16)));
 	int r             = fbink_refresh(g_fd, y, x, w, h, &g_cfg);
 	g_cfg.is_flashing = false;
 	return r;

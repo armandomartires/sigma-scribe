@@ -117,7 +117,7 @@ fn min16(r: Rect, b: Rect) -> Rect {
 fn rank(r: Refresh) -> u8 {
     match r {
         Refresh::Fast => 0,
-        Refresh::Pointer => 1,
+        Refresh::Pointer | Refresh::PointerCleanup => 1,
         Refresh::Partial => 2,
         Refresh::Full => 3,
     }
@@ -187,16 +187,29 @@ pub struct HelpState {
 #[derive(Clone, Debug, Default)]
 pub struct Perf {
     pub samples: Vec<u32>,
+    /// Pointer moves: event to the end of the (never waited) submit, µs
+    /// (v1.0.3).
+    pub pointer: Vec<u32>,
 }
 
 impl Perf {
     /// (count, p50, p95, max) in milliseconds.
     #[must_use]
     pub fn summary(&self) -> Option<(usize, f64, f64, f64)> {
-        if self.samples.is_empty() {
+        Self::stats(&self.samples)
+    }
+
+    /// (count, p50, p95, max) of the pointer samples, in milliseconds.
+    #[must_use]
+    pub fn pointer_summary(&self) -> Option<(usize, f64, f64, f64)> {
+        Self::stats(&self.pointer)
+    }
+
+    fn stats(samples: &[u32]) -> Option<(usize, f64, f64, f64)> {
+        if samples.is_empty() {
             return None;
         }
-        let mut v = self.samples.clone();
+        let mut v = samples.to_vec();
         v.sort_unstable();
         let at = |q: f64| f64::from(v[((v.len() - 1) as f64 * q).round() as usize]) / 1000.0;
         Some((v.len(), at(0.5), at(0.95), at(1.0)))
@@ -416,10 +429,68 @@ impl App {
             .sync(&mut self.store, SCRATCH, self.scratch.text(), rev);
     }
 
-    /// The drawer is drawn and takes taps (write mode, no sheet).
+    /// The drawer is drawn and takes taps: write mode or preview, never
+    /// over a sheet (v1.0.3, S10.3-D1; write mode only before).
     #[must_use]
     pub fn drawer_visible(&self) -> bool {
-        self.drawer.iter().any(|&o| o) && self.in_editor()
+        self.drawer.iter().any(|&o| o) && self.drawer_allowed()
+    }
+
+    /// Write mode or preview, with no sheet (Files, Options, Graph, Help,
+    /// rename) open.
+    #[must_use]
+    pub fn drawer_allowed(&self) -> bool {
+        self.files.is_none()
+            && self.rename.is_none()
+            && !self.options
+            && self.graph.is_none()
+            && self.help.is_none()
+    }
+
+    /// The layout the drawer sits on: preview has no on-screen keyboard.
+    fn drawer_base(&self) -> sigma_render::editor::Layout {
+        if self.preview.is_some() {
+            self.screen.layout(false, &self.keyboard)
+        } else {
+            self.screen.layout(self.keys_visible(), &self.keyboard)
+        }
+    }
+
+    /// Headings for Contents: in preview, the rendered headings only.
+    fn drawer_headings(&self) -> Vec<Heading> {
+        let hs = self.headings();
+        match &self.preview {
+            Some(p) => {
+                let shown = p.doc.heading_lines();
+                hs.into_iter().filter(|h| shown.contains(&h.line)).collect()
+            }
+            None => hs,
+        }
+    }
+
+    /// Where the preview page goes when the drawer is open (v1.0.3).
+    fn sync_preview_drawer(&mut self, preview: bool) {
+        self.screen.preview_drawer =
+            (preview && self.drawer.iter().any(|&o| o) && self.drawer_allowed()).then(|| {
+                let base = self.screen.layout(false, &self.keyboard);
+                self.screen.drawer_rect(&base, self.settings.drawer)
+            });
+    }
+
+    /// Lays the preview out again (drawer opened/closed, to-do toggled),
+    /// keeping the shown source line on screen.
+    fn rebuild_preview(&mut self) {
+        let Some(p) = &self.preview else { return };
+        let src = p
+            .doc
+            .pages
+            .get(p.page)
+            .and_then(|r| p.doc.lines[r.clone()].iter().find(|l| !l.spacer))
+            .map_or(0, |l| l.src);
+        self.sync_preview_drawer(true);
+        let doc = self.preview_doc();
+        let page = doc.page_of_line(src);
+        self.preview = Some(PreviewState { doc, page });
     }
 
     fn scratch_focused(&self) -> bool {
@@ -481,8 +552,8 @@ impl App {
         if !self.drawer_visible() {
             return DrawerHit::Outside;
         }
-        let (hs, todos) = (self.headings(), self.todo_list());
-        let base = self.screen.layout(self.keys_visible(), &self.keyboard);
+        let (hs, todos) = (self.drawer_headings(), self.todo_list());
+        let base = self.drawer_base();
         self.screen
             .drawer_hit(&base, &self.drawer_model(&hs, &todos), x, y)
     }
@@ -577,6 +648,19 @@ impl App {
         self.sel_ui = None;
         let page = self.page_rect();
         match hit {
+            DrawerHit::Heading(line) if self.preview.is_some() => {
+                self.push_history();
+                self.scratch_focus = false;
+                let p = self.preview.as_mut()?;
+                p.page = p.doc.page_of_line(line);
+                Some(Refresh::Partial)
+            }
+            DrawerHit::TodoBox(i) if self.preview.is_some() => {
+                let it = self.todo_list().get(i)?.clone();
+                let r = self.toggle_todo(&it);
+                self.rebuild_preview();
+                r
+            }
             DrawerHit::Heading(line) => {
                 self.push_history();
                 self.scratch_focus = false;
@@ -604,6 +688,19 @@ impl App {
                 self.push_history();
                 if full {
                     self.open(&it.note);
+                }
+                if self.preview.is_some() {
+                    self.scratch_focus = false;
+                    if full {
+                        self.enter_preview();
+                    }
+                    let p = self.preview.as_mut()?;
+                    p.page = p.doc.page_of_line(it.todo.line);
+                    return Some(if full {
+                        Refresh::Full
+                    } else {
+                        Refresh::Partial
+                    });
                 }
                 self.scratch_focus = false;
                 let page = self.page_rect();
@@ -1102,6 +1199,15 @@ impl App {
         self.save();
         self.sel_ui = None;
         self.drag = None;
+        self.sync_preview_drawer(true);
+        let doc = self.preview_doc();
+        let page = self.page_rect();
+        let top = self.screen.top_source_line(&self.buffer, page);
+        let page = doc.page_of_line(top);
+        self.preview = Some(PreviewState { doc, page });
+    }
+
+    fn preview_doc(&self) -> sigma_render::preview::Doc {
         let names = self.note_names();
         let known = |n: &str| names.contains(&n.trim().to_lowercase());
         let back: Vec<(String, String)> = self
@@ -1110,13 +1216,8 @@ impl App {
             .iter()
             .map(|p| (stem(p.as_str()).to_owned(), p.as_str().to_owned()))
             .collect();
-        let doc =
-            self.screen
-                .build_preview_with(self.buffer.text(), &self.keyboard, &known, Some(&back));
-        let page = self.page_rect();
-        let top = self.screen.top_source_line(&self.buffer, page);
-        let page = doc.page_of_line(top);
-        self.preview = Some(PreviewState { doc, page });
+        self.screen
+            .build_preview_with(self.buffer.text(), &self.keyboard, &known, Some(&back))
     }
 
     /// Back to write mode; caret, selection and scroll are as they were.
@@ -1124,12 +1225,20 @@ impl App {
         self.preview = None;
     }
 
-    /// Preview input: pencil, Files, page turns, Escape. Everything else is
-    /// ignored (read-only, decision S3-D1).
+    /// Preview input: pencil, Files, page turns, Escape, and (v1.0.3) the
+    /// drawer: Contents jumps, to-do toggles, scratch typing. The note
+    /// itself stays read-only (decision S3-D1; to-dos are the S10.3-D1
+    /// exception).
     fn preview_event(&mut self, e: Event) -> Option<Refresh> {
         match e {
+            Event::Tap { x, y } if self.in_drawer(x, y) => self.drawer_tap(x, y),
             Event::Tap { x, y } => match self.screen.preview_hit(&self.keyboard, x, y) {
                 Hit::Back => self.go_back(),
+                Hit::Drawer(p) => {
+                    let r = self.toggle_pane(p);
+                    self.rebuild_preview();
+                    Some(r)
+                }
                 Hit::TogglePreview => {
                     self.exit_preview();
                     Some(Refresh::Full)
@@ -1179,6 +1288,8 @@ impl App {
                     Refresh::Partial
                 })
             }
+            // The scratch pad stays editable in preview; the note does not.
+            Event::Key(k) if self.scratch_focused() => self.scratch_hw(k),
             Event::Key(HwKey::Escape) => {
                 if !self.history.is_empty() {
                     return self.go_back();
@@ -1299,7 +1410,17 @@ impl App {
                 keyboard: &self.keyboard,
                 theme: self.theme(),
             };
-            self.screen.draw_preview(&mut c, &m);
+            self.screen.drawer_open = if self.drawer_visible() {
+                self.drawer
+            } else {
+                [false; 3]
+            };
+            let l = self.screen.draw_preview(&mut c, &m);
+            if self.drawer_visible() {
+                let (hs, todos) = (self.drawer_headings(), self.todo_list());
+                self.screen
+                    .draw_drawer(&mut c, &l, &self.drawer_model(&hs, &todos));
+            }
         } else if self.files.is_some() {
             let rows = self.rows();
             if let Some(m) = self.files_model(&rows) {
@@ -1386,12 +1507,12 @@ impl App {
         for r in &regions {
             self.present(dev, *r, refresh)?;
         }
-        // When the arrow hides: one non-flashing GC16 partial over its path
-        // since the last cleanup, clearing any residue (v1.0.1).
+        // When the arrow hides: one non-flashing GL16 pass over its path
+        // since the last cleanup, clearing the DU trails (v1.0.3, S10.3-D2).
         if std::mem::take(&mut self.pointer.cleanup) {
             if let Some(t) = self.pointer.trail.take() {
                 if refresh != Refresh::Full {
-                    self.present(dev, min16(t, self.canvas.bounds()), Refresh::Partial)?;
+                    self.present(dev, min16(t, self.canvas.bounds()), Refresh::PointerCleanup)?;
                 }
             }
         }
@@ -2121,9 +2242,11 @@ impl App {
             let typing = self.is_key_tap(&e);
             if let Some(r) = self.handle(e) {
                 self.render(dev, r)?;
+                let us = t0.elapsed().as_micros().min(u128::from(u32::MAX)) as u32;
                 if typing {
-                    let us = t0.elapsed().as_micros().min(u128::from(u32::MAX)) as u32;
                     self.perf.samples.push(us);
+                } else if r == Refresh::Pointer {
+                    self.perf.pointer.push(us);
                 }
             }
         }
@@ -2135,6 +2258,11 @@ impl App {
         if let Some((n, p50, p95, max)) = self.perf.summary() {
             eprintln!(
                 "perf: {n} keystrokes, keystroke-to-refresh p50 {p50:.1} ms, p95 {p95:.1} ms, max {max:.1} ms"
+            );
+        }
+        if let Some((n, p50, p95, max)) = self.perf.pointer_summary() {
+            eprintln!(
+                "perf pointer: {n} du updates, move-to-submit p50 {p50:.1} ms, p95 {p95:.1} ms, max {max:.1} ms"
             );
         }
         Ok(())
@@ -2371,8 +2499,8 @@ impl App {
         if !self.drawer_visible() {
             return None;
         }
-        let (hs, todos) = (self.headings(), self.todo_list());
-        let base = self.screen.layout(self.keys_visible(), &self.keyboard);
+        let (hs, todos) = (self.drawer_headings(), self.todo_list());
+        let base = self.drawer_base();
         let l = self
             .screen
             .drawer_layout(&base, &self.drawer_model(&hs, &todos));

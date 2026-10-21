@@ -182,6 +182,9 @@ pub struct EditorScreen {
     /// The Find bar is open: it sits under the title bar and the page
     /// starts below it; the magnifier draws active.
     pub find_open: bool,
+    /// The drawer rectangle while it is open in preview (v1.0.3): the
+    /// preview page is laid out in the space beside it.
+    pub preview_drawer: Option<Rect>,
 }
 
 /// Real-face measurement for Line mode.
@@ -215,6 +218,7 @@ impl EditorScreen {
             back_on: false,
             drawer_open: [false; 3],
             find_open: false,
+            preview_drawer: None,
         }
     }
 
@@ -1417,7 +1421,20 @@ impl EditorScreen {
     /// The text column of the preview page (the keyboard is hidden).
     #[must_use]
     pub fn preview_area(&self, keyboard: &Keyboard) -> Rect {
-        self.text_area(self.layout(false, keyboard).page)
+        let page = self.layout(false, keyboard).page;
+        let a = self.text_area(page);
+        let Some(d) = self.preview_drawer else {
+            return a;
+        };
+        // Beside the drawer, with the page margin on the drawer side too.
+        let m = self.px(self.margin_px);
+        if d.x <= page.x {
+            let x = a.x.max(d.x + d.w + m);
+            Rect::new(x, a.y, (a.x + a.w - x).max(1), a.h)
+        } else {
+            let r = (a.x + a.w).min(d.x - m);
+            Rect::new(a.x, a.y, (r - a.x).max(1), a.h)
+        }
     }
 
     /// Parses and lays out `text` for preview at the current type settings.
@@ -1530,7 +1547,7 @@ impl EditorScreen {
         x: i32,
         y: i32,
     ) -> Option<String> {
-        let area = self.text_area(self.layout(false, keyboard).page);
+        let area = self.preview_area(keyboard);
         let r = doc.pages.get(page)?.clone();
         preview::link_at(&self.fonts, area, &doc.lines, r, x, y, self.px(8.0))
     }
@@ -1545,7 +1562,7 @@ impl EditorScreen {
         page: usize,
         label: &str,
     ) -> Option<(i32, i32)> {
-        let area = self.text_area(self.layout(false, keyboard).page);
+        let area = self.preview_area(keyboard);
         let mut y = area.y;
         for l in &doc.lines[doc.pages.get(page)?.clone()] {
             for p in &l.pieces {
@@ -1577,6 +1594,13 @@ impl EditorScreen {
             Hit::Graph
         } else if l.help_button.inset(-self.px(4.0)).contains(x, y) {
             Hit::Help
+        } else if l.contents_button.inset(-self.px(4.0)).contains(x, y) {
+            // v1.0.3: the drawer panes open in preview too.
+            Hit::Drawer(crate::drawer::Pane::Contents)
+        } else if l.todos_button.inset(-self.px(4.0)).contains(x, y) {
+            Hit::Drawer(crate::drawer::Pane::Todos)
+        } else if l.scratch_button.inset(-self.px(4.0)).contains(x, y) {
+            Hit::Drawer(crate::drawer::Pane::Scratch)
         } else {
             Hit::Nothing
         }
@@ -1596,7 +1620,22 @@ impl EditorScreen {
         draw_graph_icon(c, l.graph_button, is, t.ink);
         // Help was tappable but not drawn in preview before S9.2.
         crate::help::draw_help_icon(self, c, l.help_button, t.ink);
-        let area = self.text_area(l.page);
+        // v1.0.3: the drawer pane buttons, active while open (as in write).
+        for (i, r) in [l.contents_button, l.todos_button, l.scratch_button]
+            .into_iter()
+            .enumerate()
+        {
+            if self.drawer_open[i] {
+                c.fill(r, t.wash);
+                c.stroke(r, 2, t.ink);
+            }
+            match i {
+                0 => crate::drawer::draw_contents_icon(c, r, is, t.ink),
+                1 => crate::drawer::draw_todos_icon(c, r, is, t.ink),
+                _ => crate::drawer::draw_scratch_icon(c, r, is, t.ink),
+            }
+        }
+        let area = self.preview_area(m.keyboard);
         let page = m.page.min(m.doc.pages.len().saturating_sub(1));
         if let Some(r) = m.doc.pages.get(page) {
             preview::draw_page(c, &self.fonts, area, &m.doc.lines, r.clone(), t, self.s);
