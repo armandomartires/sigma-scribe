@@ -276,6 +276,19 @@ impl Buffer {
         }
     }
 
+    /// Replaces the whole text as one undo step (Replace All) and puts the
+    /// caret at `caret`.
+    pub fn replace_text(&mut self, text: String, caret: usize) {
+        if text == self.text {
+            return;
+        }
+        self.record(Edit::Break);
+        self.text = text;
+        self.anchor = None;
+        self.caret = self.floor(caret.min(self.text.len()));
+        self.revision += 1;
+    }
+
     /// Types text at the caret, replacing any selection.
     pub fn insert(&mut self, s: &str) {
         if s.is_empty() && self.selection().is_none() {

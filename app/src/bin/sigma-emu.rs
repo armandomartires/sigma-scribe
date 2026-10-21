@@ -15,6 +15,9 @@
 //!   v0.5: tap-on Contents|To-dos|Scratch (icons) | tap-on Heading:TEXT |
 //!   tap-on Todo:TEXT | tap-on TodoBox:TEXT | tap-on Filter | tap-on ScratchPane
 //!   expect-scratch TEXT | expect-file-contains PATH|TEXT | expect-line N
+//!   v0.6: tap-on Find|Graph (icons) | tap-on FindField|ReplaceField|Prev|Next|
+//!   Replace|All|Aa|FindClose | tap-on Link:LABEL (preview) | tap-on
+//!   Graph:PATH | expect-find LABEL | expect-mode write|preview|find|graph
 //! The background to-do index is settled after every step (deterministic).
 //! Coordinates are screen coordinates (landscape is 1920×1440); shots are
 //! written the way the reader sees them, turned upright.
@@ -343,8 +346,18 @@ fn main() -> ExitCode {
                 step(&mut app, &mut dev, Event::Key(HwKey::Escape));
                 let _ = app.render(&mut dev, sigma_device::Refresh::Full);
             }
+            "expect-find" => {
+                let got = app.find.as_ref().map(|_| app.find_label());
+                if got.as_deref() != Some(arg) {
+                    return fail(format!("find bar shows {got:?}"));
+                }
+            }
             "expect-mode" => {
-                let mode = if app.preview.is_some() {
+                let mode = if app.graph.is_some() {
+                    "graph"
+                } else if app.find.is_some() && app.preview.is_none() {
+                    "find"
+                } else if app.preview.is_some() {
                     "preview"
                 } else {
                     "write"

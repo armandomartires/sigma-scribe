@@ -39,6 +39,8 @@ pub struct Piece {
     pub strike: bool,
     /// Inline code: wash behind the text.
     pub wash: bool,
+    /// `[[wiki]]` target: a tap opens (or creates) that note (v0.6).
+    pub target: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -98,7 +100,7 @@ pub struct Type {
     pub scale: Scale,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 struct Look {
     face: Face,
     size: f32,
@@ -106,6 +108,7 @@ struct Look {
     underline: Option<Underline>,
     strike: bool,
     wash: bool,
+    target: Option<String>,
 }
 
 struct Builder<'a> {
@@ -196,7 +199,7 @@ impl Builder<'_> {
                 if rest.is_empty() {
                     break;
                 }
-                put(&mut pieces, x, &cut, *look);
+                put(&mut pieces, x, &cut, look);
                 start(&mut pieces, &mut first, self);
                 x = indent;
                 xf = indent as f32;
@@ -205,7 +208,7 @@ impl Builder<'_> {
             if text.is_empty() {
                 continue;
             }
-            put(&mut pieces, x, &text, *look);
+            put(&mut pieces, x, &text, look);
             xf += self.fonts.width(look.face, look.size, &text);
             x = xf.ceil() as i32;
         }
@@ -223,7 +226,7 @@ fn trim_last(pieces: &mut [Piece]) {
     }
 }
 
-fn put(pieces: &mut Vec<Piece>, x: i32, text: &str, l: Look) {
+fn put(pieces: &mut Vec<Piece>, x: i32, text: &str, l: &Look) {
     if let Some(p) = pieces.last_mut() {
         if p.face == l.face
             && p.size == l.size
@@ -231,6 +234,7 @@ fn put(pieces: &mut Vec<Piece>, x: i32, text: &str, l: Look) {
             && p.underline == l.underline
             && p.strike == l.strike
             && p.wash == l.wash
+            && p.target == l.target
         {
             p.text.push_str(text);
             return;
@@ -245,6 +249,7 @@ fn put(pieces: &mut Vec<Piece>, x: i32, text: &str, l: Look) {
         underline: l.underline,
         strike: l.strike,
         wash: l.wash,
+        target: l.target.clone(),
     });
 }
 
@@ -269,13 +274,13 @@ fn tokens(
         for ch in text.chars() {
             let sp = ch.is_whitespace();
             if !sp && in_space {
-                out.push((std::mem::take(&mut cur), look));
+                out.push((std::mem::take(&mut cur), look.clone()));
             }
             in_space = sp;
             cur.push(if sp { ' ' } else { ch });
         }
         if !cur.is_empty() {
-            out.push((cur, look));
+            out.push((cur, look.clone()));
         }
     }
     out
@@ -315,6 +320,11 @@ fn look(r: &Run, size: f32, heading: bool, tone: Tone, known: &dyn Fn(&str) -> b
         underline,
         strike,
         wash: code,
+        target: if link == Some(LinkKind::Wiki) {
+            r.target.clone()
+        } else {
+            None
+        },
     }
 }
 
@@ -409,6 +419,7 @@ pub fn layout(
                                 underline: None,
                                 strike: false,
                                 wash: false,
+                                target: None,
                             },
                         )];
                         let start = b.lines.len();
@@ -461,6 +472,7 @@ pub fn layout(
                     underline: None,
                     strike: false,
                     wash: false,
+                    target: None,
                 };
                 let code_h = (size * ty.leading).round() as i32;
                 let code_base = ((code_h as f32 - size * 1.2) / 2.0).max(0.0) as i32
@@ -484,7 +496,7 @@ pub fn layout(
                     let t: Vec<(String, Look)> =
                         tokens(std::slice::from_ref(r), size, false, Tone::Ink, known)
                             .into_iter()
-                            .map(|(s, _)| (s, look))
+                            .map(|(s, _)| (s, look.clone()))
                             .collect();
                     // Leading spaces matter in code: keep them as an indent.
                     let lead = r.text.len() - r.text.trim_start().len();
@@ -562,6 +574,35 @@ fn is_heading(l: &Line) -> bool {
             && l.h != 0
             && p.x == 0
     }) && l.pieces.iter().all(|p| p.face == Face::LiterataSemi)
+}
+
+/// The `[[wiki]]` target under a point on the shown page (`area` is the
+/// text column it was drawn into). A little slop around each link.
+#[must_use]
+pub fn link_at(
+    fonts: &Fonts,
+    area: Rect,
+    lines: &[Line],
+    range: Range<usize>,
+    x: i32,
+    y: i32,
+    slop: i32,
+) -> Option<String> {
+    let mut top = area.y;
+    for l in &lines[range] {
+        if y >= top - slop && y < top + l.h + slop {
+            for p in &l.pieces {
+                let Some(t) = &p.target else { continue };
+                let x0 = area.x + p.x;
+                let w = fonts.width(p.face, p.size, &p.text).ceil() as i32;
+                if x >= x0 - slop && x < x0 + w + slop {
+                    return Some(t.clone());
+                }
+            }
+        }
+        top += l.h;
+    }
+    None
 }
 
 /// Draws `range` of `lines` into `area`.

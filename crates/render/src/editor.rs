@@ -80,6 +80,10 @@ pub enum Hit {
     StartRename,
     /// "Aa" in the title bar: the Options sheet (v0.4).
     Options,
+    /// Magnifying glass: the Find bar (v0.6).
+    Find,
+    /// Connected nodes: the Graph sheet (v0.6).
+    Graph,
     /// Contents / To-dos / Scratch icon: toggle that drawer pane (v0.5).
     Drawer(crate::drawer::Pane),
     /// Landscape keyboard bar: Split / Full / Centre, pad toggles (v0.4).
@@ -123,6 +127,12 @@ pub struct Layout {
     pub scratch_button: Rect,
     pub todos_button: Rect,
     pub contents_button: Rect,
+    /// Find (between the eye and Scratch) and Graph (between Contents and
+    /// Options), brief §3 order (v0.6).
+    pub find_button: Rect,
+    pub graph_button: Rect,
+    /// The Find bar under the title bar when open (zero height otherwise).
+    pub find_bar: Rect,
     /// The text column inside the page: the page itself, or the locked
     /// portrait-width column (Line on, landscape) with gutters beside it.
     pub column: Rect,
@@ -147,6 +157,9 @@ pub struct EditorScreen {
     pub cfg: Settings,
     /// Open drawer panes (Contents, To-dos, Scratch): their icons draw active.
     pub drawer_open: [bool; 3],
+    /// The Find bar is open: it sits under the title bar and the page
+    /// starts below it; the magnifier draws active.
+    pub find_open: bool,
 }
 
 /// Real-face measurement for Line mode.
@@ -177,6 +190,7 @@ impl EditorScreen {
             key_theme: None,
             cfg: Settings::default(),
             drawer_open: [false; 3],
+            find_open: false,
         }
     }
 
@@ -298,7 +312,9 @@ impl EditorScreen {
         let keyboard_rect = Rect::new(0, h - kb_h, w, kb_h);
         let status_h = self.px(44.0) + 2 * self.px(4.0);
         let status = Rect::new(0, keyboard_rect.y - status_h, w, status_h);
-        let page = Rect::new(0, title.h, w, status.y - title.h);
+        let fb_h = if self.find_open { self.find_bar_h() } else { 0 };
+        let find_bar = Rect::new(0, title.h, w, fb_h);
+        let page = Rect::new(0, title.h + fb_h, w, status.y - title.h - fb_h);
         let kb_w = self.px(64.0);
         let keys_button = Rect::new(
             w - self.px(12.0) - kb_w,
@@ -316,10 +332,12 @@ impl EditorScreen {
         let files_button = Rect::new(w - self.px(12.0) - btn, by, btn, btn);
         let preview_button = Rect::new(files_button.x - self.px(8.0) - btn, by, btn, btn);
         let left_of = |r: Rect| Rect::new(r.x - self.px(8.0) - btn, by, btn, btn);
-        let scratch_button = left_of(preview_button);
+        let find_button = left_of(preview_button);
+        let scratch_button = left_of(find_button);
         let todos_button = left_of(scratch_button);
         let contents_button = left_of(todos_button);
-        let options_button = left_of(contents_button);
+        let graph_button = left_of(contents_button);
+        let options_button = left_of(graph_button);
         let name_rect = Rect::new(
             0,
             0,
@@ -352,6 +370,9 @@ impl EditorScreen {
             scratch_button,
             todos_button,
             contents_button,
+            find_button,
+            graph_button,
+            find_bar,
             column,
             kb_buttons,
         }
@@ -767,6 +788,12 @@ impl EditorScreen {
         if l.options_button.inset(-self.px(4.0)).contains(x, y) {
             return Hit::Options;
         }
+        if l.find_button.inset(-self.px(4.0)).contains(x, y) {
+            return Hit::Find;
+        }
+        if l.graph_button.inset(-self.px(4.0)).contains(x, y) {
+            return Hit::Graph;
+        }
         for (r, p) in [
             (l.contents_button, crate::drawer::Pane::Contents),
             (l.todos_button, crate::drawer::Pane::Todos),
@@ -818,6 +845,12 @@ impl EditorScreen {
         if model.rename.is_none() {
             draw_eye_icon(c, l.preview_button, self.s, t.ink);
             self.draw_options_icon(c, l.options_button, t);
+            if self.find_open {
+                c.fill(l.find_button, t.wash);
+                c.stroke(l.find_button, 1, t.ink);
+            }
+            draw_find_icon(c, l.find_button, self.s, t.ink);
+            draw_graph_icon(c, l.graph_button, self.s, t.ink);
             for (i, r) in [l.contents_button, l.todos_button, l.scratch_button]
                 .into_iter()
                 .enumerate()
@@ -1319,19 +1352,80 @@ impl EditorScreen {
         keyboard: &Keyboard,
         known: &dyn Fn(&str) -> bool,
     ) -> Doc {
+        self.build_preview_with(text, keyboard, known, None)
+    }
+
+    /// As [`Self::build_preview`], with a Backlinks section at the end
+    /// (brief §4): `(label, target)` per note that links here.
+    #[must_use]
+    pub fn build_preview_with(
+        &self,
+        text: &str,
+        keyboard: &Keyboard,
+        known: &dyn Fn(&str) -> bool,
+        backlinks: Option<&[(String, String)]>,
+    ) -> Doc {
+        use sigma_core::markdown::{Block, BlockKind, LinkKind, Run, Style};
         let area = self.preview_area(keyboard);
         let ty = Type {
             body: self.body(),
             leading: self.leading,
             scale: self.s,
         };
-        let lines = preview::layout(
-            &sigma_core::markdown::parse(text),
-            &self.fonts,
-            area.w,
-            ty,
-            known,
-        );
+        let mut blocks = sigma_core::markdown::parse(text);
+        if let Some(bl) = backlinks {
+            // Past every source line, so it never moves the write position.
+            let line = text.lines().count() + 1;
+            let run = |text: &str, style: Style, target: Option<&str>| Run {
+                text: text.to_owned(),
+                style,
+                target: target.map(str::to_owned),
+            };
+            let block = |kind, runs| Block { kind, runs, line };
+            blocks.push(block(BlockKind::Rule, Vec::new()));
+            blocks.push(block(
+                BlockKind::Paragraph,
+                vec![run(
+                    "Backlinks",
+                    Style {
+                        strong: true,
+                        ..Style::default()
+                    },
+                    None,
+                )],
+            ));
+            if bl.is_empty() {
+                blocks.push(block(
+                    BlockKind::Paragraph,
+                    vec![run(
+                        "No other notes link here.",
+                        Style {
+                            em: true,
+                            ..Style::default()
+                        },
+                        None,
+                    )],
+                ));
+            }
+            for (label, target) in bl {
+                blocks.push(block(
+                    BlockKind::Item {
+                        depth: 0,
+                        marker: None,
+                        task: None,
+                    },
+                    vec![run(
+                        label,
+                        Style {
+                            link: Some(LinkKind::Wiki),
+                            ..Style::default()
+                        },
+                        Some(target),
+                    )],
+                ));
+            }
+        }
+        let lines = preview::layout(&blocks, &self.fonts, area.w, ty, known);
         Doc {
             pages: preview::paginate(&lines, area.h),
             lines,
@@ -1350,6 +1444,45 @@ impl EditorScreen {
             .count()
     }
 
+    /// The `[[wiki]]` target under a tap on the shown preview page.
+    #[must_use]
+    pub fn preview_link_at(
+        &self,
+        keyboard: &Keyboard,
+        doc: &Doc,
+        page: usize,
+        x: i32,
+        y: i32,
+    ) -> Option<String> {
+        let area = self.text_area(self.layout(false, keyboard).page);
+        let r = doc.pages.get(page)?.clone();
+        preview::link_at(&self.fonts, area, &doc.lines, r, x, y, self.px(8.0))
+    }
+
+    /// Screen point of the first link labelled `label` on the shown page
+    /// (emulator scripts).
+    #[must_use]
+    pub fn preview_link_point(
+        &self,
+        keyboard: &Keyboard,
+        doc: &Doc,
+        page: usize,
+        label: &str,
+    ) -> Option<(i32, i32)> {
+        let area = self.text_area(self.layout(false, keyboard).page);
+        let mut y = area.y;
+        for l in &doc.lines[doc.pages.get(page)?.clone()] {
+            for p in &l.pieces {
+                if p.target.is_some() && p.text.trim() == label {
+                    let w = self.fonts.width(p.face, p.size, &p.text) as i32;
+                    return Some((area.x + p.x + w / 2, y + l.h / 2));
+                }
+            }
+            y += l.h;
+        }
+        None
+    }
+
     /// Taps in preview: only the title-bar buttons do something in v0.3.
     #[must_use]
     pub fn preview_hit(&self, keyboard: &Keyboard, x: i32, y: i32) -> Hit {
@@ -1360,6 +1493,10 @@ impl EditorScreen {
             Hit::TogglePreview
         } else if l.options_button.inset(-self.px(4.0)).contains(x, y) {
             Hit::Options
+        } else if l.find_button.inset(-self.px(4.0)).contains(x, y) {
+            Hit::Find
+        } else if l.graph_button.inset(-self.px(4.0)).contains(x, y) {
+            Hit::Graph
         } else {
             Hit::Nothing
         }
@@ -1374,6 +1511,8 @@ impl EditorScreen {
         self.draw_title(c, &l, m.file_name, None, t, true);
         draw_pencil_icon(c, l.preview_button, self.s, t.ink);
         self.draw_options_icon(c, l.options_button, t);
+        draw_find_icon(c, l.find_button, self.s, t.ink);
+        draw_graph_icon(c, l.graph_button, self.s, t.ink);
         let area = self.text_area(l.page);
         let page = m.page.min(m.doc.pages.len().saturating_sub(1));
         if let Some(r) = m.doc.pages.get(page) {
@@ -1457,6 +1596,67 @@ pub fn draw_pencil_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
             ink,
             255,
         );
+    }
+}
+
+/// Magnifying glass: a ring and a handle to the lower right.
+pub fn draw_find_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
+    let (cx, cy) = (
+        target.x + target.w / 2 - s.px(3.0),
+        target.y + target.h / 2 - s.px(3.0),
+    );
+    let r = s.px(7.5) as f32;
+    let st = s.px(1.75).max(2) as f32;
+    let k = s.px(10.0);
+    for dy in -k..=k {
+        for dx in -k..=k {
+            let d = ((dx * dx + dy * dy) as f32).sqrt();
+            if (d - r).abs() <= st / 2.0 {
+                c.blend(cx + dx, cy + dy, ink, 255);
+            }
+        }
+    }
+    let st = st as i32;
+    let from = (r * 0.72) as i32 + 1;
+    for t in from..from + s.px(8.0) {
+        for a in 0..st + 1 {
+            for b in 0..st + 1 {
+                c.blend(cx + t + a - st / 2, cy + t + b - st / 2, ink, 255);
+            }
+        }
+    }
+}
+
+/// Graph: three dots joined by lines.
+pub fn draw_graph_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
+    let (cx, cy) = (target.x + target.w / 2, target.y + target.h / 2);
+    let pts = [
+        (cx - s.px(8.0), cy + s.px(6.0)),
+        (cx + s.px(8.0), cy + s.px(7.0)),
+        (cx + s.px(1.0), cy - s.px(8.0)),
+    ];
+    let st = s.px(1.5).max(2);
+    for (i, &(x0, y0)) in pts.iter().enumerate() {
+        let (x1, y1) = pts[(i + 1) % 3];
+        let n = (x1 - x0).abs().max((y1 - y0).abs()).max(1);
+        for k in 0..=n {
+            let x = x0 + (x1 - x0) * k / n;
+            let y = y0 + (y1 - y0) * k / n;
+            for a in 0..st {
+                c.blend(x + a - st / 2, y, ink, 255);
+                c.blend(x, y + a - st / 2, ink, 255);
+            }
+        }
+    }
+    let r = s.px(3.5);
+    for &(x, y) in &pts {
+        for dy in -r..=r {
+            for dx in -r..=r {
+                if dx * dx + dy * dy <= r * r {
+                    c.blend(x + dx, y + dy, ink, 255);
+                }
+            }
+        }
     }
 }
 

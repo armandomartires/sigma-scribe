@@ -102,6 +102,8 @@ pub enum KeyAction {
     /// Layout switched: re-layout and remember the choice.
     Relayout,
     Escape,
+    /// Ctrl+F: open the Find bar (v0.6).
+    Find,
     /// A Ctrl shortcut with no binding; nothing happened.
     Ignored,
 }
@@ -526,6 +528,7 @@ impl Keyboard {
                     KeyAction::Ignored
                 }
             }
+            'f' => KeyAction::Find,
             'y' => {
                 if buffer.redo() {
                     KeyAction::Edited

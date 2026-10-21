@@ -16,3 +16,9 @@ FBInk has **no emulator or preview window**. Its README notes it "works perfectl
 - `tap-on Contents|To-dos|Scratch` (title-bar icons), `tap-on Heading:TEXT`, `tap-on Todo:TEXT`, `tap-on TodoBox:TEXT`, `tap-on Filter`, `tap-on ScratchPane`.
 - `expect-scratch TEXT`, `expect-file-contains PATH|TEXT`, `expect-line N`.
 - The to-do indexer is settled after every step, so scripts are deterministic.
+
+## Emulator commands added in v0.6
+- `tap-on Find|Graph` (title-bar icons); Find bar: `tap-on FindField|ReplaceField|Prev|Next|Replace|All|Aa|FindClose`.
+- `tap-on Link:LABEL` (a wiki link or backlink on the shown preview page); `tap-on Graph:PATH` (a Graph row), `tap-on Close` on the Graph sheet.
+- `expect-find LABEL` (`Find`, `None`, `i of n`); `expect-mode` also knows `find` and `graph`.
+- Fixture `tests/emu/fixtures/lamps.md`: 50 matches of "lamp" and a missing link.

@@ -116,3 +116,25 @@ On-device checklist (`sprints/S5-side-drawer.md`):
 - Scratch: type into it, switch notes, leave and relaunch from NickelMenu — the text is still there; it is not in Files.
 - Landscape and Night with the drawer open; no ghosting after closing panes.
 - No regressions; the log shows exit 0 and no refresh failures.
+
+## Upgrade 0.4.0 → 0.6.0 (PENDING APPROVAL — not run)
+The device runs **0.4.0**. **0.5.0 was never installed or tested on the device** (the 0.4.0 → 0.5.0 section above stays pending and is superseded by this one if this one is approved). This upgrade goes straight from 0.4.0 to 0.6.0, so the on-device checklist below covers both the v0.5 and the v0.6 features.
+
+Same procedure as 0.4.0: confirm it is the same Forma (serial <FORMA-SERIAL>) and touch no other disk; read `.adds/sigma-scribe/sigma-scribe.log` read-only; make a checksum-verified backup into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v0.6.0` (`.adds/sigma-scribe` + `notes`); replace **only** `.adds/sigma-scribe/sigma-scribe` with `dist/sigma-scribe-0.6.0-kobo/.adds/sigma-scribe/sigma-scribe` (sha256 `a9c2922daceefbbeae9b870e11ceb12e04cf5e1bbd2030733f59d361cf8f734c`) via `.new` + sync + rename; verify the sha256 of the device copy; sync, unmount and power off with udisksctl. `launch.sh`, `touch.conf`, the NickelMenu entry and the licences are unchanged since 0.3.0 (same checksums). Settings from 0.4.0 are read as-is. 0.6 may create `notes/.scratchpad.md` (Scratch) and new empty notes when a missing `[[link]]` is tapped.
+
+Rollback: copy the 0.4.0 binary back (sha256 `689b84c4e763119cbdfa19eb07ade52d5709cdf034bf971fc2e5116e97c02043`, also in the pre-v0.6.0 backup). `.scratchpad.md` is hidden and ignored by 0.4.0; notes created from links are ordinary `.md` files and stay.
+
+On-device checklist — v0.5 (drawer, never tested on the device):
+- The Contents, To-dos and Scratch icons open/close their panes in any combination; panes share the height; Options → Drawer Left/Right moves the drawer; no drawer in preview.
+- Contents lists the headings; tapping one jumps the caret there.
+- To-dos lists boxes from all notes; filter All/Open/Done; checking a box in another note changes only that line; tapping the text opens that note at the line.
+- Scratch: type into it, switch notes, leave and relaunch from NickelMenu — the text is still there; it is not in Files.
+- Landscape and Night with the drawer open; no ghosting after closing panes.
+
+On-device checklist — v0.6 (find & wiki):
+- Title bar icons in order Files, Preview, Find, Scratch, To-dos, Contents, Graph, Options; all reachable with a finger.
+- Find: the magnifier opens the bar under the title bar (one full refresh); typing goes into the Find field, the count reads `i of n`, Prev/Next select and scroll to the match; Aa changes the count for mixed-case text; Replace changes one; **Replace All across 50 matches** (open a note with 50 copies of a word) and one Undo (Ctrl+Z) brings them back; a one-line selection seeds the query; Esc / X closes; from preview it switches to write.
+- Wiki links in preview: a known `[[note]]` (solid underline) opens it; **tapping a missing `[[note]]` (dashed) creates it** and opens it in write mode; it shows in Files.
+- **Backlinks** at the end of the preview list the right notes (field-notes ← chapter-01 and the reverse with the seed library); each opens.
+- Graph: one row per note with → / ← links, the current note marked, page-turn scrolls, tap opens; the scratch pad is not listed.
+- No regressions (typing, selection, Files, preview paging, Options, landscape); the log shows exit 0 and no refresh failures.
