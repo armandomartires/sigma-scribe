@@ -54,7 +54,7 @@ The Forma shows "Updating…" (installs NickelMenu) and restarts. **Leave it on 
 | 1 | After the update reboot, look at the home screen | Normal Kobo home; books intact | |
 | 2 | Open the main menu (☰, top left on 4.38) | New entry **Sigma Scribe** (NickelMenu) | |
 | 3 | Tap **Sigma Scribe** | Within ~5 s a full flash, then the page: title `field-notes.md`, seeded note, status `… words · line N   Paper · saved  [Keys]`, keyboard at the bottom | |
-| 4 | Display: compare with `docs/screenshots/v0.1-start.png` | Same layout, crisp Literata text, no rotated or mirrored image | |
+| 4 | Display: compare with `docs/screenshots/v0.1/v0.1-start.png` | Same layout, crisp Literata text, no rotated or mirrored image | |
 | 5 | Touch accuracy: tap `q`, `p`, `Shift`, `Return`, `Space`, and the middle of the page | Each key types what it shows; page tap moves the caret there. If taps land mirrored/rotated, note where, edit `.adds/sigma-scribe/touch.conf` (try `swap,mirror_y`, `swap`, `mirror_x`) and retest | |
 | 6 | Type a sentence quickly (~20 keys) | No missed or doubled keys; status returns to `saved` | |
 | 7 | Ghosting/refresh while typing | Only the edited line and status update; light ghosting acceptable; note latency feel (target < 150 ms) | |

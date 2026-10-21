@@ -14,17 +14,17 @@ Estimates are working days. Branch `feat/v0.2-library`. Desktop/emulator status 
 - **Deps:** S2-T01  **Estimate:** 1 d
 
 ### S2-T03 — Files sheet (render + app)
-- **Status:** ✅ DONE (`crates/render/src/files.rs`; screenshots `v0.2-files.png`, `v0.2-folder.png`)
+- **Status:** ✅ DONE (`crates/render/src/files.rs`; screenshots `docs/screenshots/v0.2/v0.2-files.png`, `docs/screenshots/v0.2/v0.2-folder.png`)
 - **Acceptance:** folder icon in the editor title bar opens a full-page sheet (full refresh); rows ≥ 76 brief px with name and `N words` / `Folder`; open note marked (bar + bold); tap folder enters, `← Up to …` crumb goes up; tap note opens it in the editor (current note saved first); page-turn keys page the list; X / Esc closes; all targets ≥ 44 brief px (render tests).
 - **Deps:** S2-T02  **Estimate:** 1 d
 
 ### S2-T04 — More → Rename / Move / Delete (armed)
-- **Status:** ✅ DONE (screenshots `v0.2-move.png`, `v0.2-delete-armed.png`, `v0.2-files-after.png`)
+- **Status:** ✅ DONE (screenshots `docs/screenshots/v0.2/v0.2-move.png`, `docs/screenshots/v0.2/v0.2-delete-armed.png`, `docs/screenshots/v0.2/v0.2-files-after.png`)
 - **Acceptance:** More reveals three actions under the row; Delete arms (`Tap again to delete`, inverted) and only a second Delete tap on the same row deletes — any other tap disarms; deleting the open note opens another note and the deleted file is not re-created on save/quit (app test); Move lists destination folders (not the current parent, not the folder itself/children) with Cancel; errors (e.g. last note) show as a message line.
 - **Deps:** S2-T03  **Estimate:** 1 d
 
 ### S2-T05 — Rename in place from the title bar (was S1-T11)
-- **Status:** ✅ DONE (screenshot `v0.2-rename-title.png`, app test)
+- **Status:** ✅ DONE (screenshot `docs/screenshots/v0.2/v0.2-rename-title.png`, app test)
 - **Acceptance:** tap the file name → field with caret, Cancel and OK; OSK and USB keyboard type into the field; Return/OK/blur confirm, Cancel/Esc discard; unsaved edits are saved before the rename; the open note follows the rename, including when its folder is renamed or moved.
 - **Deps:** S2-T02  **Estimate:** 0.5 d
 
