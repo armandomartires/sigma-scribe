@@ -672,6 +672,34 @@ fn main() -> ExitCode {
                     return fail(format!("screen is {got}"));
                 }
             }
+            "sensor" => {
+                // v1.2: pretend an accelerometer is (not) present.
+                dev.gsensor = arg == "on";
+                app.set_gsensor(dev.gsensor);
+            }
+            "tilt" => {
+                use sigma_device::gsensor::Tilt;
+                let tilt = match arg {
+                    "upright" => Tilt::Upright,
+                    "cw" => Tilt::Clockwise,
+                    "180" => Tilt::UpsideDown,
+                    "ccw" => Tilt::CounterClockwise,
+                    _ => return fail("tilt upright|cw|180|ccw".into()),
+                };
+                events.push(Event::Tilt { tilt, t: clock });
+            }
+            "expect-rotation" => {
+                let got = app.rotation().name();
+                if got != arg {
+                    return fail(format!("rotation is {got}"));
+                }
+            }
+            "expect-orientation-status" => {
+                let got = app.orientation_status();
+                if got != arg {
+                    return fail(format!("status is {got:?}"));
+                }
+            }
             "ui-scale" => {
                 // v1.1: step Options -> UI scale to a value (100..=200).
                 let Ok(want) = arg.trim_end_matches('%').parse::<u16>() else {
@@ -699,6 +727,7 @@ fn main() -> ExitCode {
                 // Power off and on: settings and the note must come back.
                 app.handle(Event::Power);
                 app = App::new(size.0, size.1, root.clone());
+                app.set_gsensor(dev.gsensor);
                 if let Err(e) = app.render(&mut dev, sigma_device::Refresh::Full) {
                     return fail(e.to_string());
                 }

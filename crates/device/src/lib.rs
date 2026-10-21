@@ -5,6 +5,7 @@ pub mod desktop;
 pub mod evdev;
 #[cfg(target_arch = "arm")]
 pub mod fbink;
+pub mod gsensor;
 pub mod otg;
 pub mod pointer;
 pub mod usbkbd;
@@ -139,6 +140,11 @@ pub enum Event {
     Tick {
         t: u64,
     },
+    /// The accelerometer reports a new hold (v1.2, Auto orientation).
+    Tilt {
+        tilt: gsensor::Tilt,
+        t: u64,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -162,6 +168,11 @@ pub trait Device {
     /// The port could not be switched (the app carries on without it).
     fn usb_host(&mut self, _on: bool) -> io::Result<()> {
         Ok(())
+    }
+    /// An accelerometer sends [`Event::Tilt`] (v1.2). Default: none, so
+    /// Auto orientation keeps the last rotation.
+    fn has_gsensor(&self) -> bool {
+        false
     }
 }
 

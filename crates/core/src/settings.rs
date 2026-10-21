@@ -40,9 +40,77 @@ pub enum Side {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Orientation {
+    /// Follow the accelerometer (v1.2 default); without a sensor the last
+    /// applied rotation stays.
     #[default]
+    Auto,
     Portrait,
     Landscape,
+}
+
+/// The rotation the screen is drawn in (v1.2), clockwise from the panel's
+/// portrait: 0 portrait, 90 landscape, 180 portrait inverted, 270
+/// landscape inverted.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Rotation {
+    #[default]
+    R0,
+    R90,
+    R180,
+    R270,
+}
+
+impl Rotation {
+    #[must_use]
+    pub fn is_landscape(self) -> bool {
+        matches!(self, Self::R90 | Self::R270)
+    }
+
+    #[must_use]
+    pub fn is_inverted(self) -> bool {
+        matches!(self, Self::R180 | Self::R270)
+    }
+
+    /// The manual rotation for an orientation choice (`None` for Auto).
+    #[must_use]
+    pub fn manual(o: Orientation, upside_down: bool) -> Option<Self> {
+        Some(match (o, upside_down) {
+            (Orientation::Auto, _) => return None,
+            (Orientation::Portrait, false) => Self::R0,
+            (Orientation::Landscape, false) => Self::R90,
+            (Orientation::Portrait, true) => Self::R180,
+            (Orientation::Landscape, true) => Self::R270,
+        })
+    }
+
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::R0 => "Portrait",
+            Self::R90 => "Landscape",
+            Self::R180 => "Portrait inverted",
+            Self::R270 => "Landscape inverted",
+        }
+    }
+
+    fn degrees(self) -> u16 {
+        match self {
+            Self::R0 => 0,
+            Self::R90 => 90,
+            Self::R180 => 180,
+            Self::R270 => 270,
+        }
+    }
+
+    fn from_degrees(d: &str) -> Option<Self> {
+        Some(match d {
+            "0" => Self::R0,
+            "90" => Self::R90,
+            "180" => Self::R180,
+            "270" => Self::R270,
+            _ => return None,
+        })
+    }
 }
 
 /// Landscape keyboard arrangement (brief §7).
@@ -91,7 +159,13 @@ pub struct Settings {
     /// Reverse scroll (v1.0.1): wheel / two-finger notches move content the
     /// other way ("natural", like a touch screen). Default off = 1.0.
     pub natural_scroll: bool,
+    /// Options → Orientation: Auto (default, v1.2), Portrait or Landscape.
     pub orientation: Orientation,
+    /// Options → Upside down (v1.2): turns a manual orientation 180°.
+    pub upside_down: bool,
+    /// The rotation in force: the manual choice, or the last one Auto
+    /// applied (kept when there is no sensor).
+    pub rotation: Rotation,
     pub land_keys: LandKeys,
     pub pad: Pad,
     pub pad_side: Side,
@@ -120,7 +194,9 @@ impl Default for Settings {
             drawer: Side::Right,
             usb: false,
             natural_scroll: false,
-            orientation: Orientation::Portrait,
+            orientation: Orientation::Auto,
+            upside_down: false,
+            rotation: Rotation::R0,
             land_keys: LandKeys::Centre,
             pad: Pad::Numbers,
             pad_side: Side::Right,
@@ -149,6 +225,9 @@ pub enum Change {
     Usb(bool),
     NaturalScroll(bool),
     Orientation(Orientation),
+    UpsideDown(bool),
+    /// Auto applied a sensor reading (v1.2).
+    Rotate(Rotation),
     LandKeys(LandKeys),
     Pad(Pad),
     PadSide(Side),
@@ -165,9 +244,12 @@ impl Change {
         match self {
             Self::Size(_) => Some(Some(true)),
             Self::Margin(_) => Some(Some(false)),
-            Self::LineOn(_) | Self::LineWords(_) | Self::Face(_) | Self::Orientation(_) => {
-                Some(None)
-            }
+            Self::LineOn(_)
+            | Self::LineWords(_)
+            | Self::Face(_)
+            | Self::Orientation(_)
+            | Self::UpsideDown(_)
+            | Self::Rotate(_) => Some(None),
             _ => None,
         }
     }
@@ -180,6 +262,8 @@ impl Change {
             self,
             Self::Paper(_)
                 | Self::Orientation(_)
+                | Self::UpsideDown(_)
+                | Self::Rotate(_)
                 | Self::Keyboard(_)
                 | Self::LandKeys(_)
                 | Self::Pad(_)
@@ -235,7 +319,19 @@ impl Settings {
             Change::Drawer(s) => self.drawer = s,
             Change::Usb(on) => self.usb = on,
             Change::NaturalScroll(on) => self.natural_scroll = on,
-            Change::Orientation(o) => self.orientation = o,
+            Change::Orientation(o) => {
+                self.orientation = o;
+                self.sync_rotation();
+            }
+            Change::UpsideDown(b) => {
+                self.upside_down = b;
+                self.sync_rotation();
+            }
+            Change::Rotate(r) => {
+                if self.orientation == Orientation::Auto {
+                    self.rotation = r;
+                }
+            }
             Change::LandKeys(k) => self.land_keys = k,
             Change::Pad(p) => self.pad = p,
             Change::PadSide(s) => self.pad_side = s,
@@ -267,6 +363,13 @@ impl Settings {
             KeyTone::Theme => self.paper == Paper::Night,
             KeyTone::Light => false,
             KeyTone::Dark => true,
+        }
+    }
+
+    /// A manual orientation sets the rotation; Auto keeps the last one.
+    fn sync_rotation(&mut self) {
+        if let Some(r) = Rotation::manual(self.orientation, self.upside_down) {
+            self.rotation = r;
         }
     }
 
@@ -348,11 +451,14 @@ impl Settings {
                 }
                 "orientation" => {
                     s.orientation = match v {
+                        "auto" => Orientation::Auto,
                         "portrait" => Orientation::Portrait,
                         "landscape" => Orientation::Landscape,
                         _ => s.orientation,
                     }
                 }
+                "upside_down" => s.upside_down = b().unwrap_or(s.upside_down),
+                "rotation" => s.rotation = Rotation::from_degrees(v).unwrap_or(s.rotation),
                 "landscape_keys" => {
                     s.land_keys = match v {
                         "centre" => LandKeys::Centre,
@@ -372,6 +478,15 @@ impl Settings {
                 _ => {}
             }
         }
+        // Files before v1.2 have no rotation= line and always wrote
+        // orientation=portrait as the default: those move to Auto (the v1.2
+        // default); a saved landscape stays manual (decision S12-D2).
+        if !text.lines().any(|l| l.starts_with("rotation="))
+            && s.orientation == Orientation::Portrait
+        {
+            s.orientation = Orientation::Auto;
+        }
+        s.sync_rotation();
         s
     }
 
@@ -386,7 +501,7 @@ impl Settings {
         format!(
             "keyboard={}\npaper={}\ntype={}\nline={}\nline_words={}\nsize={}\nleading={}\nmargin={}\n\
              tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\nusb={}\nscroll={}\norientation={}\n\
-             landscape_keys={}\npad={}\npad_side={}\nui_scale={}\n",
+             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\n",
             self.keyboard.name(),
             match self.paper {
                 Paper::Day => "day",
@@ -412,9 +527,12 @@ impl Settings {
             on(self.usb),
             if self.natural_scroll { "natural" } else { "traditional" },
             match self.orientation {
+                Orientation::Auto => "auto",
                 Orientation::Portrait => "portrait",
                 Orientation::Landscape => "landscape",
             },
+            on(self.upside_down),
+            self.rotation.degrees(),
             match self.land_keys {
                 LandKeys::Centre => "centre",
                 LandKeys::Split => "split",

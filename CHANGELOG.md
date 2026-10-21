@@ -2,6 +2,12 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.2.0 — 2026-10-22 (built, not installed, not tagged)
+- Orientation (sprint S12, decision 39): Options → Orientation **Auto** (default) / Portrait / Landscape and **Upside down** Off/On — four rotations. Touch, page buttons (swapped upside down) and partial refreshes follow the rotation. Auto turns the screen after a reading holds 0.6 s, with one full refresh, never while a finger is down or within 1 s of typing; the rotation is remembered. Settings from 1.1 and earlier move to Auto unless landscape was chosen.
+- The accelerometer is **off in this build** (safe default): the decoder is in place but waits for a device check, so Auto keeps the last rotation and Options says "Auto (no sensor) — Portrait".
+- Emulator: `tests/emu/v1.2-orientation.script` (steps `sensor`, `tilt`, `expect-rotation`, `expect-orientation-status`); screenshots `docs/screenshots/v1.2/`.
+- Device binary sha256 (CI build) `<pending>`; tarball `<pending>`.
+
 ## 1.1.0 — 2026-10-22 (built, not installed, not tagged)
 - UI scale (sprint S11, decision 38): Options → **UI scale** 100 / 125 / 150 / 175 / **200 %** (default 200 %, saved as `ui_scale=`). It scales the title bar, icons, sheets (Files, Options, Help, Graph), drawer, Find bar, status bar and keyboard together; the note text **Size**, margins, preview and selection handles keep the device scale. The keyboard takes at most 42 % of the height in portrait and 45 % in landscape. Touch targets stay ≥ 44 px at the device scale at every step.
 - Icons are now **Lucide** (ISC, decision 35): the SVGs are baked with resvg at build time into greyscale masks, one per UI-scale step (stroke 2.25 for e-ink), and drawn by one blit; Options keeps its 'Aa'. Credit in the README, Help → App info and `THIRD-PARTY.txt`.

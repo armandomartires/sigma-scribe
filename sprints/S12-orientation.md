@@ -1,6 +1,8 @@
-# S12 — v1.2: Orientation, four rotations + Auto (draft)
+# S12 — v1.2: Orientation, four rotations + Auto
 
-> **DRAFT — planning only (updated 2026-10-21 21:24 with the user's answers). No development until the user approves.**
+> **Status:** BUILT 2026-10-22 (v1.2.0, decision 39, not installed, not tagged). As built: Orientation Auto / Portrait / Landscape + Upside down Off/On (S12-D1, instead of a 5-value cycler); ≤ 1.1 settings move to Auto (S12-D2); g-sensor decoder and node finder in `crates/device/src/gsensor.rs` with `ENABLED = false` (S12-D3) — the read-only probe was not done (no device access). Tests `app/tests/orientation.rs`; script `tests/emu/v1.2-orientation.script` (pretend sensor); shots `docs/screenshots/v1.2/`.
+>
+> **Device check list:** (1) read-only probe: `/proc/bus/input/devices` has an MSC_RAW node; codes seen when turning the Forma; (2) map 0x19/0x1a to the right landscape; set `ENABLED = true` and wire the reader; (3) touch lands under the finger in all four rotations; (4) page buttons forward/back feel right upside down; (5) no turning mid-typing.
 
 **Options → Orientation:** **Auto (default, user decision)**, Portrait, Landscape, Portrait inverted, Landscape inverted (a cycler at UI scale 200 %).
 
