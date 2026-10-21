@@ -6,7 +6,7 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
 - UI scale (sprint S11, decision 38): Options → **UI scale** 100 / 125 / 150 / 175 / **200 %** (default 200 %, saved as `ui_scale=`). It scales the title bar, icons, sheets (Files, Options, Help, Graph), drawer, Find bar, status bar and keyboard together; the note text **Size**, margins, preview and selection handles keep the device scale. The keyboard takes at most 42 % of the height in portrait and 45 % in landscape. Touch targets stay ≥ 44 px at the device scale at every step.
 - Icons are now **Lucide** (ISC, decision 35): the SVGs are baked with resvg at build time into greyscale masks, one per UI-scale step (stroke 2.25 for e-ink), and drawn by one blit; Options keeps its 'Aa'. Credit in the README, Help → App info and `THIRD-PARTY.txt`.
 - Emulator: `tests/emu/v1.1-ui-scale.script`; screenshots `docs/screenshots/v1.1/`.
-- Device binary sha256 (CI build) `<pending>`; tarball `<pending>`.
+- Device binary sha256 (CI build) `917a0c11e9723256904a4bdbb00188d287b6873b9bafa39a56836ae31179213f`; tarball `94d8335156ccb47e92a67363f5349cc9bbe7894e982960ac6d1129a24c9b7750`.
 
 ## 1.0.4 — 2026-10-22 (built, not installed, not tagged)
 - Pointer regression fixed (sprint S10.4): pointer moves no longer redraw the whole screen (1.0.3 log: ~170 ms CPU per move, events queued behind it); a pointer-only frame restores and redraws just the arrow. Idle hiding uses processing time, so a backlog no longer makes the arrow flicker on and off. The Graph selection pill is GL16 again (1.0.3 sent it as DU).
