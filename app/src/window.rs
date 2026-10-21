@@ -5,7 +5,7 @@
 //! ghosting left behind by fast/partial refreshes.
 
 use minifb::{InputCallback, Key, KeyRepeat, MouseButton, MouseMode, Window, WindowOptions};
-use sigma_device::{Device, Event, HwKey, Phase, Refresh};
+use sigma_device::{Device, Event, HwKey, Mods, Phase, Refresh};
 use sigma_render::{Canvas, Rect};
 use std::cell::RefCell;
 use std::collections::VecDeque;
@@ -127,7 +127,41 @@ impl WindowDevice {
             }
         }
         self.was_down = down;
+        // Modifiers (v0.8): the same chords a USB keyboard sends.
+        let w = &self.window;
+        let mods = Mods {
+            ctrl: w.is_key_down(Key::LeftCtrl) || w.is_key_down(Key::RightCtrl),
+            shift: w.is_key_down(Key::LeftShift) || w.is_key_down(Key::RightShift),
+            alt: w.is_key_down(Key::LeftAlt) || w.is_key_down(Key::RightAlt),
+        };
+        let chorded = mods.ctrl || mods.alt;
         for k in self.window.get_keys_pressed(KeyRepeat::Yes) {
+            let letter = (k as u32).wrapping_sub(Key::A as u32);
+            if chorded && letter < 26 {
+                let c = char::from(b'a' + letter as u8);
+                self.pending.push_back(Event::Chord {
+                    key: HwKey::Char(c),
+                    mods,
+                });
+                continue;
+            }
+            let nav = match k {
+                Key::Left => Some(HwKey::Left),
+                Key::Right => Some(HwKey::Right),
+                Key::Up => Some(HwKey::Up),
+                Key::Down => Some(HwKey::Down),
+                Key::Home => Some(HwKey::Home),
+                Key::End => Some(HwKey::End),
+                _ => None,
+            };
+            if let Some(key) = nav {
+                self.pending.push_back(if mods == Mods::default() {
+                    Event::Key(key)
+                } else {
+                    Event::Chord { key, mods }
+                });
+                continue;
+            }
             let e = match k {
                 Key::PageDown => Event::PageTurn { forward: true },
                 Key::PageUp => Event::PageTurn { forward: false },
@@ -145,6 +179,9 @@ impl WindowDevice {
             self.pending.push_back(e);
         }
         while let Some(c) = self.chars.borrow_mut().pop_front() {
+            if chorded || c.is_control() {
+                continue;
+            }
             self.pending.push_back(Event::Key(HwKey::Char(c)));
         }
     }

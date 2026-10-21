@@ -15,7 +15,7 @@ use sigma_core::{
     Autosave, Buffer, Change, Entry, FsNoteStore, KeyAction, Keyboard, Kind, Library, NotePath,
     NoteStore, Settings,
 };
-use sigma_device::{Device, Event, HwKey, Phase, Refresh};
+use sigma_device::{Device, Event, HwKey, Mods, Phase, Refresh};
 use sigma_render::editor::Model;
 use sigma_render::{
     BarAction, Canvas, Doc, DrawerHit, DrawerModel, EditorScreen, FilesHit, FilesModel, FindField,
@@ -187,6 +187,10 @@ pub struct App {
     /// The open note could not be read: autosave is held back so a blank
     /// buffer never overwrites it (v0.7 hardening).
     pub read_only: bool,
+    /// A USB keyboard is connected (v0.8, from the device's hot-plug watcher).
+    pub usb_live: bool,
+    /// The USB host-mode state last asked of the device (v0.8).
+    pub usb_host: bool,
     pub perf: Perf,
     pub running: bool,
 }
@@ -251,6 +255,8 @@ impl App {
             graph: None,
             help: None,
             read_only: unreadable,
+            usb_live: false,
+            usb_host: false,
             perf: Perf::default(),
             running: true,
         }
@@ -568,6 +574,7 @@ impl App {
             HwKey::Right => b.right(),
             HwKey::Up => b.up(),
             HwKey::Down => b.down(),
+            HwKey::Home | HwKey::End | HwKey::PageUp | HwKey::PageDown => return None,
             HwKey::Escape => {
                 self.scratch_focus = false;
                 return Some(Refresh::Fast);
@@ -682,6 +689,54 @@ impl App {
         // Width and height swap, so the >= 16 px minimum still holds.
         let pr = Rect::new(lh - y1, x0, y1 - y0, x1 - x0);
         dev.present(&self.phys_canvas, pr, refresh)
+    }
+
+    /// A physical key with modifiers (USB keyboard, v0.8). Routed through
+    /// the on-screen keyboard's own key and shortcut code (S2.5) with the
+    /// chord's modifiers, so Ctrl+Z/Y/A/C/X/V/F and Shift/Ctrl+arrows behave
+    /// exactly like their on-screen versions. The on-screen modifier state is
+    /// restored afterwards. Sheets ignore chords; Ctrl+F in preview opens Find.
+    fn chord(&mut self, key: HwKey, mods: Mods) -> Option<Refresh> {
+        let ctrl_f = mods.ctrl && key == HwKey::Char('f');
+        if self.options || self.help.is_some() || self.graph.is_some() || self.files.is_some() {
+            return None;
+        }
+        if self.preview.is_some() {
+            return if ctrl_f { Some(self.open_find()) } else { None };
+        }
+        let k = match key {
+            HwKey::Char(c) => Key::Char(c.to_ascii_lowercase()),
+            HwKey::Backspace => Key::Back,
+            HwKey::Delete => Key::Del,
+            HwKey::Return => Key::Return,
+            HwKey::Tab => Key::Tab,
+            HwKey::Left => Key::Arrow(Dir::Left),
+            HwKey::Right => Key::Arrow(Dir::Right),
+            HwKey::Up => Key::Arrow(Dir::Up),
+            HwKey::Down => Key::Arrow(Dir::Down),
+            HwKey::Escape => Key::Esc,
+            HwKey::Home => Key::Home,
+            HwKey::End => Key::End,
+            HwKey::PageUp => Key::PgUp,
+            HwKey::PageDown => Key::PgDn,
+        };
+        let kb = &mut self.keyboard;
+        let saved = (kb.shift, kb.ctrl, kb.alt);
+        (kb.shift, kb.ctrl, kb.alt) = (mods.shift, mods.ctrl, mods.alt);
+        let r = if self.rename.is_some() {
+            self.type_into_field(k)
+        } else if self.find_typing() && !ctrl_f {
+            self.find_key(k)
+        } else if self.scratch_focused() {
+            self.scratch_key(k)
+        } else {
+            let tab = self.settings.tab_kind();
+            let a = self.keyboard.press(k, &mut self.buffer, tab);
+            self.after_key(a)
+        };
+        let kb = &mut self.keyboard;
+        (kb.shift, kb.ctrl, kb.alt) = saved;
+        r
     }
 
     fn after_key(&mut self, action: KeyAction) -> Option<Refresh> {
@@ -1138,7 +1193,13 @@ impl App {
                 self.finish_rename(false);
                 return Some(Refresh::Full);
             }
-            HwKey::Tab | HwKey::Up | HwKey::Down => {}
+            HwKey::Tab
+            | HwKey::Up
+            | HwKey::Down
+            | HwKey::Home
+            | HwKey::End
+            | HwKey::PageUp
+            | HwKey::PageDown => {}
         }
         Some(Refresh::Fast)
     }
@@ -1492,6 +1553,16 @@ impl App {
                 let g = self.gestures.tick(t);
                 self.apply(g)
             }
+            Event::Usb(on) => {
+                self.usb_live = on;
+                self.screen.usb_live = on;
+                Some(Refresh::Partial)
+            }
+            Event::Chord { key, mods } => self.chord(key, mods),
+            // Nav keys only a USB keyboard has: the on-screen key path.
+            Event::Key(k @ (HwKey::Home | HwKey::End | HwKey::PageUp | HwKey::PageDown)) => {
+                self.chord(k, Mods::default())
+            }
             Event::Quit | Event::Power => {
                 self.save();
                 self.save_scratch();
@@ -1564,6 +1635,7 @@ impl App {
                     HwKey::Right => self.buffer.right(),
                     HwKey::Up => self.screen.caret_row(&mut self.buffer, page, false),
                     HwKey::Down => self.screen.caret_row(&mut self.buffer, page, true),
+                    HwKey::Home | HwKey::End | HwKey::PageUp | HwKey::PageDown => return None,
                     HwKey::Escape => {
                         let had = self.sel_ui.take().is_some();
                         return had.then_some(Refresh::Fast);
@@ -1667,6 +1739,18 @@ impl App {
         }
     }
 
+    /// Puts the USB port in host mode while Options → USB keyboard is On,
+    /// and back when it is turned off (v0.8). A failure is logged and
+    /// retried only when the setting changes again.
+    pub fn sync_usb_host(&mut self, dev: &mut dyn Device) {
+        if self.settings.usb != self.usb_host {
+            self.usb_host = self.settings.usb;
+            if let Err(e) = dev.usb_host(self.usb_host) {
+                eprintln!("usb: {e}");
+            }
+        }
+    }
+
     /// Main loop until power/quit or end of input.
     ///
     /// # Errors
@@ -1674,6 +1758,7 @@ impl App {
     pub fn run(&mut self, dev: &mut dyn Device) -> std::io::Result<()> {
         self.render(dev, Refresh::Full)?;
         while self.running {
+            self.sync_usb_host(dev);
             let Some(e) = dev.next_event() else { break };
             let t0 = std::time::Instant::now();
             let e = self.to_logical(e);
@@ -1687,6 +1772,10 @@ impl App {
             }
         }
         self.save();
+        if self.usb_host {
+            let _ = dev.usb_host(false);
+            self.usb_host = false;
+        }
         if let Some((n, p50, p95, max)) = self.perf.summary() {
             eprintln!(
                 "perf: {n} keystrokes, keystroke-to-refresh p50 {p50:.1} ms, p95 {p95:.1} ms, max {max:.1} ms"
@@ -2168,7 +2257,12 @@ impl App {
             HwKey::Tab => Key::Tab,
             HwKey::Left => Key::Arrow(Dir::Left),
             HwKey::Right => Key::Arrow(Dir::Right),
-            HwKey::Up | HwKey::Down => return None,
+            HwKey::Up
+            | HwKey::Down
+            | HwKey::Home
+            | HwKey::End
+            | HwKey::PageUp
+            | HwKey::PageDown => return None,
             HwKey::Escape => Key::Esc,
         };
         if let Key::Char(c) = key {
@@ -2359,7 +2453,7 @@ impl App {
             ),
             (
                 "USB keyboard".into(),
-                "Needs a powered hub or a Y-cable: the reader does not power the port.".into(),
+                "Needs a powered hub or a Y-cable: the reader does not power the port. See Help \u{2192} USB keyboard & export.".into(),
             ),
             (
                 "Credits".into(),
@@ -2466,6 +2560,7 @@ impl App {
             if h.page == HelpPage::Menu {
                 add("App info", l.rows[0]);
                 add("Markdown reference", l.rows[1]);
+                add("USB keyboard & export", l.rows[2]);
             } else {
                 add("Back", l.crumb);
             }

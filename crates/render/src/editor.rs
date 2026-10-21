@@ -148,6 +148,8 @@ pub struct EditorScreen {
     pub height: u32,
     pub fonts: Fonts,
     pub scroll: usize,
+    /// A USB keyboard is connected (v0.8).
+    pub usb_live: bool,
     s: Scale,
     // Typography defaults from the brief: 20 px, leading 1.5, margin 28 px.
     pub body_px: f32,
@@ -193,6 +195,7 @@ impl EditorScreen {
             face: Face::Literata,
             key_theme: None,
             cfg: Settings::default(),
+            usb_live: false,
             drawer_open: [false; 3],
             find_open: false,
         }
@@ -1047,12 +1050,18 @@ impl EditorScreen {
         }
     }
 
-    /// Status bar right side (brief §3): `USB` when on, `Paper` or
+    /// Status bar right side (brief §3): `USB` when a USB keyboard is
+    /// connected, `no USB` when the setting is on but none is found (v0.8),
+    /// then `Paper` or
     /// `Night`, then the save state.
     fn status_right(&self, t: Theme, save: &SaveState) -> String {
         format!(
             "{}{} \u{b7} {}",
-            if self.cfg.usb { "USB \u{b7} " } else { "" },
+            match (self.usb_live, self.cfg.usb) {
+                (true, _) => "USB \u{b7} ",
+                (false, true) => "no USB \u{b7} ",
+                (false, false) => "",
+            },
             if t == Theme::NIGHT { "Night" } else { "Paper" },
             save.label()
         )
@@ -2095,6 +2104,8 @@ mod tests {
         assert!(e.status_right(Theme::NIGHT, &s).starts_with("Night"));
         st.usb = true;
         e.configure(&mut st, None);
+        assert!(e.status_right(Theme::NIGHT, &s).starts_with("no USB"));
+        e.usb_live = true;
         assert!(e.status_right(Theme::NIGHT, &s).starts_with("USB"));
     }
 }

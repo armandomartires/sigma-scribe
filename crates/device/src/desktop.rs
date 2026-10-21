@@ -16,6 +16,8 @@ pub struct DesktopDevice {
     pub eink: bool,
     pub events: VecDeque<Event>,
     pub refreshes: Vec<(Rect, Refresh)>,
+    /// Every `usb_host` call (v0.8), for tests.
+    pub usb_host: Vec<bool>,
 }
 
 impl DesktopDevice {
@@ -26,6 +28,7 @@ impl DesktopDevice {
             eink: std::env::var("SIGMA_EINK").is_ok_and(|v| v != "0"),
             events: VecDeque::new(),
             refreshes: Vec::new(),
+            usb_host: Vec::new(),
         }
     }
 
@@ -85,6 +88,11 @@ impl Device for DesktopDevice {
 
     fn next_event(&mut self) -> Option<Event> {
         self.events.pop_front()
+    }
+
+    fn usb_host(&mut self, on: bool) -> io::Result<()> {
+        self.usb_host.push(on);
+        Ok(())
     }
 }
 
