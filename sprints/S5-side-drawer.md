@@ -43,3 +43,6 @@ Tasks: `tasks/S5-tasks.md`
 - S5-D2: lists that do not fit end with "N more…" (no scrolling yet).
 - S5-D3: open panes are not persisted (not in the brief's persistence list).
 - S5-D4: the open note and scratch are read live from their buffers; other notes come from the background indexer; toggling in another note writes atomically and reindexes.
+
+## User approval (2026-10-21, 12:40 CEST)
+Approved without device testing (never installed): v0.5 defaults stay (no drawer in preview, "N more…", panes not remembered); missing `[[link]]` → new note next to the linking note; known link → preview; Graph stays a list. Installs with v0.7 (0.4.0 → 0.7.0, pending approval).

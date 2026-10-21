@@ -19,8 +19,8 @@ use sigma_device::{Device, Event, HwKey, Phase, Refresh};
 use sigma_render::editor::Model;
 use sigma_render::{
     BarAction, Canvas, Doc, DrawerHit, DrawerModel, EditorScreen, FilesHit, FilesModel, FindField,
-    FindHit, FindModel, GraphHit, GraphModel, GraphRow, Hit, KbButton, OptionsHit, OptionsModel,
-    Pane, PreviewModel, Rect, Row, SelUi, Theme,
+    FindHit, FindModel, GraphHit, GraphModel, GraphRow, HelpHit, HelpModel, HelpPage, Hit,
+    KbButton, OptionsHit, OptionsModel, Pane, PreviewModel, Rect, Row, SelUi, Theme,
 };
 use std::path::PathBuf;
 
@@ -104,6 +104,35 @@ pub struct GraphState {
     pub first: usize,
 }
 
+/// The Help sheet (v0.7): the page shown and its laid-out text.
+#[derive(Clone, Debug)]
+pub struct HelpState {
+    pub page: HelpPage,
+    pub doc: Option<Doc>,
+    pub at: usize,
+}
+
+/// Keystroke-to-present timings (v0.7 perf report): microseconds from an
+/// input event to the end of its refresh call, for key presses.
+#[derive(Clone, Debug, Default)]
+pub struct Perf {
+    pub samples: Vec<u32>,
+}
+
+impl Perf {
+    /// (count, p50, p95, max) in milliseconds.
+    #[must_use]
+    pub fn summary(&self) -> Option<(usize, f64, f64, f64)> {
+        if self.samples.is_empty() {
+            return None;
+        }
+        let mut v = self.samples.clone();
+        v.sort_unstable();
+        let at = |q: f64| f64::from(v[((v.len() - 1) as f64 * q).round() as usize]) / 1000.0;
+        Some((v.len(), at(0.5), at(0.95), at(1.0)))
+    }
+}
+
 /// Preview mode (v0.3): the laid-out note and the page shown. Read-only.
 #[derive(Clone, Debug, Default)]
 pub struct PreviewState {
@@ -153,6 +182,12 @@ pub struct App {
     pub find: Option<FindState>,
     /// Graph sheet (v0.6).
     pub graph: Option<GraphState>,
+    /// Help sheet (v0.7).
+    pub help: Option<HelpState>,
+    /// The open note could not be read: autosave is held back so a blank
+    /// buffer never overwrites it (v0.7 hardening).
+    pub read_only: bool,
+    pub perf: Perf,
     pub running: bool,
 }
 
@@ -170,11 +205,7 @@ impl App {
             .or_else(|| library.all_notes().ok().and_then(|n| n.into_iter().next()))
             .unwrap_or_else(|| NotePath::parse(NOTE).unwrap_or_default());
         let store = FsNoteStore::new(&root);
-        let body = store
-            .load(current.as_str())
-            .ok()
-            .flatten()
-            .unwrap_or_default();
+        let (body, unreadable) = load_note(&store, &current);
         let buffer = Buffer::new(body);
         let _ = library.set_last_opened(&current);
         let mut settings = load_settings(&root);
@@ -183,7 +214,13 @@ impl App {
         screen.configure(&mut settings, None);
         let scratch = Buffer::new(store.load(SCRATCH).ok().flatten().unwrap_or_default());
         Self {
-            autosave: Autosave::new(buffer.revision()),
+            autosave: if unreadable {
+                let mut a = Autosave::new(buffer.revision());
+                a.failed("could not read the note");
+                a
+            } else {
+                Autosave::new(buffer.revision())
+            },
             library,
             current,
             buffer,
@@ -212,6 +249,9 @@ impl App {
             disk_todos: Vec::new(),
             find: None,
             graph: None,
+            help: None,
+            read_only: unreadable,
+            perf: Perf::default(),
             running: true,
         }
     }
@@ -539,6 +579,7 @@ impl App {
 
     /// Opens the Options sheet (closes preview and selection chrome).
     pub fn open_options(&mut self) {
+        self.help = None;
         self.close_find();
         self.graph = None;
         self.save();
@@ -675,6 +716,9 @@ impl App {
     }
 
     fn save(&mut self) {
+        if self.read_only {
+            return;
+        }
         let rev = self.buffer.revision();
         self.autosave.sync(
             &mut self.store,
@@ -687,15 +731,14 @@ impl App {
     /// Saves the open note and opens another.
     pub fn open(&mut self, p: &NotePath) {
         self.save();
-        let body = self
-            .store
-            .load(p.as_str())
-            .ok()
-            .flatten()
-            .unwrap_or_default();
+        let (body, unreadable) = load_note(&self.store, p);
         self.current = p.clone();
         self.buffer = Buffer::new(body);
         self.autosave = Autosave::new(self.buffer.revision());
+        self.read_only = unreadable;
+        if unreadable {
+            self.autosave.failed("could not read the note");
+        }
         self.screen.scroll = 0;
         let _ = self.library.set_last_opened(p);
         if self.drawer[1] {
@@ -719,6 +762,7 @@ impl App {
                 && self.preview.is_none()
                 && !self.options
                 && self.graph.is_none()
+                && self.help.is_none()
                 && self.keys_on)
     }
 
@@ -792,6 +836,11 @@ impl App {
                 Hit::Graph => {
                     self.exit_preview();
                     self.open_graph();
+                    Some(Refresh::Full)
+                }
+                Hit::Help => {
+                    self.exit_preview();
+                    self.open_help();
                     Some(Refresh::Full)
                 }
                 _ => {
@@ -898,6 +947,7 @@ impl App {
 
     /// Opens the Files sheet at the current note's folder.
     pub fn open_files(&mut self) {
+        self.help = None;
         self.close_find();
         self.graph = None;
         self.save();
@@ -916,6 +966,8 @@ impl App {
         let mut c = std::mem::replace(&mut self.canvas, Canvas::new(1, 1, 0));
         if self.options {
             self.screen.draw_options(&mut c, &self.options_model());
+        } else if let Some(h) = &self.help {
+            self.screen.draw_help(&mut c, &self.help_model(h));
         } else if let Some(g) = &self.graph {
             self.screen.draw_graph(&mut c, &self.graph_model(g));
         } else if let Some(p) = &self.preview {
@@ -1233,6 +1285,7 @@ impl App {
             && self.preview.is_none()
             && !self.options
             && self.graph.is_none()
+            && self.help.is_none()
     }
 
     fn apply(&mut self, gestures: Vec<Gesture>) -> Option<Refresh> {
@@ -1451,6 +1504,10 @@ impl App {
                 Some(Refresh::Full)
             }
             Event::Key(_) | Event::PageTurn { .. } if self.options => None,
+            Event::Tap { x, y } if self.help.is_some() => self.help_tap(x, y),
+            Event::PageTurn { forward } if self.help.is_some() => self.help_page(forward),
+            Event::Key(HwKey::Escape) if self.help.is_some() => self.help_back(),
+            Event::Key(_) if self.help.is_some() => None,
             Event::Tap { x, y } if self.graph.is_some() => self.graph_tap(x, y),
             Event::PageTurn { forward } if self.graph.is_some() => self.graph_page(forward),
             Event::Key(HwKey::Escape) if self.graph.is_some() => {
@@ -1557,6 +1614,10 @@ impl App {
                         self.open_graph();
                         Some(Refresh::Full)
                     }
+                    Hit::Help => {
+                        self.open_help();
+                        Some(Refresh::Full)
+                    }
                     Hit::Drawer(p) => Some(self.toggle_pane(p)),
                     Hit::Key(k) => {
                         let tab = self.settings.tab_kind();
@@ -1614,12 +1675,23 @@ impl App {
         self.render(dev, Refresh::Full)?;
         while self.running {
             let Some(e) = dev.next_event() else { break };
+            let t0 = std::time::Instant::now();
             let e = self.to_logical(e);
+            let typing = self.is_key_tap(&e);
             if let Some(r) = self.handle(e) {
                 self.render(dev, r)?;
+                if typing {
+                    let us = t0.elapsed().as_micros().min(u128::from(u32::MAX)) as u32;
+                    self.perf.samples.push(us);
+                }
             }
         }
         self.save();
+        if let Some((n, p50, p95, max)) = self.perf.summary() {
+            eprintln!(
+                "perf: {n} keystrokes, keystroke-to-refresh p50 {p50:.1} ms, p95 {p95:.1} ms, max {max:.1} ms"
+            );
+        }
         Ok(())
     }
 
@@ -1643,6 +1715,9 @@ impl App {
     pub fn control_centre(&self, label: &str) -> Option<(i32, i32)> {
         if self.options {
             return self.screen.options_control(&self.options_model(), label);
+        }
+        if let Some(h) = &self.help {
+            return self.screen.help_control(&self.help_model(h), label);
         }
         if let Some(g) = &self.graph {
             let m = self.graph_model(g);
@@ -1698,6 +1773,7 @@ impl App {
             "Scratch" => Some(centre(l.scratch_button)),
             "Find" => Some(centre(l.find_button)),
             "Graph" => Some(centre(l.graph_button)),
+            "Help" => Some(centre(l.help_button)),
             "FindField" | "ReplaceField" | "FindClose" | "Prev" | "Next" | "Replace" | "All"
             | "Aa" => self.screen.find_control(&l, label),
             s if s.starts_with("Heading:")
@@ -2109,6 +2185,7 @@ impl App {
 
     /// Opens the Graph sheet with fresh rows.
     pub fn open_graph(&mut self) {
+        self.help = None;
         self.close_find();
         self.save();
         self.sel_ui = None;
@@ -2221,5 +2298,262 @@ impl App {
         self.exit_preview();
         self.open(&p);
         Some(Refresh::Full)
+    }
+}
+
+/// Loads a note. A file that exists but cannot be read as text comes back
+/// empty with `true`, and the app then never saves over it.
+fn load_note(store: &FsNoteStore, p: &NotePath) -> (String, bool) {
+    match store.load(p.as_str()) {
+        Ok(b) => (b.unwrap_or_default(), false),
+        Err(_) => (String::new(), true),
+    }
+}
+
+/// Help sheet and perf (v0.7).
+impl App {
+    /// A key event for the perf sample: hardware keys, and taps (or
+    /// lifts) on the on-screen keyboard.
+    fn is_key_tap(&self, e: &Event) -> bool {
+        let on_keys =
+            |x: i32, y: i32| self.in_editor() && self.page_layout().keyboard.contains(x, y);
+        match *e {
+            Event::Key(_) => true,
+            Event::Tap { x, y } => on_keys(x, y),
+            Event::Touch {
+                phase: Phase::Up,
+                x,
+                y,
+                ..
+            } => on_keys(x, y),
+            _ => false,
+        }
+    }
+
+    /// App info rows: version, licence, author, where notes live, credits.
+    #[must_use]
+    pub fn about(&self) -> Vec<(String, String)> {
+        vec![
+            (
+                "Sigma Scribe".into(),
+                format!(
+                    "Version {}. A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.",
+                    env!("CARGO_PKG_VERSION")
+                ),
+            ),
+            (
+                "License".into(),
+                "AGPL-3.0-only. The source is on GitHub: armandomartires/sigma-scribe.".into(),
+            ),
+            ("Author".into(), "Sigma Recon.".into()),
+            (
+                "Your notes".into(),
+                format!(
+                    "Plain .md and .txt files in {}. Connect the Kobo over USB to copy them. The scratch pad is the hidden file .scratchpad.md.",
+                    self.library.root().display()
+                ),
+            ),
+            (
+                "Buttons".into(),
+                "The page buttons scroll the page. The power button saves and goes back to the reader. Every change is saved as you type.".into(),
+            ),
+            (
+                "USB keyboard".into(),
+                "Needs a powered hub or a Y-cable: the reader does not power the port.".into(),
+            ),
+            (
+                "Credits".into(),
+                "Literata and Atkinson Hyperlegible fonts (SIL Open Font License 1.1). FBInk by NiLuJe (GPL-3.0-or-later). NickelMenu by pgaskin.".into(),
+            ),
+        ]
+    }
+
+    pub fn open_help(&mut self) {
+        self.close_find();
+        self.graph = None;
+        self.files = None;
+        self.options = false;
+        self.save();
+        self.sel_ui = None;
+        self.drag = None;
+        self.help = Some(HelpState {
+            page: HelpPage::Menu,
+            doc: None,
+            at: 0,
+        });
+    }
+
+    fn help_model<'a>(&'a self, h: &'a HelpState) -> HelpModel<'a> {
+        HelpModel {
+            page: h.page,
+            doc: h.doc.as_ref(),
+            at: h.at,
+            theme: self.theme(),
+            keyboard: &self.keyboard,
+        }
+    }
+
+    fn help_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
+        let h = self.help.as_ref()?;
+        match self.screen.help_hit(&self.help_model(h), x, y) {
+            HelpHit::Close => {
+                self.help = None;
+                Some(Refresh::Full)
+            }
+            HelpHit::Back => self.help_back(),
+            HelpHit::Open(page) => {
+                let doc = self.screen.build_help(&self.keyboard, page, &self.about());
+                self.help = Some(HelpState {
+                    page,
+                    doc: Some(doc),
+                    at: 0,
+                });
+                Some(Refresh::Full)
+            }
+            HelpHit::Nothing => None,
+        }
+    }
+
+    /// Escape / Back: a sub-page goes back to the menu, the menu closes.
+    fn help_back(&mut self) -> Option<Refresh> {
+        let h = self.help.as_mut()?;
+        if h.page == HelpPage::Menu {
+            self.help = None;
+        } else {
+            h.page = HelpPage::Menu;
+            h.doc = None;
+            h.at = 0;
+        }
+        Some(Refresh::Full)
+    }
+
+    fn help_page(&mut self, forward: bool) -> Option<Refresh> {
+        let h = self.help.as_mut()?;
+        let n = h.doc.as_ref()?.pages.len();
+        let next = if forward {
+            (h.at + 1).min(n.saturating_sub(1))
+        } else {
+            h.at.saturating_sub(1)
+        };
+        (next != h.at).then(|| {
+            h.at = next;
+            Refresh::Partial
+        })
+    }
+}
+
+/// Touch-target audit (v0.7, brief: 44 px targets at the Forma scale).
+impl App {
+    /// Every tappable control on the current screen, named.
+    #[must_use]
+    pub fn touch_targets(&self) -> Vec<(String, Rect)> {
+        let mut out: Vec<(String, Rect)> = Vec::new();
+        let mut add = |n: &str, r: Rect| out.push((n.to_owned(), r));
+        if self.options {
+            let l = self.screen.options_layout(&self.options_model());
+            add("Close", l.close);
+            for (i, (_, cells)) in l.rows.iter().enumerate() {
+                for (j, c) in cells.iter().enumerate() {
+                    add(&format!("option {i}/{j}"), *c);
+                }
+            }
+            return out;
+        }
+        if let Some(h) = &self.help {
+            let m = self.help_model(h);
+            let l = self.screen.help_layout(m.keyboard);
+            add("Close", l.close);
+            if h.page == HelpPage::Menu {
+                add("App info", l.rows[0]);
+                add("Markdown reference", l.rows[1]);
+            } else {
+                add("Back", l.crumb);
+            }
+            return out;
+        }
+        if let Some(g) = &self.graph {
+            let l = self.screen.graph_layout(&self.graph_model(g));
+            add("Close", l.close);
+            for (i, r) in &l.rows {
+                add(&format!("graph row {i}"), *r);
+            }
+            return out;
+        }
+        let rows = self.rows();
+        if let Some(m) = self.files_model(&rows) {
+            let l = self.screen.files_layout(&m);
+            add("Close", l.close);
+            if l.crumb.w > 0 && l.crumb.h > 0 {
+                add("Up", l.crumb);
+            }
+            for (i, r, more) in &l.rows {
+                add(&format!("file row {i}"), *r);
+                add(&format!("file more {i}"), *more);
+            }
+            for (k, r) in l.actions.iter().flatten().enumerate() {
+                add(&format!("action {k}"), *r);
+            }
+            add("New note", l.bottom[0]);
+            add("New folder", l.bottom[1]);
+            return out;
+        }
+        let l = self.page_layout();
+        add("Files", l.files_button);
+        add("Preview", l.preview_button);
+        add("Find", l.find_button);
+        add("Graph", l.graph_button);
+        add("Options", l.options_button);
+        add("Help", l.help_button);
+        if self.preview.is_some() {
+            return out;
+        }
+        add("Scratch", l.scratch_button);
+        add("To-dos", l.todos_button);
+        add("Contents", l.contents_button);
+        add("Keys", l.keys_button);
+        for (r, k) in &l.keys {
+            add(&format!("key {}", self.keyboard.label(*k)), *r);
+        }
+        for (r, b) in &l.kb_buttons {
+            add(self.screen.kb_button_label(*b), *r);
+        }
+        if self.find.is_some() {
+            let f = self.screen.find_layout(&l);
+            for (n, r) in [
+                ("FindField", f.find),
+                ("ReplaceField", f.replace),
+                ("FindClose", f.close),
+                ("Prev", f.prev),
+                ("Next", f.next),
+                ("Replace", f.replace_one),
+                ("All", f.all),
+                ("Aa", f.case),
+            ] {
+                add(n, r);
+            }
+        }
+        if self.drawer_visible() {
+            let (hs, todos) = (self.headings(), self.todo_list());
+            let d = self
+                .screen
+                .drawer_layout(&l, &self.drawer_model(&hs, &todos));
+            for (r, line) in &d.headings {
+                add(&format!("heading {line}"), *r);
+            }
+            for (b, t, i) in &d.todos {
+                add(&format!("todo box {i}"), *b);
+                add(&format!("todo {i}"), *t);
+            }
+            if let Some(f) = d.filter {
+                add("Filter", f);
+            }
+        }
+        out
+    }
+
+    /// The smallest side a target may have: 44 px at the screen's scale.
+    #[must_use]
+    pub fn min_target(&self) -> i32 {
+        self.screen.scale().px(44.0)
     }
 }

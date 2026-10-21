@@ -44,3 +44,6 @@ Tasks: `tasks/S6-tasks.md`
 - S6-D4: the link index is built synchronously when preview or Graph opens (reads every note; fine for a personal library — can move to the S5 indexer thread if it gets slow).
 - S6-D5: the Find bar closes when preview, Files, Options or Graph opens; the query is not kept after closing (brief §8: need not persist).
 - Not done: side-by-side check against the mockup (as S4/S5).
+
+## User approval (2026-10-21, 12:40 CEST)
+Approved without device testing (never installed): v0.5 defaults stay (no drawer in preview, "N more…", panes not remembered); missing `[[link]]` → new note next to the linking note; known link → preview; Graph stays a list. Installs with v0.7 (0.4.0 → 0.7.0, pending approval).

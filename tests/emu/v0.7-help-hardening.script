@@ -1,0 +1,65 @@
+# v0.7 Help sheet and the rotation pass (Forma 1440x1920).
+tap-on Help
+expect-mode help
+expect-help Help
+shot v0.7-help-menu
+tap-on App info
+expect-help Help / App info
+shot v0.7-help-app-info
+tap-on Back
+expect-help Help
+tap-on Markdown reference
+expect-help Help / Markdown reference
+expect-page 1
+shot v0.7-help-markdown-1
+page next
+expect-page 2
+shot v0.7-help-markdown-2
+page back
+expect-page 1
+# Esc: sub-page → menu → closed.
+esc
+expect-help Help
+esc
+expect-mode write
+# Help from preview; opening another sheet closes Help.
+tap-on Preview
+tap-on Help
+expect-mode help
+tap-on Close
+expect-mode write
+tap-on Help
+tap-on Close
+# Drawer after the touch-target audit (44 px heading rows and Filter).
+tap-on Contents
+tap-on To-dos
+shot v0.7-drawer-targets
+tap-on Contents
+tap-on To-dos
+# Rotation pass: every sheet in landscape, then back.
+tap-on Options
+tap-on Orientation/Landscape
+tap-on Close
+expect-screen 1920x1440
+tap-on Help
+tap-on Markdown reference
+shot v0.7-landscape-help
+tap-on Close
+tap-on Files
+shot v0.7-landscape-files
+tap-on Close
+tap-on Options
+shot v0.7-landscape-options
+tap-on Paper/Night
+tap-on Close
+tap-on Help
+tap-on App info
+shot v0.7-landscape-night-app-info
+tap-on Close
+tap-on Options
+tap-on Paper/Day
+tap-on Orientation/Portrait
+tap-on Close
+expect-screen 1440x1920
+type ok
+expect-status saved
