@@ -115,6 +115,23 @@ Procedure (same as 0.4.0): confirm it is the same Forma (serial <FORMA-SERIAL>) 
 
 Rollback: copy the 0.4.0 binary back (sha256 `689b84c4e763119cbdfa19eb07ade52d5709cdf034bf971fc2e5116e97c02043`, also in the pre-v1.0.0 backup). `.scratchpad.md` is hidden and ignored by 0.4.0; notes created from links are ordinary `.md` files and stay. `launch.sh` reboots on exit, which also returns the USB port to normal (gadget) mode.
 
+## Upgrade 1.0.0 → 1.0.1 (PENDING APPROVAL — not run)
+**Package:** CI-built `sigma-scribe-1.0.1-kobo` (release workflow on PR #3, feat/v1.0.1). Tarball sha256 `3aa18e6b2d0514f9b446a3e520d05307d7632b0ac40ba0b6376db6b8137ff03c`; binary `.adds/sigma-scribe/sigma-scribe` sha256 `ffc2e119e569e4364e565b7779d4e650183bb6107bc46e4bc982356650306567`.
+
+Procedure (same as 0.4.0 → 1.0.0): identify the Forma by serial <FORMA-SERIAL> and mount only that disk (never sdb, the 64 GB stick, or any other disk); read `.adds/sigma-scribe/sigma-scribe.log` read-only; back up `.adds/sigma-scribe`, `.adds/nm/sigma-scribe` and `sigma-scribe/notes` into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v1.0.1` and verify it against checksums; confirm the device binary is 1.0.0 (`bb38a083b0925ced9adc61690430d0f768509a1cf284a0c533cf5839e570dad1`), else stop; replace **only** the binary; verify its sha256 on the device; sync, unmount, eject, confirm gone from `lsblk`. Settings carry over (`scroll=` is new and defaults to Traditional).
+
+**Optional, separate approval — test notes:** after the binary step and before eject, copy `dist/test-notes/_test/` (from `scripts/make-test-notes.sh`, tarball sha256 `460a8611e3fbae74aa166751c3db93bfe14b41e2895638b99f3949efd7f45c9b`) to `sigma-scribe/notes/_test/` on the Kobo. Nothing else in `notes/` is touched; `graph-300/` may be left out (`--no-graph`). Uninstall = delete `notes/_test/`.
+
+Rollback: copy the 1.0.0 binary back from the pre-v1.0.1 backup (sha256 above).
+
+On-device checklist — v1.0.1 (K400 Plus on the charging splitter, Options → USB keyboard & mouse = On):
+- [ ] Move the pointer in circles for 30 s over text and the title bar: **no ghost trails**; the arrow still feels responsive
+- [ ] Let it hide (3 s) and type a key: any faint residue along the path is cleaned, no flash
+- [ ] Log has `perf pointer: gl16 … ms` lines; record the values (> 300 ms → raise the throttle to 250 ms)
+- [ ] Options → Scroll = Natural: two-finger scroll reverses in note, preview, Files and Graph (zoom); back to Traditional restores 1.0 behaviour; survives a restart
+- [ ] Options row reads **USB keyboard & mouse**; Help page **USB keyboard, mouse & export**
+- [ ] (if the test notes were copied) `_test/test-00-start-here` opens; its links, Find (50 lamps) and Graph map work
+
 ### Extra steps and risks for USB keyboard and mouse (v0.8 / v0.8.1)
 Nothing extra is installed: no kernel modules, no KoboRoot, no udev rules. What 1.0.0 does on the device, only while **Options → USB keyboard = On** (this also covers the mouse/touchpad):
 - Switches the USB port to **host mode** by writing `host` to `/sys/kernel/debug/ci_hdrc.0/role` (mounting debugfs first if needed — the same method as KOReader's ExternalKeyboard plugin), and writes `gadget` back when the setting is turned off or the app exits. While it is on, the Kobo cannot be seen by a computer — leave the app first. A reboot always restores gadget mode.

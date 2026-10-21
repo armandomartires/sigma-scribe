@@ -8,6 +8,7 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
 - Label: Options → **USB keyboard & mouse**; Help → **USB keyboard, mouse & export**; About text updated. Settings key `usb` unchanged.
 - Test notes pack (S10.1): sources in `tests/test-notes/`, `scripts/make-test-notes.sh` builds `dist/test-notes/` (316 files, incl. generated `graph-300/`) and a reproducible tarball; emulator `copy-notes DIR` and `tests/emu/v1.0.1-test-notes.script`.
 - Emulator e-ink model: small Fast updates to mid greys now keep 30 % of the old pixel (DU-like), so trails show in `SIGMA_EINK=1`.
+- Device binary sha256 (CI build) `ffc2e119e569e4364e565b7779d4e650183bb6107bc46e4bc982356650306567`; tarball `3aa18e6b2d0514f9b446a3e520d05307d7632b0ac40ba0b6376db6b8137ff03c`.
 
 ## 1.0.0 — 2026-10-21 (release candidate: built, not installed, not tagged, not released)
 - Release prep (sprint S9): reproducible tarball (fixed order, owner, mode, time; `gzip -n`), `scripts/check-package.sh` (only `.adds/`, no notes, required files, ARM static, hash list), `THIRD-PARTY.txt` in the package (AGPL, FBInk GPL-3.0+ at 886f25f1, OFL fonts, NickelMenu not included).
