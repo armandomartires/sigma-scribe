@@ -1,4 +1,6 @@
 # v0.2.2 Android-style touch selection (headless, virtual clock).
+# Written for the 1.0 layout: run at UI scale 100 % (v1.1 default is 200 %).
+ui-scale 100
 type quick brown fox jumps over lazy dogs
 # Long-press a word: selects it, handles + action bar.
 long-press-word brown

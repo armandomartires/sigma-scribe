@@ -468,61 +468,6 @@ impl EditorScreen {
     }
 }
 
-/// Contents icon: a small tree (three indented bars).
-pub fn draw_contents_icon(c: &mut Canvas, target: Rect, s: crate::theme::Scale, ink: u8) {
-    let (x, y) = (
-        target.x + (target.w - s.px(20.0)) / 2,
-        target.y + (target.h - s.px(16.0)) / 2,
-    );
-    let st = s.px(1.75).max(2);
-    c.fill(Rect::new(x, y, s.px(20.0), st), ink);
-    c.fill(Rect::new(x + s.px(5.0), y + s.px(7.0), s.px(15.0), st), ink);
-    c.fill(
-        Rect::new(x + s.px(5.0), y + s.px(14.0), s.px(15.0), st),
-        ink,
-    );
-    c.fill(Rect::new(x + s.px(1.0), y, st, s.px(15.0)), ink);
-}
-
-/// To-dos icon: two checked boxes with lines.
-pub fn draw_todos_icon(c: &mut Canvas, target: Rect, s: crate::theme::Scale, ink: u8) {
-    let (x, y) = (
-        target.x + (target.w - s.px(20.0)) / 2,
-        target.y + (target.h - s.px(18.0)) / 2,
-    );
-    let st = s.px(1.75).max(2);
-    for k in 0..2 {
-        let yy = y + k * s.px(10.0);
-        c.stroke(Rect::new(x, yy, s.px(7.0), s.px(7.0)), st, ink);
-        c.fill(
-            Rect::new(x + s.px(10.0), yy + s.px(3.0), s.px(10.0), st),
-            ink,
-        );
-    }
-    c.fill(
-        Rect::new(x + s.px(2.0), y + s.px(2.0), s.px(3.0), s.px(3.0)),
-        ink,
-    );
-}
-
-/// Scratch icon: a sticky note with a folded corner.
-pub fn draw_scratch_icon(c: &mut Canvas, target: Rect, s: crate::theme::Scale, ink: u8) {
-    let w = s.px(18.0);
-    let (x, y) = (target.x + (target.w - w) / 2, target.y + (target.h - w) / 2);
-    let st = s.px(1.75).max(2);
-    let f = s.px(6.0);
-    c.fill(Rect::new(x, y, w, st), ink);
-    c.fill(Rect::new(x, y, st, w), ink);
-    c.fill(Rect::new(x, y + w - st, w - f, st), ink);
-    c.fill(Rect::new(x + w - st, y, st, w - f), ink);
-    for k in 0..=f {
-        c.fill(
-            Rect::new(x + w - f + k - st / 2, y + w - k - st / 2, st, st),
-            ink,
-        );
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

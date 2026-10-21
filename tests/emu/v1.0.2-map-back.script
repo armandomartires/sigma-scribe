@@ -1,6 +1,8 @@
 # v1.0.2 (S10.2): round map nodes, selection pill, plain links; Back
 # navigation (title-bar arrow, Esc), on the test notes pack (Forma 1440x1920).
 copy-notes tests/test-notes/_test
+# Written for the 1.0 layout: run at UI scale 100 % (v1.1 default is 200 %).
+ui-scale 100
 expect-open _test/test-00-start-here.md
 tap-on Graph
 expect-graph map

@@ -338,13 +338,13 @@ fn v104_pointer_only_frames_match_a_full_render_and_stay_small() {
     let fast = r.dev.panel.pixels.clone();
     r.app.render(&mut r.dev, Refresh::Full).unwrap();
     assert_eq!(fast, r.dev.panel.pixels, "fast path == full frame");
-    // Pointer frames only cover the old+new arrow.
+    // Pointer frames only cover the old+new arrow (arrow follows the UI scale, v1.1).
     let n = r.dev.refreshes.len();
     r.to(700, 700);
     for (rect, k) in &r.dev.refreshes[n..] {
         assert_eq!(*k, Refresh::Pointer);
         assert!(
-            rect.w <= 200 && rect.h <= 200 && rect.w >= 16 && rect.h >= 16,
+            rect.w <= 300 && rect.h <= 300 && rect.w >= 16 && rect.h >= 16,
             "{rect:?}"
         );
     }

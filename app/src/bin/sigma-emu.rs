@@ -672,6 +672,29 @@ fn main() -> ExitCode {
                     return fail(format!("screen is {got}"));
                 }
             }
+            "ui-scale" => {
+                // v1.1: step Options -> UI scale to a value (100..=200).
+                let Ok(want) = arg.trim_end_matches('%').parse::<u16>() else {
+                    return fail("ui-scale needs a percentage".into());
+                };
+                if !sigma_core::settings::UI_SCALES.contains(&want) {
+                    return fail(format!("no UI scale {want}"));
+                }
+                for _ in 0..sigma_core::settings::UI_SCALES.len() {
+                    let now = app.settings.ui_scale;
+                    if now == want {
+                        break;
+                    }
+                    app.change(sigma_core::settings::Change::UiScale(if now < want {
+                        1
+                    } else {
+                        -1
+                    }));
+                }
+                if let Err(e) = app.render(&mut dev, sigma_device::Refresh::Full) {
+                    return fail(e.to_string());
+                }
+            }
             "restart" => {
                 // Power off and on: settings and the note must come back.
                 app.handle(Event::Power);

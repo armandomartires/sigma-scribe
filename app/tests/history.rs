@@ -125,7 +125,7 @@ fn title_bar_fits_with_back_in_both_orientations() {
         assert!(l.back_button.x + l.back_button.w < l.files_button.x);
         assert!(l.name_rect.x + l.name_rect.w <= l.back_button.x);
         assert!(
-            l.name_rect.w >= r.app.screen.scale().px(200.0),
+            l.name_rect.w >= r.app.screen.page_scale().px(200.0),
             "{land}: {:?}",
             l.name_rect
         );

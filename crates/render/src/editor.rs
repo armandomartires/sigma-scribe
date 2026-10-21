@@ -167,6 +167,8 @@ pub struct EditorScreen {
     /// Navigation history is not empty: show the Back arrow (v1.0.2).
     pub back_on: bool,
     s: Scale,
+    /// The page scale (note text, margins): `s` without the UI scale (v1.1).
+    page_s: Scale,
     // Typography defaults from the brief: 20 px, leading 1.5, margin 28 px.
     pub body_px: f32,
     pub leading: f32,
@@ -207,7 +209,8 @@ impl EditorScreen {
             height,
             fonts: Fonts::new(),
             scroll: 0,
-            s: Scale::for_width(width.min(height)),
+            s: Scale(Scale::for_width(width.min(height)).0 * 2.0),
+            page_s: Scale::for_width(width.min(height)),
             body_px: 20.0,
             leading: 1.5,
             margin_px: 28.0,
@@ -236,7 +239,8 @@ impl EditorScreen {
     pub fn resize(&mut self, width: u32, height: u32) {
         self.width = width;
         self.height = height;
-        self.s = Scale::for_width(width.min(height));
+        self.page_s = Scale::for_width(width.min(height));
+        self.s = Scale(self.page_s.0 * f32::from(self.cfg.ui_scale) / 100.0);
     }
 
     #[must_use]
@@ -258,8 +262,9 @@ impl EditorScreen {
             KeyTone::Dark => Some(Theme::NIGHT),
         };
         self.leading = st.leading;
+        self.s = Scale(self.page_s.0 * f32::from(st.ui_scale) / 100.0);
         if st.line_on {
-            let k = self.s.0;
+            let k = self.page_s.0;
             let column = self.width.min(self.height) as f32;
             let f = linefit::fit(
                 &FaceMeasure {
@@ -303,7 +308,7 @@ impl EditorScreen {
     }
 
     fn body(&self) -> f32 {
-        self.body_px * self.s.0
+        self.body_px * self.page_s.0
     }
 
     fn line_h(&self) -> i32 {
@@ -323,10 +328,22 @@ impl EditorScreen {
         let (w, h) = (self.width as i32, self.height as i32);
         let (btn, icon_gap) = self.title_icons(w);
         let title = Rect::new(0, 0, w, btn + 2 * self.px(6.0));
-        let key_h = self.px(58.0);
         let gap = self.px(6.0);
         let pad = self.px(10.0);
         let rows = keyboard.rows();
+        // v1.1: the keyboard takes at most 42 % (portrait) / 45 % (landscape)
+        // of the height, so the page keeps room at 200 %.
+        let key_h = {
+            let n = rows.len().max(1) as i32;
+            let bar = if self.landscape() {
+                self.px(44.0) + gap
+            } else {
+                0
+            };
+            let cap = h * if self.landscape() { 45 } else { 42 } / 100;
+            let fit = (cap - pad * 2 - bar - gap * (n - 1)) / n;
+            self.px(58.0).min(fit).max(self.page_s.px(44.0))
+        };
         // Landscape adds the Split · Full · Centre bar above the keys.
         let bar_h = if self.landscape() {
             self.px(44.0) + gap
@@ -423,13 +440,14 @@ impl EditorScreen {
     #[must_use]
     pub fn title_icons(&self, w: i32) -> (i32, i32) {
         let n = TITLE_ICONS;
-        let room = w - self.px(12.0) - self.px(200.0);
-        let (mut btn, mut gap) = (self.px(88.0), self.px(8.0));
+        let room = w - self.px(12.0) - self.px(100.0);
+        // v1.1: 44 units at the UI scale (200 % = the S9.2 size).
+        let (mut btn, mut gap) = (self.px(44.0), self.px(4.0));
         if n * btn + (n - 1) * gap > room {
-            gap = self.px(2.0);
+            gap = self.px(1.0);
         }
         if n * btn + (n - 1) * gap > room {
-            btn = ((room - (n - 1) * gap) / n).max(self.px(44.0));
+            btn = ((room - (n - 1) * gap) / n).max(self.page_s.px(44.0));
         }
         (btn, gap)
     }
@@ -632,13 +650,9 @@ impl EditorScreen {
         } else {
             page
         };
-        let m = self.px(self.margin_px);
-        Rect::new(
-            page.x + m,
-            page.y + self.px(16.0),
-            page.w - 2 * m,
-            page.h - self.px(16.0) * 2,
-        )
+        let m = self.page_s.px(self.margin_px);
+        let v = self.page_s.px(16.0);
+        Rect::new(page.x + m, page.y + v, page.w - 2 * m, page.h - v * 2)
     }
 
     fn visible_rows(&self, page: Rect) -> usize {
@@ -751,7 +765,8 @@ impl EditorScreen {
             return SelGeom::default();
         };
         let b = model.buffer;
-        let target = self.px(48.0);
+        // Handles sit on the text, so they follow the page scale (v1.1).
+        let target = self.page_s.px(48.0);
         let mut g = SelGeom::default();
         let (a, e) = b.selection().unwrap_or((b.caret(), b.caret()));
         let pa = self.point_of(b, l.page, a);
@@ -912,16 +927,15 @@ impl EditorScreen {
 
         self.draw_title(c, &l, model.file_name, model.rename, t, true);
         if model.rename.is_none() {
-            let is = self.icon_scale(&l);
-            draw_eye_icon(c, l.preview_button, is, t.ink);
+            crate::icons::draw_icon(c, crate::icons::Icon::Eye, l.preview_button, t.ink);
             self.draw_options_icon(c, l.options_button, t);
             if self.find_open {
                 c.fill(l.find_button, t.wash);
                 c.stroke(l.find_button, 2, t.ink);
             }
-            draw_find_icon(c, l.find_button, is, t.ink);
-            draw_graph_icon(c, l.graph_button, is, t.ink);
-            crate::help::draw_help_icon(self, c, l.help_button, t.ink);
+            crate::icons::draw_icon(c, crate::icons::Icon::Search, l.find_button, t.ink);
+            crate::icons::draw_icon(c, crate::icons::Icon::Graph, l.graph_button, t.ink);
+            crate::icons::draw_icon(c, crate::icons::Icon::Help, l.help_button, t.ink);
             for (i, r) in [l.contents_button, l.todos_button, l.scratch_button]
                 .into_iter()
                 .enumerate()
@@ -931,9 +945,9 @@ impl EditorScreen {
                     c.stroke(r, 2, t.ink);
                 }
                 match i {
-                    0 => crate::drawer::draw_contents_icon(c, r, is, t.ink),
-                    1 => crate::drawer::draw_todos_icon(c, r, is, t.ink),
-                    _ => crate::drawer::draw_scratch_icon(c, r, is, t.ink),
+                    0 => crate::icons::draw_icon(c, crate::icons::Icon::Contents, r, t.ink),
+                    1 => crate::icons::draw_icon(c, crate::icons::Icon::Todos, r, t.ink),
+                    _ => crate::icons::draw_icon(c, crate::icons::Icon::Scratch, r, t.ink),
                 }
             }
         }
@@ -1156,6 +1170,12 @@ impl EditorScreen {
         self.s
     }
 
+    /// Device scale from the short side, independent of the UI scale (v1.1).
+    #[must_use]
+    pub fn page_scale(&self) -> Scale {
+        self.page_s
+    }
+
     /// Title bar: a name (tap to rename) and the Files icon, or the rename
     /// field with Cancel / OK. Hairline under.
     pub fn draw_title(
@@ -1230,9 +1250,9 @@ impl EditorScreen {
                 t.ink,
             );
             if files_icon {
-                draw_folder_icon(c, l.files_button, self.icon_scale(l), t.ink);
+                crate::icons::draw_icon(c, crate::icons::Icon::Folder, l.files_button, t.ink);
                 if self.back_on {
-                    draw_back_icon(c, l.back_button, self.icon_scale(l), t.ink);
+                    crate::icons::draw_icon(c, crate::icons::Icon::Back, l.back_button, t.ink);
                 }
             }
         }
@@ -1427,7 +1447,7 @@ impl EditorScreen {
             return a;
         };
         // Beside the drawer, with the page margin on the drawer side too.
-        let m = self.px(self.margin_px);
+        let m = self.page_s.px(self.margin_px);
         if d.x <= page.x {
             let x = a.x.max(d.x + d.w + m);
             Rect::new(x, a.y, (a.x + a.w - x).max(1), a.h)
@@ -1463,7 +1483,7 @@ impl EditorScreen {
         let ty = Type {
             body: self.body(),
             leading: self.leading,
-            scale: self.s,
+            scale: self.page_s,
         };
         let mut blocks = sigma_core::markdown::parse(text);
         if let Some(bl) = backlinks {
@@ -1613,13 +1633,12 @@ impl EditorScreen {
         c.fill(c.bounds(), t.paper);
         draw_gutters(c, &l, t);
         self.draw_title(c, &l, m.file_name, None, t, true);
-        let is = self.icon_scale(&l);
-        draw_pencil_icon(c, l.preview_button, is, t.ink);
+        crate::icons::draw_icon(c, crate::icons::Icon::Pencil, l.preview_button, t.ink);
         self.draw_options_icon(c, l.options_button, t);
-        draw_find_icon(c, l.find_button, is, t.ink);
-        draw_graph_icon(c, l.graph_button, is, t.ink);
+        crate::icons::draw_icon(c, crate::icons::Icon::Search, l.find_button, t.ink);
+        crate::icons::draw_icon(c, crate::icons::Icon::Graph, l.graph_button, t.ink);
         // Help was tappable but not drawn in preview before S9.2.
-        crate::help::draw_help_icon(self, c, l.help_button, t.ink);
+        crate::icons::draw_icon(c, crate::icons::Icon::Help, l.help_button, t.ink);
         // v1.0.3: the drawer pane buttons, active while open (as in write).
         for (i, r) in [l.contents_button, l.todos_button, l.scratch_button]
             .into_iter()
@@ -1630,15 +1649,23 @@ impl EditorScreen {
                 c.stroke(r, 2, t.ink);
             }
             match i {
-                0 => crate::drawer::draw_contents_icon(c, r, is, t.ink),
-                1 => crate::drawer::draw_todos_icon(c, r, is, t.ink),
-                _ => crate::drawer::draw_scratch_icon(c, r, is, t.ink),
+                0 => crate::icons::draw_icon(c, crate::icons::Icon::Contents, r, t.ink),
+                1 => crate::icons::draw_icon(c, crate::icons::Icon::Todos, r, t.ink),
+                _ => crate::icons::draw_icon(c, crate::icons::Icon::Scratch, r, t.ink),
             }
         }
         let area = self.preview_area(m.keyboard);
         let page = m.page.min(m.doc.pages.len().saturating_sub(1));
         if let Some(r) = m.doc.pages.get(page) {
-            preview::draw_page(c, &self.fonts, area, &m.doc.lines, r.clone(), t, self.s);
+            preview::draw_page(
+                c,
+                &self.fonts,
+                area,
+                &m.doc.lines,
+                r.clone(),
+                t,
+                self.page_s,
+            );
         }
         let ui = self.ui_px();
         c.fill(Rect::new(0, l.status.y, l.status.w, 1), t.rule);
@@ -1666,145 +1693,6 @@ impl EditorScreen {
             .draw(c, Face::Atkinson, ui, rx, sb, &right, t.mute);
         l
     }
-}
-
-/// Eye (brief §3: "eye in write mode"): an almond outline and a pupil.
-pub fn draw_eye_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
-    let (cx, cy) = (target.x + target.w / 2, target.y + target.h / 2);
-    let a = s.px(11.0) as f32;
-    let b = s.px(6.5) as f32;
-    let st = s.px(1.75).max(2) as f32;
-    let pr = s.px(3.0) as f32;
-    let r = a as i32 + 2;
-    for dy in -r..=r {
-        for dx in -r..=r {
-            let (x, y) = (dx as f32, dy as f32);
-            // Two arcs meeting at the corners: |y| <= b * (1 - (x/a)^2).
-            let edge = b * (1.0 - (x / a).powi(2));
-            let on_outline = x.abs() <= a && (y.abs() - edge).abs() <= st / 2.0;
-            let pupil = x * x + y * y <= pr * pr;
-            if on_outline || pupil {
-                c.blend(cx + dx, cy + dy, ink, 255);
-            }
-        }
-    }
-}
-
-/// Pencil (brief §3: "pencil in preview"): a diagonal shaft with a tip.
-pub fn draw_pencil_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
-    let (cx, cy) = (target.x + target.w / 2, target.y + target.h / 2);
-    let half = s.px(9.0);
-    let w = s.px(2.5).max(2);
-    for t in -half..=half {
-        // Shaft from top-right to bottom-left; the last quarter is the tip.
-        let tip = t > half / 2;
-        let ww = if tip {
-            w * (half - t) / (half / 2).max(1)
-        } else {
-            w
-        };
-        for k in -ww..=ww {
-            c.blend(cx - t + k, cy + t + k, ink, 255);
-            if !tip && k.abs() == ww {
-                c.blend(cx - t + k + 1, cy + t + k, ink, 255);
-            }
-        }
-    }
-    // The cap line across the top end.
-    for k in -w..=w {
-        c.blend(
-            cx + half - s.px(3.0) + k,
-            cy - half + s.px(3.0) + k,
-            ink,
-            255,
-        );
-    }
-}
-
-/// Magnifying glass: a ring and a handle to the lower right.
-pub fn draw_find_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
-    let (cx, cy) = (
-        target.x + target.w / 2 - s.px(3.0),
-        target.y + target.h / 2 - s.px(3.0),
-    );
-    let r = s.px(7.5) as f32;
-    let st = s.px(1.75).max(2) as f32;
-    let k = s.px(10.0);
-    for dy in -k..=k {
-        for dx in -k..=k {
-            let d = ((dx * dx + dy * dy) as f32).sqrt();
-            if (d - r).abs() <= st / 2.0 {
-                c.blend(cx + dx, cy + dy, ink, 255);
-            }
-        }
-    }
-    let st = st as i32;
-    let from = (r * 0.72) as i32 + 1;
-    for t in from..from + s.px(8.0) {
-        for a in 0..st + 1 {
-            for b in 0..st + 1 {
-                c.blend(cx + t + a - st / 2, cy + t + b - st / 2, ink, 255);
-            }
-        }
-    }
-}
-
-/// Graph: three dots joined by lines.
-pub fn draw_graph_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
-    let (cx, cy) = (target.x + target.w / 2, target.y + target.h / 2);
-    let pts = [
-        (cx - s.px(8.0), cy + s.px(6.0)),
-        (cx + s.px(8.0), cy + s.px(7.0)),
-        (cx + s.px(1.0), cy - s.px(8.0)),
-    ];
-    let st = s.px(1.5).max(2);
-    for (i, &(x0, y0)) in pts.iter().enumerate() {
-        let (x1, y1) = pts[(i + 1) % 3];
-        let n = (x1 - x0).abs().max((y1 - y0).abs()).max(1);
-        for k in 0..=n {
-            let x = x0 + (x1 - x0) * k / n;
-            let y = y0 + (y1 - y0) * k / n;
-            for a in 0..st {
-                c.blend(x + a - st / 2, y, ink, 255);
-                c.blend(x, y + a - st / 2, ink, 255);
-            }
-        }
-    }
-    let r = s.px(3.5);
-    for &(x, y) in &pts {
-        for dy in -r..=r {
-            for dx in -r..=r {
-                if dx * dx + dy * dy <= r * r {
-                    c.blend(x + dx, y + dy, ink, 255);
-                }
-            }
-        }
-    }
-}
-
-/// A 20 px (brief), 1.75-stroke folder outline centred in a 44 px target.
-/// Back arrow (v1.0.2): a shaft and a chevron pointing left.
-pub fn draw_back_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
-    let w = s.px(20.0);
-    let st = s.px(1.75).max(2);
-    let x = target.x + (target.w - w) / 2;
-    let cy = target.y + target.h / 2;
-    c.fill(Rect::new(x, cy - st / 2, w, st), ink);
-    let arm = s.px(8.0);
-    for k in 0..=arm {
-        c.fill(Rect::new(x + k, cy - k - st / 2, st, st), ink);
-        c.fill(Rect::new(x + k, cy + k - st / 2, st, st), ink);
-    }
-}
-
-pub fn draw_folder_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
-    let w = s.px(20.0);
-    let h = s.px(16.0);
-    let st = s.px(1.75).max(2);
-    let x = target.x + (target.w - w) / 2;
-    let y = target.y + (target.h - h) / 2 + s.px(1.0);
-    c.stroke(Rect::new(x, y + s.px(3.0), w, h - s.px(3.0)), st, ink);
-    c.stroke(Rect::new(x, y, w * 2 / 5, s.px(4.0)), st, ink);
 }
 
 fn ellipsize(f: &Fonts, face: Face, size: f32, s: &str, max: f32) -> String {
@@ -1859,7 +1747,8 @@ mod tests {
         let l = e.layout(true, &k);
         assert_eq!(l.keys.len(), 15 + 15 + 14 + 14 + 9);
         let narrowest = l.keys.iter().map(|(r, _)| r.w).min().unwrap();
-        assert!(narrowest >= 80, "1-unit key {narrowest}px");
+        // v1.1: keyboard capped at 42 % of the screen height.
+        assert!(narrowest >= 70, "1-unit key {narrowest}px");
         for (r, _) in &l.keys {
             assert!(
                 r.h >= 60 && r.x >= 0 && r.x + r.w <= W as i32 && r.y + r.h <= H as i32,
@@ -1884,8 +1773,13 @@ mod tests {
         };
         use sigma_core::keyboard::Dir;
         assert_eq!(find(Dir::Up).x, find(Dir::Down).x);
-        assert!(l.keyboard.h <= H as i32 / 4, "keyboard {}px", l.keyboard.h);
-        assert!(l.page.h >= 1300, "page {}px", l.page.h);
+        // v1.1: the keyboard is capped at 42 % of the height.
+        assert!(
+            l.keyboard.h <= H as i32 * 42 / 100,
+            "keyboard {}px",
+            l.keyboard.h
+        );
+        assert!(l.page.h >= 800, "page {}px", l.page.h);
         let c = e.layout(
             true,
             &Keyboard::with_layout(sigma_core::keyboard::Layout::Compact),
@@ -2022,7 +1916,7 @@ mod tests {
     }
 
     #[test]
-    fn title_icons_doubled_in_mockup_order_both_orientations() {
+    fn title_icons_in_mockup_order_at_ui_scale_both_orientations() {
         let k = Keyboard::default();
         for (w, h) in [(W, H), (H, W)] {
             let e = EditorScreen::new(w, h);
@@ -2040,7 +1934,11 @@ mod tests {
                 l.help_button,
             ];
             for r in order {
-                assert_eq!((r.w, r.h), (s.px(88.0), s.px(88.0)), "{w}x{h}: doubled");
+                assert_eq!(
+                    (r.w, r.h),
+                    (s.px(44.0), s.px(44.0)),
+                    "{w}x{h}: 44 units at UI scale"
+                );
                 assert!(r.w >= 44 && r.y >= 0 && r.y + r.h <= l.title.h);
             }
             for p in order.windows(2) {
@@ -2048,8 +1946,8 @@ mod tests {
             }
             assert_eq!(l.close_button, l.help_button);
             assert!(l.help_button.x + l.help_button.w <= w as i32 - s.px(12.0));
-            assert!(l.name_rect.w >= s.px(200.0), "{w}: title keeps room");
-            assert!(l.title.h >= s.px(88.0) && l.page.y >= l.title.h);
+            assert!(l.name_rect.w >= s.px(100.0), "{w}: title keeps room");
+            assert!(l.title.h >= s.px(44.0) && l.page.y >= l.title.h);
             // Every icon hits itself in write and preview mode.
             let b = Buffer::new("x");
             let st = SaveState::Saved;
@@ -2081,11 +1979,16 @@ mod tests {
     fn title_icon_overflow_shrinks_gaps_then_icons_never_below_44() {
         let e = EditorScreen::new(W, H);
         let s = e.scale();
-        assert_eq!(e.title_icons(W as i32), (s.px(88.0), s.px(8.0)));
-        let (b, g) = e.title_icons(1100);
-        assert_eq!(g, s.px(2.0));
-        assert!(b < s.px(88.0) && b >= s.px(44.0));
-        assert_eq!(e.title_icons(300).0, s.px(44.0));
+        assert_eq!(e.title_icons(W as i32), (s.px(44.0), s.px(4.0)));
+        let n = TITLE_ICONS;
+        let full = n * s.px(44.0) + (n - 1) * s.px(4.0) + s.px(12.0) + s.px(100.0);
+        let (b, g) = e.title_icons(full - 8);
+        assert_eq!((b, g), (s.px(44.0), s.px(1.0)), "gaps shrink first");
+        let (b2, _) = e.title_icons(full - s.px(80.0));
+        assert!(b2 < s.px(44.0), "then icons");
+        let floor = Scale::for_width(W).px(44.0);
+        assert!(b2 >= floor);
+        assert_eq!(e.title_icons(300).0, floor);
     }
 
     #[test]
@@ -2178,7 +2081,8 @@ mod tests {
                             assert!(r.y >= l.keyboard.y && r.x + r.w <= H as i32);
                             assert_eq!(e.hit(&m, r.x + r.w / 2, r.y + r.h / 2), Hit::KbButton(*b));
                         }
-                        assert!(l.page.h >= 800, "{mode:?} page {}", l.page.h);
+                        // v1.1: 200 % UI + 45 % keyboard cap leaves a smaller page.
+                        assert!(l.page.h >= 500, "{mode:?} page {}", l.page.h);
                         if layout == L::Compact {
                             let q = l.keys.iter().find(|(_, k)| *k == Key::Char('q')).unwrap().0;
                             let tol = if mode == LandKeys::Full {

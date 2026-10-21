@@ -125,3 +125,11 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.0.4 | [v1.0.4-pointer-moving.png](v1.0.4/v1.0.4-pointer-moving.png) | pointer drawn by a pointer-only frame | [eink](v1.0.4/eink/v1.0.4-pointer-moving.png) |
 | v1.0.4 | [v1.0.4-pointer-hidden.png](v1.0.4/v1.0.4-pointer-hidden.png) | after 3 s idle: arrow gone, page restored | [eink](v1.0.4/eink/v1.0.4-pointer-hidden.png) |
 | v1.0.4 | [v1.0.4-graph-pill-pointer.png](v1.0.4/v1.0.4-graph-pill-pointer.png) | Graph pill (GL16) with the pointer over the map | [eink](v1.0.4/eink/v1.0.4-graph-pill-pointer.png) |
+| v1.1 | [v1.1-write-200.png](v1.1/v1.1-write-200.png) | write mode at the 200 % default, Lucide title icons | [eink](v1.1/eink/v1.1-write-200.png) |
+| v1.1 | [v1.1-options-200.png](v1.1/v1.1-options-200.png) | Options at 200 %: UI scale row first | [eink](v1.1/eink/v1.1-options-200.png) |
+| v1.1 | [v1.1-options-100.png](v1.1/v1.1-options-100.png) | Options after stepping UI scale down to 100 % | [eink](v1.1/eink/v1.1-options-100.png) |
+| v1.1 | [v1.1-write-100.png](v1.1/v1.1-write-100.png) | write mode at 100 % | [eink](v1.1/eink/v1.1-write-100.png) |
+| v1.1 | [v1.1-files-100.png](v1.1/v1.1-files-100.png) | Files at 100 %, Lucide folder icons | [eink](v1.1/eink/v1.1-files-100.png) |
+| v1.1 | [v1.1-files-200.png](v1.1/v1.1-files-200.png) | Files at 200 % | [eink](v1.1/eink/v1.1-files-200.png) |
+| v1.1 | [v1.1-drawer-200.png](v1.1/v1.1-drawer-200.png) | Contents drawer at 200 % | [eink](v1.1/eink/v1.1-drawer-200.png) |
+| v1.1 | [v1.1-landscape-200.png](v1.1/v1.1-landscape-200.png) | landscape at 200 %, keyboard capped at 45 % | [eink](v1.1/eink/v1.1-landscape-200.png) |

@@ -1,4 +1,6 @@
 # v0.5 side drawer: Contents, To-dos, Scratch (Forma 1440x1920, seeded library).
+# Written for the 1.0 layout: run at UI scale 100 % (v1.1 default is 200 %).
+ui-scale 100
 expect-open field-notes.md
 tap-on Contents
 shot v0.5-contents

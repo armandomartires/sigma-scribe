@@ -4,7 +4,7 @@
 //! the bottom. In move mode the list shows destination folders instead.
 
 use crate::canvas::{Canvas, Rect};
-use crate::editor::{draw_folder_icon, EditorScreen, Layout};
+use crate::editor::{EditorScreen, Layout};
 use crate::fonts::Face;
 use crate::theme::Theme;
 use sigma_core::{Buffer, Keyboard};
@@ -213,14 +213,7 @@ impl EditorScreen {
         self.draw_title(c, &l.base, &title, m.rename, t, false);
         if m.rename.is_none() {
             // Close mark: an X in a 44 px target.
-            let r = l.close;
-            let (cx, cy, d) = (r.x + r.w / 2, r.y + r.h / 2, s.px(16.0));
-            for k in -d..=d {
-                for th in 0..s.px(3.5).max(3) {
-                    c.blend(cx + k, cy + k + th, t.ink, 255);
-                    c.blend(cx + k, cy - k + th, t.ink, 255);
-                }
-            }
+            crate::icons::draw_icon(c, crate::icons::Icon::Close, l.close, t.ink);
         }
         let base =
             |r: Rect, face| r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(face, ui) / 2.6;
@@ -265,15 +258,15 @@ impl EditorScreen {
             }
             let ix = s.px(20.0);
             if row.folder {
-                draw_folder_icon(
+                crate::icons::draw_icon(
                     c,
+                    crate::icons::Icon::Folder,
                     Rect::new(
                         ix - s.px(10.0),
                         r.y + (r.h - s.px(44.0)) / 2,
                         s.px(44.0),
                         s.px(44.0),
                     ),
-                    s,
                     t.ink,
                 );
             }
@@ -440,7 +433,8 @@ mod tests {
         let (r, kb) = (rows(), Keyboard::default());
         let m = model(&r, &kb);
         let l = e.files_layout(&m);
-        assert!(l.visible >= 15 && l.visible < r.len(), "{} rows", l.visible);
+        // v1.1: rows follow the 200 % UI scale.
+        assert!(l.visible >= 8 && l.visible < r.len(), "{} rows", l.visible);
         for &(i, row, more) in &l.rows {
             assert!(row.h >= 50 && more.w >= 50 && more.h >= 50);
             assert_eq!(
