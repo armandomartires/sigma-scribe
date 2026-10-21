@@ -25,9 +25,11 @@ extern "C" {
     fn sg_refresh(x: u32, y: u32, w: u32, h: u32, mode: i32) -> i32;
     fn sg_abs_max(fd: i32, code: i32) -> i32;
     fn sg_close() -> i32;
+    fn sg_wait() -> i32;
 }
 
 pub struct KoboDevice {
+    pointer_updates: u64,
     width: u32,
     height: u32,
     events: Receiver<Event>,
@@ -103,6 +105,7 @@ impl KoboDevice {
             height: h,
             events: rx,
             epoch,
+            pointer_updates: 0,
         })
     }
 }
@@ -121,7 +124,9 @@ impl Device for KoboDevice {
             Refresh::Fast => 0,
             Refresh::Partial => 1,
             Refresh::Full => 2,
+            Refresh::Pointer => 3,
         };
+        let started = std::time::Instant::now();
         // SAFETY: px holds exactly r.w*r.h bytes for the duration of the call.
         let rc = unsafe { sg_blit(px.as_ptr(), r.w, r.h, r.x, r.y) };
         if rc < 0 {
@@ -136,6 +141,21 @@ impl Device for KoboDevice {
                 "sigma-scribe: warning: fbink refresh {}x{}@{},{} failed ({rc})",
                 r.w, r.h, r.x, r.y
             );
+        }
+        // v1.0.1: log the pointer's GL16 latency every 20th update (waiting
+        // for completion only then, so the arrow is not slowed down).
+        if refresh == Refresh::Pointer {
+            self.pointer_updates += 1;
+            if self.pointer_updates % 20 == 1 {
+                // SAFETY: no arguments.
+                let _ = unsafe { sg_wait() };
+                eprintln!(
+                    "perf pointer: gl16 {}x{} submit+complete {} ms",
+                    r.w,
+                    r.h,
+                    started.elapsed().as_millis()
+                );
+            }
         }
         Ok(())
     }

@@ -68,7 +68,7 @@ impl Rig {
 }
 
 #[test]
-fn redraws_are_throttled_fast_and_at_least_16px() {
+fn redraws_are_throttled_gl16_and_at_least_16px() {
     let mut r = Rig::new("throttle");
     r.to(500, 500);
     let before = r.dev.refreshes.len();
@@ -83,7 +83,7 @@ fn redraws_are_throttled_fast_and_at_least_16px() {
     r.tick(200);
     assert!(!r.app.pointer.pending, "pending move flushed on the tick");
     for (rect, kind) in &r.dev.refreshes[before..] {
-        assert_eq!(*kind, Refresh::Fast);
+        assert_eq!(*kind, Refresh::Pointer);
         assert!(rect.w >= 16 && rect.h >= 16, "{rect:?}");
         assert!(
             rect.w <= 200 && rect.h <= 200,
@@ -182,4 +182,96 @@ fn unplug_mid_drag_is_safe() {
     r.send(Event::PointerPlug(false));
     r.send(Event::Key(sigma_device::HwKey::Char('q')));
     assert!(r.app.buffer.text().contains('q'));
+}
+
+/// v1.0.1 ghost trails: every move is ONE merged old+new region on the
+/// pointer (GL16) waveform, and hiding sends one cleanup over the path.
+#[test]
+fn moves_are_one_merged_region_and_hide_cleans_the_path() {
+    let mut r = Rig::new("trail");
+    r.to(300, 300);
+    let mut lo = (i32::MAX, i32::MAX);
+    let mut hi = (0, 0);
+    for i in 0..24 {
+        let a = f64::from(i) * std::f64::consts::PI / 6.0;
+        let (x, y) = (
+            600 + (200.0 * a.cos()) as i32,
+            700 + (200.0 * a.sin()) as i32,
+        );
+        let before = r.dev.refreshes.len();
+        r.to(x, y);
+        let new = &r.dev.refreshes[before..];
+        assert_eq!(new.len(), 1, "one region per move: {new:?}");
+        let (rect, kind) = new[0];
+        assert_eq!(kind, Refresh::Pointer);
+        // Old and new sprite both inside the one region.
+        assert!(rect.x <= x + 4 && rect.y <= y + 4, "{rect:?} vs {x},{y}");
+        lo = (lo.0.min(x), lo.1.min(y));
+        hi = (hi.0.max(x), hi.1.max(y));
+    }
+    let before = r.dev.refreshes.len();
+    r.tick(POINTER_HIDE_MS + 100);
+    assert!(!r.app.pointer.visible);
+    let cleanup: Vec<_> = r.dev.refreshes[before..]
+        .iter()
+        .filter(|(_, k)| *k == Refresh::Partial)
+        .collect();
+    assert_eq!(cleanup.len(), 1, "{:?}", &r.dev.refreshes[before..]);
+    let c = cleanup[0].0;
+    assert!(
+        c.x <= lo.0 && c.y <= lo.1 && c.x + c.w > hi.0 && c.y + c.h > hi.1,
+        "{c:?}"
+    );
+    assert!(r.app.pointer.trail.is_none());
+    assert_eq!(r.dev.panel.pixels, r.app.canvas.pixels);
+    // Typing hides it too, with the cleanup.
+    r.to(500, 500);
+    let before = r.dev.refreshes.len();
+    r.send(Event::Key(sigma_device::HwKey::Char('x')));
+    assert!(r.dev.refreshes[before..]
+        .iter()
+        .any(|(_, k)| *k == Refresh::Partial));
+}
+
+/// Emulator latency for the pointer path (app side: draw + diff + merge).
+#[test]
+fn pointer_update_cost_is_small() {
+    let mut r = Rig::new("cost");
+    r.to(300, 300);
+    let mut v = Vec::new();
+    for i in 0..100 {
+        r.t += 200;
+        let t0 = std::time::Instant::now();
+        r.raw(raw_move(if i % 2 == 0 { 7 } else { -5 }, 3));
+        v.push(t0.elapsed().as_secs_f64() * 1000.0);
+    }
+    v.sort_by(f64::total_cmp);
+    println!("pointer update p50 {:.2} ms p95 {:.2} ms", v[50], v[95]);
+    assert!(v[50] < 200.0);
+}
+
+#[test]
+fn reverse_scroll_flips_wheel_notches() {
+    let mut r = Rig::new("reverse");
+    r.app.buffer.select_all();
+    r.app.buffer.backspace();
+    let text: String = (0..200).map(|i| format!("line {i}\n")).collect();
+    r.app.buffer.insert(&text);
+    r.app.buffer.set_caret(0);
+    r.send(Event::Wheel { notches: -2 });
+    let traditional = r.app.buffer.caret();
+    assert!(traditional > 0, "wheel down moves forward");
+    r.app.buffer.set_caret(0);
+    r.app
+        .settings
+        .apply(sigma_core::settings::Change::NaturalScroll(true));
+    r.send(Event::Wheel { notches: 2 });
+    assert_eq!(
+        r.app.buffer.caret(),
+        traditional,
+        "natural: same move, other notch sign"
+    );
+    let s = r.app.settings.serialize();
+    assert!(s.contains("scroll=natural"), "{s}");
+    assert!(sigma_core::settings::Settings::parse(&s).natural_scroll);
 }

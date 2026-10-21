@@ -88,6 +88,9 @@ pub struct Settings {
     pub key_tone: KeyTone,
     pub drawer: Side,
     pub usb: bool,
+    /// Reverse scroll (v1.0.1): wheel / two-finger notches move content the
+    /// other way ("natural", like a touch screen). Default off = 1.0.
+    pub natural_scroll: bool,
     pub orientation: Orientation,
     pub land_keys: LandKeys,
     pub pad: Pad,
@@ -110,6 +113,7 @@ impl Default for Settings {
             key_tone: KeyTone::Theme,
             drawer: Side::Right,
             usb: false,
+            natural_scroll: false,
             orientation: Orientation::Portrait,
             land_keys: LandKeys::Centre,
             pad: Pad::Numbers,
@@ -136,6 +140,7 @@ pub enum Change {
     KeyTone(KeyTone),
     Drawer(Side),
     Usb(bool),
+    NaturalScroll(bool),
     Orientation(Orientation),
     LandKeys(LandKeys),
     Pad(Pad),
@@ -220,6 +225,7 @@ impl Settings {
             Change::KeyTone(t) => self.key_tone = t,
             Change::Drawer(s) => self.drawer = s,
             Change::Usb(on) => self.usb = on,
+            Change::NaturalScroll(on) => self.natural_scroll = on,
             Change::Orientation(o) => self.orientation = o,
             Change::LandKeys(k) => self.land_keys = k,
             Change::Pad(p) => self.pad = p,
@@ -309,6 +315,13 @@ impl Settings {
                 }
                 "drawer" => s.drawer = parse_side(v).unwrap_or(s.drawer),
                 "usb" => s.usb = b().unwrap_or(s.usb),
+                "scroll" => {
+                    s.natural_scroll = match v {
+                        "natural" => true,
+                        "traditional" => false,
+                        _ => s.natural_scroll,
+                    }
+                }
                 "orientation" => {
                     s.orientation = match v {
                         "portrait" => Orientation::Portrait,
@@ -348,7 +361,7 @@ impl Settings {
         let on = |b: bool| if b { "on" } else { "off" };
         format!(
             "keyboard={}\npaper={}\ntype={}\nline={}\nline_words={}\nsize={}\nleading={}\nmargin={}\n\
-             tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\nusb={}\norientation={}\n\
+             tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\nusb={}\nscroll={}\norientation={}\n\
              landscape_keys={}\npad={}\npad_side={}\n",
             self.keyboard.name(),
             match self.paper {
@@ -373,6 +386,7 @@ impl Settings {
             },
             side(self.drawer),
             on(self.usb),
+            if self.natural_scroll { "natural" } else { "traditional" },
             match self.orientation {
                 Orientation::Portrait => "portrait",
                 Orientation::Landscape => "landscape",

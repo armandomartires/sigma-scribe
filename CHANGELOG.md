@@ -2,6 +2,13 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.0.1 — 2026-10-21 (built, not installed, not tagged)
+- Pointer ghost trails fixed (sprint S10): every pointer move is now ONE update over the union of the old and new arrow (≥ 16×16) on a new `Refresh::Pointer` class mapped to FBInk `WFM_GL16` (grey-accurate, no flash) instead of `WFM_AUTO` (DU/A2, which left residue on the grey paper). When the arrow hides (3 s idle, typing, touching) one non-flashing GC16 partial covers its whole path since the last cleanup. Throttle stays 150 ms. Device log: `perf pointer: gl16 WxH submit+complete N ms` every 20th update.
+- Reverse scroll: Options → **Scroll: Traditional / Natural** (default Traditional = 1.0). Natural flips every wheel / two-finger notch: note, preview, sheets, Graph zoom. Saved as `scroll=natural|traditional`.
+- Label: Options → **USB keyboard & mouse**; Help → **USB keyboard, mouse & export**; About text updated. Settings key `usb` unchanged.
+- Test notes pack (S10.1): sources in `tests/test-notes/`, `scripts/make-test-notes.sh` builds `dist/test-notes/` (316 files, incl. generated `graph-300/`) and a reproducible tarball; emulator `copy-notes DIR` and `tests/emu/v1.0.1-test-notes.script`.
+- Emulator e-ink model: small Fast updates to mid greys now keep 30 % of the old pixel (DU-like), so trails show in `SIGMA_EINK=1`.
+
 ## 1.0.0 — 2026-10-21 (release candidate: built, not installed, not tagged, not released)
 - Release prep (sprint S9): reproducible tarball (fixed order, owner, mode, time; `gzip -n`), `scripts/check-package.sh` (only `.adds/`, no notes, required files, ARM static, hash list), `THIRD-PARTY.txt` in the package (AGPL, FBInk GPL-3.0+ at 886f25f1, OFL fonts, NickelMenu not included).
 - `.github/workflows/release.yml`: builds and checks the package with the pinned FBInk on every PR and push to main (artifact = release candidate); on a `v*` tag pushed by the maintainer it checks tag = Cargo version and creates a **draft** GitHub Release. It never tags or publishes.

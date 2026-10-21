@@ -1,7 +1,7 @@
 # v0.8 USB keyboard (raw evdev codes through the US keymap) and export help.
 # Setting on, nothing plugged: the status bar says "no USB".
 tap-on Options
-tap-on USB keyboard/On
+tap-on USB keyboard & mouse/On
 tap-on Close
 expect-usb off
 shot v0.8-no-usb
@@ -46,8 +46,8 @@ expect-scratch jot this
 tap-on Scratch
 # Help page.
 tap-on Help
-tap-on USB keyboard & export
-expect-help Help / USB keyboard & export
+tap-on USB keyboard, mouse & export
+expect-help Help / USB keyboard, mouse & export
 shot v0.8-help-usb
 tap-on Close
 # Unplug while typing: no crash, flag back to "no USB".
@@ -65,5 +65,5 @@ usb-type Sideways.
 shot v0.8-landscape-usb
 tap-on Options
 tap-on Orientation/Portrait
-tap-on USB keyboard/Off
+tap-on USB keyboard & mouse/Off
 tap-on Close

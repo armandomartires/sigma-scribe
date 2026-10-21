@@ -1,0 +1,47 @@
+# v1.0.1 (S10.1) test notes pack: every feature on the pack's notes, plus
+# the v1.0.1 pointer, Reverse scroll and label changes (Forma 1440x1920).
+copy-notes tests/test-notes/_test
+expect-open _test/test-00-start-here.md
+expect Start here
+tap-on Graph
+expect-graph map
+shot v1.0.1-test-notes-graph
+tap-on Close
+tap-on Options
+shot v1.0.1-options-scroll
+tap-on USB keyboard & mouse/Off
+tap-on Scroll/Natural
+expect-setting scroll=natural
+tap-on Close
+tap-on Help
+tap-on USB keyboard, mouse & export
+expect-help Help / USB keyboard, mouse & export
+shot v1.0.1-help-usb-mouse
+tap-on Close
+# Pointer: circles over text, then idle hide (merged GL16 + cleanup).
+pointer plug
+pointer-to 700 500
+wait 200
+pointer-to 800 560
+wait 200
+pointer-to 760 640
+wait 200
+pointer-to 660 600
+wait 200
+expect-pointer visible
+shot v1.0.1-pointer
+wait 3100
+expect-pointer hidden
+shot v1.0.1-pointer-hidden
+# Natural scroll in the long note.
+tap-on Files
+tap-on test-long-note.md
+expect-open _test/test-long-note.md
+wheel 2
+shot v1.0.1-natural-scroll
+pointer unplug
+tap-on Options
+tap-on Orientation/Landscape
+shot v1.0.1-options-landscape
+tap-on Orientation/Portrait
+tap-on Close

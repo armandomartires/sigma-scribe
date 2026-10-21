@@ -91,6 +91,10 @@ pub struct PointerState {
     pub pending: bool,
     pub down: Option<MouseDown>,
     pub last_press: Option<(i32, i32, u64)>,
+    /// Screen area the arrow has covered since the last cleanup (v1.0.1).
+    pub trail: Option<Rect>,
+    /// A cleanup refresh over `trail` is due (the arrow just hid).
+    pub cleanup: bool,
 }
 
 fn merge(a: Option<Refresh>, b: Option<Refresh>) -> Option<Refresh> {
@@ -101,11 +105,21 @@ fn merge(a: Option<Refresh>, b: Option<Refresh>) -> Option<Refresh> {
     }
 }
 
+/// Grows a region to at least 16×16 (refresh rule), inside `b`.
+fn min16(r: Rect, b: Rect) -> Rect {
+    let w = r.w.max(16).min(b.w);
+    let h = r.h.max(16).min(b.h);
+    let x = r.x.min(b.x + b.w - w).max(b.x);
+    let y = r.y.min(b.y + b.h - h).max(b.y);
+    Rect::new(x, y, w, h)
+}
+
 fn rank(r: Refresh) -> u8 {
     match r {
         Refresh::Fast => 0,
-        Refresh::Partial => 1,
-        Refresh::Full => 2,
+        Refresh::Pointer => 1,
+        Refresh::Partial => 2,
+        Refresh::Full => 3,
     }
 }
 
@@ -761,7 +775,7 @@ impl App {
         if t.saturating_sub(self.pointer.last_draw) >= POINTER_THROTTLE_MS {
             self.pointer.last_draw = t;
             self.pointer.pending = false;
-            Some(Refresh::Fast)
+            Some(Refresh::Pointer)
         } else {
             self.pointer.pending = true;
             None
@@ -777,7 +791,8 @@ impl App {
         if p.down.is_none() && t.saturating_sub(p.last_move) >= POINTER_HIDE_MS {
             p.visible = false;
             p.pending = false;
-            return Some(Refresh::Fast);
+            p.cleanup = true;
+            return Some(Refresh::Pointer);
         }
         if p.pending {
             return self.pointer_redraw(t);
@@ -817,7 +832,7 @@ impl App {
             self.pointer_redraw(t)
         } else {
             self.pointer.last_draw = t;
-            Some(Refresh::Fast)
+            Some(Refresh::Pointer)
         }
     }
 
@@ -882,6 +897,12 @@ impl App {
         if notches == 0 || self.options {
             return None;
         }
+        // Reverse scroll (v1.0.1): Natural flips every notch, everywhere.
+        let notches = if self.settings.natural_scroll {
+            -notches
+        } else {
+            notches
+        };
         let forward = notches < 0;
         if self.graph.as_ref().is_some_and(|g| g.map) {
             return self.graph_zoom(notches > 0);
@@ -1310,17 +1331,39 @@ impl App {
                 cell,
                 self.theme(),
             );
+            let pr = sigma_render::pointer::pointer_rect(self.pointer.x, self.pointer.y, cell)
+                .intersect(&c.bounds());
+            self.pointer.trail = Some(self.pointer.trail.map_or(pr, |t| t.union(&pr)));
         }
         self.canvas = c;
         // Only what changed goes to the panel: a pressed modifier redraws its
         // cap, a typed letter its text row and the word count.
-        let regions = if refresh == Refresh::Full {
+        let mut regions = if refresh == Refresh::Full {
             vec![self.canvas.bounds()]
         } else {
             self.canvas.diff_regions(&self.shown, 24, 8)
         };
+        // v1.0.1: the arrow's erase and draw go out as ONE update, so the
+        // panel never shows the old arrow's residue next to the new one.
+        if refresh == Refresh::Pointer && regions.len() > 1 {
+            let u = regions.iter().skip(1).fold(regions[0], |a, r| a.union(r));
+            regions = vec![u];
+        }
+        let regions: Vec<Rect> = regions
+            .into_iter()
+            .map(|r| min16(r, self.canvas.bounds()))
+            .collect();
         for r in &regions {
             self.present(dev, *r, refresh)?;
+        }
+        // When the arrow hides: one non-flashing GC16 partial over its path
+        // since the last cleanup, clearing any residue (v1.0.1).
+        if std::mem::take(&mut self.pointer.cleanup) {
+            if let Some(t) = self.pointer.trail.take() {
+                if refresh != Refresh::Full {
+                    self.present(dev, min16(t, self.canvas.bounds()), Refresh::Partial)?;
+                }
+            }
         }
         if !regions.is_empty() {
             self.shown.pixels.copy_from_slice(&self.canvas.pixels);
@@ -1779,6 +1822,7 @@ impl App {
             {
                 self.pointer.visible = false;
                 self.pointer.pending = false;
+                self.pointer.cleanup = true;
                 let r = self.handle_inner(e);
                 return merge(Some(Refresh::Fast), r);
             }
@@ -2896,8 +2940,8 @@ impl App {
                 "The page buttons scroll the page. The power button saves and goes back to the reader. Every change is saved as you type.".into(),
             ),
             (
-                "USB keyboard".into(),
-                "Needs a powered hub or a Y-cable: the reader does not power the port. See Help \u{2192} USB keyboard & export.".into(),
+                "USB keyboard & mouse".into(),
+                "Needs a powered hub or a Y-cable: the reader does not power the port. See Help \u{2192} USB keyboard, mouse & export.".into(),
             ),
             (
                 "Credits".into(),
@@ -3004,7 +3048,7 @@ impl App {
             if h.page == HelpPage::Menu {
                 add("App info", l.rows[0]);
                 add("Markdown reference", l.rows[1]);
-                add("USB keyboard & export", l.rows[2]);
+                add("USB keyboard, mouse & export", l.rows[2]);
             } else {
                 add("Back", l.crumb);
             }

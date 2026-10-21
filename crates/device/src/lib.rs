@@ -17,6 +17,9 @@ use std::io;
 pub enum Refresh {
     /// Keystrokes and caret: smallest region, fastest waveform.
     Fast,
+    /// The mouse pointer (v1.0.1): one merged old+new region with the
+    /// grey-accurate, non-flashing GL16 waveform (DU left trails on greys).
+    Pointer,
     /// Larger partial changes (keyboard toggled, scrolled page).
     Partial,
     /// Theme, orientation, opening a sheet, first paint: flashing full refresh.
