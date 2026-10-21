@@ -4,6 +4,8 @@ A distraction-free Markdown notebook for the **Kobo Forma** — native Rust, dra
 
 Licence: **AGPL-3.0-only** (`LICENSE`) · Author: **Sigma Recon** · Statically links FBInk (GPL-3.0-or-later) · Fonts: Literata and Atkinson Hyperlegible (SIL OFL 1.1) — see `packaging/kobo/.adds/sigma-scribe/THIRD-PARTY.txt`.
 
+> This repository's git history was cleaned for publication (author identities unified; machine names removed). Device serial numbers are masked as `<FORMA-SERIAL>` in the docs.
+
 Status: **v1.0.0 release candidate — not yet tested on the device and not released.** The last version that passed on the Forma is v0.4.0. Tested model/firmware: Kobo Forma, 4.38.23697.
 
 | Write | Preview | Drawer | Night | Landscape |
