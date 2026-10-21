@@ -4,6 +4,7 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
 
 ## 1.0.4 — 2026-10-22 (built, not installed, not tagged)
 - Pointer regression fixed (sprint S10.4): pointer moves no longer redraw the whole screen (1.0.3 log: ~170 ms CPU per move, events queued behind it); a pointer-only frame restores and redraws just the arrow. Idle hiding uses processing time, so a backlog no longer makes the arrow flicker on and off. The Graph selection pill is GL16 again (1.0.3 sent it as DU).
+- Device binary sha256 (CI build) `681a6d1f800a996ecef3ce8beea33434269fb43316af6f95c57bc14ea1b46b2e`; tarball `7da86927b84fbf69e96580827c677cd967a0094e003482caabeefd5a49f9a86d`.
 
 ## 1.0.3 — 2026-10-22 (built, not installed, not tagged)
 - Pointer lag fixed (sprint S10.3, decision S10.3-D2): the moving pointer now uses the fast DU waveform and is never waited for; one non-flashing GL16 cleanup over its path runs when it hides (3 s idle, typing, touching), clearing trails. The blocking `fbink_wait_for_complete` every 20th move (1.0.1/1.0.2) is gone, so pointer updates can no longer hold up typing. Regions stay ≥ 16×16. Device log: `perf pointer: du …` every 20th move, `perf pointer: gl16-cleanup …` per hide, and a pointer p50/p95 summary at exit.
