@@ -1,0 +1,65 @@
+# v0.5 side drawer: Contents, To-dos, Scratch (Forma 1440x1920, seeded library).
+expect-open field-notes.md
+tap-on Contents
+shot v0.5-contents
+tap-on Heading:Today
+expect-line 5
+tap-on To-dos
+shot v0.5-contents-todos
+# Checking a box in another note rewrites only that line on disk.
+tap-on TodoBox:Name the conductor
+expect-file-contains drafts/chapter-01.md|- [x] Name the conductor
+expect-file-contains drafts/chapter-01.md|- [ ] Decide what is in the parcel
+# In the open note it edits the buffer (autosaved).
+tap-on TodoBox:Try the keyboard in landscape
+expect - [x] Try the keyboard in landscape
+expect-file-contains field-notes.md|- [x] Try the keyboard in landscape
+tap-on Filter
+shot v0.5-todos-open
+tap-on Filter
+shot v0.5-todos-done
+tap-on Filter
+# Scratch: three panes share the height; the keyboard types into it.
+tap-on Scratch
+type buy milk
+key Enter
+type - [ ] call mara
+expect-scratch buy milk
+expect-not buy milk
+expect-file-contains .scratchpad.md|- [ ] call mara
+shot v0.5-three-panes
+# Scratch to-dos are listed and can be checked.
+tap-on TodoBox:call mara
+expect-scratch - [x] call mara
+# Tapping a to-do's text opens its note at that line.
+tap-on Todo:Decide what is in the parcel
+expect-open drafts/chapter-01.md
+expect-line 6
+shot v0.5-todo-open
+# Scratch survives a note switch and a restart.
+restart
+tap-on Scratch
+expect-scratch buy milk
+expect-scratch - [x] call mara
+shot v0.5-scratch-after-restart
+# Drawer side from Options; landscape; night.
+tap-on Options
+tap-on Drawer/Left
+tap-on Close
+tap-on Contents
+shot v0.5-drawer-left
+tap-on Options
+tap-on Orientation/Landscape
+tap-on Close
+expect-screen 1920x1440
+shot v0.5-landscape-drawer
+tap-on Options
+tap-on Paper/Night
+tap-on Close
+shot v0.5-night-drawer
+tap-on Options
+tap-on Paper/Day
+tap-on Orientation/Portrait
+tap-on Drawer/Right
+tap-on Close
+expect-status saved

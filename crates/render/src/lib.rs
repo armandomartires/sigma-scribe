@@ -3,6 +3,7 @@
 //! FBInk backend blits the canvas to the Forma, the desktop backend writes PNG.
 
 pub mod canvas;
+pub mod drawer;
 pub mod editor;
 pub mod files;
 pub mod fonts;
@@ -11,6 +12,7 @@ pub mod preview;
 pub mod theme;
 
 pub use canvas::{Canvas, Rect};
+pub use drawer::{DrawerHit, DrawerModel, Pane};
 pub use editor::{BarAction, EditorScreen, Hit, KbButton, PreviewModel, SelGeom, SelUi};
 pub use files::{FilesHit, FilesModel, Row};
 pub use fonts::{Face, Fonts};

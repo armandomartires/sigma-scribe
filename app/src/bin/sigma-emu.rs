@@ -12,6 +12,10 @@
 //!   v0.4: tap-on Options | tap-on Row/Cell (in Options, e.g. Paper/Night, Size/+)
 //!   tap-on Split|Full|Centre|Arrows|123|Pad left|Pad right (landscape bar)
 //!   expect-setting KEY=VALUE | expect-words N | expect-screen WxH | restart
+//!   v0.5: tap-on Contents|To-dos|Scratch (icons) | tap-on Heading:TEXT |
+//!   tap-on Todo:TEXT | tap-on TodoBox:TEXT | tap-on Filter | tap-on ScratchPane
+//!   expect-scratch TEXT | expect-file-contains PATH|TEXT | expect-line N
+//! The background to-do index is settled after every step (deterministic).
 //! Coordinates are screen coordinates (landscape is 1920×1440); shots are
 //! written the way the reader sees them, turned upright.
 
@@ -361,6 +365,24 @@ fn main() -> ExitCode {
                     return fail(format!("only {n} preview pages"));
                 }
             }
+            "expect-scratch" => {
+                if !app.scratch.text().contains(arg) {
+                    return fail(format!("scratch is {:?}", app.scratch.text()));
+                }
+            }
+            "expect-file-contains" => {
+                let (path, want) = arg.split_once('|').unwrap_or((arg, ""));
+                let body =
+                    std::fs::read_to_string(app.library.root().join(path)).unwrap_or_default();
+                if !body.contains(want) {
+                    return fail(format!("{path} is {body:?}"));
+                }
+            }
+            "expect-line" => {
+                if app.buffer.line_number().to_string() != arg {
+                    return fail(format!("caret on line {}", app.buffer.line_number()));
+                }
+            }
             "expect-setting" => {
                 let file = std::fs::read_to_string(app.library.root().join(".sigma-settings"))
                     .unwrap_or_default();
@@ -410,5 +432,8 @@ fn main() -> ExitCode {
 fn step(app: &mut App, dev: &mut DesktopDevice, e: Event) {
     if let Some(r) = app.handle(e) {
         let _ = app.render(dev, r);
+    }
+    if app.settle() {
+        let _ = app.render(dev, sigma_device::Refresh::Partial);
     }
 }

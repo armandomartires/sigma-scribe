@@ -103,3 +103,16 @@ On-device checklist (`sprints/S4-options-line-mode.md`):
 - Tab key: Spaces 2/4/8 and Tab.
 - No regressions: typing, selection, Files, preview; the log shows exit 0 and no refresh failures.
 
+
+## Upgrade 0.4.0 → 0.5.0 (PENDING APPROVAL — not run)
+Same procedure as 0.4.0: confirm it is the same Forma (serial <FORMA-SERIAL>) and touch no other disk; read `.adds/sigma-scribe/sigma-scribe.log` read-only; make a checksum-verified backup into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v0.5.0`; replace **only** `.adds/sigma-scribe/sigma-scribe` with `dist/sigma-scribe-0.5.0-kobo/.adds/sigma-scribe/sigma-scribe` (sha256 `1ada5ae93504d287bb685e15e9cb3a15288cb65073dc233b220cd4293ec01f8f`) via `.new` + sync + rename; verify the sha256 of the device copy; sync, unmount and power off with udisksctl. `launch.sh`, `touch.conf`, the NickelMenu entry and the licences are unchanged (same checksums). 0.5 creates `notes/.scratchpad.md` on first use of Scratch.
+
+Rollback: copy the 0.4.0 binary back (sha256 `689b84c4e763119cbdfa19eb07ade52d5709cdf034bf971fc2e5116e97c02043`); `.scratchpad.md` is ignored by 0.4.0 (hidden file) and can stay.
+
+On-device checklist (`sprints/S5-side-drawer.md`):
+- The three drawer icons open/close their panes in any combination; panes share the height; Options → Drawer Left/Right moves the drawer.
+- Contents lists the headings; tapping one jumps the caret there.
+- To-dos lists boxes from all notes; filter All/Open/Done; checking a box in another note changes only that line (check the file in Files/preview); tapping the text opens that note at the line.
+- Scratch: type into it, switch notes, leave and relaunch from NickelMenu — the text is still there; it is not in Files.
+- Landscape and Night with the drawer open; no ghosting after closing panes.
+- No regressions; the log shows exit 0 and no refresh failures.
