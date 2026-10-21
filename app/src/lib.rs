@@ -5,6 +5,7 @@
 
 use sigma_core::buffer::TabKind;
 use sigma_core::gesture::{Gesture, Recognizer};
+use sigma_core::graphmap::{self, MapLayout};
 use sigma_core::keyboard::{Dir, Key};
 use sigma_core::library::SCRATCH;
 use sigma_core::linefit::Anchor;
@@ -20,7 +21,8 @@ use sigma_render::editor::Model;
 use sigma_render::{
     BarAction, Canvas, Doc, DrawerHit, DrawerModel, EditorScreen, FilesHit, FilesModel, FindField,
     FindHit, FindModel, GraphHit, GraphModel, GraphRow, HelpHit, HelpModel, HelpPage, Hit,
-    KbButton, OptionsHit, OptionsModel, Pane, PreviewModel, Rect, Row, SelUi, Theme,
+    KbButton, MapView, OptionsHit, OptionsModel, Pane, PreviewModel, Rect, Row, SelUi, Theme,
+    ZOOMS,
 };
 use std::path::PathBuf;
 
@@ -143,7 +145,20 @@ pub struct GraphState {
     pub rows: Vec<GraphRow>,
     pub edges: usize,
     pub first: usize,
+    /// v1.0 map view (default) or the list.
+    pub map: bool,
+    /// Links between notes (from, to) and their layout.
+    pub links: Vec<(usize, usize)>,
+    pub layout: std::sync::Arc<MapLayout>,
+    pub zoom: usize,
+    pub pan: (f64, f64),
+    pub selected: Option<usize>,
+    /// Layout time in microseconds (0 when it came from the cache).
+    pub layout_us: u64,
 }
+
+/// Seed of the map layout: fixed, so the same notes give the same picture.
+pub const MAP_SEED: u64 = 0x5349_474d_414d_4150;
 
 /// The Help sheet (v0.7): the page shown and its laid-out text.
 #[derive(Clone, Debug)]
@@ -198,6 +213,10 @@ pub struct App {
     /// Touch selection chrome (v0.2.2).
     pub sel_ui: Option<SelUi>,
     drag: Option<Drag>,
+    /// Map pan by finger: press point and whether it moved past the slop.
+    map_drag: Option<(i32, i32, bool)>,
+    /// Map layout cache: key over names + links (v1.0).
+    map_cache: Option<(u64, std::sync::Arc<MapLayout>)>,
     /// `Some` while the note is shown rendered (eye ↔ pencil).
     pub preview: Option<PreviewState>,
     /// Every Options setting (v0.4), kept in `notes/.sigma-settings`.
@@ -280,6 +299,8 @@ impl App {
             gestures: Recognizer::default(),
             sel_ui: None,
             drag: None,
+            map_drag: None,
+            map_cache: None,
             preview: None,
             canvas: Canvas::new(lw, lh, 255),
             shown: Canvas::new(lw, lh, 0),
@@ -841,6 +862,10 @@ impl App {
             return None;
         }
         let d = self.pointer.down.take()?;
+        if d.dragged && self.on_map(d.x, d.y) {
+            let r = self.graph_pan(x - d.x, y - d.y);
+            return merge(Some(Refresh::Fast), r);
+        }
         if d.dragged && d.anchor.is_some() {
             self.sel_ui = self.buffer.selection().map(|_| SelUi { bar: true });
             self.pointer.last_draw = t;
@@ -858,6 +883,9 @@ impl App {
             return None;
         }
         let forward = notches < 0;
+        if self.graph.as_ref().is_some_and(|g| g.map) {
+            return self.graph_zoom(notches > 0);
+        }
         if self.preview.is_some()
             || self.files.is_some()
             || self.graph.is_some()
@@ -1576,8 +1604,23 @@ impl App {
         let page = self.page_rect();
         let on_page = |x: i32, y: i32| page.contains(x, y);
         match g {
+            Gesture::Press { x, y } if self.on_map(x, y) => {
+                self.drag = None;
+                self.map_drag = Some((x, y, false));
+                None
+            }
+            Gesture::Drag { x, y, .. } if self.map_drag.is_some() => {
+                let (x0, y0, _) = self.map_drag?;
+                self.map_drag = Some((x, y, true));
+                self.graph_pan(x - x0, y - y0)
+            }
+            Gesture::Release { x, y, .. } if self.map_drag.is_some_and(|d| d.2) => {
+                let (x0, y0, _) = self.map_drag.take()?;
+                self.graph_pan(x - x0, y - y0).or(Some(Refresh::Partial))
+            }
             Gesture::Press { x, y } => {
                 self.drag = None;
+                self.map_drag = None;
                 if self.in_editor() && self.sel_ui.is_some() {
                     if let (Hit::Handle(i), Some((a, b))) =
                         (self.editor_hit(x, y), self.buffer.selection())
@@ -2045,6 +2088,25 @@ impl App {
             let l = self.screen.graph_layout(&m);
             if label == "Close" {
                 return Some(centre(l.close));
+            }
+            let want = match label {
+                "Map" => Some(GraphHit::Map),
+                "List" => Some(GraphHit::List),
+                "Zoom+" => Some(GraphHit::ZoomIn),
+                "Zoom-" => Some(GraphHit::ZoomOut),
+                "Open" => Some(GraphHit::Open),
+                _ => None,
+            };
+            if let Some(h) = want {
+                return l
+                    .toolbar
+                    .iter()
+                    .find(|(g, _)| *g == h)
+                    .map(|(_, r)| centre(*r));
+            }
+            if let Some(name) = label.strip_prefix("Node:") {
+                let i = g.rows.iter().position(|r| r.name == name)?;
+                return self.screen.map_node_point(&m, i);
             }
             let name = label.strip_prefix("Graph:")?;
             return l
@@ -2518,6 +2580,11 @@ impl App {
         self.find_key(key)
     }
 
+    /// Forgets the cached map layout (perf measurements).
+    pub fn clear_map_cache(&mut self) {
+        self.map_cache = None;
+    }
+
     /// Opens the Graph sheet with fresh rows.
     pub fn open_graph(&mut self) {
         self.help = None;
@@ -2559,11 +2626,40 @@ impl App {
                 }
             })
             .collect();
+        let mut links: Vec<(usize, usize)> = g
+            .out
+            .iter()
+            .enumerate()
+            .flat_map(|(i, out)| out.iter().filter_map(move |l| l.to.map(|j| (i, j))))
+            .filter(|(a, b)| a != b)
+            .collect();
+        links.sort_unstable();
+        links.dedup();
+        let names: Vec<String> = g.notes.iter().map(|n| n.as_str().to_owned()).collect();
+        let key = graphmap::layout_key(&names, &links);
+        let (layout, layout_us) = match &self.map_cache {
+            Some((k, l)) if *k == key => (l.clone(), 0),
+            _ => {
+                let t0 = std::time::Instant::now();
+                let l = std::sync::Arc::new(graphmap::layout(names.len(), &links, MAP_SEED));
+                let us = t0.elapsed().as_micros() as u64;
+                self.map_cache = Some((key, l.clone()));
+                (l, us.max(1))
+            }
+        };
+        let map = self.graph.as_ref().is_none_or(|g| g.map);
         self.graph = Some(GraphState {
             edges: g.edges(),
             notes: g.notes,
             rows,
             first: 0,
+            map,
+            links,
+            layout,
+            zoom: 0,
+            pan: (0.0, 0.0),
+            selected: None,
+            layout_us,
         });
     }
 
@@ -2574,12 +2670,21 @@ impl App {
             edges: g.edges,
             theme: self.theme(),
             keyboard: &self.keyboard,
+            map: g.map.then_some(MapView {
+                pos: &g.layout.pos,
+                orphan: &g.layout.orphan,
+                edges: &g.links,
+                zoom: g.zoom,
+                pan: g.pan,
+                selected: g.selected,
+            }),
         }
     }
 
     fn graph_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
         let g = self.graph.as_ref()?;
-        match self.screen.graph_hit(&self.graph_model(g), x, y) {
+        let hit = self.screen.graph_hit(&self.graph_model(g), x, y);
+        match hit {
             GraphHit::Close => {
                 self.graph = None;
                 Some(Refresh::Full)
@@ -2590,12 +2695,110 @@ impl App {
                 self.open(&p);
                 Some(Refresh::Full)
             }
-            GraphHit::Nothing => None,
+            GraphHit::Map | GraphHit::List => {
+                let map = matches!(hit, GraphHit::Map);
+                let g = self.graph.as_mut()?;
+                if g.map == map {
+                    return None;
+                }
+                g.map = map;
+                g.selected = None;
+                Some(Refresh::Full)
+            }
+            GraphHit::ZoomIn | GraphHit::ZoomOut => {
+                self.graph_zoom(matches!(hit, GraphHit::ZoomIn))
+            }
+            GraphHit::Open => {
+                let s = g.selected?;
+                self.graph_open_preview(s)
+            }
+            GraphHit::Node(i) => {
+                if g.selected == Some(i) {
+                    return self.graph_open_preview(i);
+                }
+                self.graph.as_mut()?.selected = Some(i);
+                Some(Refresh::Partial)
+            }
+            GraphHit::Nothing => {
+                let g = self.graph.as_mut()?;
+                if g.map && g.selected.take().is_some() {
+                    return Some(Refresh::Partial);
+                }
+                None
+            }
         }
+    }
+
+    /// Opens a map node in preview (the sheet closes).
+    fn graph_open_preview(&mut self, i: usize) -> Option<Refresh> {
+        let p = self.graph.as_ref()?.notes.get(i)?.clone();
+        self.graph = None;
+        self.map_drag = None;
+        if p != self.current {
+            self.open(&p);
+        }
+        self.enter_preview();
+        Some(Refresh::Full)
+    }
+
+    /// One zoom step; the view stays centred where it is. Full refresh.
+    fn graph_zoom(&mut self, zoom_in: bool) -> Option<Refresh> {
+        let g = self.graph.as_mut()?;
+        if !g.map {
+            return None;
+        }
+        let z = if zoom_in {
+            (g.zoom + 1).min(ZOOMS.len() - 1)
+        } else {
+            g.zoom.saturating_sub(1)
+        };
+        if z == g.zoom {
+            return None;
+        }
+        g.zoom = z;
+        if z == 0 {
+            g.pan = (0.0, 0.0);
+        }
+        Some(Refresh::Full)
+    }
+
+    /// Pans the map by a screen distance (the picture follows the finger).
+    fn graph_pan(&mut self, dx: i32, dy: i32) -> Option<Refresh> {
+        let g = self.graph.as_ref()?;
+        if !g.map || (dx == 0 && dy == 0) {
+            return None;
+        }
+        let scale = self
+            .screen
+            .graph_layout(&self.graph_model(g))
+            .scale
+            .max(1e-6);
+        let g = self.graph.as_mut()?;
+        let lim = 2.0;
+        g.pan.0 = (g.pan.0 - f64::from(dx) / scale).clamp(-lim, lim);
+        g.pan.1 = (g.pan.1 - f64::from(dy) / scale).clamp(-lim, lim);
+        Some(Refresh::Partial)
+    }
+
+    /// Whether a point is on the map drawing area.
+    fn on_map(&self, x: i32, y: i32) -> bool {
+        self.graph.as_ref().is_some_and(|g| {
+            g.map
+                && self
+                    .screen
+                    .graph_layout(&self.graph_model(g))
+                    .area
+                    .contains(x, y)
+        })
     }
 
     fn graph_page(&mut self, forward: bool) -> Option<Refresh> {
         let g = self.graph.as_ref()?;
+        if g.map {
+            // Page buttons pan half a view down (forward) or up.
+            let h = self.screen.graph_layout(&self.graph_model(g)).area.h / 2;
+            return self.graph_pan(0, if forward { -h } else { h });
+        }
         let visible = self
             .screen
             .graph_layout(&self.graph_model(g))
@@ -2810,8 +3013,14 @@ impl App {
         if let Some(g) = &self.graph {
             let l = self.screen.graph_layout(&self.graph_model(g));
             add("Close", l.close);
+            for (h, r) in &l.toolbar {
+                add(&format!("graph {h:?}"), *r);
+            }
             for (i, r) in &l.rows {
                 add(&format!("graph row {i}"), *r);
+            }
+            for (i, r) in &l.nodes {
+                add(&format!("graph node {i}"), r.intersect(&l.area));
             }
             return out;
         }

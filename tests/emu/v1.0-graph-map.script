@@ -1,0 +1,113 @@
+# v1.0 (S9.1) Graph map: nodes and links, Map/List, select, open in
+# preview, pan, zoom, mouse (Forma 1440x1920).
+open-fixture tests/emu/fixtures/lamps.md
+type [[markdown-tour]] and [[The Parcel]]
+open-fixture tests/emu/fixtures/markdown-tour.md
+type See [[lamps]].
+tap-on Files
+tap-on New note
+clear-field
+type The Parcel
+tap-on OK
+type Back to [[lamps]] and on to [[field-notes]].
+tap-on Files
+tap-on New note
+clear-field
+type field-notes
+tap-on OK
+type Some notes from the field.
+tap-on Files
+tap-on New note
+clear-field
+type orphan
+tap-on OK
+tap-on Files
+tap-on New note
+clear-field
+type ideas
+tap-on OK
+type [[field-notes]] and [[lamps]]
+tap-on Graph
+expect-mode graph
+expect-graph map
+expect-zoom 0
+shot v1.0-graph-map
+# Tap selects (neighbours emphasised); tap again opens in preview.
+tap-on Node:lamps.md
+expect-selected lamps.md
+shot v1.0-graph-map-selected
+tap-on Node:lamps.md
+expect-mode preview
+expect-open lamps.md
+esc
+# Map / List toggle.
+tap-on Graph
+tap-on List
+expect-graph list
+tap-on Map
+expect-graph map
+# Zoom: 4 levels, clamped.
+tap-on Zoom+
+tap-on Zoom+
+tap-on Zoom+
+tap-on Zoom+
+expect-zoom 3
+tap-on Zoom-
+expect-zoom 2
+# Pan: drag and page buttons.
+press 700 1000
+move 300 1000
+release
+page
+page back
+tap-on Zoom-
+tap-on Zoom-
+expect-zoom 0
+# The Open button opens the selection.
+tap-on Node:orphan.md
+expect-selected orphan.md
+tap-on Open
+expect-mode preview
+expect-open orphan.md
+esc
+# Mouse: wheel zooms, click selects, drag pans.
+pointer plug
+tap-on Graph
+wheel 1
+expect-zoom 1
+wheel -1
+expect-zoom 0
+pointer-to-control Node:ideas.md
+click
+expect-selected ideas.md
+mouse-down
+pointer-move -200 0
+mouse-up
+expect-mode graph
+expect-selected ideas.md
+tap-on Close
+pointer unplug
+# Night, landscape.
+tap-on Options
+tap-on Paper/Night
+tap-on Close
+tap-on Graph
+shot v1.0-graph-map-night
+tap-on Close
+tap-on Options
+tap-on Paper/Day
+tap-on Orientation/Landscape
+tap-on Close
+tap-on Graph
+expect-graph map
+shot v1.0-graph-map-landscape
+tap-on Close
+tap-on Options
+tap-on Orientation/Portrait
+tap-on Close
+# ~300 notes: layout time (desktop), with a generous ceiling.
+make-notes 300
+perf-graph 2000
+tap-on Graph
+shot v1.0-graph-map-300
+tap-on Close

@@ -495,6 +495,82 @@ fn main() -> ExitCode {
                     return fail(format!("find bar shows {got:?}"));
                 }
             }
+            // Graph map (v1.0, S9.1).
+            "make-notes" => {
+                // N synthetic notes in map/ with deterministic links: each
+                // note links to the next and to one "hub"; every tenth is
+                // an orphan. Opens map/n000.md.
+                let n: usize = arg.parse().unwrap_or(0);
+                let dir = app.library.root().join("map");
+                if let Err(e) = std::fs::create_dir_all(&dir) {
+                    return fail(e.to_string());
+                }
+                for i in 0..n {
+                    let mut body = format!("# Note {i}\n\n");
+                    if i % 10 != 9 {
+                        let next = (i + 1) % n;
+                        if next % 10 != 9 {
+                            body.push_str(&format!("Next: [[n{next:03}]]\n"));
+                        }
+                        body.push_str(&format!("Hub: [[n{:03}]]\n", (i * 7 / 10) % 20));
+                    }
+                    if let Err(e) = std::fs::write(dir.join(format!("n{i:03}.md")), body) {
+                        return fail(e.to_string());
+                    }
+                }
+                if let Ok(p) = sigma_core::NotePath::parse("map/n000.md") {
+                    app.open(&p);
+                }
+                let _ = app.render(&mut dev, sigma_device::Refresh::Full);
+            }
+            "perf-graph" => {
+                // Opens the Graph with an empty cache and reports the layout
+                // time; fails above ARG ms (desktop).
+                let limit: f64 = arg.parse().unwrap_or(f64::MAX);
+                app.clear_map_cache();
+                app.open_graph();
+                let us = app.graph.as_ref().map_or(0, |g| g.layout_us);
+                let n = app.graph.as_ref().map_or(0, |g| g.rows.len());
+                let l = app.graph.as_ref().map_or(0, |g| g.links.len());
+                let t0 = std::time::Instant::now();
+                let _ = app.render(&mut dev, sigma_device::Refresh::Full);
+                let draw = t0.elapsed().as_micros();
+                println!(
+                    "perf-graph notes={n} links={l} layout_ms={:.1} draw_ms={:.1}",
+                    us as f64 / 1000.0,
+                    draw as f64 / 1000.0
+                );
+                if us as f64 / 1000.0 > limit {
+                    return fail(format!("layout took {} ms", us / 1000));
+                }
+                app.graph = None;
+                let _ = app.render(&mut dev, sigma_device::Refresh::Full);
+            }
+            "expect-graph" => {
+                let got = app
+                    .graph
+                    .as_ref()
+                    .map(|g| if g.map { "map" } else { "list" });
+                if got != Some(arg) {
+                    return fail(format!("graph shows {got:?}"));
+                }
+            }
+            "expect-selected" => {
+                let got = app
+                    .graph
+                    .as_ref()
+                    .and_then(|g| g.selected.map(|i| g.rows[i].name.clone()))
+                    .unwrap_or_else(|| "none".into());
+                if got != arg {
+                    return fail(format!("selected is {got}"));
+                }
+            }
+            "expect-zoom" => {
+                let got = app.graph.as_ref().map(|g| g.zoom.to_string());
+                if got.as_deref() != Some(arg) {
+                    return fail(format!("zoom is {got:?}"));
+                }
+            }
             "expect-mode" => {
                 let mode = if app.help.is_some() {
                     "help"
