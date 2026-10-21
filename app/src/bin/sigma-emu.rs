@@ -496,6 +496,32 @@ fn main() -> ExitCode {
                 }
             }
             // Graph map (v1.0, S9.1).
+            "copy-notes" => {
+                // Copies a folder of notes (the S10.1 test pack's _test/)
+                // into the library as _test/, then opens
+                // _test/test-00-start-here.md.
+                fn copy(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
+                    std::fs::create_dir_all(to)?;
+                    for e in std::fs::read_dir(from)? {
+                        let e = e?;
+                        let dst = to.join(e.file_name());
+                        if e.file_type()?.is_dir() {
+                            copy(&e.path(), &dst)?;
+                        } else {
+                            std::fs::copy(e.path(), dst)?;
+                        }
+                    }
+                    Ok(())
+                }
+                if let Err(e) = copy(std::path::Path::new(arg), &app.library.root().join("_test")) {
+                    return fail(e.to_string());
+                }
+                match sigma_core::NotePath::parse("_test/test-00-start-here.md") {
+                    Ok(p) => app.open(&p),
+                    Err(e) => return fail(e.to_string()),
+                }
+                let _ = app.render(&mut dev, sigma_device::Refresh::Full);
+            }
             "make-notes" => {
                 // N synthetic notes in map/ with deterministic links: each
                 // note links to the next and to one "hub"; every tenth is

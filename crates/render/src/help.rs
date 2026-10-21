@@ -29,7 +29,7 @@ impl HelpPage {
             Self::Menu => "Help",
             Self::About => "Help / App info",
             Self::Markdown => "Help / Markdown reference",
-            Self::Keyboard => "Help / USB keyboard & export",
+            Self::Keyboard => "Help / USB keyboard, mouse & export",
         }
     }
 }
@@ -43,7 +43,7 @@ pub const MENU: [(&str, &str, HelpPage); 3] = [
         HelpPage::Markdown,
     ),
     (
-        "USB keyboard & export",
+        "USB keyboard, mouse & export",
         "Hub, shortcuts, getting files off",
         HelpPage::Keyboard,
     ),
@@ -58,7 +58,7 @@ pub const KEYBOARD_HELP: [(&str, &str, &str); 7] = [
     ),
     (
         "Connecting",
-        "Turn on Options \u{2192} USB keyboard first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.",
+        "Turn on Options \u{2192} USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.",
         "",
     ),
     (

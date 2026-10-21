@@ -193,11 +193,23 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
             ],
         },
         OptRow {
-            label: "USB keyboard",
+            label: "USB keyboard & mouse",
             hint: "Needs a powered hub: the reader does not power the port",
             cells: vec![
                 choice("Off", Change::Usb(false), !s.usb),
                 choice("On", Change::Usb(true), s.usb),
+            ],
+        },
+        OptRow {
+            label: "Scroll",
+            hint: "Wheel and two-finger direction; Natural moves the page like a touch screen",
+            cells: vec![
+                choice(
+                    "Traditional",
+                    Change::NaturalScroll(false),
+                    !s.natural_scroll,
+                ),
+                choice("Natural", Change::NaturalScroll(true), s.natural_scroll),
             ],
         },
         OptRow {
@@ -446,7 +458,8 @@ mod tests {
                 "Keyboard",
                 "Keyboard tone",
                 "Drawer",
-                "USB keyboard",
+                "USB keyboard & mouse",
+                "Scroll",
                 "Orientation"
             ]
         );

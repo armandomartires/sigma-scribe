@@ -1,6 +1,6 @@
 # S10 — v1.0.1: pointer trails, Reverse scroll, USB label (draft)
 
-> **DRAFT — planning only (updated 2026-10-21 21:24 with the user's answers). No development until the user approves.**
+> **APPROVED 2026-10-21 22:32 and BUILT** (branch `feat/v1.0.1`). Implemented as recommended (option A + cleanup). Deviations: the emulator cannot time the panel; GL16 latency is logged on the device (`perf pointer`), see below.
 
 **Release:** **v1.0.1** on its own (user decision 2026-10-21) · **Estimate:** 1.75 d + device check · **Depends on:** 1.0.0 device results
 
@@ -28,3 +28,9 @@ Rename the Options row, Help page ("USB keyboard, mouse & export") and status he
 ## Device checklist
 - [ ] Circles with the K400 touchpad over text and the title bar: no trails; arrow still responsive
 - [ ] Natural vs Traditional on two-finger scroll in note, preview, Files and Graph
+
+## Built (v1.0.1)
+- `Refresh::Pointer` (rank between Fast and Partial) → FBInk `WFM_GL16`, no flash (`sg_fbink.c` mode 3). Pointer-only renders union all changed regions into one (≥ 16×16). `PointerState.trail` collects the arrow's area; on hide (idle, key, touch) one `Partial` (GC16_FAST) over it, then the trail resets.
+- **Latency (emulator, desktop release build, app side = draw + diff + merge, 100 moves):** p50 **5.0 ms**, p95 **16.4 ms** (`app/tests/pointer.rs::pointer_update_cost_is_small`). The panel waveform time cannot be measured in the emulator; expected on the Forma: DU ≈ 120 ms vs GL16 ≈ 260 ms per update (FBInk/EPDC figures), inside the 150 ms throttle + one queued update. **On the device** the binary logs `perf pointer: gl16 WxH submit+complete N ms` on every 20th pointer update (waits for completion only then) — record it in the device check; if it is > 300 ms, raise the throttle to 250 ms.
+- Tests: one merged region per move, Pointer kind, cleanup Partial covering the path, panel equals a fresh render after hide; Reverse scroll flips notches and round-trips `scroll=natural`.
+- Screenshots: `docs/screenshots/v1.0.1/` (+ `eink/`).

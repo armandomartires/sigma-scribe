@@ -101,3 +101,10 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.0 | [v1.0-titlebar-mockup-vs-ours.png](v1.0/v1.0-titlebar-mockup-vs-ours.png) | mockup title bar vs ours, side by side | missing |
 | v1.0 | [v1.0-usb-pointer.png](v1.0/v1.0-usb-pointer.png) | usb pointer | [eink](v1.0/eink/v1.0-usb-pointer.png) |
 | v1.0 | [v1.0-write.png](v1.0/v1.0-write.png) | write | [eink](v1.0/eink/v1.0-write.png) |
+| v1.0.1 | [v1.0.1-help-usb-mouse.png](v1.0.1/v1.0.1-help-usb-mouse.png) | Help page renamed "USB keyboard, mouse & export" | [eink](v1.0.1/eink/v1.0.1-help-usb-mouse.png) |
+| v1.0.1 | [v1.0.1-natural-scroll.png](v1.0.1/v1.0.1-natural-scroll.png) | long test note after two natural-scroll notches | [eink](v1.0.1/eink/v1.0.1-natural-scroll.png) |
+| v1.0.1 | [v1.0.1-options-landscape.png](v1.0.1/v1.0.1-options-landscape.png) | Options in landscape with the new Scroll row | [eink](v1.0.1/eink/v1.0.1-options-landscape.png) |
+| v1.0.1 | [v1.0.1-options-scroll.png](v1.0.1/v1.0.1-options-scroll.png) | Options: "USB keyboard & mouse" and the new Scroll row | [eink](v1.0.1/eink/v1.0.1-options-scroll.png) |
+| v1.0.1 | [v1.0.1-pointer.png](v1.0.1/v1.0.1-pointer.png) | pointer arrow over text after circles | [eink](v1.0.1/eink/v1.0.1-pointer.png) |
+| v1.0.1 | [v1.0.1-pointer-hidden.png](v1.0.1/v1.0.1-pointer-hidden.png) | after the arrow hides (cleanup refresh) | [eink](v1.0.1/eink/v1.0.1-pointer-hidden.png) |
+| v1.0.1 | [v1.0.1-test-notes-graph.png](v1.0.1/v1.0.1-test-notes-graph.png) | graph map of the test notes pack | [eink](v1.0.1/eink/v1.0.1-test-notes-graph.png) |

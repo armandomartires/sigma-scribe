@@ -39,7 +39,7 @@ int sg_blit(const unsigned char* data, int w, int h, int x, int y)
 int sg_refresh(uint32_t x, uint32_t y, uint32_t w, uint32_t h, int mode)
 {
 	g_cfg.is_flashing = (mode == 2);
-	g_cfg.wfm_mode    = mode == 0 ? WFM_AUTO : (mode == 1 ? WFM_GC16_FAST : WFM_GC16);
+	g_cfg.wfm_mode    = mode == 0 ? WFM_AUTO : (mode == 1 ? WFM_GC16_FAST : (mode == 3 ? WFM_GL16 : WFM_GC16));
 	int r             = fbink_refresh(g_fd, y, x, w, h, &g_cfg);
 	g_cfg.is_flashing = false;
 	return r;
