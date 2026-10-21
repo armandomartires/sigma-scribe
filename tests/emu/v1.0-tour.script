@@ -1,0 +1,46 @@
+# v1.0 tour: one screenshot per main screen (README / release page).
+open-fixture tests/emu/fixtures/markdown-tour.md
+shot v1.0-write
+tap-on Preview
+expect-mode preview
+shot v1.0-preview
+tap-on Preview
+tap-on Contents
+tap-on To-dos
+shot v1.0-drawer
+tap-on Contents
+tap-on To-dos
+tap-on Find
+type list
+expect-mode find
+shot v1.0-find
+esc
+tap-on Files
+shot v1.0-files
+tap-on Close
+tap-on Graph
+shot v1.0-graph
+tap-on Close
+tap-on Options
+shot v1.0-options
+tap-on Paper/Night
+tap-on Close
+shot v1.0-night
+tap-on Help
+shot v1.0-help
+tap-on Close
+tap-on Options
+tap-on Paper/Day
+tap-on Orientation/Landscape
+tap-on Close
+expect-screen 1920x1440
+shot v1.0-landscape
+tap-on Options
+tap-on Orientation/Portrait
+tap-on Close
+usb plug
+pointer plug
+pointer-to-word hanging
+double-click
+expect-selection hanging
+shot v1.0-usb-pointer

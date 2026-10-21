@@ -39,3 +39,7 @@ FBInk has **no emulator or preview window**. Its README notes it "works perfectl
 - `pointer plug|unplug`; `pointer-to X Y`, `pointer-to-word W`, `pointer-before W`, `pointer-after W`, `pointer-to-control NAME`, `pointer-move DX DY` — all sent as raw `REL_X/REL_Y` through the evdev pointer decoder.
 - `click`, `double-click`, `right-click`, `mouse-down`, `mouse-up`, `wheel N` (+ = up); `expect-pointer visible|hidden`; `wait MS` drives the throttle and the 3 s hide.
 - Script: `tests/emu/v0.8.1-pointer.script` (screenshots in `docs/screenshots/v0.8.1/`, `eink/`).
+
+## v1.0 release checks
+- `scripts/check-package.sh dist/sigma-scribe-<ver>-kobo` (run by `package-kobo.sh` and the release workflow).
+- `app/tests/release.rs`; tour script `tests/emu/v1.0-tour.script` (screenshots `docs/screenshots/v1.0/`, `eink/`).

@@ -5,7 +5,7 @@ The Cobalt Store no longer applies (Plan B, 2026-10-20). Proposed distribution:
 ## GitHub Releases (primary)
 - Repo `sigma-scribe` (AGPL-3.0, author **Sigma Recon**). Tag `vX.Y.Z` per roadmap version.
 - Assets: `sigma-scribe-X.Y.Z-kobo.tar.gz` (the `.adds/` tree: binary, `launch.sh`, `touch.conf`, NickelMenu entry, `LICENSE`, OFL texts), `.sha256`, and the source archive (AGPL: source for the exact binary). Release notes = user-visible changes.
-- Built by CI (`.github/workflows/ci.yml` → later a `release.yml` on tags) so the binary is reproducible from the tagged source; FBInk version pinned.
+- Built by `.github/workflows/release.yml` (pinned FBInk 886f25f1, same container as CI): an artifact on every PR / main push; a **draft** release only when the maintainer pushes a `v*` tag. The CI build is reproducible with itself; local builds differ (toolchain), so the CI artifact is what gets tested and shipped. Steps: `docs/release/checklist.md`; drafts in `docs/release/`.
 - Install instructions: (1) install NickelMenu from its own release, (2) unpack our tarball onto the Kobo drive root, (3) eject. Uninstall = delete two paths.
 - Public screenshots allowed (decision 2026-10-20): use `docs/screenshots/` and on-device photos.
 

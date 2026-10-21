@@ -104,25 +104,27 @@ On-device checklist (`sprints/S4-options-line-mode.md`):
 - No regressions: typing, selection, Files, preview; the log shows exit 0 and no refresh failures.
 
 
-## Upgrade 0.4.0 → 0.8.1 (PENDING APPROVAL — not run)
-The device runs **0.4.0**. **0.5.0, 0.6.0, 0.7.0 and 0.8.0 were never installed or tested on the device.** This single section replaces the earlier pending 0.4.0 → 0.5/0.6/0.7/0.8 sections: the upgrade goes straight from 0.4.0 to 0.8.1, so the checklists below cover v0.5 to v0.8.1.
+## Upgrade 0.4.0 → 1.0.0 (PENDING APPROVAL — not run)
+The device runs **0.4.0**. **0.5.0, 0.6.0, 0.7.0, 0.8.0 and 0.8.1 were never installed or tested on the device.** This single section replaces all earlier pending sections: the upgrade goes straight from 0.4.0 to 1.0.0, so the checklists below cover v0.5 to v1.0. Passing it is the S9 "final regression" (S9-T01) and the precondition for any tag, release or post.
 
-Procedure (same as 0.4.0): confirm it is the same Forma (serial <FORMA-SERIAL>) and touch no other disk (in particular not sdb, the 64 GB stick); read `.adds/sigma-scribe/sigma-scribe.log` read-only; make a checksum-verified backup into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v0.8.1` (`.adds/sigma-scribe` + `notes`); replace **only** `.adds/sigma-scribe/sigma-scribe` with `dist/sigma-scribe-0.8.1-kobo/.adds/sigma-scribe/sigma-scribe` (sha256 `21103122de5602e77c954ffb6dc0c303d645bf5cf91e6ea1f2129f048579f562`) via `.new` + sync + rename; verify the sha256 of the device copy; sync, unmount and power off with udisksctl. `launch.sh`, `touch.conf`, the NickelMenu entry and the licences are unchanged since 0.3.0 (same checksums). Settings from 0.4.0 are read as-is. 0.8.1 may create `notes/.scratchpad.md` (Scratch) and new empty notes when a missing `[[link]]` is tapped.
+**Which package:** the **CI-built** release candidate (artifact `sigma-scribe-1.0.0-kobo` of the release workflow for merge commit `MERGE_SHA`), because that is byte-for-byte what a release would ship. Binary sha256 `CI_BIN`, tarball sha256 `CI_TAR`. (The locally built `dist/sigma-scribe-1.0.0-kobo` has binary `LOCAL_BIN` — same source, different toolchain build of FBInk/gcc, so a different hash; it is not the one to test.) Download it into `dist/ci/` with `gh run download` and check `scripts/check-package.sh` before copying.
 
-Rollback: copy the 0.4.0 binary back (sha256 `689b84c4e763119cbdfa19eb07ade52d5709cdf034bf971fc2e5116e97c02043`, also in the pre-v0.8.1 backup). `.scratchpad.md` is hidden and ignored by 0.4.0; notes created from links are ordinary `.md` files and stay. If the USB port seems stuck after a crash (computer not seen), a reboot returns it to normal (gadget) mode.
+Procedure (same as 0.4.0): confirm it is the same Forma (serial <FORMA-SERIAL>) and touch no other disk (in particular not sdb, the 64 GB stick); read `.adds/sigma-scribe/sigma-scribe.log` read-only; make a checksum-verified backup into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v1.0.0` (`.adds/sigma-scribe`, `.adds/nm/sigma-scribe` and `sigma-scribe/notes`); replace **only** `.adds/sigma-scribe/sigma-scribe` with the CI package's binary (sha256 `CI_BIN`) via `.new` + sync + rename; verify the sha256 of the device copy; sync, unmount and power off with udisksctl. `launch.sh`, `touch.conf`, the NickelMenu entry and the licences are unchanged since 0.3.0 (same checksums); `THIRD-PARTY.txt` is new and is added only in the fresh-install test below. Settings from 0.4.0 are read as-is.
+
+Rollback: copy the 0.4.0 binary back (sha256 `689b84c4e763119cbdfa19eb07ade52d5709cdf034bf971fc2e5116e97c02043`, also in the pre-v1.0.0 backup). `.scratchpad.md` is hidden and ignored by 0.4.0; notes created from links are ordinary `.md` files and stay. `launch.sh` reboots on exit, which also returns the USB port to normal (gadget) mode.
 
 ### Extra steps and risks for USB keyboard and mouse (v0.8 / v0.8.1)
-Nothing extra is installed: no kernel modules, no KoboRoot, no udev rules. What 0.8.1 does on the device, only while **Options → USB keyboard = On** (this also covers the mouse/touchpad):
+Nothing extra is installed: no kernel modules, no KoboRoot, no udev rules. What 1.0.0 does on the device, only while **Options → USB keyboard = On** (this also covers the mouse/touchpad):
 - Switches the USB port to **host mode** by writing `host` to `/sys/kernel/debug/ci_hdrc.0/role` (mounting debugfs first if needed — the same method as KOReader's ExternalKeyboard plugin), and writes `gadget` back when the setting is turned off or the app exits. While it is on, the Kobo cannot be seen by a computer — leave the app first. A reboot always restores gadget mode.
 - Polls `/proc/bus/input/devices` once a second for keyboards (EV_KEY with A, Z, Space, Enter) and relative pointers (EV_REL with REL_X + REL_Y) and reads their `/dev/input/eventN`; a combined device (K400 Plus) is read once and feeds both. The touch panel (absolute) and the gpio buttons are never treated as either.
 - Logs every step to `.adds/sigma-scribe/sigma-scribe.log` (`usb: host mode on -> …`, `usb: "…" on eventN (keyboard …, pointer …)`, `usb: eventN gone`).
 
-Hardware: the **Logitech K400 Plus** (Unifying receiver, keyboard + touchpad in one) with a micro-USB OTG adapter and power for the receiver (powered hub or powered OTG/Y-cable) — the Forma does not supply VBUS. **The user has already used this K400 Plus on this Forma with other Kobo software, so USB host mode, enumeration and HID input work on this firmware (fw 4.38.23697)**; see `docs/usb-keyboard.md`.
+Hardware: first the **regular wired 60% USB keyboard** that already worked on this Forma (most likely with KOReader), then the **Logitech K400 Plus** (Unifying receiver, keyboard + touchpad, never tested on the device); a micro-USB OTG adapter and power (powered hub or powered OTG/Y-cable) — the Forma does not supply VBUS. See `docs/usb-keyboard.md`.
 
 Risks (only the device can confirm) and the fallback if it fails:
-1. *Lowered:* host mode and HID are known to work on this Forma with the K400 Plus. Remaining risk: that the other software reached host mode the same way (debugfs `ci_hdrc.0/role`) — if this app's switch fails, the log shows it, the status bar says `no USB`, and everything else works. Kernel modules are **not** part of this plan.
-2. The receiver may expose the K400 as one combined device (hid-logitech-dj) or as separate keyboard and mouse nodes; both are handled, but which one appears is unverified — record the `usb:` log lines.
-3. Nickel keeps running underneath and may also read the keyboard and pointer events (no exclusive grab yet); watch for Nickel reacting after leaving.
+1. *Lowered:* host mode with a wired keyboard is known to work on this Forma (most likely via KOReader). Our switch writes the same debugfs file (`ci_hdrc.0/role`) the same way KOReader does (differences in `docs/usb-keyboard.md`: no `/proc/mounts` check; we restore gadget only if we switched). If it fails, the log shows it, the status bar says `no USB`, and everything else works. Kernel modules are **not** part of this plan.
+2. *Unverified:* the K400 Plus receiver and touchpad were never used on this Forma. The receiver may expose the K400 as one combined device (hid-logitech-dj) or as separate keyboard and mouse nodes; both are handled, but which one appears is unverified — record the `usb:` log lines.
+3. Nickel is stopped by `launch.sh` before the app starts (same as KOReader) and the device reboots on exit, so Nickel does not see the keys; the earlier note about Nickel reading them was wrong.
 4. Pointer motion is raw relative counts (no acceleration curve); speed on the 1440×1920 panel may feel slow or fast — note it.
 5. Battery: host mode and the receiver may drain faster; the setting is Off by default.
 
@@ -145,24 +147,29 @@ On-device checklist — v0.7 (help & hardening):
 - All controls hittable with a finger: title bar, drawer rows and Filter, Find bar, Files rows and More, Graph, Options, Help — portrait and landscape.
 - Both orientations: switch to Landscape and back with Help, Files, Options and the drawer; text and caret survive; no ghosting.
 - Typing feel: after a few minutes of typing, exit and read the log — the last `perf:` line shows key events with **p95 < 150 ms** (report the numbers; see `docs/perf.md`).
-On-device checklist — v0.8 (USB keyboard; use the Logitech K400 Plus):
-- With USB keyboard Off: the port behaves as in 0.4.0 (connect to a computer after leaving the app works).
-- Options → USB keyboard On: status shows `no USB`; the log has `usb: host mode on -> Ok(())` (record the actual line).
-- **Hot-plug** the K400 Plus receiver (through a powered hub or powered OTG cable): within ~1 s the status shows `USB`; typing goes into the note; Shift gives capitals/symbols (US layout).
+On-device checklist — v0.8 (USB keyboard) — **first with the wired 60% keyboard** that already worked on this Forma, **then with the Logitech K400 Plus** (never tested on the device):
+- With USB keyboard Off: the port behaves as in 0.4.0 (after leaving the app and the reboot, a computer sees the Kobo).
+- Options → USB keyboard On: status shows `no USB`; the log has `usb: host mode on -> Ok(())` (record the actual line and `role now`).
+- **Wired 60% keyboard**, hot-plugged through the powered hub / powered OTG cable: within ~1 s the status shows `USB`; the log names it (`keyboard true`); typing goes into the note; Shift gives capitals/symbols (US layout); if the 60% board uses Fn layers, check arrows, Home/End, PgUp/PgDn, Delete and Esc through Fn.
 - **Shortcuts**: Ctrl+Z / Ctrl+Y, Ctrl+A, Ctrl+C / X / V, Ctrl+F (opens Find, typing goes into the field, Esc closes), Shift+arrows select, Ctrl+Left/Right by word, Home/End, Ctrl+Home/End, PgUp/PgDn.
 - Scratch pane takes USB typing; the on-screen keyboard keeps working alongside (one-shot Shift unaffected).
 - **Unplug** while typing (and while holding Ctrl) → no crash, status back to `no USB`; re-plug works again.
-- Leave the app → connect to a computer → the Kobo is seen (gadget mode restored). Turn the setting Off and confirm the same.
+- **Then the K400 Plus receiver**: record the `usb:` lines (one combined device or separate keyboard/mouse), repeat typing, shortcuts and unplug.
 - Help → USB keyboard & export reads correctly; landscape typing works.
 - Export: copy `sigma-scribe/notes` to a computer over USB; files open as plain Markdown.
-- No regressions; the log shows exit 0, no refresh failures, and the `perf:` line (p95 < 150 ms; USB typing included).
 
-On-device checklist — v0.8.1 (mouse / touchpad, K400 Plus touchpad):
-- With USB keyboard On and the receiver plugged in: the log shows the K400 as pointer (and keyboard); status `USB`.
+On-device checklist — v0.8.1 (mouse / touchpad — K400 Plus touchpad, never tested on the device; a plain USB mouse too if available):
+- With USB keyboard On and the receiver plugged in: the log shows a pointer; status `USB`.
 - Touchpad moves a small arrow; it redraws in small steps (no full-screen flashes), with no trail left behind; it hides after ~3 s still and as soon as you type (USB or on-screen).
-- Left click (pad click or left button) places the caret, presses title-bar icons, keyboard keys, drawer rows, Files rows, Options cells, Help rows and Close.
+- Left click places the caret, presses title-bar icons, keyboard keys, drawer rows, Files rows, Options cells, Help rows and Close.
 - Click-and-drag on the note selects text and the Cut/Copy/Paste bar appears; double-click selects a word; right click does nothing.
-- Two-finger scroll (if the receiver sends wheel events; the K400's may not — note it) and the wheel of any mouse: note moves 3 rows per notch; preview, Files, Graph and Help turn a page per scroll.
+- Two-finger scroll (if the receiver sends wheel events; the K400's may not — note it) and a mouse wheel: note moves 3 rows per notch; preview, Files, Graph and Help turn a page per scroll.
 - Landscape and Night: the arrow is visible and follows the rotated screen.
-- Unplug the receiver while holding the button → no crash; arrow gone; keyboard and touch keep working; re-plug works.
-- No regressions; the log shows exit 0, no refresh failures, and the `perf:` line.
+- Unplug the receiver while holding the button → no crash; arrow gone; keyboard and touch keep working.
+
+On-device checklist — v1.0 (release; S9 definition of done):
+- Help → App info shows **Version 1.0.0**.
+- **Update keeps notes**: after the upgrade above, every note, folder, the scratch pad and the settings from 0.4.0 are still there.
+- **Fresh install from the release tarball** *(needs its own approval: it deletes the app folder on the device after a verified backup)*: with notes backed up, remove `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`, unpack the CI tarball (sha256 `CI_TAR`) onto the drive root, eject; NickelMenu shows *Sigma Scribe*; first launch creates `sigma-scribe/notes` if missing; `THIRD-PARTY.txt` is present.
+- **Uninstall clean** *(needs its own approval)*: delete `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`; NickelMenu no longer lists it; the stock reader works; `sigma-scribe/notes` is untouched. Then re-install for daily use.
+- No regressions anywhere; the log shows exit 0, no refresh failures, and the `perf:` line with p95 < 150 ms (record it).
