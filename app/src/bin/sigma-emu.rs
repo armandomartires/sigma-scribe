@@ -20,11 +20,16 @@
 //!   Graph:PATH | expect-find LABEL | expect-mode write|preview|find|graph
 //!   v0.7: tap-on Help | tap-on App info|Markdown reference|Back|Close (Help)
 //!   | perf-type N (time N key taps) | expect-help TITLE | expect-mode help | expect-page N (Help pages too)
+//!   v0.8: usb plug|unplug (hot-plug event) | usb-type TEXT (raw evdev key
+//!   codes through the USB keymap, US layout) | usb-key CHORD (e.g. ctrl+f,
+//!   shift+left, ctrl+shift+end, pgdn) | expect-usb on|off
 //! The background to-do index is settled after every step (deterministic).
 //! Coordinates are screen coordinates (landscape is 1920×1440); shots are
 //! written the way the reader sees them, turned upright.
 
 use sigma_device::desktop::DesktopDevice;
+use sigma_device::evdev::{RawEvent, EV_KEY};
+use sigma_device::usbkbd::{code_for_name, raw_for_char, KeyMapper};
 use sigma_device::Phase;
 use sigma_device::{Device, Event, HwKey};
 use sigma_scribe::App;
@@ -80,6 +85,8 @@ fn main() -> ExitCode {
     // Virtual clock for touch gestures (ms); every step advances it.
     let mut clock: u64 = 0;
     let mut finger: (i32, i32) = (0, 0);
+    // The USB keyboard's modifier state, as on the device (v0.8).
+    let mut usb = KeyMapper::default();
     for (n, line) in text.lines().enumerate() {
         clock += 16;
         let line = line.trim();
@@ -320,6 +327,44 @@ fn main() -> ExitCode {
                     println!(
                         "perf: {n} keystrokes, keystroke-to-refresh p50 {p50:.1} ms, p95 {p95:.1} ms, max {max:.1} ms"
                     );
+                }
+            }
+            "usb" => match arg {
+                "plug" => events.push(Event::Usb(true)),
+                "unplug" => {
+                    usb = KeyMapper::default();
+                    events.push(Event::Usb(false));
+                }
+                _ => return fail("usb plug|unplug".into()),
+            },
+            "usb-type" => events.extend(
+                arg.chars()
+                    .flat_map(raw_for_char)
+                    .filter_map(|e| usb.feed(e)),
+            ),
+            "usb-key" => {
+                let mut codes = Vec::new();
+                for name in arg.split('+') {
+                    match code_for_name(name) {
+                        Some(c) => codes.push(c),
+                        None => return fail(format!("unknown key {name:?}")),
+                    }
+                }
+                let ev = |code, value| RawEvent {
+                    kind: EV_KEY,
+                    code,
+                    value,
+                };
+                let raws: Vec<RawEvent> = codes
+                    .iter()
+                    .map(|&c| ev(c, 1))
+                    .chain(codes.iter().rev().map(|&c| ev(c, 0)))
+                    .collect();
+                events.extend(raws.into_iter().filter_map(|e| usb.feed(e)));
+            }
+            "expect-usb" => {
+                if app.usb_live != (arg == "on") {
+                    return fail(format!("usb_live is {}", app.usb_live));
                 }
             }
             "hw" => events.extend(arg.chars().map(|c| Event::Key(HwKey::Char(c)))),

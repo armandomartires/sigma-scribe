@@ -5,6 +5,8 @@ pub mod desktop;
 pub mod evdev;
 #[cfg(target_arch = "arm")]
 pub mod fbink;
+pub mod otg;
+pub mod usbkbd;
 
 use sigma_render::{Canvas, Rect};
 use std::io;
@@ -33,6 +35,15 @@ pub enum Event {
     Power,
     /// A physical keyboard key (desktop keyboard now, USB-OTG keyboard in S8).
     Key(HwKey),
+    /// A physical key with Ctrl / Alt held, or Shift with a non-character
+    /// key (v0.8, USB keyboard). Routed through the on-screen keyboard's
+    /// shortcut code.
+    Chord {
+        key: HwKey,
+        mods: Mods,
+    },
+    /// A USB keyboard appeared (`true`) or went away (`false`).
+    Usb(bool),
     Quit,
     /// Raw finger contact with a monotonic timestamp (ms). The app turns
     /// these into taps / holds / drags with `sigma_core::gesture`.
@@ -63,6 +74,14 @@ pub trait Device {
     fn present(&mut self, canvas: &Canvas, region: Rect, refresh: Refresh) -> io::Result<()>;
     /// Blocks for the next input; `None` means no more input (emulator end).
     fn next_event(&mut self) -> Option<Event>;
+    /// USB host mode for a keyboard (v0.8, Options → USB keyboard). Devices
+    /// without an OTG port do nothing.
+    ///
+    /// # Errors
+    /// The port could not be switched (the app carries on without it).
+    fn usb_host(&mut self, _on: bool) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 /// Keys from a physical keyboard, already mapped to characters.
@@ -78,4 +97,16 @@ pub enum HwKey {
     Up,
     Down,
     Escape,
+    Home,
+    End,
+    PageUp,
+    PageDown,
+}
+
+/// Modifiers held with a physical key.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Mods {
+    pub ctrl: bool,
+    pub shift: bool,
+    pub alt: bool,
 }

@@ -18,6 +18,8 @@ pub enum HelpPage {
     Menu,
     About,
     Markdown,
+    /// USB keyboard, shortcuts and export (v0.8).
+    Keyboard,
 }
 
 impl HelpPage {
@@ -27,17 +29,53 @@ impl HelpPage {
             Self::Menu => "Help",
             Self::About => "Help / App info",
             Self::Markdown => "Help / Markdown reference",
+            Self::Keyboard => "Help / USB keyboard & export",
         }
     }
 }
 
 /// Menu rows: label and hint (the mock's wording).
-pub const MENU: [(&str, &str, HelpPage); 2] = [
+pub const MENU: [(&str, &str, HelpPage); 3] = [
     ("App info", "Version, license, and author", HelpPage::About),
     (
         "Markdown reference",
         "The syntax this page can render",
         HelpPage::Markdown,
+    ),
+    (
+        "USB keyboard & export",
+        "Hub, shortcuts, getting files off",
+        HelpPage::Keyboard,
+    ),
+];
+
+/// The USB keyboard and export page (v0.8): heading, text, optional code.
+pub const KEYBOARD_HELP: [(&str, &str, &str); 6] = [
+    (
+        "Powered hub",
+        "The Forma does not power its USB port. Plug the keyboard into a powered USB hub, or a Y-cable with its own power supply, and the hub into the reader with a micro-USB OTG adapter.",
+        "",
+    ),
+    (
+        "Connecting",
+        "Turn on Options \u{2192} USB keyboard first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.",
+        "",
+    ),
+    (
+        "Shortcuts",
+        "The same as the on-screen Ctrl key.",
+        "Ctrl+Z  undo      Ctrl+Y  redo\nCtrl+A  select all\nCtrl+C  copy      Ctrl+X  cut\nCtrl+V  paste     Ctrl+F  find\nShift+arrows      select\nCtrl+Left/Right   word by word\nHome / End        line start / end\nCtrl+Home / End   top / end of note\nPgUp / PgDn       one screen",
+    ),
+    ("Layout", "US layout. Esc closes Find, sheets and selections.", ""),
+    (
+        "Export",
+        "Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.",
+        "",
+    ),
+    (
+        "If nothing happens",
+        "Check the hub's power, try another keyboard (simple wired ones work best), then leave and reopen the app. The device log .adds/sigma-scribe/sigma-scribe.log notes each keyboard found.",
+        "",
     ),
 ];
 
@@ -93,7 +131,7 @@ pub struct HelpLayout {
     /// "Back to Help" (sub-pages).
     pub crumb: Rect,
     /// Menu rows.
-    pub rows: [Rect; 2],
+    pub rows: [Rect; 3],
     /// Text column of a sub-page.
     pub area: Rect,
     /// Page indicator band.
@@ -144,6 +182,19 @@ pub fn help_blocks(page: HelpPage, about: &[(String, String)]) -> Vec<Block> {
                 out.push(para(text, Style::default()));
             }
         }
+        HelpPage::Keyboard => {
+            for (name, text, code) in KEYBOARD_HELP {
+                out.push(para(name, STRONG));
+                out.push(para(text, Style::default()));
+                if !code.is_empty() {
+                    out.push(Block {
+                        kind: BlockKind::Code,
+                        runs: code.lines().map(|l| run(l, Style::default())).collect(),
+                        line: 0,
+                    });
+                }
+            }
+        }
         HelpPage::Markdown => {
             for (name, source, note) in REFERENCE {
                 out.push(para(name, STRONG));
@@ -181,6 +232,7 @@ impl EditorScreen {
             rows: [
                 Rect::new(0, top + s.px(8.0), w, row_h),
                 Rect::new(0, top + s.px(8.0) + row_h, w, row_h),
+                Rect::new(0, top + s.px(8.0) + 2 * row_h, w, row_h),
             ],
             area: Rect::new(ax, ay, cw, foot.y - ay - s.px(8.0)),
             foot,

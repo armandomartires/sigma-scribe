@@ -27,3 +27,10 @@ FBInk has **no emulator or preview window**. Its README notes it "works perfectl
 - `expect-mode help`, `expect-help TITLE` (e.g. `Help / App info`); `expect-page N` also checks Help pages.
 - `perf-type N` — taps N keys and prints p50/p95/max handling time (use a release build; see `docs/perf.md`).
 - Script: `tests/emu/v0.7-help-hardening.script` (screenshots in `docs/screenshots/v0.7/`, `eink/` versions with `--eink`).
+
+## v0.8 emulator commands
+- `usb plug|unplug` — hot-plug events; `expect-usb on|off`.
+- `usb-type TEXT` — text as raw evdev press/release codes through the USB keymap (US layout, Shift added as needed).
+- `usb-key CHORD` — e.g. `ctrl+f`, `shift+left`, `ctrl+home`, `pgdn`, `esc` (pressed in order, released in reverse).
+- Script: `tests/emu/v0.8-usb-keyboard.script` (screenshots in `docs/screenshots/v0.8/`, `eink/`).
+- The live window (`scripts/sim.sh`) sends the same chords for Ctrl+letter, Shift/Ctrl+arrows, Home/End.
