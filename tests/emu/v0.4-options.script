@@ -1,0 +1,83 @@
+# v0.4 Options, Day/Night, Line mode, landscape keyboards (Forma 1440x1920).
+expect-open field-notes.md
+expect-screen 1440x1920
+tap-on Options
+shot v0.4-options
+tap-on Paper/Night
+expect-setting paper=night
+shot v0.4-options-night
+tap-on Close
+shot v0.4-night-write
+# Keyboard tone: a light keyboard under a night page.
+tap-on Options
+tap-on Keyboard tone/Light
+tap-on Close
+shot v0.4-night-light-keys
+tap-on Options
+tap-on Keyboard tone/Theme
+tap-on Paper/Day
+tap-on Type/Atkinson
+expect-setting type=atkinson
+# Line mode: N words a row, kept when Size or Margin moves.
+tap-on Line/On
+expect-setting line=on
+expect-words 12
+tap-on Line/-
+expect-words 11
+tap-on Line/+
+tap-on Size/+
+tap-on Size/+
+expect-words 12
+tap-on Margin/+
+expect-words 12
+tap-on Type/Literata
+expect-words 12
+shot v0.4-options-line
+tap-on Close
+shot v0.4-line-portrait
+# Landscape: locked column with gutters, the word count holds.
+tap-on Options
+tap-on Orientation/Landscape
+expect-screen 1920x1440
+expect-setting orientation=landscape
+expect-words 12
+tap-on Close
+shot v0.4-landscape-line-centre
+tap-on Split
+expect-setting landscape_keys=split
+type split ok
+expect split ok
+shot v0.4-landscape-split
+tap-on Full
+expect-setting landscape_keys=full
+shot v0.4-landscape-full-numbers
+tap-on Arrows
+expect-setting pad=arrows
+tap-on Pad left
+expect-setting pad_side=left
+shot v0.4-landscape-full-arrows-left
+# Compact board + number pad types digits.
+tap-on Options
+tap-on Keyboard/Compact
+tap-on Close
+tap-on 123
+tap-on Pad right
+key 7
+key .
+key 5
+expect split ok7.5
+shot v0.4-landscape-compact-numbers
+# Everything persists across a restart.
+restart
+expect-screen 1920x1440
+expect-setting keyboard=compact
+expect-setting line_words=12
+expect-words 12
+expect split ok7.5
+tap-on Options
+tap-on Orientation/Portrait
+expect-screen 1440x1920
+expect-words 12
+tap-on Line/Off
+tap-on Close
+expect-status saved

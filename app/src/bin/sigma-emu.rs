@@ -9,6 +9,11 @@
 //!   move-handle-end W | move-handle-start W | expect-bar A,B|none
 //!   expect-clipboard T | expect-caret-after W |
 //!   expect-not TEXT | expect-selection TEXT | clear-field | expect-file PATH | expect-no-file PATH | expect-open PATH
+//!   v0.4: tap-on Options | tap-on Row/Cell (in Options, e.g. Paper/Night, Size/+)
+//!   tap-on Split|Full|Centre|Arrows|123|Pad left|Pad right (landscape bar)
+//!   expect-setting KEY=VALUE | expect-words N | expect-screen WxH | restart
+//! Coordinates are screen coordinates (landscape is 1920×1440); shots are
+//! written the way the reader sees them, turned upright.
 
 use sigma_device::desktop::DesktopDevice;
 use sigma_device::Phase;
@@ -55,6 +60,7 @@ fn main() -> ExitCode {
         }
     };
     let notes = notes.unwrap_or_else(sigma_scribe::notes_dir);
+    let root = notes.clone();
     let _ = std::fs::create_dir_all(&shots);
     let mut dev = DesktopDevice::new(size.0, size.1);
     let mut app = App::new(size.0, size.1, notes);
@@ -287,7 +293,10 @@ fn main() -> ExitCode {
                 forward: arg != "back",
             }),
             "shot" => {
-                if let Err(e) = dev.shot(&shots.join(format!("{arg}.png"))) {
+                let view = app.view(&dev.panel);
+                if let Err(e) =
+                    sigma_device::desktop::write_png(&view, &shots.join(format!("{arg}.png")))
+                {
                     return fail(e.to_string());
                 }
                 println!("shot {}", shots.join(format!("{arg}.png")).display());
@@ -350,6 +359,33 @@ fn main() -> ExitCode {
                 let n = app.preview.as_ref().map_or(0, |p| p.doc.pages.len());
                 if n < arg.parse().unwrap_or(usize::MAX) {
                     return fail(format!("only {n} preview pages"));
+                }
+            }
+            "expect-setting" => {
+                let file = std::fs::read_to_string(app.library.root().join(".sigma-settings"))
+                    .unwrap_or_default();
+                if !file.lines().any(|l| l == arg) {
+                    return fail(format!("settings file is {file:?}"));
+                }
+            }
+            "expect-words" => {
+                let n = sigma_scribe::words_per_row(&app);
+                if n.to_string() != arg {
+                    return fail(format!("{n} words per row"));
+                }
+            }
+            "expect-screen" => {
+                let got = format!("{}x{}", app.canvas.width, app.canvas.height);
+                if got != arg {
+                    return fail(format!("screen is {got}"));
+                }
+            }
+            "restart" => {
+                // Power off and on: settings and the note must come back.
+                app.handle(Event::Power);
+                app = App::new(size.0, size.1, root.clone());
+                if let Err(e) = app.render(&mut dev, sigma_device::Refresh::Full) {
+                    return fail(e.to_string());
                 }
             }
             "expect-status" => {

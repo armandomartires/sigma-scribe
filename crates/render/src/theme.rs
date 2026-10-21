@@ -31,6 +31,15 @@ impl Theme {
         wash: 28,
         gutter: 36,
     };
+
+    /// The page theme for Options → Paper.
+    #[must_use]
+    pub fn for_paper(p: sigma_core::settings::Paper) -> Self {
+        match p {
+            sigma_core::settings::Paper::Day => Self::DAY,
+            sigma_core::settings::Paper::Night => Self::NIGHT,
+        }
+    }
 }
 
 /// Brief sizes are given for a 1264 px wide portrait page.

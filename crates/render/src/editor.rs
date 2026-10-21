@@ -6,8 +6,11 @@ use crate::canvas::{Canvas, Rect};
 use crate::fonts::{Face, Fonts, Measure};
 use crate::preview::{self, Doc, Type};
 use crate::theme::{Scale, Theme};
-use sigma_core::keyboard::Key;
+use sigma_core::keyboard::{Dir, Key};
+use sigma_core::linefit::{self, Anchor, Fit, Limits, SizedMeasure};
+use sigma_core::settings::{KeyTone, LandKeys, Pad, Side, Typeface, MARGIN_RANGE, SIZE_RANGE};
 use sigma_core::wrap::{caret_cell, offset_at, wrap, VisualLine};
+use sigma_core::Settings;
 use sigma_core::{Buffer, Keyboard, SaveState};
 
 /// What the screen shows; owned by the app.
@@ -75,9 +78,26 @@ pub enum Hit {
     TogglePreview,
     /// Tap on the file name: rename in place.
     StartRename,
+    /// "Aa" in the title bar: the Options sheet (v0.4).
+    Options,
+    /// Landscape keyboard bar: Split / Full / Centre, pad toggles (v0.4).
+    KbButton(KbButton),
     RenameOk,
     RenameCancel,
     Nothing,
+}
+
+/// Keys and landscape bar buttons with their rectangles.
+type Board = (Vec<(Rect, Key)>, Vec<(Rect, KbButton)>);
+
+/// Buttons in the landscape keyboard bar (brief §7).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KbButton {
+    Mode(LandKeys),
+    /// Arrows ⇄ 123 pad (Full only).
+    PadToggle,
+    /// Pad left ⇄ Pad right (Full only).
+    PadSide,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -94,6 +114,12 @@ pub struct Layout {
     pub name_rect: Rect,
     pub ok_rect: Rect,
     pub cancel_rect: Rect,
+    /// "Aa" Options button, left of the eye.
+    pub options_button: Rect,
+    /// The text column inside the page: the page itself, or the locked
+    /// portrait-width column (Line on, landscape) with gutters beside it.
+    pub column: Rect,
+    pub kb_buttons: Vec<(Rect, KbButton)>,
 }
 
 pub struct EditorScreen {
@@ -106,6 +132,24 @@ pub struct EditorScreen {
     pub body_px: f32,
     pub leading: f32,
     pub margin_px: f32,
+    /// Page face (Options → Type).
+    pub face: Face,
+    /// Keyboard colours when they differ from the page (Options → Keyboard tone).
+    pub key_theme: Option<Theme>,
+    /// The settings in force (landscape keyboard, Line, USB flag).
+    pub cfg: Settings,
+}
+
+/// Real-face measurement for Line mode.
+struct FaceMeasure<'a> {
+    fonts: &'a Fonts,
+    face: Face,
+}
+
+impl SizedMeasure for FaceMeasure<'_> {
+    fn width_at(&self, size: f32, text: &str) -> f32 {
+        self.fonts.width(self.face, size, text)
+    }
 }
 
 impl EditorScreen {
@@ -120,7 +164,77 @@ impl EditorScreen {
             body_px: 20.0,
             leading: 1.5,
             margin_px: 28.0,
+            face: Face::Literata,
+            key_theme: None,
+            cfg: Settings::default(),
         }
+    }
+
+    /// New panel size (orientation change). The scale follows the short
+    /// side, so type and keys keep their size when the device turns.
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.width = width;
+        self.height = height;
+        self.s = Scale::for_width(width.min(height));
+    }
+
+    #[must_use]
+    pub fn landscape(&self) -> bool {
+        self.width > self.height
+    }
+
+    /// Applies settings. With Line on, fits size and margin to the
+    /// portrait-width column with the real face and writes the result back
+    /// into `st` (brief §4: Size moves Margin, Margin moves Size).
+    pub fn configure(&mut self, st: &mut Settings, anchor: Option<Anchor>) {
+        self.face = match st.face {
+            Typeface::Literata => Face::Literata,
+            Typeface::Atkinson => Face::Atkinson,
+        };
+        self.key_theme = match st.key_tone {
+            KeyTone::Theme => None,
+            KeyTone::Light => Some(Theme::DAY),
+            KeyTone::Dark => Some(Theme::NIGHT),
+        };
+        self.leading = st.leading;
+        if st.line_on {
+            let k = self.s.0;
+            let column = self.width.min(self.height) as f32;
+            let f = linefit::fit(
+                &FaceMeasure {
+                    fonts: &self.fonts,
+                    face: self.face,
+                },
+                column,
+                st.line_words,
+                Fit {
+                    size: st.size * k,
+                    margin: st.margin * k,
+                },
+                anchor.unwrap_or(Anchor::Size),
+                Limits {
+                    size: (SIZE_RANGE.0 * k, SIZE_RANGE.1 * k),
+                    margin: (MARGIN_RANGE.0 * k, MARGIN_RANGE.1 * k),
+                },
+            );
+            self.body_px = f.size / k;
+            self.margin_px = f.margin / k;
+            st.size = (self.body_px * 10.0).round() / 10.0;
+            st.margin = (self.margin_px * 10.0).round() / 10.0;
+        } else {
+            self.body_px = st.size;
+            self.margin_px = st.margin;
+        }
+        self.cfg = *st;
+    }
+
+    /// Words on the first row of the Line sample at the current settings
+    /// (Options shows it; tests check it).
+    #[must_use]
+    pub fn sample_words_per_row(&self, page: Rect) -> usize {
+        let text = format!("{} {}", linefit::SAMPLE, linefit::SAMPLE);
+        let rows = wrap(&text, self.text_area(page).w as u32, &self.measure());
+        text[rows[0].start..rows[0].end].split_whitespace().count()
     }
 
     fn px(&self, v: f32) -> i32 {
@@ -138,7 +252,7 @@ impl EditorScreen {
     fn measure(&self) -> Measure<'_> {
         Measure {
             fonts: &self.fonts,
-            face: Face::Literata,
+            face: self.face,
             size: self.body(),
         }
     }
@@ -151,8 +265,14 @@ impl EditorScreen {
         let gap = self.px(6.0);
         let pad = self.px(10.0);
         let rows = keyboard.rows();
+        // Landscape adds the Split · Full · Centre bar above the keys.
+        let bar_h = if self.landscape() {
+            self.px(44.0) + gap
+        } else {
+            0
+        };
         let kb_h = if keys_on {
-            pad * 2 + key_h * rows.len() as i32 + gap * (rows.len() as i32 - 1)
+            pad * 2 + bar_h + key_h * rows.len() as i32 + gap * (rows.len() as i32 - 1)
         } else {
             0
         };
@@ -167,34 +287,28 @@ impl EditorScreen {
             kb_w,
             self.px(44.0),
         );
-        let mut keys = Vec::new();
-        if keys_on {
-            // Grid units (10 Compact, 16 Full); rows are centred, columns
-            // align because every key starts at its cumulative unit offset.
-            let grid = keyboard.grid_units();
-            let unit = (w - 2 * pad + gap) as f32 / grid;
-            for (r, row) in rows.iter().enumerate() {
-                let total: f32 = row
-                    .iter()
-                    .enumerate()
-                    .map(|(c, &k)| keyboard.units(k, r, c))
-                    .sum();
-                let mut x = pad as f32 + (grid - total) / 2.0 * unit;
-                let y = keyboard_rect.y + pad + r as i32 * (key_h + gap);
-                for (c, &k) in row.iter().enumerate() {
-                    let kw = keyboard.units(k, r, c) * unit;
-                    let x0 = x.round() as i32;
-                    let x1 = (x + kw).round() as i32 - gap;
-                    keys.push((Rect::new(x0, y, x1 - x0, key_h), k));
-                    x += kw;
-                }
-            }
-        }
+        let (keys, kb_buttons) = if keys_on {
+            self.board(keyboard, keyboard_rect, key_h, gap, pad, bar_h)
+        } else {
+            (Vec::new(), Vec::new())
+        };
         let btn = self.px(44.0);
         let by = (title.h - btn) / 2;
         let files_button = Rect::new(w - self.px(12.0) - btn, by, btn, btn);
         let preview_button = Rect::new(files_button.x - self.px(8.0) - btn, by, btn, btn);
-        let name_rect = Rect::new(0, 0, w * 3 / 5, title.h);
+        let options_button = Rect::new(preview_button.x - self.px(8.0) - btn, by, btn, btn);
+        let name_rect = Rect::new(
+            0,
+            0,
+            (w * 3 / 5).min(options_button.x - self.px(8.0)),
+            title.h,
+        );
+        let column = if self.landscape() && self.cfg.line_on {
+            let cw = w.min(h);
+            Rect::new(page.x + (page.w - cw) / 2, page.y, cw, page.h)
+        } else {
+            page
+        };
         let okw = self.px(72.0);
         let cw = self.px(96.0);
         let ok_rect = Rect::new(w - self.px(12.0) - okw, by, okw, btn);
@@ -211,10 +325,203 @@ impl EditorScreen {
             name_rect,
             ok_rect,
             cancel_rect,
+            options_button,
+            column,
+            kb_buttons,
+        }
+    }
+
+    /// Keys and landscape bar buttons inside the keyboard rectangle.
+    ///
+    /// Grid units (10 Compact, 16 Full); rows are centred, columns align
+    /// because every key starts at its cumulative unit offset. The unit comes
+    /// from the short side, so keys keep their portrait size in landscape.
+    /// Landscape: **Centre** centres the board; **Split** cuts it in two with
+    /// a gap (a key across the middle goes to the side of its centre; Space
+    /// is cut in two so both halves have one); **Full** adds a number or
+    /// direction pad on the left or right.
+    #[allow(clippy::too_many_lines)]
+    fn board(
+        &self,
+        keyboard: &Keyboard,
+        kb: Rect,
+        key_h: i32,
+        gap: i32,
+        pad: i32,
+        bar_h: i32,
+    ) -> Board {
+        let w = self.width as i32;
+        let short = w.min(self.height as i32);
+        let land = self.landscape();
+        let rows = keyboard.rows();
+        let grid = keyboard.grid_units();
+        let mode = if land {
+            self.cfg.land_keys
+        } else {
+            LandKeys::Centre
+        };
+        // Portrait key size; Full shrinks it slightly if board + pad would
+        // not fit the long side.
+        let mut unit = (short - 2 * pad + gap) as f32 / grid;
+        if mode == LandKeys::Full {
+            unit = unit.min((w - 2 * pad + gap) as f32 / (grid + 3.5));
+        }
+        let board_w = grid * unit;
+        let split_gap = if mode == LandKeys::Split {
+            (3.0 * unit).min((w - 2 * pad) as f32 - board_w).max(0.0)
+        } else {
+            0.0
+        };
+        let (pad_w, pad_gap) = if mode == LandKeys::Full {
+            (3.0 * unit, unit / 2.0)
+        } else {
+            (0.0, 0.0)
+        };
+        let total = board_w + split_gap + pad_w + pad_gap;
+        let x_start = if land {
+            ((w as f32 - total) / 2.0).max(0.0)
+        } else {
+            pad as f32
+        };
+        let pad_left = mode == LandKeys::Full && self.cfg.pad_side == Side::Left;
+        let board_x = x_start + if pad_left { pad_w + pad_gap } else { 0.0 };
+        let top = kb.y + pad + bar_h;
+        let mid = grid / 2.0;
+        let mut keys = Vec::new();
+        let mut push = |x: f32, kw: f32, y: i32, h: i32, k: Key| {
+            let x0 = x.round() as i32;
+            let x1 = (x + kw).round() as i32 - gap;
+            keys.push((Rect::new(x0, y, x1 - x0, h), k));
+        };
+        for (r, row) in rows.iter().enumerate() {
+            let row = if split_gap > 0.0 {
+                space_across(keyboard, r, row, grid)
+            } else {
+                row.clone()
+            };
+            let total_u: f32 = row
+                .iter()
+                .enumerate()
+                .map(|(c, &k)| keyboard.units(k, r, c))
+                .sum();
+            let mut u = (grid - total_u) / 2.0;
+            let y = top + r as i32 * (key_h + gap);
+            for (c, &k) in row.iter().enumerate() {
+                let ku = keyboard.units(k, r, c);
+                let across = u + 1e-3 < mid && u + ku > mid + 1e-3;
+                if split_gap > 0.0 && across && k == Key::Space {
+                    push(board_x + u * unit, (mid - u) * unit, y, key_h, k);
+                    push(
+                        board_x + mid * unit + split_gap,
+                        (u + ku - mid) * unit,
+                        y,
+                        key_h,
+                        k,
+                    );
+                } else {
+                    let right = if across {
+                        u + ku / 2.0 >= mid
+                    } else {
+                        u + 1e-3 >= mid
+                    };
+                    let off = if right { split_gap } else { 0.0 };
+                    push(board_x + u * unit + off, ku * unit, y, key_h, k);
+                }
+                u += ku;
+            }
+        }
+        if mode == LandKeys::Full {
+            let px0 = if pad_left {
+                x_start
+            } else {
+                board_x + board_w + pad_gap
+            };
+            let n = |c: char| Some(Key::Char(c));
+            let cells: Vec<[Option<Key>; 3]> = match self.cfg.pad {
+                Pad::Numbers => vec![
+                    [n('7'), n('8'), n('9')],
+                    [n('4'), n('5'), n('6')],
+                    [n('1'), n('2'), n('3')],
+                    [n('0'), n('.'), None],
+                ],
+                Pad::Arrows => vec![
+                    [None, Some(Key::Arrow(Dir::Up)), None],
+                    [
+                        Some(Key::Arrow(Dir::Left)),
+                        None,
+                        Some(Key::Arrow(Dir::Right)),
+                    ],
+                    [None, Some(Key::Arrow(Dir::Down)), None],
+                ],
+            };
+            let nr = rows.len() as i32;
+            let span = nr * key_h + (nr - 1) * gap;
+            let m = cells.len() as i32;
+            let ph = (span - (m - 1) * gap) / m;
+            for (i, line) in cells.iter().enumerate() {
+                for (c, k) in line.iter().enumerate() {
+                    if let Some(k) = k {
+                        push(
+                            px0 + c as f32 * unit,
+                            unit,
+                            top + i as i32 * (ph + gap),
+                            ph,
+                            *k,
+                        );
+                    }
+                }
+            }
+        }
+        let mut buttons = Vec::new();
+        if land {
+            let bh = self.px(44.0);
+            let by = kb.y + pad;
+            let bw = self.px(110.0);
+            let bg = self.px(8.0);
+            let x = (w - (3 * bw + 2 * bg)) / 2;
+            for (i, m) in [LandKeys::Split, LandKeys::Full, LandKeys::Centre]
+                .into_iter()
+                .enumerate()
+            {
+                buttons.push((
+                    Rect::new(x + i as i32 * (bw + bg), by, bw, bh),
+                    KbButton::Mode(m),
+                ));
+            }
+            if mode == LandKeys::Full {
+                let side = Rect::new(w - pad - bw, by, bw, bh);
+                buttons.push((Rect::new(side.x - bg - bw, by, bw, bh), KbButton::PadToggle));
+                buttons.push((side, KbButton::PadSide));
+            }
+        }
+        (keys, buttons)
+    }
+
+    /// Label of a landscape bar button (the action it takes).
+    #[must_use]
+    pub fn kb_button_label(&self, b: KbButton) -> &'static str {
+        match b {
+            KbButton::Mode(LandKeys::Split) => "Split",
+            KbButton::Mode(LandKeys::Full) => "Full",
+            KbButton::Mode(LandKeys::Centre) => "Centre",
+            KbButton::PadToggle => match self.cfg.pad {
+                Pad::Numbers => "Arrows",
+                Pad::Arrows => "123",
+            },
+            KbButton::PadSide => match self.cfg.pad_side {
+                Side::Left => "Pad right",
+                Side::Right => "Pad left",
+            },
         }
     }
 
     fn text_area(&self, page: Rect) -> Rect {
+        let page = if self.landscape() && self.cfg.line_on {
+            let cw = (self.width.min(self.height) as i32).min(page.w);
+            Rect::new(page.x + (page.w - cw) / 2, page.y, cw, page.h)
+        } else {
+            page
+        };
         let m = self.px(self.margin_px);
         Rect::new(
             page.x + m,
@@ -431,6 +738,12 @@ impl EditorScreen {
         if l.preview_button.inset(-self.px(4.0)).contains(x, y) {
             return Hit::TogglePreview;
         }
+        if l.options_button.inset(-self.px(4.0)).contains(x, y) {
+            return Hit::Options;
+        }
+        if let Some((_, b)) = l.kb_buttons.iter().find(|(r, _)| r.contains(x, y)) {
+            return Hit::KbButton(*b);
+        }
         if l.name_rect.contains(x, y) {
             return Hit::StartRename;
         }
@@ -463,11 +776,13 @@ impl EditorScreen {
         let l = self.layout(model.keys_on, model.keyboard);
         self.follow_caret(model.buffer, l.page);
         c.fill(c.bounds(), t.paper);
+        draw_gutters(c, &l, t);
         let ui = 17.0 * self.s.0;
 
         self.draw_title(c, &l, model.file_name, model.rename, t, true);
         if model.rename.is_none() {
             draw_eye_icon(c, l.preview_button, self.s, t.ink);
+            self.draw_options_icon(c, l.options_button, t);
         }
 
         // Page.
@@ -475,7 +790,7 @@ impl EditorScreen {
         let rows = self.rows(model.buffer, l.page);
         let text = model.buffer.text();
         let lh = self.line_h();
-        let asc = self.fonts.ascent(Face::Literata, self.body());
+        let asc = self.fonts.ascent(self.face, self.body());
         let top_pad = ((lh as f32 - self.body() * 1.2) / 2.0).max(0.0);
         let sel = model.buffer.selection();
         for (i, r) in rows
@@ -489,18 +804,18 @@ impl EditorScreen {
                 let through_newline = b > r.end && a <= r.end;
                 if s0 < s1 || through_newline {
                     let x0 = self.fonts.width(
-                        Face::Literata,
+                        self.face,
                         self.body(),
                         &text[r.start..s0.min(r.end).max(r.start)],
                     );
-                    let x1 =
-                        self.fonts
-                            .width(Face::Literata, self.body(), &text[r.start..s1.max(s0)])
-                            + if through_newline {
-                                self.body() * 0.4
-                            } else {
-                                0.0
-                            };
+                    let x1 = self
+                        .fonts
+                        .width(self.face, self.body(), &text[r.start..s1.max(s0)])
+                        + if through_newline {
+                            self.body() * 0.4
+                        } else {
+                            0.0
+                        };
                     c.fill(
                         Rect::new(
                             area.x + x0 as i32,
@@ -515,7 +830,7 @@ impl EditorScreen {
             let y = area.y as f32 + (i as i32 * lh) as f32 + top_pad + asc;
             self.fonts.draw(
                 c,
-                Face::Literata,
+                self.face,
                 self.body(),
                 area.x as f32,
                 y,
@@ -559,11 +874,7 @@ impl EditorScreen {
             &left,
             t.mute,
         );
-        let right = format!(
-            "{} \u{b7} {}",
-            if t == Theme::NIGHT { "Night" } else { "Paper" },
-            model.save.label()
-        );
+        let right = self.status_right(t, model.save);
         let rw = self.fonts.width(Face::Atkinson, ui, &right);
         let rx = l.keys_button.x as f32 - self.px(16.0) as f32 - rw;
         self.fonts
@@ -646,6 +957,34 @@ impl EditorScreen {
                 );
             }
         }
+    }
+
+    /// Status bar right side (brief §3): `USB` when on, `Paper` or
+    /// `Night`, then the save state.
+    fn status_right(&self, t: Theme, save: &SaveState) -> String {
+        format!(
+            "{}{} \u{b7} {}",
+            if self.cfg.usb { "USB \u{b7} " } else { "" },
+            if t == Theme::NIGHT { "Night" } else { "Paper" },
+            save.label()
+        )
+    }
+
+    /// "Aa" in a 44 px target: the Options sheet.
+    pub fn draw_options_icon(&self, c: &mut Canvas, r: Rect, t: Theme) {
+        let size = self.ui_px() * 1.1;
+        let w = self.fonts.width(Face::AtkinsonBold, size, "Aa");
+        let base =
+            r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(Face::AtkinsonBold, size) / 2.6;
+        self.fonts.draw(
+            c,
+            Face::AtkinsonBold,
+            size,
+            r.x as f32 + (r.w as f32 - w) / 2.0,
+            base,
+            "Aa",
+            t.ink,
+        );
     }
 
     #[must_use]
@@ -743,9 +1082,34 @@ impl EditorScreen {
 
     /// The on-screen keyboard in `l.keyboard`.
     pub fn draw_keys(&self, c: &mut Canvas, l: &Layout, keyboard: &Keyboard, t: Theme) {
+        let t = self.key_theme.unwrap_or(t);
         c.fill(l.keyboard, t.paper);
         c.fill(Rect::new(0, l.keyboard.y, l.keyboard.w, 1), t.rule);
         let ks = 20.0 * self.s.0;
+        let ui = self.ui_px();
+        for &(r, b) in &l.kb_buttons {
+            let active = matches!(b, KbButton::Mode(m) if m == self.cfg.land_keys);
+            let (bg, fg) = if active {
+                (t.ink, t.paper)
+            } else {
+                (t.paper, t.ink)
+            };
+            c.fill(r, bg);
+            c.stroke(r, 1, if active { t.ink } else { t.rule });
+            let label = self.kb_button_label(b);
+            let lw = self.fonts.width(Face::AtkinsonBold, ui, label);
+            let by =
+                r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(Face::AtkinsonBold, ui) / 2.6;
+            self.fonts.draw(
+                c,
+                Face::AtkinsonBold,
+                ui,
+                r.x as f32 + (r.w as f32 - lw) / 2.0,
+                by,
+                label,
+                fg,
+            );
+        }
         for &(r, k) in &l.keys {
             let active = keyboard.is_active(k);
             let (bg, fg) = if active {
@@ -793,8 +1157,64 @@ impl EditorScreen {
     }
 }
 
-fn draw_arrow(c: &mut Canvas, r: Rect, d: sigma_core::keyboard::Dir, s: Scale, ink: u8) {
-    use sigma_core::keyboard::Dir;
+/// Split: both halves need a Space (brief §7). If the row's Space sits
+/// wholly on one side, move it to the slot where it crosses the middle, as
+/// evenly as possible; the other keys keep their order.
+fn space_across(keyboard: &Keyboard, r: usize, row: &[Key], grid: f32) -> Vec<Key> {
+    let Some(at) = row.iter().position(|&k| k == Key::Space) else {
+        return row.to_vec();
+    };
+    let mid = grid / 2.0;
+    let others: Vec<Key> = row.iter().copied().filter(|&k| k != Key::Space).collect();
+    let mut best = (f32::MAX, at, row.to_vec());
+    for i in 0..=others.len() {
+        let mut cand = others.clone();
+        cand.insert(i, Key::Space);
+        let total: f32 = cand
+            .iter()
+            .enumerate()
+            .map(|(c, &k)| keyboard.units(k, r, c))
+            .sum();
+        let start = (grid - total) / 2.0
+            + cand[..i]
+                .iter()
+                .enumerate()
+                .map(|(c, &k)| keyboard.units(k, r, c))
+                .sum::<f32>();
+        let ku = keyboard.units(Key::Space, r, i);
+        let imbalance = ((mid - start) - (start + ku - mid)).abs();
+        let crosses = start < mid && start + ku > mid;
+        // Keep the original slot when it already crosses.
+        let score = if !crosses {
+            f32::MAX / 2.0
+        } else if i == at {
+            -1.0
+        } else {
+            imbalance
+        };
+        if score < best.0 {
+            best = (score, i, cand);
+        }
+    }
+    best.2
+}
+
+/// Landscape with Line on: the strips beside the locked column (brief §4).
+pub fn draw_gutters(c: &mut Canvas, l: &Layout, t: Theme) {
+    if l.column.w > 0 && l.column.w < l.page.w {
+        c.fill(
+            Rect::new(l.page.x, l.page.y, l.column.x - l.page.x, l.page.h),
+            t.gutter,
+        );
+        let right = l.column.x + l.column.w;
+        c.fill(
+            Rect::new(right, l.page.y, l.page.x + l.page.w - right, l.page.h),
+            t.gutter,
+        );
+    }
+}
+
+fn draw_arrow(c: &mut Canvas, r: Rect, d: Dir, s: Scale, ink: u8) {
     let (cx, cy) = (r.x + r.w / 2, r.y + r.h / 2);
     let len = s.px(10.0);
     let head = s.px(6.0);
@@ -889,6 +1309,8 @@ impl EditorScreen {
             Hit::Files
         } else if l.preview_button.inset(-self.px(4.0)).contains(x, y) {
             Hit::TogglePreview
+        } else if l.options_button.inset(-self.px(4.0)).contains(x, y) {
+            Hit::Options
         } else {
             Hit::Nothing
         }
@@ -899,8 +1321,10 @@ impl EditorScreen {
         let t = m.theme;
         let l = self.layout(false, m.keyboard);
         c.fill(c.bounds(), t.paper);
+        draw_gutters(c, &l, t);
         self.draw_title(c, &l, m.file_name, None, t, true);
         draw_pencil_icon(c, l.preview_button, self.s, t.ink);
+        self.draw_options_icon(c, l.options_button, t);
         let area = self.text_area(l.page);
         let page = m.page.min(m.doc.pages.len().saturating_sub(1));
         if let Some(r) = m.doc.pages.get(page) {
@@ -925,11 +1349,7 @@ impl EditorScreen {
             &left,
             t.mute,
         );
-        let right = format!(
-            "{} \u{b7} {}",
-            if t == Theme::NIGHT { "Night" } else { "Paper" },
-            m.save.label()
-        );
+        let right = self.status_right(t, m.save);
         let rw = self.fonts.width(Face::Atkinson, ui, &right);
         let rx = (l.status.w - self.px(20.0)) as f32 - rw;
         self.fonts
@@ -1249,5 +1669,175 @@ mod tests {
         // Page and status bar are drawn; nothing below the status bar.
         assert!(c.pixels.iter().any(|&p| p < 80));
         let _ = e.draw(&mut c, &m);
+    }
+
+    fn no_overlap(keys: &[(Rect, Key)]) {
+        for (i, (a, _)) in keys.iter().enumerate() {
+            for (b, _) in &keys[i + 1..] {
+                assert!(
+                    a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y,
+                    "{a:?} {b:?}"
+                );
+            }
+        }
+    }
+
+    fn landscape(
+        mode: LandKeys,
+        pad: Pad,
+        side: Side,
+        layout: sigma_core::keyboard::Layout,
+    ) -> (EditorScreen, Keyboard, Layout) {
+        let mut e = EditorScreen::new(H, W);
+        let mut st = Settings {
+            land_keys: mode,
+            pad,
+            pad_side: side,
+            ..Settings::default()
+        };
+        e.configure(&mut st, None);
+        let k = Keyboard::with_layout(layout);
+        let l = e.layout(true, &k);
+        (e, k, l)
+    }
+
+    #[test]
+    fn landscape_keyboards_fit_hit_and_keep_portrait_key_size() {
+        use sigma_core::keyboard::Layout as L;
+        let portrait = EditorScreen::new(W, H).layout(true, &Keyboard::with_layout(L::Compact));
+        let unit_w = portrait.keys[0].0.w;
+        for layout in [L::Compact, L::Full] {
+            for mode in [LandKeys::Centre, LandKeys::Split, LandKeys::Full] {
+                for pad in [Pad::Numbers, Pad::Arrows] {
+                    for side in [Side::Left, Side::Right] {
+                        let (e, k, l) = landscape(mode, pad, side, layout);
+                        no_overlap(&l.keys);
+                        let (b, s) = (Buffer::new(""), SaveState::Saved);
+                        let m = model(&b, &k, &s);
+                        for (r, key) in &l.keys {
+                            assert!(
+                                r.x >= 5 && r.x + r.w <= H as i32 - 5 && r.y + r.h <= W as i32,
+                                "{r:?}"
+                            );
+                            assert!(r.w >= 50 && r.h >= 50, "{r:?}");
+                            assert_eq!(e.hit(&m, r.x + r.w / 2, r.y + r.h / 2), Hit::Key(*key));
+                        }
+                        for (r, b) in &l.kb_buttons {
+                            assert!(r.y >= l.keyboard.y && r.x + r.w <= H as i32);
+                            assert_eq!(e.hit(&m, r.x + r.w / 2, r.y + r.h / 2), Hit::KbButton(*b));
+                        }
+                        assert!(l.page.h >= 800, "{mode:?} page {}", l.page.h);
+                        if layout == L::Compact {
+                            let q = l.keys.iter().find(|(_, k)| *k == Key::Char('q')).unwrap().0;
+                            let tol = if mode == LandKeys::Full {
+                                unit_w / 20
+                            } else {
+                                1
+                            };
+                            assert!((q.w - unit_w).abs() <= tol, "unit {} vs {unit_w}", q.w);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn split_has_a_gap_and_space_on_both_halves() {
+        use sigma_core::keyboard::Layout as L;
+        let (_, _, l) = landscape(LandKeys::Split, Pad::Numbers, Side::Right, L::Compact);
+        let spaces: Vec<_> = l.keys.iter().filter(|(_, k)| *k == Key::Space).collect();
+        assert_eq!(spaces.len(), 2);
+        let t = l.keys.iter().find(|(_, k)| *k == Key::Char('t')).unwrap().0;
+        let y = l.keys.iter().find(|(_, k)| *k == Key::Char('y')).unwrap().0;
+        assert!(y.x - (t.x + t.w) > 2 * t.w, "clear gap between halves");
+        let shift = l.keys.iter().find(|(_, k)| *k == Key::Shift).unwrap().0;
+        let back = l.keys.iter().find(|(_, k)| *k == Key::Back).unwrap().0;
+        assert!(shift.x < t.x && back.x > y.x);
+    }
+
+    #[test]
+    fn full_pad_sits_on_the_chosen_side_with_the_right_keys() {
+        use sigma_core::keyboard::Layout as L;
+        let (_, _, l) = landscape(LandKeys::Full, Pad::Numbers, Side::Right, L::Compact);
+        let seven = l.keys.iter().find(|(_, k)| *k == Key::Char('7')).unwrap().0;
+        let p = l.keys.iter().find(|(_, k)| *k == Key::Char('p')).unwrap().0;
+        assert!(seven.x > p.x + p.w);
+        let (_, _, l) = landscape(LandKeys::Full, Pad::Arrows, Side::Left, L::Compact);
+        let up = l
+            .keys
+            .iter()
+            .find(|(_, k)| *k == Key::Arrow(Dir::Up))
+            .unwrap()
+            .0;
+        let down = l
+            .keys
+            .iter()
+            .find(|(_, k)| *k == Key::Arrow(Dir::Down))
+            .unwrap()
+            .0;
+        let q = l.keys.iter().find(|(_, k)| *k == Key::Char('q')).unwrap().0;
+        assert!(up.x + up.w < q.x && up.x == down.x && up.y < down.y);
+        assert_eq!(l.kb_buttons.len(), 5);
+    }
+
+    #[test]
+    fn line_mode_holds_n_words_in_both_orientations_with_real_fonts() {
+        for face in [Typeface::Literata, Typeface::Atkinson] {
+            for n in 8..=16u8 {
+                let mut st = Settings {
+                    line_on: true,
+                    line_words: n,
+                    face,
+                    ..Settings::default()
+                };
+                let k = Keyboard::default();
+                let mut p = EditorScreen::new(W, H);
+                p.configure(&mut st, None);
+                let pp = p.layout(true, &k).page;
+                assert_eq!(
+                    p.sample_words_per_row(pp),
+                    usize::from(n),
+                    "portrait {face:?} {n}"
+                );
+                let mut l = EditorScreen::new(H, W);
+                l.configure(&mut st, None);
+                let lp = l.layout(true, &k);
+                assert_eq!(
+                    l.sample_words_per_row(lp.page),
+                    usize::from(n),
+                    "landscape {face:?} {n}"
+                );
+                assert_eq!(lp.column.w, W as i32, "column locked to the portrait width");
+                assert!(lp.column.x > 0, "gutters beside the column");
+            }
+        }
+    }
+
+    #[test]
+    fn night_draws_inverted_and_key_tone_can_differ() {
+        let mut e = EditorScreen::new(W, H);
+        let mut st = Settings {
+            paper: sigma_core::settings::Paper::Night,
+            key_tone: KeyTone::Light,
+            ..Settings::default()
+        };
+        e.configure(&mut st, None);
+        let (b, k, s) = (Buffer::new("night"), Keyboard::default(), SaveState::Saved);
+        let mut m = model(&b, &k, &s);
+        m.theme = Theme::NIGHT;
+        let mut c = Canvas::new(W, H, 128);
+        let l = e.draw(&mut c, &m);
+        let px = |x: i32, y: i32| c.pixels[(y * W as i32 + x) as usize];
+        assert_eq!(
+            px(5, l.page.y + 5),
+            Theme::NIGHT.paper,
+            "night page, not a grey card"
+        );
+        assert_eq!(px(2, l.keyboard.y + 3), Theme::DAY.paper, "light keyboard");
+        assert!(e.status_right(Theme::NIGHT, &s).starts_with("Night"));
+        st.usb = true;
+        e.configure(&mut st, None);
+        assert!(e.status_right(Theme::NIGHT, &s).starts_with("USB"));
     }
 }

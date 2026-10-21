@@ -5,16 +5,19 @@
 
 use sigma_core::buffer::TabKind;
 use sigma_core::gesture::{Gesture, Recognizer};
-use sigma_core::keyboard::{Dir, Key, Layout};
+use sigma_core::keyboard::{Dir, Key};
 use sigma_core::library::SCRATCH;
+use sigma_core::linefit::Anchor;
+use sigma_core::settings::{Orientation, Pad, Side};
 use sigma_core::{
-    Autosave, Buffer, Entry, FsNoteStore, KeyAction, Keyboard, Kind, Library, NotePath, NoteStore,
+    Autosave, Buffer, Change, Entry, FsNoteStore, KeyAction, Keyboard, Kind, Library, NotePath,
+    NoteStore, Settings,
 };
 use sigma_device::{Device, Event, HwKey, Phase, Refresh};
 use sigma_render::editor::Model;
 use sigma_render::{
-    BarAction, Canvas, Doc, EditorScreen, FilesHit, FilesModel, Hit, PreviewModel, Rect, Row,
-    SelUi, Theme,
+    BarAction, Canvas, Doc, EditorScreen, FilesHit, FilesModel, Hit, KbButton, OptionsHit,
+    OptionsModel, PreviewModel, Rect, Row, SelUi, Theme,
 };
 use std::path::PathBuf;
 
@@ -104,6 +107,14 @@ pub struct App {
     drag: Option<Drag>,
     /// `Some` while the note is shown rendered (eye ↔ pencil).
     pub preview: Option<PreviewState>,
+    /// Every Options setting (v0.4), kept in `notes/.sigma-settings`.
+    pub settings: Settings,
+    /// The Options sheet is open.
+    pub options: bool,
+    /// Panel size as the device reports it (portrait on the Forma).
+    phys: (u32, u32),
+    /// Rotated copy of the canvas sent to the panel in landscape.
+    phys_canvas: Canvas,
     pub running: bool,
 }
 
@@ -128,15 +139,18 @@ impl App {
             .unwrap_or_default();
         let buffer = Buffer::new(body);
         let _ = library.set_last_opened(&current);
-        let layout = load_layout(&root);
+        let mut settings = load_settings(&root);
+        let (lw, lh) = logical_size((width, height), settings.orientation);
+        let mut screen = EditorScreen::new(lw, lh);
+        screen.configure(&mut settings, None);
         Self {
             autosave: Autosave::new(buffer.revision()),
             library,
             current,
             buffer,
-            keyboard: Keyboard::with_layout(layout),
+            keyboard: Keyboard::with_layout(settings.keyboard),
             keys_on: true,
-            screen: EditorScreen::new(width, height),
+            screen,
             store,
             files: None,
             rename: None,
@@ -144,18 +158,171 @@ impl App {
             sel_ui: None,
             drag: None,
             preview: None,
-            canvas: Canvas::new(width, height, 255),
-            shown: Canvas::new(width, height, 0),
+            canvas: Canvas::new(lw, lh, 255),
+            shown: Canvas::new(lw, lh, 0),
+            settings,
+            options: false,
+            phys: (width, height),
+            phys_canvas: Canvas::new(width, height, 255),
             running: true,
         }
     }
 
-    /// Remembers Full / Compact in `notes/.sigma-settings`.
-    fn save_settings(&self) {
+    /// Writes every setting to `notes/.sigma-settings` (atomic).
+    fn save_settings(&mut self) {
+        self.settings.keyboard = self.keyboard.layout;
         let _ = sigma_core::store::write_atomic(
             &self.library.root().join(SETTINGS),
-            &format!("keyboard={}\n", self.keyboard.layout.name()),
+            &self.settings.serialize(),
         );
+    }
+
+    /// The page theme (Options → Paper).
+    #[must_use]
+    pub fn theme(&self) -> Theme {
+        Theme::for_paper(self.settings.paper)
+    }
+
+    #[must_use]
+    pub fn is_landscape(&self) -> bool {
+        self.settings.orientation == Orientation::Landscape
+    }
+
+    /// Applies one Options / keyboard-bar change: refits Line mode,
+    /// re-lays out (and resizes on rotation), saves the settings file.
+    /// Paper and orientation need a full (flashing) refresh.
+    pub fn change(&mut self, c: Change) -> Refresh {
+        self.settings.apply(c);
+        if let Change::Keyboard(l) = c {
+            self.keyboard = Keyboard {
+                layout: l,
+                clipboard: std::mem::take(&mut self.keyboard.clipboard),
+                ..Keyboard::default()
+            };
+        }
+        let anchor = match c.refit() {
+            Some(Some(true)) => Some(Anchor::Size),
+            Some(Some(false)) => Some(Anchor::Margin),
+            _ => None,
+        };
+        let (w, h) = logical_size(self.phys, self.settings.orientation);
+        if (self.screen.width, self.screen.height) != (w, h) {
+            self.screen.resize(w, h);
+            self.canvas = Canvas::new(w, h, 255);
+            self.shown = Canvas::new(w, h, 0);
+            self.sel_ui = None;
+        }
+        self.screen.configure(&mut self.settings, anchor);
+        self.save_settings();
+        if c.needs_full_refresh() {
+            Refresh::Full
+        } else {
+            Refresh::Partial
+        }
+    }
+
+    /// Opens the Options sheet (closes preview and selection chrome).
+    pub fn open_options(&mut self) {
+        self.save();
+        self.preview = None;
+        self.sel_ui = None;
+        self.drag = None;
+        self.options = true;
+    }
+
+    fn options_model(&self) -> OptionsModel<'_> {
+        OptionsModel {
+            settings: &self.settings,
+            theme: self.theme(),
+            keyboard: &self.keyboard,
+        }
+    }
+
+    fn options_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
+        match self.screen.options_hit(&self.options_model(), x, y) {
+            OptionsHit::Close => {
+                self.options = false;
+                Some(Refresh::Full)
+            }
+            OptionsHit::Change(c) => Some(self.change(c)),
+            OptionsHit::Nothing => None,
+        }
+    }
+
+    fn kb_button(&mut self, b: KbButton) -> Option<Refresh> {
+        let c = match b {
+            KbButton::Mode(m) if m == self.settings.land_keys => return None,
+            KbButton::Mode(m) => Change::LandKeys(m),
+            KbButton::PadToggle => Change::Pad(match self.settings.pad {
+                Pad::Numbers => Pad::Arrows,
+                Pad::Arrows => Pad::Numbers,
+            }),
+            KbButton::PadSide => Change::PadSide(match self.settings.pad_side {
+                Side::Left => Side::Right,
+                Side::Right => Side::Left,
+            }),
+        };
+        Some(self.change(c))
+    }
+
+    /// Device coordinates → screen coordinates (landscape turns the
+    /// picture 90° clockwise on the portrait panel).
+    #[must_use]
+    pub fn to_logical(&self, e: Event) -> Event {
+        if !self.is_landscape() {
+            return e;
+        }
+        let lh = self.canvas.height as i32;
+        let m = |x: i32, y: i32| (y, lh - 1 - x);
+        match e {
+            Event::Tap { x, y } => {
+                let (x, y) = m(x, y);
+                Event::Tap { x, y }
+            }
+            Event::Touch { phase, x, y, t } => {
+                let (x, y) = m(x, y);
+                Event::Touch { phase, x, y, t }
+            }
+            e => e,
+        }
+    }
+
+    /// What the panel shows, turned back to the screen's orientation
+    /// (emulator screenshots).
+    #[must_use]
+    pub fn view(&self, panel: &Canvas) -> Canvas {
+        if !self.is_landscape() {
+            return panel.clone();
+        }
+        let (lw, lh) = (self.canvas.width as usize, self.canvas.height as usize);
+        let pw = panel.width as usize;
+        let mut out = Canvas::new(lw as u32, lh as u32, 255);
+        for y in 0..lh {
+            for x in 0..lw {
+                out.pixels[y * lw + x] = panel.pixels[x * pw + (lh - 1 - y)];
+            }
+        }
+        out
+    }
+
+    fn present(&mut self, dev: &mut dyn Device, r: Rect, refresh: Refresh) -> std::io::Result<()> {
+        if !self.is_landscape() {
+            return dev.present(&self.canvas, r, refresh);
+        }
+        let (lw, lh) = (self.canvas.width as i32, self.canvas.height as i32);
+        let pw = self.phys_canvas.width as usize;
+        let (x0, y0) = (r.x.max(0), r.y.max(0));
+        let (x1, y1) = ((r.x + r.w).min(lw), (r.y + r.h).min(lh));
+        for y in y0..y1 {
+            for x in x0..x1 {
+                let v = self.canvas.pixels[(y * lw + x) as usize];
+                let (px, py) = ((lh - 1 - y) as usize, x as usize);
+                self.phys_canvas.pixels[py * pw + px] = v;
+            }
+        }
+        // Width and height swap, so the >= 16 px minimum still holds.
+        let pr = Rect::new(lh - y1, x0, y1 - y0, x1 - x0);
+        dev.present(&self.phys_canvas, pr, refresh)
     }
 
     fn after_key(&mut self, action: KeyAction) -> Option<Refresh> {
@@ -221,7 +388,8 @@ impl App {
     }
 
     fn keys_visible(&self) -> bool {
-        self.rename.is_some() || (self.files.is_none() && self.preview.is_none() && self.keys_on)
+        self.rename.is_some()
+            || (self.files.is_none() && self.preview.is_none() && !self.options && self.keys_on)
     }
 
     /// Names a `[[wiki]]` link may use for an existing note: the file name
@@ -273,6 +441,10 @@ impl App {
                 Hit::Files => {
                     self.exit_preview();
                     self.open_files();
+                    Some(Refresh::Full)
+                }
+                Hit::Options => {
+                    self.open_options();
                     Some(Refresh::Full)
                 }
                 _ => None,
@@ -355,7 +527,7 @@ impl App {
             moving: f.moving.as_ref().map(NotePath::name),
             message: f.message.as_deref(),
             first: f.first,
-            theme: Theme::DAY,
+            theme: self.theme(),
             rename: self.rename.as_ref().map(|(_, b)| b),
             keyboard: &self.keyboard,
         })
@@ -387,7 +559,9 @@ impl App {
     /// The device could not present the frame.
     pub fn render(&mut self, dev: &mut dyn Device, refresh: Refresh) -> std::io::Result<()> {
         let mut c = std::mem::replace(&mut self.canvas, Canvas::new(1, 1, 0));
-        if let Some(p) = &self.preview {
+        if self.options {
+            self.screen.draw_options(&mut c, &self.options_model());
+        } else if let Some(p) = &self.preview {
             let m = PreviewModel {
                 file_name: self.current.name(),
                 doc: &p.doc,
@@ -395,7 +569,7 @@ impl App {
                 words: sigma_core::text::word_count(self.buffer.text()),
                 save: &self.autosave.state,
                 keyboard: &self.keyboard,
-                theme: Theme::DAY,
+                theme: self.theme(),
             };
             self.screen.draw_preview(&mut c, &m);
         } else if self.files.is_some() {
@@ -411,7 +585,7 @@ impl App {
                 keyboard: &self.keyboard,
                 keys_on: self.keys_visible(),
                 save: &self.autosave.state,
-                theme: Theme::DAY,
+                theme: self.theme(),
                 sel_ui: if self.rename.is_some() {
                     None
                 } else {
@@ -434,7 +608,7 @@ impl App {
             self.canvas.diff_regions(&self.shown, 24, 8)
         };
         for r in &regions {
-            dev.present(&self.canvas, *r, refresh)?;
+            self.present(dev, *r, refresh)?;
         }
         if !regions.is_empty() {
             self.shown.pixels.copy_from_slice(&self.canvas.pixels);
@@ -672,7 +846,7 @@ impl App {
 
     /// Applies one event; returns the refresh it needs (or `None`).
     fn in_editor(&self) -> bool {
-        self.files.is_none() && self.rename.is_none() && self.preview.is_none()
+        self.files.is_none() && self.rename.is_none() && self.preview.is_none() && !self.options
     }
 
     fn apply(&mut self, gestures: Vec<Gesture>) -> Option<Refresh> {
@@ -804,7 +978,7 @@ impl App {
             keyboard: &self.keyboard,
             keys_on: self.keys_visible(),
             save: &self.autosave.state,
-            theme: Theme::DAY,
+            theme: self.theme(),
             sel_ui: self.sel_ui,
             rename: None,
         };
@@ -872,6 +1046,12 @@ impl App {
                 self.running = false;
                 None
             }
+            Event::Tap { x, y } if self.options => self.options_tap(x, y),
+            Event::Key(HwKey::Escape) if self.options => {
+                self.options = false;
+                Some(Refresh::Full)
+            }
+            Event::Key(_) | Event::PageTurn { .. } if self.options => None,
             e @ (Event::Tap { .. } | Event::PageTurn { .. } | Event::Key(_))
                 if self.preview.is_some() && self.files.is_none() =>
             {
@@ -912,7 +1092,7 @@ impl App {
                     HwKey::Backspace => self.buffer.backspace(),
                     HwKey::Delete => self.buffer.delete_forward(),
                     HwKey::Return => self.buffer.newline(),
-                    HwKey::Tab => self.buffer.insert_tab(TabKind::default()),
+                    HwKey::Tab => self.buffer.insert_tab(self.settings.tab_kind()),
                     HwKey::Left => self.buffer.left(),
                     HwKey::Right => self.buffer.right(),
                     HwKey::Up => self.screen.caret_row(&mut self.buffer, page, false),
@@ -934,7 +1114,7 @@ impl App {
                     keyboard: &self.keyboard,
                     keys_on: self.keys_visible(),
                     save: &self.autosave.state,
-                    theme: Theme::DAY,
+                    theme: self.theme(),
                     sel_ui: if self.rename.is_some() {
                         None
                     } else {
@@ -956,7 +1136,8 @@ impl App {
                     Hit::Handle(_) => None,
                     Hit::Key(k) if self.rename.is_some() => self.type_into_field(k),
                     Hit::Key(k) => {
-                        let a = self.keyboard.press(k, &mut self.buffer, TabKind::default());
+                        let tab = self.settings.tab_kind();
+                        let a = self.keyboard.press(k, &mut self.buffer, tab);
                         self.after_key(a)
                     }
                     Hit::ToggleKeys => {
@@ -975,6 +1156,11 @@ impl App {
                         self.enter_preview();
                         Some(Refresh::Full)
                     }
+                    Hit::Options => {
+                        self.open_options();
+                        Some(Refresh::Full)
+                    }
+                    Hit::KbButton(b) => self.kb_button(b),
                     Hit::StartRename => {
                         self.start_rename(RenameTarget::Current);
                         Some(Refresh::Partial)
@@ -1001,6 +1187,7 @@ impl App {
         self.render(dev, Refresh::Full)?;
         while self.running {
             let Some(e) = dev.next_event() else { break };
+            let e = self.to_logical(e);
             if let Some(r) = self.handle(e) {
                 self.render(dev, r)?;
             }
@@ -1027,6 +1214,9 @@ impl App {
     /// `Move`, `Delete`, `More:<row name>`, or a row name.
     #[must_use]
     pub fn control_centre(&self, label: &str) -> Option<(i32, i32)> {
+        if self.options {
+            return self.screen.options_control(&self.options_model(), label);
+        }
         let rows = self.rows();
         if let Some(m) = self.files_model(&rows) {
             let l = self.screen.files_layout(&m);
@@ -1057,7 +1247,12 @@ impl App {
             "OK" => Some(centre(l.ok_rect)),
             "Cancel" => Some(centre(l.cancel_rect)),
             "Keys" => Some(centre(l.keys_button)),
-            _ => None,
+            "Options" => Some(centre(l.options_button)),
+            s => l
+                .kb_buttons
+                .iter()
+                .find(|(_, b)| self.screen.kb_button_label(*b) == s)
+                .map(|(r, _)| centre(*r)),
         }
     }
 
@@ -1090,7 +1285,7 @@ impl App {
             keyboard: &self.keyboard,
             keys_on: self.keys_visible(),
             save: &self.autosave.state,
-            theme: Theme::DAY,
+            theme: self.theme(),
             sel_ui: self.sel_ui,
             rename: None,
         };
@@ -1113,7 +1308,7 @@ impl App {
             keyboard: &self.keyboard,
             keys_on: self.keys_visible(),
             save: &self.autosave.state,
-            theme: Theme::DAY,
+            theme: self.theme(),
             sel_ui: self.sel_ui,
             rename: None,
         };
@@ -1133,14 +1328,25 @@ impl App {
 
 const SETTINGS: &str = ".sigma-settings";
 
-fn load_layout(root: &std::path::Path) -> Layout {
+fn load_settings(root: &std::path::Path) -> Settings {
     std::fs::read_to_string(root.join(SETTINGS))
-        .ok()
-        .and_then(|s| {
-            s.lines()
-                .find_map(|l| l.strip_prefix("keyboard=").and_then(Layout::parse))
-        })
+        .map(|s| Settings::parse(&s))
         .unwrap_or_default()
+}
+
+/// Screen size for an orientation on a panel of `phys` size.
+fn logical_size(phys: (u32, u32), o: Orientation) -> (u32, u32) {
+    let (short, long) = (phys.0.min(phys.1), phys.0.max(phys.1));
+    match o {
+        Orientation::Portrait => (short, long),
+        Orientation::Landscape => (long, short),
+    }
+}
+
+/// Words a Line-mode row holds at the current settings (tests, emulator).
+#[must_use]
+pub fn words_per_row(app: &App) -> usize {
+    app.screen.sample_words_per_row(app.page_rect())
 }
 
 fn centre(r: Rect) -> (i32, i32) {
