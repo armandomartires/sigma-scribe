@@ -1,0 +1,10 @@
+# S11 — Test notes pack (draft; artifact built)
+
+> **DRAFT — planning only (2026-10-21). No development until the user approves.** The pack itself is a docs-only artifact and was built on 2026-10-21.
+
+**Path:** `dist/test-notes/` (README + `_test/`), tarball `dist/sigma-scribe-test-notes.tar.gz` (sha256 `6247294b3ba302194bf7e8c1274cd79d69a730fa4ddd512acc65a4e3916146b8`, 316 files, 1.3 MB). Not in git (`dist/` is ignored); S11 would add a generator script and an emulator script that runs every feature on it.
+
+**Contents:** `00-start-here.md` (index), `markdown-tour.md`, `find-50-lamps.md` (50 matches, 48 lower case), `todos.md` + `todos-other.md`, `headings.md`, `long-note.md` (~12 pages), `wiki/` (hub, 3 spokes, alias link, missing link, orphan), `folders/a/b/`, `unicode.md` (FR/PT/DE/ES + Farsi/JP sample lines), optional `graph-300/` (300 linked notes, every tenth orphan). Emulator check: 315 notes / 530 links, layout 24 ms desktop.
+
+**Device install (separate approval):** Kobo connected by USB to the PC, mounted (same identity checks as installs), copy `_test` to `sigma-scribe/notes/_test/`; the user's notes are untouched; uninstall = delete that folder. graph-300 can be left out.
+**Risk:** link names (`hub`, `n000`) resolve by file name across the whole library and could collide with user notes — prefix (`t-hub`) if wanted. Estimate 0.25 d.
