@@ -22,7 +22,8 @@ pub enum Refresh {
     /// which lagged and held up typing).
     Pointer,
     /// When the pointer hides: one non-flashing GL16 pass over its path,
-    /// clearing the DU trails (v1.0.3).
+    /// clearing the DU trails (v1.0.3). Also the Graph selection pill
+    /// (v1.0.4): one merged, non-flashing GL16 region.
     PointerCleanup,
     /// Larger partial changes (keyboard toggled, scrolled page).
     Partial,

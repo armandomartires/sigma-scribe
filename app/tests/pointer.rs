@@ -326,3 +326,48 @@ fn v103_pointer_never_blocks_typing() {
         .iter()
         .any(|(_, k)| *k == Refresh::PointerCleanup));
 }
+
+#[test]
+fn v104_pointer_only_frames_match_a_full_render_and_stay_small() {
+    let mut r = Rig::new("fast");
+    r.to(300, 300);
+    for i in 0..12 {
+        r.to(300 + i * 37, 300 + i * 23);
+    }
+    // The fast path must leave exactly what a full redraw would show.
+    let fast = r.dev.panel.pixels.clone();
+    r.app.render(&mut r.dev, Refresh::Full).unwrap();
+    assert_eq!(fast, r.dev.panel.pixels, "fast path == full frame");
+    // Pointer frames only cover the old+new arrow.
+    let n = r.dev.refreshes.len();
+    r.to(700, 700);
+    for (rect, k) in &r.dev.refreshes[n..] {
+        assert_eq!(*k, Refresh::Pointer);
+        assert!(
+            rect.w <= 200 && rect.h <= 200 && rect.w >= 16 && rect.h >= 16,
+            "{rect:?}"
+        );
+    }
+    // Hiding restores the page and runs one cleanup.
+    r.tick(POINTER_HIDE_MS + 100);
+    let hidden = r.dev.panel.pixels.clone();
+    r.app.render(&mut r.dev, Refresh::Full).unwrap();
+    assert_eq!(hidden, r.dev.panel.pixels);
+}
+
+#[test]
+fn v104_backlogged_moves_do_not_hide_the_pointer() {
+    let mut r = Rig::new("backlog");
+    r.to(400, 400);
+    // Ticks run at "now" = 10 s while queued moves still carry old times.
+    r.t = 10_000;
+    let t = r.t;
+    r.send(Event::Tick { t });
+    for i in 0..5 {
+        let t = 6_000 + i * 10; // read 4 s ago, processed now
+        r.send(Event::PointerMove { dx: 3, dy: 0, t });
+    }
+    let t = r.t + 50;
+    r.send(Event::Tick { t });
+    assert!(r.app.pointer.visible, "a backlog is not idle time");
+}

@@ -95,6 +95,11 @@ pub struct PointerState {
     pub trail: Option<Rect>,
     /// A cleanup refresh over `trail` is due (the arrow just hid).
     pub cleanup: bool,
+    /// Where the arrow is on the panel now (v1.0.4 fast path).
+    pub drawn: Option<Rect>,
+    /// Latest tick time: idle is measured in processing time, so a
+    /// backlog of old move events cannot hide the arrow (v1.0.4).
+    pub last_tick: u64,
 }
 
 fn merge(a: Option<Refresh>, b: Option<Refresh>) -> Option<Refresh> {
@@ -112,6 +117,20 @@ fn min16(r: Rect, b: Rect) -> Rect {
     let x = r.x.min(b.x + b.w - w).max(b.x);
     let y = r.y.min(b.y + b.h - h).max(b.y);
     Rect::new(x, y, w, h)
+}
+
+/// Copies rectangle `r` of `src` into `dst` (same size canvases).
+fn copy_rect(dst: &mut Canvas, src: &Canvas, r: Rect) {
+    let r = r.intersect(&dst.bounds());
+    if r.w <= 0 || r.h <= 0 || dst.width != src.width || dst.height != src.height {
+        return;
+    }
+    let w = dst.width as usize;
+    for y in r.y..r.y + r.h {
+        let a = y as usize * w + r.x as usize;
+        let e = a + r.w as usize;
+        dst.pixels[a..e].copy_from_slice(&src.pixels[a..e]);
+    }
 }
 
 fn rank(r: Refresh) -> u8 {
@@ -249,6 +268,11 @@ pub struct App {
     rename: Option<(RenameTarget, Buffer)>,
     pub canvas: Canvas,
     shown: Canvas,
+    /// The last full frame without the pointer (v1.0.4 fast path).
+    base: Canvas,
+    /// The next `Refresh::Pointer` render only moves the arrow: nothing
+    /// else changed since the last full frame (v1.0.4).
+    pointer_fast: bool,
     gestures: Recognizer,
     /// Touch selection chrome (v0.2.2).
     pub sel_ui: Option<SelUi>,
@@ -346,6 +370,8 @@ impl App {
             preview: None,
             canvas: Canvas::new(lw, lh, 255),
             shown: Canvas::new(lw, lh, 0),
+            base: Canvas::new(1, 1, 0),
+            pointer_fast: false,
             settings,
             options: false,
             phys: (width, height),
@@ -900,6 +926,7 @@ impl App {
     /// Ticks: flush a throttled move, hide after `POINTER_HIDE_MS` idle.
     fn pointer_tick(&mut self, t: u64) -> Option<Refresh> {
         let p = &mut self.pointer;
+        p.last_tick = p.last_tick.max(t);
         if !p.visible {
             return None;
         }
@@ -924,7 +951,7 @@ impl App {
         let p = &mut self.pointer;
         p.x = (p.x + dx).clamp(0, w - 1);
         p.y = (p.y + dy).clamp(0, h - 1);
-        p.last_move = t;
+        p.last_move = t.max(p.last_tick);
         let was = std::mem::replace(&mut p.visible, true);
         let (x, y) = (p.x, p.y);
         if let Some(d) = &mut self.pointer.down {
@@ -1392,6 +1419,13 @@ impl App {
     /// # Errors
     /// The device could not present the frame.
     pub fn render(&mut self, dev: &mut dyn Device, refresh: Refresh) -> std::io::Result<()> {
+        if refresh == Refresh::Pointer
+            && std::mem::take(&mut self.pointer_fast)
+            && self.base.pixels.len() == self.canvas.pixels.len()
+        {
+            return self.render_pointer_only(dev);
+        }
+        self.pointer_fast = false;
         self.screen.back_on = !self.history.is_empty();
         let mut c = std::mem::replace(&mut self.canvas, Canvas::new(1, 1, 0));
         if self.options {
@@ -1473,6 +1507,10 @@ impl App {
                     .draw_drawer(&mut c, &l, &self.drawer_model(&hs, &todos));
             }
         }
+        if self.pointer.live {
+            self.base.clone_from(&c);
+        }
+        self.pointer.drawn = None;
         if self.pointer.visible && self.pointer.live {
             let cell = sigma_render::pointer::pointer_cell(self.screen.scale().px(1.0) as f32);
             sigma_render::pointer::draw_pointer(
@@ -1485,6 +1523,7 @@ impl App {
             let pr = sigma_render::pointer::pointer_rect(self.pointer.x, self.pointer.y, cell)
                 .intersect(&c.bounds());
             self.pointer.trail = Some(self.pointer.trail.map_or(pr, |t| t.union(&pr)));
+            self.pointer.drawn = Some(pr);
         }
         self.canvas = c;
         // Only what changed goes to the panel: a pressed modifier redraws its
@@ -1496,7 +1535,7 @@ impl App {
         };
         // v1.0.1: the arrow's erase and draw go out as ONE update, so the
         // panel never shows the old arrow's residue next to the new one.
-        if refresh == Refresh::Pointer && regions.len() > 1 {
+        if matches!(refresh, Refresh::Pointer | Refresh::PointerCleanup) && regions.len() > 1 {
             let u = regions.iter().skip(1).fold(regions[0], |a, r| a.union(r));
             regions = vec![u];
         }
@@ -1518,6 +1557,46 @@ impl App {
         }
         if !regions.is_empty() {
             self.shown.pixels.copy_from_slice(&self.canvas.pixels);
+        }
+        Ok(())
+    }
+
+    /// v1.0.4: a pointer-only frame. Restores the old arrow's pixels from
+    /// the last full frame and draws the new one; no full redraw (the
+    /// 1.0.3 device log showed ~170 ms of CPU per move from full redraws,
+    /// which backed up the event queue).
+    fn render_pointer_only(&mut self, dev: &mut dyn Device) -> std::io::Result<()> {
+        let b = self.canvas.bounds();
+        let mut region = self.pointer.drawn.take();
+        if let Some(o) = region {
+            copy_rect(&mut self.canvas, &self.base, o);
+        }
+        if self.pointer.visible && self.pointer.live {
+            let cell = sigma_render::pointer::pointer_cell(self.screen.scale().px(1.0) as f32);
+            let theme = self.theme();
+            sigma_render::pointer::draw_pointer(
+                &mut self.canvas,
+                self.pointer.x,
+                self.pointer.y,
+                cell,
+                theme,
+            );
+            let pr = sigma_render::pointer::pointer_rect(self.pointer.x, self.pointer.y, cell)
+                .intersect(&b);
+            self.pointer.trail = Some(self.pointer.trail.map_or(pr, |t| t.union(&pr)));
+            self.pointer.drawn = Some(pr);
+            region = Some(region.map_or(pr, |r| r.union(&pr)));
+        }
+        if let Some(r) = region {
+            let r = min16(r, b);
+            self.present(dev, r, Refresh::Pointer)?;
+            copy_rect(&mut self.shown, &self.canvas, r);
+        }
+        if std::mem::take(&mut self.pointer.cleanup) {
+            if let Some(t) = self.pointer.trail.take() {
+                let t = min16(t, b);
+                self.present(dev, t, Refresh::PointerCleanup)?;
+            }
         }
         Ok(())
     }
@@ -1968,9 +2047,26 @@ impl App {
             Event::Tick { t } => {
                 let p = self.pointer_tick(t);
                 let r = self.handle_inner(e);
+                if r.is_some() {
+                    self.pointer_fast = false;
+                } else if p == Some(Refresh::Pointer) && self.pointer.down.is_none() {
+                    self.pointer_fast = true;
+                }
                 return merge(p, r);
             }
+            Event::PointerMove { .. } => {
+                let r = self.handle_inner(e);
+                if r == Some(Refresh::Pointer) && self.pointer.down.is_none() {
+                    self.pointer_fast = true;
+                } else if r.is_some() {
+                    self.pointer_fast = false;
+                }
+                return r;
+            }
             // Typing or touching hides the pointer (v0.8.1).
+            _ => self.pointer_fast = false,
+        }
+        match e {
             Event::Key(_) | Event::Chord { .. } | Event::Touch { .. } | Event::Tap { .. }
                 if self.pointer.visible =>
             {
@@ -2930,13 +3026,14 @@ impl App {
                     return self.graph_open_preview(i);
                 }
                 self.graph.as_mut()?.selected = Some(i);
-                // v1.0.2: the pill grows in one non-flashing GL16 region.
-                Some(Refresh::Pointer)
+                // v1.0.2: the pill grows in one non-flashing GL16 region
+                // (v1.0.4: the GL16 class again; 1.0.3 sent it as DU).
+                Some(Refresh::PointerCleanup)
             }
             GraphHit::Nothing => {
                 let g = self.graph.as_mut()?;
                 if g.map && g.selected.take().is_some() {
-                    return Some(Refresh::Pointer);
+                    return Some(Refresh::PointerCleanup);
                 }
                 None
             }

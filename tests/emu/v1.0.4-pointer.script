@@ -1,0 +1,15 @@
+# v1.0.4 (S10.4): pointer-only frames, no flicker; Graph pill GL16.
+copy-notes tests/test-notes/_test
+pointer plug
+pointer-to 600 800
+pointer-move 200 120
+expect-pointer visible
+shot v1.0.4-pointer-moving
+wait 3200
+expect-pointer hidden
+shot v1.0.4-pointer-hidden
+tap-on Graph
+tap-on Node:_test/wiki/test-hub.md
+pointer-to 700 700
+shot v1.0.4-graph-pill-pointer
+tap-on Close

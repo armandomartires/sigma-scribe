@@ -73,7 +73,7 @@ fn opens_on_the_map_select_then_open_in_preview() {
     assert!(g.layout.orphan[lone]);
     let n = r.dev.refreshes.len();
     // v1.0.2: selecting grows the pill in ONE GL16 region.
-    assert_eq!(r.tap_on("Node:b.md"), Some(Refresh::Pointer));
+    assert_eq!(r.tap_on("Node:b.md"), Some(Refresh::PointerCleanup));
     assert_min(r.regions_since(n));
     assert_eq!(r.regions_since(n).len(), 1);
     let g = r.app.graph.as_ref().unwrap();

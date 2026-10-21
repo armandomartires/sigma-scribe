@@ -122,3 +122,6 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.0.3 | [v1.0.3-pointer-du.png](v1.0.3/v1.0.3-pointer-du.png) | USB pointer moving (DU updates) | [eink](v1.0.3/eink/v1.0.3-pointer-du.png) |
 | v1.0.3 | [v1.0.3-pointer-cleaned.png](v1.0.3/v1.0.3-pointer-cleaned.png) | pointer hidden after 3 s: one GL16 cleanup pass | [eink](v1.0.3/eink/v1.0.3-pointer-cleaned.png) |
 | v1.0.3 | [v1.0.3-preview-landscape-night.png](v1.0.3/v1.0.3-preview-landscape-night.png) | Contents in preview, landscape, Night | [eink](v1.0.3/eink/v1.0.3-preview-landscape-night.png) |
+| v1.0.4 | [v1.0.4-pointer-moving.png](v1.0.4/v1.0.4-pointer-moving.png) | pointer drawn by a pointer-only frame | [eink](v1.0.4/eink/v1.0.4-pointer-moving.png) |
+| v1.0.4 | [v1.0.4-pointer-hidden.png](v1.0.4/v1.0.4-pointer-hidden.png) | after 3 s idle: arrow gone, page restored | [eink](v1.0.4/eink/v1.0.4-pointer-hidden.png) |
+| v1.0.4 | [v1.0.4-graph-pill-pointer.png](v1.0.4/v1.0.4-graph-pill-pointer.png) | Graph pill (GL16) with the pointer over the map | [eink](v1.0.4/eink/v1.0.4-graph-pill-pointer.png) |
