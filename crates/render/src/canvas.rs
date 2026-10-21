@@ -34,6 +34,16 @@ impl Rect {
         )
     }
 
+    /// The overlap of two rectangles (empty when they do not meet).
+    #[must_use]
+    pub fn intersect(&self, o: &Rect) -> Rect {
+        let x0 = self.x.max(o.x);
+        let y0 = self.y.max(o.y);
+        let x1 = (self.x + self.w).min(o.x + o.w);
+        let y1 = (self.y + self.h).min(o.y + o.h);
+        Rect::new(x0, y0, (x1 - x0).max(0), (y1 - y0).max(0))
+    }
+
     #[must_use]
     pub fn inset(&self, d: i32) -> Rect {
         Rect::new(self.x + d, self.y + d, self.w - 2 * d, self.h - 2 * d)

@@ -21,6 +21,7 @@ FBInk has **no emulator or preview window**. Its README notes it "works perfectl
 - `tap-on Find|Graph` (title-bar icons); Find bar: `tap-on FindField|ReplaceField|Prev|Next|Replace|All|Aa|FindClose`.
 - `tap-on Link:LABEL` (a wiki link or backlink on the shown preview page); `tap-on Graph:PATH` (a Graph row), `tap-on Close` on the Graph sheet.
 - `expect-find LABEL` (`Find`, `None`, `i of n`); `expect-mode` also knows `find` and `graph`.
+- Graph map (v1.0): `tap-on Map|List|Zoom+|Zoom-|Open`, `tap-on Node:PATH` (a visible map node), `expect-graph map|list`, `expect-selected PATH|none`, `expect-zoom N`, `make-notes N` (N linked notes in `map/`, every tenth an orphan; opens `map/n000.md`), `perf-graph [MAX_MS]` (layout with an empty cache; prints `layout_ms`, `draw_ms`). The Graph opens on the map, so list scripts `tap-on List` first.
 - Fixture `tests/emu/fixtures/lamps.md`: 50 matches of "lamp" and a missing link.
 
 ## v0.7 emulator commands

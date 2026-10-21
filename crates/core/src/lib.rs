@@ -7,6 +7,7 @@
 pub mod buffer;
 pub mod find;
 pub mod gesture;
+pub mod graphmap;
 pub mod keyboard;
 pub mod library;
 pub mod linefit;

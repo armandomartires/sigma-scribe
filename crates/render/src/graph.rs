@@ -2,6 +2,8 @@
 //! with their links" on the device instead of a drawn map (decision S6-D1).
 //! One row per note: its name, then where it links (→) and what links to
 //! it (←). Tap a row to open that note. Page-turn buttons scroll.
+//! v1.0 (S9.1) adds the map view (`graphmap.rs`) and a Map / List toggle;
+//! the list stays.
 
 use crate::canvas::{Canvas, Rect};
 use crate::editor::{EditorScreen, Layout};
@@ -25,6 +27,8 @@ pub struct GraphModel<'a> {
     pub edges: usize,
     pub theme: Theme,
     pub keyboard: &'a Keyboard,
+    /// `Some` when the map view is shown (v1.0); `None` shows the list.
+    pub map: Option<crate::graphmap::MapView<'a>>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -36,12 +40,28 @@ pub struct GraphLayout {
     pub visible: usize,
     /// Where the "N links · page i of n" or empty-state note goes.
     pub foot: Rect,
+    /// Map / List toggle, zoom and Open buttons (v1.0).
+    pub toolbar: Vec<(GraphHit, Rect)>,
+    /// The map drawing area (map view).
+    pub area: Rect,
+    /// Visible nodes and their boxes (map view), in drawing order.
+    pub nodes: Vec<(usize, Rect)>,
+    /// Pixels per layout unit and the layout point at the area's centre.
+    pub scale: f64,
+    pub centre: (f64, f64),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GraphHit {
     Close,
     Row(usize),
+    /// v1.0 map view.
+    Map,
+    List,
+    ZoomOut,
+    ZoomIn,
+    Open,
+    Node(usize),
     Nothing,
 }
 
@@ -52,20 +72,44 @@ impl EditorScreen {
         let s = self.scale();
         let w = self.width as i32;
         let row_h = s.px(80.0);
-        let top = base.title.h + s.px(8.0);
+        let bar_h = s.px(72.0);
+        let toolbar = self.graph_toolbar(m, base.title.h, bar_h);
+        let top = base.title.h + bar_h + s.px(8.0);
         let foot_h = s.px(56.0);
         let avail = self.height as i32 - top - foot_h;
         let visible = (avail / row_h).max(1) as usize;
+        let foot = Rect::new(0, self.height as i32 - foot_h, w, foot_h);
+        if let Some(v) = &m.map {
+            let area = Rect::new(0, base.title.h + bar_h, w, foot.y - base.title.h - bar_h);
+            let (scale, centre, nodes) = self.map_nodes(m, v, area);
+            return GraphLayout {
+                close: base.files_button,
+                foot,
+                base,
+                rows: Vec::new(),
+                visible,
+                toolbar,
+                area,
+                nodes,
+                scale,
+                centre,
+            };
+        }
         let rows = (m.first..m.rows.len().min(m.first + visible))
             .enumerate()
             .map(|(k, i)| (i, Rect::new(0, top + k as i32 * row_h, w, row_h)))
             .collect();
         GraphLayout {
             close: base.files_button,
-            foot: Rect::new(0, self.height as i32 - foot_h, w, foot_h),
+            foot,
             base,
             rows,
             visible,
+            toolbar,
+            area: Rect::default(),
+            nodes: Vec::new(),
+            scale: 0.0,
+            centre: (0.0, 0.0),
         }
     }
 
@@ -74,6 +118,16 @@ impl EditorScreen {
         let l = self.graph_layout(m);
         if l.close.inset(-self.scale().px(4.0)).contains(x, y) {
             return GraphHit::Close;
+        }
+        if let Some((h, _)) = l.toolbar.iter().find(|(_, r)| r.contains(x, y)) {
+            return *h;
+        }
+        if m.map.is_some() {
+            return if l.area.contains(x, y) {
+                self.map_hit(&l, x, y)
+            } else {
+                GraphHit::Nothing
+            };
         }
         l.rows
             .iter()
@@ -87,7 +141,14 @@ impl EditorScreen {
         let s = self.scale();
         let ui = self.ui_px();
         c.fill(c.bounds(), t.paper);
+        if let Some(v) = &m.map {
+            self.draw_map(c, m, v, &l);
+            // Bars are painted over the map, which clips it.
+            c.fill(Rect::new(0, 0, l.area.w, l.area.y), t.paper);
+            c.fill(Rect::new(0, l.foot.y, l.foot.w, l.foot.h), t.paper);
+        }
         self.draw_title(c, &l.base, "Graph", None, t, false);
+        self.draw_graph_toolbar(c, m, &l);
         let r = l.close;
         let (cx, cy, d) = (r.x + r.w / 2, r.y + r.h / 2, s.px(8.0));
         for k in -d..=d {
@@ -97,6 +158,22 @@ impl EditorScreen {
             }
         }
         let tx = s.px(28.0) as f32;
+        if let Some(v) = &m.map {
+            let foot = self.map_footer(m, v);
+            c.fill(Rect::new(0, l.foot.y, l.foot.w, 1), t.rule);
+            self.fonts.draw(
+                c,
+                Face::Atkinson,
+                ui,
+                tx,
+                l.foot.y as f32
+                    + l.foot.h as f32 / 2.0
+                    + self.fonts.ascent(Face::Atkinson, ui) / 2.6,
+                &foot,
+                t.mute,
+            );
+            return l;
+        }
         let max = (self.width as i32 - s.px(56.0)) as f32;
         for &(i, r) in &l.rows {
             let row = &m.rows[i];
@@ -185,6 +262,7 @@ mod tests {
             edges: 0,
             theme: Theme::DAY,
             keyboard: &k,
+            map: None,
         };
         let l = e.graph_layout(&m);
         assert!(l.visible > 5 && l.visible < 40);

@@ -52,6 +52,8 @@ expect-mode write
 expect-file The Parcel.md
 tap-on Graph
 expect-mode graph
+# v1.0: the Graph opens on the map; the list is one tap away.
+tap-on List
 shot v0.6-graph
 tap-on Graph:field-notes.md
 expect-open field-notes.md
@@ -90,6 +92,7 @@ expect-find 1 of 1
 shot v0.6-find-landscape
 tap-on FindClose
 tap-on Graph
+tap-on List
 shot v0.6-graph-landscape-night
 tap-on Close
 tap-on Options

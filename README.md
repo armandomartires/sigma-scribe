@@ -12,7 +12,7 @@ Status: **v1.0.0 release candidate — not yet tested on the device and not rele
 
 ## Features
 - Editor with an on-screen keyboard (Compact / Full, landscape Split / Full / Centre), touch selection, undo, autosave.
-- Library of notes and folders; Markdown preview with pages; wiki links `[[note]]`, backlinks, a graph list.
+- Library of notes and folders; Markdown preview with pages; wiki links `[[note]]`, backlinks, a graph map of notes and links (or a list).
 - Side drawer: Contents, To-dos across all notes, Scratch pad. Find & Replace.
 - Options: Paper / Night, Literata or Atkinson, Line mode (words per line), size, leading, margin, tab, keyboard tone, landscape.
 - Help pages. USB keyboard (US layout) and mouse/touchpad over USB-OTG with a powered hub or powered OTG cable.
