@@ -115,6 +115,22 @@ Procedure (same as 0.4.0): confirm it is the same Forma (serial <FORMA-SERIAL>) 
 
 Rollback: copy the 0.4.0 binary back (sha256 `689b84c4e763119cbdfa19eb07ade52d5709cdf034bf971fc2e5116e97c02043`, also in the pre-v1.0.0 backup). `.scratchpad.md` is hidden and ignored by 0.4.0; notes created from links are ordinary `.md` files and stay. `launch.sh` reboots on exit, which also returns the USB port to normal (gadget) mode.
 
+## Upgrade 1.0.2 → 1.0.3 (APPROVED and RUN 2026-10-22 00:50 CEST — on-device checklist pending)
+Run log: Forma found as `/dev/sdc` (serial <FORMA-SERIAL>, label KOBOeReader, fw 4.38.23697) and mounted alone; sdb and every other disk untouched. Log read read-only (223 lines) and copied into the backup as `device-log-1.0.2.log`: two 1.0.2 sessions (00:17–00:23 and 00:34–00:47 CEST, both exit 0). Host mode switched on and off cleanly in both, but **no USB keyboard or pointer was detected** in either session, so 1.0.2 logged **no `perf pointer` lines and no typing `perf:` summary**. The last pointer/typing numbers are still the 1.0.1 ones (GL16 p50 606 / p95 1091 ms; typing p95 186.7 ms). Backup `~/backups/kobo-forma-<FORMA-SERIAL>/2026-10-22-pre-v1.0.3` (328 files, `SHA256SUMS` verified). Device binary was `5e14620b…3376` (1.0.2) ✓; replaced via `sigma-scribe.new` + sync + rename by CI 1.0.3, sha256 on the device `339b62613cf13b51c7e140ac9c85887b5780677028b759799aa6d04178b49be0` ✓. Synced, unmounted, powered off; gone from `lsblk`.
+
+**Package:** CI-built `sigma-scribe-1.0.3-kobo` (release workflow on PR #7). Tarball sha256 `b6d4dd52bd56aa07ebfcb005f7c651b111a5ad3e1f261f72ae6f209f7d07a6d4`; binary sha256 `339b62613cf13b51c7e140ac9c85887b5780677028b759799aa6d04178b49be0`. Rollback: the 1.0.2 binary from the backup.
+
+On-device checklist — v1.0.3 (K400 Plus on the charging splitter, Options → USB keyboard & mouse = On):
+- [ ] Move the pointer for ~30 s: responsive; only light trails while moving
+- [ ] Rest 3 s: pointer hides, one clean pass, no marks left, no flash
+- [ ] Type while moving the pointer: no typing lag
+- [ ] Log: `perf pointer: du …`, `perf pointer: gl16-cleanup …`, pointer p50/p95 summary; typing `perf:` p95 back near 66–94 ms
+- [ ] Contents open → preview: drawer stays, text beside it; tap a heading on a later page → jumps; Back returns
+- [ ] To-dos in preview: tick a box → saved, preview updates
+- [ ] Scratch in preview: USB typing goes to the scratch only; the note is unchanged; Esc leaves the scratch
+- [ ] Graph / Files / Options from preview: no drawer; it returns after closing
+- [ ] Landscape + Night
+
 ## Upgrade 1.0.1 → 1.0.2 (APPROVED and RUN 2026-10-22 00:08 CEST — on-device checklist pending)
 Run log: Forma found as `/dev/sdc` (serial <FORMA-SERIAL>, label KOBOeReader, fw 4.38.23697) and mounted alone; sdb and every other disk untouched. Log read read-only (187 lines): one 1.0.1 session, 23:30–23:47 CEST, exit 0, no errors. USB host on → Logitech receiver keyboard (event3) + pointer (event4) → both gone → host off (gadget). **`perf pointer` (GL16, 9 samples, regions 18×32 … 49×32): min 393, p50 606, p95 1091, max 1091 ms — well over the 300 ms threshold** (reported; no code changed in this run). Typing: 101 keystrokes, p50 72.5, p95 186.7, max 302.5 ms. The user also created `_test/test-chapter-01.md`. Backup `~/backups/kobo-forma-<FORMA-SERIAL>/2026-10-22-pre-v1.0.2` (327 files incl. 316 in `notes/_test/`, `SHA256SUMS` verified). Device binary was `ffc2e119…6567` (1.0.1) ✓; replaced via `sigma-scribe.new` + sync + rename by CI 1.0.2, sha256 on the device `5e14620bfeb40ca937f7ff06f9b9bf08b2df4af0c556f2a49c41e9c668703376` ✓. Synced, unmounted, powered off; gone from `lsblk`.
 
