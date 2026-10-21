@@ -1,0 +1,50 @@
+# v1.0.2 (S10.2): round map nodes, selection pill, plain links; Back
+# navigation (title-bar arrow, Esc), on the test notes pack (Forma 1440x1920).
+copy-notes tests/test-notes/_test
+expect-open _test/test-00-start-here.md
+tap-on Graph
+expect-graph map
+shot v1.0.2-graph-map
+tap-on Node:_test/wiki/test-hub.md
+expect-selected _test/wiki/test-hub.md
+shot v1.0.2-graph-map-pill
+tap-on Zoom+
+tap-on Zoom+
+expect-zoom 2
+shot v1.0.2-graph-map-zoomed
+tap-on Zoom-
+tap-on Zoom-
+# Second tap opens in preview and pushes history: Back appears.
+tap-on Node:_test/wiki/test-hub.md
+expect-mode preview
+expect-open _test/wiki/test-hub.md
+shot v1.0.2-back-button
+# Follow a wiki link in preview, then Back twice.
+tap-on Link:test-spoke-1
+expect-open _test/wiki/test-spoke-1.md
+tap-on Back
+expect-open _test/wiki/test-hub.md
+expect-mode preview
+esc
+expect-open _test/test-00-start-here.md
+expect-mode write
+# Files pushes too.
+tap-on Files
+tap-on test-todos.md
+expect-open _test/test-todos.md
+shot v1.0.2-back-write
+tap-on Back
+expect-open _test/test-00-start-here.md
+# Night and landscape map.
+tap-on Options
+tap-on Paper/Night
+tap-on Orientation/Landscape
+tap-on Close
+tap-on Graph
+tap-on Node:_test/test-todos.md
+shot v1.0.2-graph-map-landscape-night
+tap-on Close
+tap-on Options
+tap-on Paper/Day
+tap-on Orientation/Portrait
+tap-on Close

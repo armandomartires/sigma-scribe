@@ -72,15 +72,20 @@ fn opens_on_the_map_select_then_open_in_preview() {
     let lone = g.rows.iter().position(|row| row.name == "lone.md").unwrap();
     assert!(g.layout.orphan[lone]);
     let n = r.dev.refreshes.len();
-    assert_eq!(r.tap_on("Node:b.md"), Some(Refresh::Partial));
+    // v1.0.2: selecting grows the pill in ONE GL16 region.
+    assert_eq!(r.tap_on("Node:b.md"), Some(Refresh::Pointer));
     assert_min(r.regions_since(n));
+    assert_eq!(r.regions_since(n).len(), 1);
     let g = r.app.graph.as_ref().unwrap();
     assert_eq!(g.selected.map(|i| g.rows[i].name.as_str()), Some("b.md"));
     assert_eq!(r.tap_on("Node:b.md"), Some(Refresh::Full));
     assert!(r.app.graph.is_none() && r.app.preview.is_some());
     assert_eq!(r.app.current.as_str(), "b.md");
-    // Reopening with unchanged links reuses the cached layout.
+    // Esc goes Back (v1.0.2) to where the Graph was opened from.
+    let before = r.app.history.last().unwrap().note.clone();
     r.send(Event::Key(sigma_device::HwKey::Escape));
+    assert!(r.app.preview.is_none() && r.app.current == before);
+    // Reopening with unchanged links reuses the cached layout.
     r.open_graph();
     assert_eq!(r.app.graph.as_ref().unwrap().layout_us, 0, "cached");
 }

@@ -72,6 +72,8 @@ pub enum Hit {
     /// Selection handle 0 = start, 1 = end.
     Handle(usize),
     Bar(BarAction),
+    /// Back arrow (v1.0.2): the previous note, mode and position.
+    Back,
     /// Folder icon: open the Files sheet.
     Files,
     /// Eye (write mode) or pencil (preview): toggle preview, v0.3.
@@ -120,6 +122,9 @@ pub struct Layout {
     /// mockup's order left to right after the title: Files, Preview, Find,
     /// Scratch, To-dos, Contents, Graph, Options, Help.
     pub files_button: Rect,
+    /// Back arrow (v1.0.2), the slot left of Files; drawn and hit only
+    /// while `EditorScreen::back_on`.
+    pub back_button: Rect,
     /// Eye / pencil, right of the folder.
     pub preview_button: Rect,
     /// Close X of the sheets (Files, Graph, Help, Options): the rightmost
@@ -148,8 +153,9 @@ pub struct Layout {
     pub kb_buttons: Vec<(Rect, KbButton)>,
 }
 
-/// Icons in the title bar (S9.2).
-pub const TITLE_ICONS: i32 = 9;
+/// Icon slots in the title bar (S9.2; v1.0.2 adds Back before Files, so
+/// sizing always reserves room for it).
+pub const TITLE_ICONS: i32 = 10;
 
 pub struct EditorScreen {
     pub width: u32,
@@ -158,6 +164,8 @@ pub struct EditorScreen {
     pub scroll: usize,
     /// A USB keyboard is connected (v0.8).
     pub usb_live: bool,
+    /// Navigation history is not empty: show the Back arrow (v1.0.2).
+    pub back_on: bool,
     s: Scale,
     // Typography defaults from the brief: 20 px, leading 1.5, margin 28 px.
     pub body_px: f32,
@@ -204,6 +212,7 @@ impl EditorScreen {
             key_theme: None,
             cfg: Settings::default(),
             usb_live: false,
+            back_on: false,
             drawer_open: [false; 3],
             find_open: false,
         }
@@ -347,17 +356,23 @@ impl EditorScreen {
         // Right-aligned group, mockup order left to right.
         let x0 = w - self.px(12.0) - TITLE_ICONS * btn - (TITLE_ICONS - 1) * icon_gap;
         let slot = |i: i32| Rect::new(x0 + i * (btn + icon_gap), by, btn, btn);
-        let files_button = slot(0);
-        let preview_button = slot(1);
-        let find_button = slot(2);
-        let scratch_button = slot(3);
-        let todos_button = slot(4);
-        let contents_button = slot(5);
-        let graph_button = slot(6);
-        let options_button = slot(7);
-        let help_button = slot(8);
+        let back_button = slot(0);
+        let files_button = slot(1);
+        let preview_button = slot(2);
+        let find_button = slot(3);
+        let scratch_button = slot(4);
+        let todos_button = slot(5);
+        let contents_button = slot(6);
+        let graph_button = slot(7);
+        let options_button = slot(8);
+        let help_button = slot(9);
         let close_button = help_button;
-        let name_rect = Rect::new(0, 0, (files_button.x - self.px(8.0)).max(0), title.h);
+        let first = if self.back_on {
+            back_button
+        } else {
+            files_button
+        };
+        let name_rect = Rect::new(0, 0, (first.x - self.px(8.0)).max(0), title.h);
         let column = if self.landscape() && self.cfg.line_on {
             let cw = w.min(h);
             Rect::new(page.x + (page.w - cw) / 2, page.y, cw, page.h)
@@ -377,6 +392,7 @@ impl EditorScreen {
             keyboard: keyboard_rect,
             keys,
             files_button,
+            back_button,
             preview_button,
             close_button,
             name_rect,
@@ -822,6 +838,9 @@ impl EditorScreen {
                 Hit::RenameOk
             };
         }
+        if self.back_on && l.back_button.inset(-self.px(4.0)).contains(x, y) {
+            return Hit::Back;
+        }
         if l.files_button.inset(-self.px(4.0)).contains(x, y) {
             return Hit::Files;
         }
@@ -1208,6 +1227,9 @@ impl EditorScreen {
             );
             if files_icon {
                 draw_folder_icon(c, l.files_button, self.icon_scale(l), t.ink);
+                if self.back_on {
+                    draw_back_icon(c, l.back_button, self.icon_scale(l), t.ink);
+                }
             }
         }
         c.fill(
@@ -1541,7 +1563,9 @@ impl EditorScreen {
     #[must_use]
     pub fn preview_hit(&self, keyboard: &Keyboard, x: i32, y: i32) -> Hit {
         let l = self.layout(false, keyboard);
-        if l.files_button.inset(-self.px(4.0)).contains(x, y) {
+        if self.back_on && l.back_button.inset(-self.px(4.0)).contains(x, y) {
+            Hit::Back
+        } else if l.files_button.inset(-self.px(4.0)).contains(x, y) {
             Hit::Files
         } else if l.preview_button.inset(-self.px(4.0)).contains(x, y) {
             Hit::TogglePreview
@@ -1720,6 +1744,20 @@ pub fn draw_graph_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
 }
 
 /// A 20 px (brief), 1.75-stroke folder outline centred in a 44 px target.
+/// Back arrow (v1.0.2): a shaft and a chevron pointing left.
+pub fn draw_back_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
+    let w = s.px(20.0);
+    let st = s.px(1.75).max(2);
+    let x = target.x + (target.w - w) / 2;
+    let cy = target.y + target.h / 2;
+    c.fill(Rect::new(x, cy - st / 2, w, st), ink);
+    let arm = s.px(8.0);
+    for k in 0..=arm {
+        c.fill(Rect::new(x + k, cy - k - st / 2, st, st), ink);
+        c.fill(Rect::new(x + k, cy + k - st / 2, st, st), ink);
+    }
+}
+
 pub fn draw_folder_icon(c: &mut Canvas, target: Rect, s: Scale, ink: u8) {
     let w = s.px(20.0);
     let h = s.px(16.0);
