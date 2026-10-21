@@ -1,5 +1,6 @@
-//! The Graph map view (v1.0, S9.1): notes as labelled boxes, links as
-//! straight lines with arrowheads, on positions from
+//! The Graph map view (v1.0, S9.1; look v1.0.2, S10.2): notes as small
+//! circles (the selection a pill with its full name), links as plain
+//! straight lines, on positions from
 //! `sigma_core::graphmap`. The view opens fitted to the whole graph and
 //! centred on the current note; four zoom levels; panning moves the centre.
 //! Everything is solid ink / mute / rule on paper, so it stays crisp at 16
@@ -166,20 +167,23 @@ impl EditorScreen {
             .max(1.0);
         let scale = fit * ZOOMS[v.zoom.min(ZOOMS.len() - 1)];
         let centre = (anchor.0 + v.pan.0, anchor.1 + v.pan.1);
-        let labels = self.map_labels_all(n, scale);
         let bh = s.px(46.0);
-        let dot = s.px(18.0);
-        let maxw = s.px(200.0) as f32;
         let mut out = Vec::new();
         for i in 0..n {
             let (x, y) = self.map_point(area, scale, centre, v.pos[i]);
-            let r = if labels || Some(i) == cur || self.map_emph(v, i) {
-                let text = self.node_label(&m.rows[i].name, maxw);
-                let w =
-                    self.fonts.width(Face::Atkinson, self.label_size(), &text) as i32 + s.px(24.0);
+            let r = if v.selected == Some(i) {
+                // The selection: a pill with the full name (v1.0.2).
+                let w = (self.fonts.width(
+                    Face::AtkinsonBold,
+                    self.label_size(),
+                    label(&m.rows[i].name),
+                ) as i32
+                    + bh)
+                    .max(bh);
                 Rect::new(x - w / 2, y - bh / 2, w, bh)
             } else {
-                Rect::new(x - dot / 2, y - dot / 2, dot, dot)
+                let d = self.map_dot(v, i, cur);
+                Rect::new(x - d / 2, y - d / 2, d, d)
             };
             if r.x + r.w >= area.x
                 && r.x <= area.x + area.w
@@ -196,6 +200,23 @@ impl EditorScreen {
                 + 4 * u8::from(v.selected == Some(i))
         });
         (scale, centre, out)
+    }
+
+    /// Dot diameter: neighbours and the current note a little larger.
+    fn map_dot(&self, v: &MapView<'_>, i: usize, cur: Option<usize>) -> i32 {
+        let s = self.scale();
+        if Some(i) == cur || self.map_emph(v, i) {
+            s.px(30.0)
+        } else {
+            s.px(22.0)
+        }
+    }
+
+    /// Whether node `i` gets a label beside its dot (decision S10.2-D1):
+    /// always for the current note and the selection's neighbours; for
+    /// every note only when the zoom leaves room.
+    fn map_label_beside(&self, v: &MapView<'_>, i: usize, cur: Option<usize>, all: bool) -> bool {
+        v.selected != Some(i) && (all || Some(i) == cur || self.map_emph(v, i))
     }
 
     fn map_emph(&self, v: &MapView<'_>, i: usize) -> bool {
@@ -217,12 +238,20 @@ impl EditorScreen {
         )
     }
 
+    /// Touch target of a node: its shape, grown to at least 44 × 44 brief
+    /// px around the centre.
+    #[must_use]
+    pub fn map_target(&self, r: Rect) -> Rect {
+        let min = self.scale().px(44.0);
+        let (w, h) = (r.w.max(min), r.h.max(min));
+        Rect::new(r.x + r.w / 2 - w / 2, r.y + r.h / 2 - h / 2, w, h)
+    }
+
     pub(crate) fn map_hit(&self, l: &GraphLayout, x: i32, y: i32) -> GraphHit {
-        let slop = self.scale().px(14.0);
         l.nodes
             .iter()
             .rev()
-            .find(|(_, r)| r.inset(-slop).contains(x, y))
+            .find(|(_, r)| self.map_target(*r).contains(x, y))
             .map_or(GraphHit::Nothing, |&(i, _)| GraphHit::Node(i))
     }
 
@@ -269,7 +298,6 @@ impl EditorScreen {
         let n = v.pos.len().min(m.rows.len());
         let boxes: std::collections::HashMap<usize, Rect> = l.nodes.iter().copied().collect();
         let line_w = s.px(2.0).max(2);
-        let arrow = f64::from(s.px(16.0));
         // Links: incident to the selection in ink, others mute (rule when a
         // selection exists, so the neighbourhood stands out).
         let mut edges: Vec<(usize, usize)> = v
@@ -291,25 +319,23 @@ impl EditorScreen {
                 t.mute
             };
             let w = if hot { line_w + line_w / 2 } else { line_w };
-            // Clip both ends to the boxes so arrowheads touch the border.
+            // Plain lines (v1.0.2), clipped to the node shapes.
             let start = boxes.get(&a).map_or(pa, |r| exit(*r, pb, pa));
             let end = boxes.get(&b).map_or(pb, |r| exit(*r, pa, pb));
             thick_line(c, start, end, w, col);
-            let len = f64::from(end.0 - start.0).hypot(f64::from(end.1 - start.1));
-            if len > arrow * 2.5 {
-                arrowhead(c, start, end, arrow, col);
-            }
         }
         // Nodes.
         let cur = (0..n).find(|&i| m.rows[i].current);
         let border = s.px(2.0).max(2);
         let size = self.label_size();
+        let all = self.map_labels_all(n, l.scale);
+        let maxw = s.px(200.0) as f32;
+        let gap = s.px(8.0);
         for &(i, r) in &l.nodes {
             let emph = self.map_emph(v, i);
             let is_cur = Some(i) == cur;
             let sel = v.selected == Some(i);
             let quiet = v.selected.is_some() && !emph && !is_cur;
-            let small = r.h < s.px(30.0);
             let (bg, fg, edge) = if is_cur {
                 (t.ink, t.paper, t.ink)
             } else if quiet {
@@ -325,36 +351,42 @@ impl EditorScreen {
                     },
                 )
             };
-            c.fill(r, bg);
-            let bw = if sel {
-                border * 3
-            } else if emph {
-                border * 2
-            } else {
-                border
-            };
-            c.stroke(r, bw, edge);
+            let rad = r.h / 2;
+            fill_round(c, r, rad, edge);
+            let bw = if sel || emph { border * 2 } else { border };
+            fill_round(c, r.inset(bw), rad - bw, bg);
             if sel && is_cur {
-                c.stroke(r.inset(-bw - border), border, t.ink);
+                fill_round(c, r.inset(bw * 2), rad - bw * 2, t.ink);
             }
-            if small {
-                continue;
-            }
-            let text = self.node_label(&m.rows[i].name, r.w as f32);
-            let face = if is_cur || sel {
-                Face::AtkinsonBold
+            let (text, face, tx, ink) = if sel {
+                let face = Face::AtkinsonBold;
+                let text = label(&m.rows[i].name).to_owned();
+                let w = self.fonts.width(face, size, &text);
+                (text, face, r.x as f32 + (r.w as f32 - w) / 2.0, fg)
+            } else if self.map_label_beside(v, i, cur, all) {
+                let face = if is_cur {
+                    Face::AtkinsonBold
+                } else {
+                    Face::Atkinson
+                };
+                let ink = if quiet { t.mute } else { t.ink };
+                (
+                    self.node_label(&m.rows[i].name, maxw),
+                    face,
+                    (r.x + r.w + gap) as f32,
+                    ink,
+                )
             } else {
-                Face::Atkinson
+                continue;
             };
-            let w = self.fonts.width(face, size, &text);
             self.fonts.draw(
                 c,
                 face,
                 size,
-                r.x as f32 + (r.w as f32 - w) / 2.0,
+                tx,
                 r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(face, size) / 2.6,
                 &text,
-                fg,
+                ink,
             );
         }
     }
@@ -392,35 +424,29 @@ fn thick_line(c: &mut Canvas, a: (i32, i32), b: (i32, i32), w: i32, v: u8) {
     }
 }
 
-/// Filled triangle at `tip`, pointing along `from → tip`.
-fn arrowhead(c: &mut Canvas, from: (i32, i32), tip: (i32, i32), size: f64, v: u8) {
-    let (dx, dy) = (f64::from(tip.0 - from.0), f64::from(tip.1 - from.1));
-    let len = dx.hypot(dy).max(1e-9);
-    let (ux, uy) = (dx / len, dy / len);
-    let (bx, by) = (f64::from(tip.0) - ux * size, f64::from(tip.1) - uy * size);
-    let half = size * 0.5;
-    let p = [
-        (f64::from(tip.0), f64::from(tip.1)),
-        (bx - uy * half, by + ux * half),
-        (bx + uy * half, by - ux * half),
-    ];
-    let x0 = p.iter().map(|q| q.0).fold(f64::MAX, f64::min).floor() as i32;
-    let x1 = p.iter().map(|q| q.0).fold(f64::MIN, f64::max).ceil() as i32;
-    let y0 = p.iter().map(|q| q.1).fold(f64::MAX, f64::min).floor() as i32;
-    let y1 = p.iter().map(|q| q.1).fold(f64::MIN, f64::max).ceil() as i32;
-    let side = |a: (f64, f64), b: (f64, f64), x: f64, y: f64| {
-        (b.0 - a.0) * (y - a.1) - (b.1 - a.1) * (x - a.0)
-    };
-    for y in y0..=y1 {
-        for x in x0..=x1 {
-            let (fx, fy) = (f64::from(x) + 0.5, f64::from(y) + 0.5);
-            let s0 = side(p[0], p[1], fx, fy);
-            let s1 = side(p[1], p[2], fx, fy);
-            let s2 = side(p[2], p[0], fx, fy);
-            if (s0 >= 0.0 && s1 >= 0.0 && s2 >= 0.0) || (s0 <= 0.0 && s1 <= 0.0 && s2 <= 0.0) {
-                c.blend(x, y, v, 255);
-            }
-        }
+/// Filled rounded rectangle with corner radius `rad` (radius = h/2 gives
+/// a circle or a pill). Hard edges, so it is crisp at 16 grey levels.
+pub(crate) fn fill_round(c: &mut Canvas, r: Rect, rad: i32, v: u8) {
+    if r.w <= 0 || r.h <= 0 {
+        return;
+    }
+    let rad = rad.clamp(0, r.w.min(r.h) / 2);
+    let rf = f64::from(rad);
+    for row in 0..r.h {
+        let fy = f64::from(row) + 0.5;
+        let dy = if fy < rf {
+            rf - fy
+        } else if fy > f64::from(r.h) - rf {
+            fy - (f64::from(r.h) - rf)
+        } else {
+            0.0
+        };
+        let inset = if dy > 0.0 {
+            (rf - (rf * rf - dy * dy).max(0.0).sqrt()).round() as i32
+        } else {
+            0
+        };
+        c.fill(Rect::new(r.x + inset, r.y + row, r.w - 2 * inset, 1), v);
     }
 }
 
@@ -521,6 +547,58 @@ mod tests {
         let t = e.node_label("a/very-long-note-name-that-goes-on-and-on.md", 150.0);
         assert!(t.ends_with('\u{2026}'));
         assert_eq!(e.node_label("x/short.md", 400.0), "short");
+    }
+
+    #[test]
+    fn round_dots_pill_for_selection_and_44px_targets() {
+        let e = EditorScreen::new(1440, 1920);
+        let k = Keyboard::default();
+        let mut r = rows(5);
+        r[3].name = "dir/a-rather-long-note-name-for-the-pill.md".into();
+        let edges = [(0, 1), (1, 2), (3, 4)];
+        let lay = sigma_core::graphmap::layout(5, &edges, 1);
+        let mut v = MapView {
+            pos: &lay.pos,
+            orphan: &lay.orphan,
+            edges: &edges,
+            zoom: 0,
+            pan: (0.0, 0.0),
+            selected: None,
+        };
+        let model = |v: MapView<'_>| -> Vec<(usize, Rect)> {
+            let m = GraphModel {
+                rows: &r,
+                first: 0,
+                edges: 3,
+                theme: Theme::DAY,
+                keyboard: &k,
+                map: Some(v),
+            };
+            e.graph_layout(&m).nodes
+        };
+        let min = e.scale().px(44.0);
+        for (_, b) in model(v) {
+            assert_eq!(b.w, b.h, "round dot {b:?}");
+            let t = e.map_target(b);
+            assert!(t.w >= min && t.h >= min);
+        }
+        v.selected = Some(3);
+        let nodes = model(v);
+        let pill = nodes.iter().find(|(i, _)| *i == 3).unwrap().1;
+        let full = e.fonts.width(
+            Face::AtkinsonBold,
+            e.label_size(),
+            "a-rather-long-note-name-for-the-pill",
+        );
+        assert!(pill.w as f32 > full && pill.w > pill.h, "{pill:?}");
+        // Neighbour (4) keeps a larger dot than an unrelated note (1).
+        let d = |i: usize| nodes.iter().find(|(j, _)| *j == i).unwrap().1.w;
+        assert!(d(4) > d(1));
+        // Rounded fill: corners stay paper, centre is ink.
+        let mut c = Canvas::new(40, 20, 255);
+        fill_round(&mut c, Rect::new(0, 0, 40, 20), 10, 0);
+        assert_eq!(c.pixels[0], 255);
+        assert_eq!(c.pixels[10 * 40 + 20], 0);
     }
 
     #[test]

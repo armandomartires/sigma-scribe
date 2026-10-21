@@ -115,6 +115,20 @@ Procedure (same as 0.4.0): confirm it is the same Forma (serial <FORMA-SERIAL>) 
 
 Rollback: copy the 0.4.0 binary back (sha256 `689b84c4e763119cbdfa19eb07ade52d5709cdf034bf971fc2e5116e97c02043`, also in the pre-v1.0.0 backup). `.scratchpad.md` is hidden and ignored by 0.4.0; notes created from links are ordinary `.md` files and stay. `launch.sh` reboots on exit, which also returns the USB port to normal (gadget) mode.
 
+## Upgrade 1.0.1 → 1.0.2 (PENDING APPROVAL — not run)
+**Package:** CI-built `sigma-scribe-1.0.2-kobo` (release workflow on PR #5, feat/v1.0.2). Tarball sha256 `1b9c2192c6f0e6d858a8ba5803cb93080dc7e663e91091b26a302da2f098e22f`; binary sha256 `5e14620bfeb40ca937f7ff06f9b9bf08b2df4af0c556f2a49c41e9c668703376`.
+
+Procedure (same as 1.0.0 → 1.0.1): identify the Forma by serial <FORMA-SERIAL>, mount only that disk (never sdb or any other disk); read the log read-only (record the `perf pointer` lines from 1.0.1); back up `.adds/sigma-scribe`, `.adds/nm/sigma-scribe` and `sigma-scribe/notes` to `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v1.0.2` and verify against checksums; confirm the device binary is 1.0.1 (`ffc2e119e569e4364e565b7779d4e650183bb6107bc46e4bc982356650306567`), else stop; replace **only** the binary via `sigma-scribe.new` + sync + rename; verify its sha256 on the device; sync, unmount, eject, confirm gone from `lsblk`. Notes (incl. `notes/_test/`) untouched. Rollback: the 1.0.1 binary from the backup.
+
+On-device checklist — v1.0.2:
+- [ ] Graph (from `_test/test-00-start-here`): notes are round dots, links plain lines, the current note filled; labels beside dots only where they fit
+- [ ] Tap a dot: it grows into a pill with the full name in one update, **no flash**; neighbours stand out; small dots are easy to hit with a finger
+- [ ] Tap the pill again: preview opens and a **Back** arrow appears left of Files; Back returns to the start note
+- [ ] In preview follow a wiki link and a backlink, then Back twice: same notes, same mode and page
+- [ ] Files → another note, To-dos → open, Contents → heading: each can be undone with Back; Back hides when the history is empty
+- [ ] Esc (USB keyboard) and Alt+Left go back; title bar fits in portrait and landscape
+- [ ] Night + landscape map reads well
+
 ## Upgrade 1.0.0 → 1.0.1 (APPROVED and RUN 2026-10-21 23:20 CEST, with the test notes — on-device checklist pending)
 Run log: Forma found as `/dev/sdc` (serial <FORMA-SERIAL>, label KOBOeReader, fw 4.38.23697) and mounted alone at `/media/amartires/KOBOeReader`; sdb (64 GB stick) and every other disk untouched. Log read read-only (155 lines, all sessions exit 0 except the old v0.2.1 `exit 1` at 00:25): 1.0.0 sessions 20:46 (`perf: 12 keystrokes, p50 53.2 ms, p95 65.8 ms, max 81.3 ms`) and 20:48–21:04 (`usb: host mode on -> Ok(()) (role now Some("host"))`; "Logitech USB Receiver" event3 keyboard + event4 pointer; both gone on unplug; `host mode off -> Ok(()) (role now Some("gadget"))`; `perf: 19 keystrokes, p50 74.7 ms, p95 93.7 ms, max 118.0 ms`). Backup `~/backups/kobo-forma-<FORMA-SERIAL>/2026-10-21-pre-v1.0.1` (11 files, `SHA256SUMS` verified). Device binary was `bb38a083…dad1` (1.0.0) ✓; replaced via `sigma-scribe.new` + sync + rename by the CI 1.0.1 binary, sha256 on the device `ffc2e119e569e4364e565b7779d4e650183bb6107bc46e4bc982356650306567` ✓. Test notes: `notes/_test` did not exist; copied `_test/` (315 files incl. graph-300, pack tarball `460a8611…5c9b`) without overwrite; 315/315 checksums verified on the device. Synced, unmounted, powered off; gone from `lsblk`.
 

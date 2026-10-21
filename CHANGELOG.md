@@ -2,6 +2,12 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.0.2 — 2026-10-21 (built, not installed, not tagged)
+- Graph map look (sprint S10.2): links are plain lines (no arrowheads); notes are small circles (rounded rectangles, radius = height/2); the selected note grows into a pill with its full name, in one non-flashing GL16 region; the current note stays filled; the selection's neighbours keep a larger, thicker ring and ink links. Labels sit beside the dots: always for the current note and the neighbours, for every note only at zooms with room (decision S10.2-D1). Every node hits within ≥ 44 × 44 brief px.
+- Back navigation: a session history (note, write/preview, caret, scroll, preview page; cap 50) is pushed when a note is opened from a wiki link or backlink in preview, the Graph (map Open / second tap, list rows), To-dos, Contents jumps and Files. A Back arrow appears at the far left of the title bar (before Files) only while the history is not empty; Esc (when nothing else is open) and Alt+Left on a USB keyboard also go back. The title bar reserves the slot, so it still fits in portrait and landscape.
+- Emulator: `tests/emu/v1.0.2-map-back.script`, control `Back`.
+- Device binary sha256 (CI build) `5e14620bfeb40ca937f7ff06f9b9bf08b2df4af0c556f2a49c41e9c668703376`; tarball `1b9c2192c6f0e6d858a8ba5803cb93080dc7e663e91091b26a302da2f098e22f`.
+
 ## 1.0.1 — 2026-10-21 (built, not installed, not tagged)
 - Pointer ghost trails fixed (sprint S10): every pointer move is now ONE update over the union of the old and new arrow (≥ 16×16) on a new `Refresh::Pointer` class mapped to FBInk `WFM_GL16` (grey-accurate, no flash) instead of `WFM_AUTO` (DU/A2, which left residue on the grey paper). When the arrow hides (3 s idle, typing, touching) one non-flashing GC16 partial covers its whole path since the last cleanup. Throttle stays 150 ms. Device log: `perf pointer: gl16 WxH submit+complete N ms` every 20th update.
 - Reverse scroll: Options → **Scroll: Traditional / Natural** (default Traditional = 1.0). Natural flips every wheel / two-finger notch: note, preview, sheets, Graph zoom. Saved as `scroll=natural|traditional`.

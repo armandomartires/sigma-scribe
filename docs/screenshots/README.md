@@ -108,3 +108,9 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.0.1 | [v1.0.1-pointer.png](v1.0.1/v1.0.1-pointer.png) | pointer arrow over text after circles | [eink](v1.0.1/eink/v1.0.1-pointer.png) |
 | v1.0.1 | [v1.0.1-pointer-hidden.png](v1.0.1/v1.0.1-pointer-hidden.png) | after the arrow hides (cleanup refresh) | [eink](v1.0.1/eink/v1.0.1-pointer-hidden.png) |
 | v1.0.1 | [v1.0.1-test-notes-graph.png](v1.0.1/v1.0.1-test-notes-graph.png) | graph map of the test notes pack | [eink](v1.0.1/eink/v1.0.1-test-notes-graph.png) |
+| v1.0.2 | [v1.0.2-graph-map.png](v1.0.2/v1.0.2-graph-map.png) | map: round dots, plain links, labels beside dots | [eink](v1.0.2/eink/v1.0.2-graph-map.png) |
+| v1.0.2 | [v1.0.2-graph-map-pill.png](v1.0.2/v1.0.2-graph-map-pill.png) | selected note as a pill with its full name; neighbours emphasised | [eink](v1.0.2/eink/v1.0.2-graph-map-pill.png) |
+| v1.0.2 | [v1.0.2-graph-map-zoomed.png](v1.0.2/v1.0.2-graph-map-zoomed.png) | zoom 2 around the selection | [eink](v1.0.2/eink/v1.0.2-graph-map-zoomed.png) |
+| v1.0.2 | [v1.0.2-back-button.png](v1.0.2/v1.0.2-back-button.png) | preview after opening from the Graph: Back arrow before Files | [eink](v1.0.2/eink/v1.0.2-back-button.png) |
+| v1.0.2 | [v1.0.2-back-write.png](v1.0.2/v1.0.2-back-write.png) | write mode after Files → note: Back arrow | [eink](v1.0.2/eink/v1.0.2-back-write.png) |
+| v1.0.2 | [v1.0.2-graph-map-landscape-night.png](v1.0.2/v1.0.2-graph-map-landscape-night.png) | map in landscape, Night, a selection pill | [eink](v1.0.2/eink/v1.0.2-graph-map-landscape-night.png) |

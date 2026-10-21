@@ -204,6 +204,19 @@ impl Perf {
 }
 
 /// Preview mode (v0.3): the laid-out note and the page shown. Read-only.
+/// Navigation history cap (v1.0.2).
+pub const HISTORY_CAP: usize = 50;
+
+/// Where the user was before a jump (v1.0.2 Back).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HistEntry {
+    pub note: NotePath,
+    /// Preview page, or `None` for write mode.
+    pub preview: Option<usize>,
+    pub caret: usize,
+    pub scroll: usize,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct PreviewState {
     pub doc: Doc,
@@ -267,6 +280,8 @@ pub struct App {
     pub usb_host: bool,
     /// USB mouse / touchpad (v0.8.1).
     pub pointer: PointerState,
+    /// Back stack (v1.0.2), this session only, newest last.
+    pub history: Vec<HistEntry>,
     pub perf: Perf,
     pub running: bool,
 }
@@ -336,6 +351,7 @@ impl App {
             usb_live: false,
             usb_host: false,
             pointer: PointerState::default(),
+            history: Vec::new(),
             perf: Perf::default(),
             running: true,
         }
@@ -562,6 +578,7 @@ impl App {
         let page = self.page_rect();
         match hit {
             DrawerHit::Heading(line) => {
+                self.push_history();
                 self.scratch_focus = false;
                 self.screen.jump_to_line(&mut self.buffer, page, line);
                 Some(Refresh::Partial)
@@ -584,6 +601,7 @@ impl App {
                     return Some(Refresh::Partial);
                 }
                 let full = it.note != self.current;
+                self.push_history();
                 if full {
                     self.open(&it.note);
                 }
@@ -932,6 +950,13 @@ impl App {
     /// restored afterwards. Sheets ignore chords; Ctrl+F in preview opens Find.
     fn chord(&mut self, key: HwKey, mods: Mods) -> Option<Refresh> {
         let ctrl_f = mods.ctrl && key == HwKey::Char('f');
+        // Alt+Left = Back (v1.0.2), in write mode and preview.
+        if mods.alt && !mods.ctrl && key == HwKey::Left && !self.history.is_empty() {
+            if self.options || self.help.is_some() || self.graph.is_some() || self.files.is_some() {
+                return None;
+            }
+            return self.go_back();
+        }
         if self.options || self.help.is_some() || self.graph.is_some() || self.files.is_some() {
             return None;
         }
@@ -1104,6 +1129,7 @@ impl App {
     fn preview_event(&mut self, e: Event) -> Option<Refresh> {
         match e {
             Event::Tap { x, y } => match self.screen.preview_hit(&self.keyboard, x, y) {
+                Hit::Back => self.go_back(),
                 Hit::TogglePreview => {
                     self.exit_preview();
                     Some(Refresh::Full)
@@ -1154,6 +1180,9 @@ impl App {
                 })
             }
             Event::Key(HwKey::Escape) => {
+                if !self.history.is_empty() {
+                    return self.go_back();
+                }
                 self.exit_preview();
                 Some(Refresh::Full)
             }
@@ -1252,6 +1281,7 @@ impl App {
     /// # Errors
     /// The device could not present the frame.
     pub fn render(&mut self, dev: &mut dyn Device, refresh: Refresh) -> std::io::Result<()> {
+        self.screen.back_on = !self.history.is_empty();
         let mut c = std::mem::replace(&mut self.canvas, Canvas::new(1, 1, 0));
         if self.options {
             self.screen.draw_options(&mut c, &self.options_model());
@@ -1526,6 +1556,9 @@ impl App {
                     self.refresh_files();
                 } else {
                     self.files = None;
+                    if e.path != self.current {
+                        self.push_history();
+                    }
                     self.open(&e.path);
                     return Some(Refresh::Full);
                 }
@@ -1957,6 +1990,9 @@ impl App {
                     HwKey::Home | HwKey::End | HwKey::PageUp | HwKey::PageDown => return None,
                     HwKey::Escape => {
                         let had = self.sel_ui.take().is_some();
+                        if !had && !self.history.is_empty() {
+                            return self.go_back();
+                        }
                         return had.then_some(Refresh::Fast);
                     }
                 }
@@ -1990,6 +2026,7 @@ impl App {
                     self.sel_ui = None;
                 }
                 match hit {
+                    Hit::Back => self.go_back(),
                     Hit::Bar(a) => self.bar_action(a),
                     Hit::Handle(_) => None,
                     Hit::Key(k) if self.rename.is_some() => self.type_into_field(k),
@@ -2188,6 +2225,7 @@ impl App {
         }
         let l = self.screen.layout(self.keys_visible(), &self.keyboard);
         match label {
+            "Back" if self.screen.back_on => Some(centre(l.back_button)),
             "Files" => Some(centre(l.files_button)),
             "Preview" | "Pencil" | "Eye" => Some(centre(l.preview_button)),
             "Title" => Some(centre(l.name_rect)),
@@ -2736,6 +2774,9 @@ impl App {
             GraphHit::Row(i) => {
                 let p = g.notes.get(i)?.clone();
                 self.graph = None;
+                if p != self.current {
+                    self.push_history();
+                }
                 self.open(&p);
                 Some(Refresh::Full)
             }
@@ -2761,12 +2802,13 @@ impl App {
                     return self.graph_open_preview(i);
                 }
                 self.graph.as_mut()?.selected = Some(i);
-                Some(Refresh::Partial)
+                // v1.0.2: the pill grows in one non-flashing GL16 region.
+                Some(Refresh::Pointer)
             }
             GraphHit::Nothing => {
                 let g = self.graph.as_mut()?;
                 if g.map && g.selected.take().is_some() {
-                    return Some(Refresh::Partial);
+                    return Some(Refresh::Pointer);
                 }
                 None
             }
@@ -2779,6 +2821,7 @@ impl App {
         self.graph = None;
         self.map_drag = None;
         if p != self.current {
+            self.push_history();
             self.open(&p);
         }
         self.enter_preview();
@@ -2865,10 +2908,55 @@ impl App {
         })
     }
 
+    /// Remembers where we are before a jump (v1.0.2). Cap 50, oldest
+    /// dropped; an entry equal to the top is not repeated.
+    pub fn push_history(&mut self) {
+        let e = HistEntry {
+            note: self.current.clone(),
+            preview: self.preview.as_ref().map(|p| p.page),
+            caret: self.buffer.caret(),
+            scroll: self.screen.scroll,
+        };
+        if self.history.last() == Some(&e) {
+            return;
+        }
+        self.history.push(e);
+        if self.history.len() > HISTORY_CAP {
+            self.history.remove(0);
+        }
+    }
+
+    /// Back (v1.0.2): the previous note, mode and position. Sheets and the
+    /// find bar close. `None` when the history is empty.
+    pub fn go_back(&mut self) -> Option<Refresh> {
+        let e = self.history.pop()?;
+        self.files = None;
+        self.graph = None;
+        self.help = None;
+        self.options = false;
+        self.close_find();
+        self.exit_preview();
+        if e.note != self.current {
+            self.open(&e.note);
+        }
+        let at = e.caret.min(self.buffer.text().len());
+        self.buffer.set_caret(at);
+        self.screen.scroll = e.scroll;
+        self.sel_ui = None;
+        if let Some(page) = e.preview {
+            self.enter_preview();
+            if let Some(p) = &mut self.preview {
+                p.page = page.min(p.doc.pages.len().saturating_sub(1));
+            }
+        }
+        Some(Refresh::Full)
+    }
+
     /// A tapped `[[wiki]]` link: an existing note opens in preview; a
     /// missing one is created (empty) and opens in write mode.
     pub fn follow_link(&mut self, target: &str) -> Option<Refresh> {
         let notes = self.library.all_notes().unwrap_or_default();
+        self.push_history();
         if let Some(p) = links::resolve(target, &notes).cloned() {
             self.exit_preview();
             self.open(&p);
@@ -3064,7 +3152,10 @@ impl App {
                 add(&format!("graph row {i}"), *r);
             }
             for (i, r) in &l.nodes {
-                add(&format!("graph node {i}"), r.intersect(&l.area));
+                add(
+                    &format!("graph node {i}"),
+                    self.screen.map_target(*r).intersect(&l.area),
+                );
             }
             return out;
         }
@@ -3087,6 +3178,9 @@ impl App {
             return out;
         }
         let l = self.page_layout();
+        if self.screen.back_on {
+            add("Back", l.back_button);
+        }
         add("Files", l.files_button);
         add("Preview", l.preview_button);
         add("Find", l.find_button);
