@@ -155,11 +155,12 @@ Input: the 1.0.0 device test (K400 Plus keyboard, pointer and two-finger scroll 
 | 5 | Orientation | Portrait, Landscape, Portrait inverted, Landscape inverted, **Auto**. Auto is feasible: the Forma's accelerometer (mma8x5x) reports `EV_MSC/MSC_RAW` 0x17–0x1a on an input device (KOReader `handleMiscEvNTX`, `misc_ntx_gsensor_protocol`). Caveat (KOReader): events may only be enabled if Nickel ran in that power cycle — true for NickelMenu launches. Fallback if not seen on device: the four manual options only | 2–3 d | Med: inverted needs touch mapping for 4 rotations; device-only verification |
 | 7a | Layouts US/FR/PT/DE/ES (+UK, IT, Nordic easy) | Own layout tables (generated once from xkb data, checked in), dead keys (´ ` ^ ~ ¨), on-screen and USB share them; v1.1 | 4–5 d | Med: OSK Full layout per locale; AltGr on USB; fonts already cover Latin-1/Ext-A |
 | 7b | Farsi | RTL + Arabic shaping (rustybuzz + unicode-bidi), Vazirmatn font (~0.5 MB); caret/selection/wrap become bidi-aware — a major editor/render change; v1.2 | 3–4 wk | High |
+| 8 | Pen mode (finger and stylus) | Options/toolbar toggle **Finger / Stylus / Auto**; Auto classifies by contact size (`ABS_MT_TOUCH_MAJOR`/`PRESSURE`, ranges to be probed on the device); palm rejection: first contact wins, size threshold per input, two fingers = pan/zoom; constant widths in mm (Stylus Fine 0.6 mm, Finger Medium 1.2 mm), stronger smoothing for fingers. Default Finger until the probe proves Auto. See `sprints/S17-pen-mode.md` | ~1.5 wk + 0.5 d probe | High for Auto (panel data), medium latency |
 | 7c | Japanese | Romaji→kana IME (feasible), CJK font subset (Noto Sans JP: ~4–5 MB subset for JIS level 1 kanji, 16 MB full); kanji conversion (dictionary IME) is a big separate job, not planned; v1.3 | 2–3 wk (kana) | High (size, wrap rules) |
 
 **Recommended order:** S10 (pointer fix + reverse scroll + USB label, one small release v1.0.1 or first v1.1 sprint) → S11 (test-notes pack, docs) → S12 UI scale → S13 orientation → S14 Latin layouts = **v1.1.0**; S15 Farsi = v1.2; S16 Japanese kana = v1.3.
 
-**Open questions for the user:** (a) ship S10 alone as v1.0.1 first? (b) UI scale default 175 % OK, and should the note text Size scale with it on first run? (c) Auto orientation default on or off? (d) which extra Latin layouts (UK, IT, Nordic, NL)? (e) JP: kana only, or is kanji conversion a must (then a much larger plan)? (f) Farsi: also Arabic? (same work) (g) test-pack note names: keep short or prefix `t-`?
+**Open questions for the user:** (a) ship S10 alone as v1.0.1 first? (b) UI scale default 175 % OK, and should the note text Size scale with it on first run? (c) Auto orientation default on or off? (d) which extra Latin layouts (UK, IT, Nordic, NL)? (e) JP: kana only, or is kanji conversion a must (then a much larger plan)? (f) Farsi: also Arabic? (same work) (g) test-pack note names: keep short or prefix `t-`? (h) pen mode: where do drawings live (sketch block in a note saved as PNG/SVG, separate page, margin) and which release?
 
 ### Roadmap after v0.2 (confirmed)
 
@@ -187,3 +188,4 @@ Input: the 1.0.0 device test (K400 Plus keyboard, pointer and two-finger scroll 
 | S14 | Latin layouts | v1.1 📝 | US/FR/PT/DE/ES (+UK/IT/Nordic) with dead keys, OSK + USB — PLANNED |
 | S15 | Farsi RTL | v1.2 📝 | bidi + shaping (rustybuzz) — PLANNED |
 | S16 | Japanese kana | v1.3 📝 | romaji→kana IME, CJK font subset — PLANNED |
+| S17 | Pen mode | v1.1+ (TBD) 📝 | drawing with finger **or** capacitive stylus: Finger/Stylus/Auto (contact-size), palm rejection for both, per-input stroke widths — PLANNED |
