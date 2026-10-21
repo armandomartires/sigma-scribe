@@ -1,6 +1,6 @@
 # S3 — Markdown preview
 
-**Status:** 🔨 BUILT 2026-10-21 (awaiting on-device check) · **Release:** v0.3.0 · **Estimate:** 5–6 d · **Depends on:** S2.6 (v0.2.3) · **Branch:** `feat/v0.3-preview`
+**Status:** ✅ DONE 2026-10-21 (passed on device, tagged `v0.3.0`) · **Release:** v0.3.0 · **Estimate:** 5–6 d · **Depends on:** S2.6 (v0.2.3) · **Branch:** `feat/v0.3-preview`
 
 ## Goal
 Read a note rendered (brief §4 "Preview mode", step 3 of §11): eye ↔ pencil in the title bar, the page-turn buttons page through it, and nothing in write mode changes.

@@ -14,7 +14,7 @@ Acceptance made specific 2026-10-21 (see `sprints/S3-markdown-preview.md`). Stat
 - Eye button left of Files; pencil in preview; Esc leaves; Files leaves preview; page turns page; everything else ignored (decision S3-D1).
 - Accept: app tests — full refresh on entering/leaving, partial (never full-screen) on page turns, ends do nothing, typing/taps/holds change nothing, caret unchanged, file unchanged, entering from the end of a note lands on the last page.
 
-### S3-T04 — Emulator script, screenshots, package ✅ / on-device ⏳
+### S3-T04 — Emulator script, screenshots, package ✅ / on-device ✅ (passed 2026-10-21, tagged `v0.3.0`)
 - `tests/emu/v0.3-preview.script` (+ fixture), `docs/screenshots/v0.3-*.png`, `dist/sigma-scribe-0.3.0-kobo/`.
 - On-device checklist in the sprint file (needs the user; no Kobo writes without approval).
 
