@@ -121,8 +121,8 @@ Same procedure as 1.4.0:
 2. Read the log and copy it into the backup.
 3. Make a checksum-verified backup into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v1.4.2` (`.adds/sigma-scribe`, `.adds/nm`, `sigma-scribe/notes`, log).
 4. From the CI 1.4.2 package:
-   - replace `.adds/sigma-scribe/sigma-scribe` (via `.new` + sync + hash check + rename), binary sha256 `BIN142`;
-   - add `.adds/sigma-scribe/THIRD-PARTY.txt` (Lucide ISC notice, missing on the device since 1.1), sha256 as in the package.
+   - replace `.adds/sigma-scribe/sigma-scribe` (via `.new` + sync + hash check + rename), binary sha256 `1e2ca1c93790ca2cec935ddaeaff4547055958068aaf04552608f615d5d41cb1`, tarball `4cf42621f9c414e531443ccd26f860f591c966cff8a4d1c691bc24c4458685a2`;
+   - add `.adds/sigma-scribe/THIRD-PARTY.txt` (Lucide ISC notice, missing on the device since 1.1), sha256 `f61a648623ee545238601212f3d29eb056bddca7ed738f1427a2ca1bfc712ee4`.
 5. Verify both sha256 on the device, then sync, unmount and power off.
 
 Nothing else changes (`launch.sh`, `touch.conf`, licences and the NickelMenu entry are identical). `.sigma-settings` is kept as is and 1.4.2 reads it unchanged. Rollback: the 1.4.0 binary from the backup (it reads the same settings). Checklist: `sprints/S14.1-pointer-black.md` and `sprints/S14.2-settings-redesign.md`.

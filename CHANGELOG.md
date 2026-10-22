@@ -8,6 +8,7 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
 - **Settings carry over:** the `.sigma-settings` keys are unchanged, so 1.4.0 / 1.4.1 settings load as they were (tested).
 - **Scroll position bar:** a thin bar on the editor page's right edge (Kobo Settings style) shows where you are in the note and how much of it is on screen. It is pure black and white, so it is DU-safe; it inverts on Night pages and is only sent to the panel when the note scrolls. It is display-only and hidden when the note fits.
 - Emulator: `tests/emu/v1.4.2-settings.script`; old scripts' `Row/Cell` names (`Paper/Night`, `Layout/+`, `Orientation/Landscape`) are reached through the pages automatically. Screenshots `docs/screenshots/v1.4.2/`.
+- Device binary sha256 (CI build) `1e2ca1c93790ca2cec935ddaeaff4547055958068aaf04552608f615d5d41cb1`; tarball `4cf42621f9c414e531443ccd26f860f591c966cff8a4d1c691bc24c4458685a2`.
 
 ## 1.4.1 — 2026-10-22 (built, not installed, not tagged)
 - Pointer always black (sprint S14.1, decision 42): the mouse arrow is now pure black (0x00) with a 2 px pure white (0xFF) outline in Paper and Night, with no grey pixels. 1.4.0 drew it in the theme's ink and paper: in Night that is a near-white arrow (233), and in Paper the greys 28 / 240 are values the 2-level DU waveform used for pointer moves does not define, so the panel could show the arrow white.
