@@ -12,7 +12,10 @@
 //! Dead keys are stored as Unicode combining marks (U+0300 grave, U+0301
 //! acute, U+0302 circumflex, U+0303 tilde, U+0308 diaeresis): the composer
 //! joins them with the next letter, or writes the spacing accent when no
-//! composition exists (then the next character).
+//! composition exists (then the next character). Vietnamese Telex and VNI
+//! (`viet.rs`) re-spell the word being typed instead.
+
+use crate::buffer::Buffer;
 
 /// A keyboard layout (Options → Layout).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -39,9 +42,13 @@ pub enum KeyLayout {
     Ru,
     Ua,
     Gr,
+    /// Vietnamese on the US keys, Telex (v1.7).
+    ViTelex,
+    /// Vietnamese on the US keys, VNI (v1.7).
+    ViVni,
 }
 
-pub const ALL: [KeyLayout; 21] = [
+pub const ALL: [KeyLayout; 23] = [
     KeyLayout::Us,
     KeyLayout::Uk,
     KeyLayout::Fr,
@@ -63,6 +70,8 @@ pub const ALL: [KeyLayout; 21] = [
     KeyLayout::Ru,
     KeyLayout::Ua,
     KeyLayout::Gr,
+    KeyLayout::ViTelex,
+    KeyLayout::ViVni,
 ];
 
 /// evdev codes of the 48 positions, in table order.
@@ -554,6 +563,7 @@ fn table(l: KeyLayout) -> &'static Table {
         KeyLayout::Ru => &RU,
         KeyLayout::Ua => &UA,
         KeyLayout::Gr => &GR,
+        KeyLayout::ViTelex | KeyLayout::ViVni => &US,
     }
 }
 
@@ -592,6 +602,8 @@ impl KeyLayout {
             Self::Ru => "ru",
             Self::Ua => "ua",
             Self::Gr => "gr",
+            Self::ViTelex => "vi",
+            Self::ViVni => "vi-vni",
         }
     }
 
@@ -620,6 +632,8 @@ impl KeyLayout {
             Self::Ru => "Russian",
             Self::Ua => "Ukrainian",
             Self::Gr => "Greek",
+            Self::ViTelex => "Vietnamese (Telex)",
+            Self::ViVni => "Vietnamese (VNI)",
         }
     }
 
@@ -678,6 +692,16 @@ impl KeyLayout {
         match self.chars(i).0 {
             Some(c) if c.is_ascii_alphabetic() => Some(c),
             _ => KeyLayout::Us.chars(i).0,
+        }
+    }
+
+    /// Vietnamese typing: `Some(true)` for VNI, `Some(false)` for Telex.
+    #[must_use]
+    pub fn viet(self) -> Option<bool> {
+        match self {
+            Self::ViTelex => Some(false),
+            Self::ViVni => Some(true),
+            _ => None,
         }
     }
 
@@ -789,10 +813,16 @@ pub fn decompose(c: char) -> Option<(char, char)> {
     })
 }
 
-/// Dead-key state between keys (the input pipeline's composer, S13).
+/// Dead-key state between keys (the input pipeline's composer, S13), and
+/// the keystrokes of the Vietnamese word being typed (v1.7).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Composer {
     pub pending: Option<char>,
+    /// Keystrokes of the word in progress (Telex / VNI) and what they show.
+    raw: String,
+    shown: String,
+    /// Where the caret was left, to notice that it moved.
+    at: usize,
 }
 
 impl Composer {
@@ -819,8 +849,59 @@ impl Composer {
         }
     }
 
+    /// Types `c` into `buffer` under `lang`: dead keys for the Latin
+    /// layouts, a re-spelled word for Telex / VNI. True when the text
+    /// changed.
+    pub fn type_char(&mut self, buffer: &mut Buffer, lang: KeyLayout, c: char) -> bool {
+        let Some(vni) = lang.viet() else {
+            let t = self.feed(c);
+            if t.is_empty() {
+                return false;
+            }
+            buffer.insert(&t);
+            return true;
+        };
+        let takes = c.is_ascii_alphabetic() || (vni && c.is_ascii_digit());
+        if !takes {
+            self.forget();
+            buffer.insert(&self.feed(c));
+            return true;
+        }
+        let caret = buffer.caret();
+        if buffer.selection().is_some()
+            || caret != self.at
+            || !buffer.text()[..caret].ends_with(&self.shown)
+        {
+            self.forget();
+        }
+        self.raw.push(c);
+        let new = crate::viet::convert(&self.raw, vni);
+        // Rewrite only from the first letter that differs.
+        let keep = self
+            .shown
+            .chars()
+            .zip(new.chars())
+            .take_while(|(a, b)| a == b)
+            .count();
+        for _ in keep..self.shown.chars().count() {
+            buffer.backspace();
+        }
+        let tail: String = new.chars().skip(keep).collect();
+        buffer.insert(&tail);
+        self.shown = new;
+        self.at = buffer.caret();
+        true
+    }
+
+    /// Starts a new word (a space, punctuation, a moved caret).
+    pub fn forget(&mut self) {
+        self.raw.clear();
+        self.shown.clear();
+    }
+
     /// A non-character key (Enter, arrows…) flushes a waiting accent.
     pub fn flush(&mut self) -> String {
+        self.forget();
         self.pending
             .take()
             .map(|d| spacing(d).to_string())
@@ -961,6 +1042,31 @@ mod tests {
         assert_eq!(c.feed('ε'), "έ");
         assert_eq!(c.feed('\u{308}'), "");
         assert_eq!(c.feed('Ι'), "Ϊ");
+    }
+
+    #[test]
+    fn vietnamese_words_are_respelled_in_the_buffer() {
+        let mut b = Buffer::new("");
+        let mut c = Composer::default();
+        for ch in "Vieetj nguwowif".chars() {
+            c.type_char(&mut b, KeyLayout::ViTelex, ch);
+        }
+        assert_eq!(b.text(), "Việt người");
+        // Moving the caret starts a new word: the tone key is a letter.
+        b.set_caret(0);
+        c.type_char(&mut b, KeyLayout::ViTelex, 'a');
+        c.type_char(&mut b, KeyLayout::ViTelex, 's');
+        assert_eq!(b.text(), "áViệt người");
+        let mut b = Buffer::new("");
+        for ch in "to1i ".chars() {
+            c.type_char(&mut b, KeyLayout::ViVni, ch);
+        }
+        assert_eq!(b.text(), "tói ");
+        // A Latin layout types the letters as they are.
+        let mut b = Buffer::new("");
+        c.type_char(&mut b, KeyLayout::Us, 'a');
+        c.type_char(&mut b, KeyLayout::Us, 's');
+        assert_eq!(b.text(), "as");
     }
 
     #[test]

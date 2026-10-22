@@ -1062,10 +1062,9 @@ impl App {
         let b = &mut self.scratch;
         match k {
             HwKey::Char(c) => {
-                let t = self.keyboard.composer.feed(c);
-                if !t.is_empty() {
-                    self.scratch.insert(&t);
-                }
+                self.keyboard
+                    .composer
+                    .type_char(&mut self.scratch, self.settings.kb_layout, c);
             }
             HwKey::Backspace => b.backspace(),
             HwKey::Delete => b.delete_forward(),
@@ -2887,10 +2886,9 @@ impl App {
         let (_, field) = self.rename.as_mut()?;
         match k {
             HwKey::Char(c) => {
-                let t = self.keyboard.composer.feed(c);
-                if !t.is_empty() {
-                    field.insert(&t);
-                }
+                self.keyboard
+                    .composer
+                    .type_char(field, self.settings.kb_layout, c);
             }
             HwKey::Backspace => field.backspace(),
             HwKey::Delete => field.delete_forward(),
@@ -3485,10 +3483,11 @@ impl App {
                 }
                 match k {
                     HwKey::Char(c) => {
-                        let t = self.keyboard.composer.feed(c);
-                        if !t.is_empty() {
-                            self.buffer.insert(&t);
-                        }
+                        self.keyboard.composer.type_char(
+                            &mut self.buffer,
+                            self.settings.kb_layout,
+                            c,
+                        );
                     }
                     HwKey::Backspace => self.buffer.backspace(),
                     HwKey::Delete => self.buffer.delete_forward(),

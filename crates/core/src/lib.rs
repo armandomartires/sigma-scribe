@@ -20,6 +20,7 @@ pub mod outline;
 pub mod settings;
 pub mod store;
 pub mod text;
+pub mod viet;
 pub mod wrap;
 
 pub use buffer::Buffer;

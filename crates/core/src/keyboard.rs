@@ -454,13 +454,12 @@ impl Keyboard {
             }
             Key::Char(c) if ctrl => self.shortcut(c.to_ascii_lowercase(), buffer),
             Key::Char(c) => {
-                let t = self.composer.feed(self.char_for(c));
-                if t.is_empty() {
+                let ch = self.char_for(c);
+                if !self.composer.type_char(buffer, self.lang, ch) {
                     // A dead key waits for the next letter.
                     self.release();
                     return KeyAction::Relabelled;
                 }
-                buffer.insert(&t);
                 KeyAction::Edited
             }
             Key::Back => {
@@ -481,7 +480,7 @@ impl Keyboard {
                 KeyAction::Edited
             }
             Key::Space => {
-                buffer.insert(&self.composer.feed(' '));
+                self.composer.type_char(buffer, self.lang, ' ');
                 KeyAction::Edited
             }
             Key::Return => {

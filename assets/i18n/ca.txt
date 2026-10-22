@@ -778,5 +778,11 @@ Ukrainian
 Greek
 = Grec
 
+Vietnamese (Telex)
+= Vietnamita (Telex)
+
+Vietnamese (VNI)
+= Vietnamita (VNI)
+
 Machine-drafted translation, best effort; a native review is needed. Follows the Kobo's language.
 = Traducció feta per màquina, com millor s'ha pogut; cal una revisió nativa. Segueix l'idioma del Kobo.
