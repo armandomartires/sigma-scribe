@@ -172,6 +172,8 @@ pub struct Settings {
     /// UI scale in percent (v1.1): 100, 125, 150, 175 or 200 (default).
     /// Scales the interface; the note text Size stays separate.
     pub ui_scale: u16,
+    /// Options → Layout (v1.3): on-screen Full board and USB keyboards.
+    pub kb_layout: crate::layouts::KeyLayout,
 }
 
 /// UI scale steps (v1.1, S11).
@@ -201,6 +203,7 @@ impl Default for Settings {
             pad: Pad::Numbers,
             pad_side: Side::Right,
             ui_scale: 200,
+            kb_layout: crate::layouts::KeyLayout::Us,
         }
     }
 }
@@ -233,6 +236,8 @@ pub enum Change {
     PadSide(Side),
     /// One UI-scale step up (+1) or down (-1).
     UiScale(i8),
+    /// One step through the keyboard layouts (v1.3).
+    KbLayout(i8),
 }
 
 impl Change {
@@ -335,6 +340,12 @@ impl Settings {
             Change::LandKeys(k) => self.land_keys = k,
             Change::Pad(p) => self.pad = p,
             Change::PadSide(s) => self.pad_side = s,
+            Change::KbLayout(d) => {
+                use crate::layouts::ALL;
+                let i = ALL.iter().position(|&l| l == self.kb_layout).unwrap_or(0) as i32;
+                let n = ALL.len() as i32;
+                self.kb_layout = ALL[(i + i32::from(d)).rem_euclid(n) as usize];
+            }
             Change::UiScale(d) => {
                 let i = UI_SCALES
                     .iter()
@@ -389,6 +400,9 @@ impl Settings {
                 _ => None,
             };
             match k.trim() {
+                "layout" => {
+                    s.kb_layout = crate::layouts::KeyLayout::parse(v).unwrap_or(s.kb_layout);
+                }
                 "keyboard" => s.keyboard = Layout::parse(v).unwrap_or(s.keyboard),
                 "paper" => {
                     s.paper = match v {
@@ -501,7 +515,7 @@ impl Settings {
         format!(
             "keyboard={}\npaper={}\ntype={}\nline={}\nline_words={}\nsize={}\nleading={}\nmargin={}\n\
              tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\nusb={}\nscroll={}\norientation={}\n\
-             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\n",
+             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\n",
             self.keyboard.name(),
             match self.paper {
                 Paper::Day => "day",
@@ -544,6 +558,7 @@ impl Settings {
             },
             side(self.pad_side),
             self.ui_scale,
+            self.kb_layout.name(),
         )
     }
 }

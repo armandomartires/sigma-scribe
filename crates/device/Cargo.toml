@@ -11,6 +11,7 @@ build = "build.rs"
 
 [dependencies]
 sigma-render = { path = "../render" }
+sigma-core = { path = "../core" }
 png.workspace = true
 
 [build-dependencies]

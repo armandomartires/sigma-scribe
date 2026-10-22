@@ -13,6 +13,7 @@
 //! a third releases; Caps toggles letters only; Ctrl and Alt are one-shot.
 
 use crate::buffer::{Buffer, TabKind};
+use crate::layouts::{self, Composer, KeyLayout};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Layer {
@@ -108,7 +109,6 @@ pub enum KeyAction {
     Ignored,
 }
 
-const LETTERS: [&str; 3] = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
 const SYMBOLS: [&str; 3] = ["1234567890", "#*-[]()`/", ".,!?:|~>"];
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
@@ -123,6 +123,10 @@ pub struct Keyboard {
     pub alt: bool,
     /// Internal clipboard for Ctrl+C / X / V.
     pub clipboard: String,
+    /// Options → Layout (v1.3): letter positions, Shift / AltGr characters.
+    pub lang: KeyLayout,
+    /// Dead-key state, shared with USB typing (v1.3).
+    pub composer: Composer,
 }
 
 /// Compact symbol-layer shift map (brief).
@@ -155,16 +159,6 @@ fn shifted(c: char) -> char {
     }
 }
 
-/// US layout shift map (Full).
-fn us_shifted(c: char) -> char {
-    const FROM: &str = "`1234567890-=[]\\;',./";
-    const TO: &str = "~!@#$%^&*()_+{}|:\"<>?";
-    FROM.chars()
-        .position(|x| x == c)
-        .and_then(|i| TO.chars().nth(i))
-        .unwrap_or(c)
-}
-
 fn chars(s: &str) -> Vec<Key> {
     s.chars().map(Key::Char).collect()
 }
@@ -182,10 +176,10 @@ impl Keyboard {
     #[must_use]
     pub fn rows(&self) -> Vec<Vec<Key>> {
         match self.layout {
-            Layout::Full => Self::full_rows(),
+            Layout::Full => self.full_rows(),
             Layout::Compact => {
                 let src = match self.layer {
-                    Layer::Letters => LETTERS,
+                    Layer::Letters => self.lang.compact_letters(),
                     Layer::Symbols => SYMBOLS,
                 };
                 let mut third = vec![Key::Shift];
@@ -208,18 +202,24 @@ impl Keyboard {
         }
     }
 
-    fn full_rows() -> Vec<Vec<Key>> {
+    fn full_rows(&self) -> Vec<Vec<Key>> {
+        let base = |r: std::ops::Range<usize>| -> Vec<Key> {
+            r.filter_map(|i| self.lang.chars(i).0)
+                .map(Key::Char)
+                .collect()
+        };
         let mut r0 = vec![Key::Esc];
-        r0.extend(chars("`1234567890-="));
+        r0.extend(base(0..13));
         r0.push(Key::Back);
         let mut r1 = vec![Key::Tab];
-        r1.extend(chars("qwertyuiop[]\\"));
+        r1.extend(base(13..26));
         r1.push(Key::Del);
         let mut r2 = vec![Key::Caps];
-        r2.extend(chars("asdfghjkl;'"));
+        r2.extend(base(26..37));
         r2.extend([Key::Return, Key::PgUp]);
         let mut r3 = vec![Key::Shift];
-        r3.extend(chars("zxcvbnm,./"));
+        r3.extend(base(layouts::LSGT..layouts::LSGT + 1));
+        r3.extend(base(38..48));
         r3.extend([Key::Shift, Key::Arrow(Dir::Up), Key::PgDn]);
         let r4 = vec![
             Key::Ctrl,
@@ -258,9 +258,10 @@ impl Keyboard {
             Layout::Full => match (key, row) {
                 (Key::Back, _) => 2.0,
                 (Key::Tab, _) => 1.5,
-                (Key::Char('\\'), _) => 1.5,
+                (Key::Char(_), 1) if col == 13 => 1.5,
                 (Key::Caps, _) => 1.75,
                 (Key::Return, _) => 2.25,
+                (Key::Shift, _) if col == 0 && self.lang.has_iso_key() => 1.25,
                 (Key::Shift, _) if col == 0 => 2.25,
                 (Key::Shift, _) => 1.75,
                 (Key::Ctrl | Key::Alt | Key::SwitchLayout, _) => 1.5,
@@ -278,18 +279,7 @@ impl Keyboard {
     pub fn label(&self, key: Key) -> String {
         match key {
             Key::Char(c) if self.layout == Layout::Full => {
-                if c.is_ascii_alphabetic() {
-                    (if self.shift_on() != self.caps {
-                        c.to_ascii_uppercase()
-                    } else {
-                        c
-                    })
-                    .to_string()
-                } else if self.shift_on() {
-                    us_shifted(c).to_string()
-                } else {
-                    c.to_string()
-                }
+                layouts::spacing(self.char_for(c)).to_string()
             }
             Key::Char(c) => (if self.shift_on() { shifted(c) } else { c }).to_string(),
             Key::Shift => "Shift".into(),
@@ -346,17 +336,30 @@ impl Keyboard {
         self.alt = false;
     }
 
+    /// The character a Full key types now: its layout position with
+    /// Shift / Caps, or the AltGr character while Alt is on (v1.3).
     fn char_for(&self, c: char) -> char {
         match self.layout {
-            Layout::Full if c.is_ascii_alphabetic() => {
-                if self.shift_on() != self.caps {
-                    c.to_ascii_uppercase()
+            Layout::Full => {
+                // Only a key's own base character is remapped; anything
+                // else (USB text, an already shifted char) passes through.
+                let Some(i) = (0..layouts::CODES.len()).find(|&i| self.lang.chars(i).0 == Some(c))
+                else {
+                    return c;
+                };
+                let (b, sh, a) = self.lang.chars(i);
+                if self.alt {
+                    if let Some(a) = a {
+                        return a;
+                    }
+                }
+                let b = b.unwrap_or(c);
+                if self.shift_on() != (self.caps && b.is_alphabetic()) {
+                    sh.unwrap_or(b)
                 } else {
-                    c
+                    b
                 }
             }
-            Layout::Full if self.shift_on() => us_shifted(c),
-            Layout::Full => c,
             Layout::Compact if self.shift_on() => shifted(c),
             Layout::Compact => c,
         }
@@ -364,6 +367,19 @@ impl Keyboard {
 
     /// Applies a key to the focused buffer.
     pub fn press(&mut self, key: Key, buffer: &mut Buffer, tab: TabKind) -> KeyAction {
+        // Any key that is not a character or a modifier writes a waiting
+        // accent first (v1.3 composer).
+        if self.composer.pending.is_some()
+            && !matches!(
+                key,
+                Key::Char(_) | Key::Space | Key::Shift | Key::Caps | Key::Alt | Key::SwapLayer
+            )
+        {
+            let t = self.composer.flush();
+            if !t.is_empty() {
+                buffer.insert(&t);
+            }
+        }
         let extend = self.shift_on();
         let ctrl = self.ctrl;
         let action = match key {
@@ -414,7 +430,13 @@ impl Keyboard {
             }
             Key::Char(c) if ctrl => self.shortcut(c.to_ascii_lowercase(), buffer),
             Key::Char(c) => {
-                buffer.insert(&self.char_for(c).to_string());
+                let t = self.composer.feed(self.char_for(c));
+                if t.is_empty() {
+                    // A dead key waits for the next letter.
+                    self.release();
+                    return KeyAction::Relabelled;
+                }
+                buffer.insert(&t);
                 KeyAction::Edited
             }
             Key::Back => {
@@ -435,7 +457,7 @@ impl Keyboard {
                 KeyAction::Edited
             }
             Key::Space => {
-                buffer.insert(" ");
+                buffer.insert(&self.composer.feed(' '));
                 KeyAction::Edited
             }
             Key::Return => {

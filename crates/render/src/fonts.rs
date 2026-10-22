@@ -158,3 +158,37 @@ mod tests {
         assert!(c.pixels.iter().any(|&p| p < 50));
     }
 }
+
+#[cfg(test)]
+mod layout_glyphs {
+    use sigma_core::layouts::{compose, spacing, ALL, CODES};
+
+    /// v1.3: every character a layout can type (and every composed accent)
+    /// has a glyph in both text faces and the key-label face.
+    #[test]
+    fn every_layout_character_has_a_glyph() {
+        let faces = [
+            ("Literata", super::LITERATA),
+            ("Atkinson", super::ATKINSON),
+            ("Atkinson Bold", super::ATKINSON_BOLD),
+        ];
+        let mut want = Vec::new();
+        for l in ALL {
+            for i in 0..CODES.len() {
+                let (b, s, a) = l.chars(i);
+                want.extend([b, s, a].into_iter().flatten().map(spacing));
+            }
+        }
+        for d in ['\u{300}', '\u{301}', '\u{302}', '\u{303}', '\u{308}'] {
+            want.extend("aeiouycnAEIOUYCN".chars().filter_map(|c| compose(d, c)));
+        }
+        for (name, bytes) in faces {
+            let f = fontdue::Font::from_bytes(bytes, fontdue::FontSettings::default()).unwrap();
+            let missing: String = want
+                .iter()
+                .filter(|&&c| f.lookup_glyph_index(c) == 0)
+                .collect();
+            assert!(missing.is_empty(), "{name} lacks {missing:?}");
+        }
+    }
+}

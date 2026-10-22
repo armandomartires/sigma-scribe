@@ -2,6 +2,12 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.3.0 — 2026-10-22 (built, not installed, not tagged)
+- Keyboard layouts (sprint S13, decision 40): Options → **Layout** US / UK / French AZERTY / German QWERTZ / Spanish / Portuguese / Italian, for the on-screen Full board and USB keyboards together (`layout=`). The Full board shows each layout's keys (with the extra key left of Z where it exists); Alt gives the AltGr characters (€, @, { } …). Compact gets AZERTY / QWERTZ letters. Dead keys ` ´ ^ ~ ¨ compose with the next letter (ê, ñ, ü …). On USB, right Alt is AltGr and Ctrl shortcuts keep their letter (Ctrl+Z is Z wherever it sits).
+- Not yet: the long-press accent popup on Compact and the candidate bar (deferred, S13-D3); Nordic, Dutch and Brazilian layouts.
+- Emulator: `tests/emu/v1.3-layouts.script` (`usb-type` follows the layout); screenshots `docs/screenshots/v1.3/`.
+- Device binary sha256 (CI build) `51bfc10303d2fcd740fecc550a9a895116efb11209493c047404866be9f8451b`; tarball `6747e4f6c2c816d03f3e6fe64d15907a822b6fb56fe76562446f29bcdc061cb1`.
+
 ## 1.2.0 — 2026-10-22 (built, not installed, not tagged)
 - Orientation (sprint S12, decision 39): Options → Orientation **Auto** (default) / Portrait / Landscape and **Upside down** Off/On — four rotations. Touch, page buttons (swapped upside down) and partial refreshes follow the rotation. Auto turns the screen after a reading holds 0.6 s, with one full refresh, never while a finger is down or within 1 s of typing; the rotation is remembered. Settings from 1.1 and earlier move to Auto unless landscape was chosen.
 - The accelerometer is **off in this build** (safe default): the decoder is in place but waits for a device check, so Auto keeps the last rotation and Options says "Auto (no sensor) — Portrait".
