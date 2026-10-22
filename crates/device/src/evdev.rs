@@ -101,6 +101,18 @@ impl Transform {
 /// not report it. One touchscreen per process, so one value.
 static CONTACT_MAJOR: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new(-1);
 
+/// Odd touch input goes to stderr (the device log) so a stray-line report
+/// can be traced; capped so a noisy panel cannot fill the log.
+pub fn log_anomaly(msg: std::fmt::Arguments) {
+    static N: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+    if N.fetch_add(1, std::sync::atomic::Ordering::Relaxed) < 400 {
+        eprintln!("touch: {msg}");
+    }
+}
+
+/// A single report this far (px) from the last one is not a finger.
+const JUMP_LOG_PX: i32 = 300;
+
 /// The contact size at the latest touch event, if the panel reports one.
 #[must_use]
 pub fn contact_major() -> Option<u16> {
@@ -157,11 +169,30 @@ impl Decoder {
                 None
             }
             (EV_ABS, ABS_MT_SLOT) => {
+                if self.was_down && e.value != self.slot {
+                    log_anomaly(format_args!(
+                        "slot {} -> {} while down at {:?}",
+                        self.slot, e.value, self.sent
+                    ));
+                }
                 self.slot = e.value;
                 None
             }
             (EV_ABS, ABS_MT_TRACKING_ID) if primary => {
+                if self.was_down && e.value >= 0 {
+                    log_anomaly(format_args!("new tracking id {} while down", e.value));
+                }
                 self.down = e.value >= 0;
+                None
+            }
+            (EV_ABS, ABS_MT_POSITION_X | ABS_MT_POSITION_Y | ABS_X | ABS_Y) if !primary && self.was_down => {
+                // A second contact (slot != 0) while the first is down.
+                log_anomaly(format_args!(
+                    "slot {} reports {}={} while slot 0 is down",
+                    self.slot,
+                    if matches!(e.code, ABS_MT_POSITION_X | ABS_X) { "x" } else { "y" },
+                    e.value
+                ));
                 None
             }
             (EV_ABS, ABS_MT_PRESSURE | ABS_MT_TOUCH_MAJOR) if primary => {
@@ -191,6 +222,14 @@ impl Decoder {
                         if (x - self.sent.0).abs() >= MOVE_EPS
                             || (y - self.sent.1).abs() >= MOVE_EPS =>
                     {
+                        if (x - self.sent.0).abs().max((y - self.sent.1).abs()) > JUMP_LOG_PX {
+                            log_anomaly(format_args!(
+                                "jump {:?} -> {:?} on slot {}",
+                                self.sent,
+                                (x, y),
+                                self.slot
+                            ));
+                        }
                         Some(Phase::Move)
                     }
                     _ => None,

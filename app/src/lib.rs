@@ -2236,12 +2236,16 @@ impl App {
                     return None;
                 };
                 let b = l.boxes[i];
-                let q = Point {
-                    x: x.clamp(b.x, b.x + b.w - 1),
-                    y: y.clamp(b.y, b.y + b.h - 1),
-                    t,
-                    major,
-                };
+                // A report outside the box is not this stroke (clamping it
+                // drew lines to the box corners); leave it out.
+                if !b.contains(x, y) {
+                    sigma_device::evdev::log_anomaly(format_args!(
+                        "dropped move outside box ({x},{y}) box {},{} {}x{}",
+                        b.x, b.y, b.w, b.h
+                    ));
+                    return None;
+                }
+                let q = Point { x, y, t, major };
                 let (a, bb) = ink.ink.moved(q)?;
                 let r = draw_segment(&mut self.canvas, a, bb, width, b);
                 ink.pending = add(ink.pending, r);
