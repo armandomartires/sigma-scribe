@@ -175,7 +175,11 @@ fn train_saves_samples_locally_and_settings_deletes_them() {
 /// Box-unit strokes placed at `x` (area heights) in the free area, 0.4 high.
 fn at(x: f32, s: Vec<Vec<(f32, f32)>>) -> Vec<Vec<(f32, f32)>> {
     s.into_iter()
-        .map(|st| st.into_iter().map(|(a, b)| (x + a * 0.4, 0.2 + b * 0.4)).collect())
+        .map(|st| {
+            st.into_iter()
+                .map(|(a, b)| (x + a * 0.4, 0.2 + b * 0.4))
+                .collect()
+        })
         .collect()
 }
 
@@ -199,7 +203,10 @@ fn free_area_is_the_default_and_reads_printed_letters() {
             sent.extend(r.touch(Phase::Up, px, py));
         }
     }
-    assert!(sent.iter().all(|&s| s == Refresh::Ink), "free ink is DU: {sent:?}");
+    assert!(
+        sent.iter().all(|&s| s == Refresh::Ink),
+        "free ink is DU: {sent:?}"
+    );
     assert_eq!(r.app.buffer.text(), "");
     r.tick(1300);
     let got = r.app.buffer.text();
