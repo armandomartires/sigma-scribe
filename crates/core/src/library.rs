@@ -322,6 +322,7 @@ impl Library {
     /// Missing source, the scratch file, or a filesystem error.
     pub fn rename(&self, p: &NotePath, raw_name: &str) -> io::Result<NotePath> {
         self.guard(p)?;
+        let before = self.all_notes().unwrap_or_default();
         let src = self.fs_path(p);
         let name = if src.is_dir() {
             clean_name(raw_name)
@@ -348,6 +349,7 @@ impl Library {
         if !self.fs_path(&target).is_dir() {
             crate::ink::carry(&src, &self.fs_path(&target))?;
         }
+        self.relink(&before, p, &target)?;
         Ok(target)
     }
 
@@ -370,11 +372,13 @@ impl Library {
             return Ok(p.clone());
         }
         let target = self.unique(dest, p.name());
+        let before = self.all_notes().unwrap_or_default();
         let was_dir = self.fs_path(p).is_dir();
         fs::rename(self.fs_path(p), self.fs_path(&target))?;
         if !was_dir {
             crate::ink::carry(&self.fs_path(p), &self.fs_path(&target))?;
         }
+        self.relink(&before, p, &target)?;
         Ok(target)
     }
 
@@ -399,6 +403,39 @@ impl Library {
         } else {
             fs::remove_file(path)
         }
+    }
+
+    /// After `old` (a note or folder) became `new` (v1.5.2): rewrites
+    /// `[[wiki]]` links in every note and the scratch pad that pointed at a
+    /// moved note (`links::rewrite`), instead of leaving them broken.
+    fn relink(&self, before: &[NotePath], old: &NotePath, new: &NotePath) -> io::Result<()> {
+        let moved: Vec<(NotePath, NotePath)> = before
+            .iter()
+            .filter(|n| *n == old || n.within(old))
+            .filter_map(|n| {
+                let tail = &n.as_str()[old.as_str().len()..];
+                NotePath::parse(&format!("{}{tail}", new.as_str()))
+                    .ok()
+                    .map(|m| (n.clone(), m))
+            })
+            .collect();
+        if moved.is_empty() {
+            return Ok(());
+        }
+        let mut files = self.all_notes().unwrap_or_default();
+        if let Ok(s) = NotePath::parse(SCRATCH) {
+            files.push(s);
+        }
+        for f in files {
+            let path = self.fs_path(&f);
+            let Ok(text) = fs::read_to_string(&path) else {
+                continue;
+            };
+            if let Some(fixed) = crate::links::rewrite(&text, before, &moved) {
+                crate::store::write_atomic(&path, &fixed)?;
+            }
+        }
+        Ok(())
     }
 
     fn guard(&self, p: &NotePath) -> io::Result<()> {
@@ -575,6 +612,46 @@ mod tests {
         assert!(l
             .rename(&NotePath::parse("missing.md").unwrap(), "x")
             .is_err());
+    }
+
+    #[test]
+    fn rename_and_move_rewrite_wiki_links_elsewhere() {
+        let d = std::env::temp_dir().join(format!("sigma-relink-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&d);
+        fs::create_dir_all(d.join("drafts")).unwrap();
+        fs::create_dir_all(d.join("archive")).unwrap();
+        fs::write(d.join("drafts/chapter.md"), "# Chapter\nsee [[hub]]\n").unwrap();
+        fs::write(
+            d.join("hub.md"),
+            "[[chapter]] [[Chapter|ch. 1]] [[drafts/chapter#Intro]] `[[chapter]]`\n",
+        )
+        .unwrap();
+        fs::write(d.join(SCRATCH), "todo [[chapter]]\n").unwrap();
+        let lib = Library::new(&d);
+        let ch = NotePath::parse("drafts/chapter.md").unwrap();
+        let new = lib.rename(&ch, "opening").unwrap();
+        assert_eq!(
+            fs::read_to_string(d.join("hub.md")).unwrap(),
+            "[[opening]] [[opening|ch. 1]] [[drafts/opening#Intro]] `[[chapter]]`\n"
+        );
+        assert_eq!(
+            fs::read_to_string(d.join(SCRATCH)).unwrap(),
+            "todo [[opening]]\n"
+        );
+        // Moving the folder: path links follow it.
+        let moved = lib
+            .move_to(
+                &NotePath::parse("drafts").unwrap(),
+                &NotePath::parse("archive").unwrap(),
+            )
+            .unwrap();
+        assert_eq!(moved.as_str(), "archive/drafts");
+        assert!(fs::read_to_string(d.join("hub.md"))
+            .unwrap()
+            .contains("[[archive/drafts/opening#Intro]]"));
+        // Self-links in the renamed note follow too.
+        let _ = new;
+        let _ = fs::remove_dir_all(&d);
     }
 
     #[test]

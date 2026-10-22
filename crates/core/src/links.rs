@@ -46,6 +46,95 @@ pub fn resolve<'a>(target: &str, notes: &'a [NotePath]) -> Option<&'a NotePath> 
         .or_else(|| notes.iter().find(|p| keys(p)[1] == t))
 }
 
+/// Rewrites `[[…]]` links in `text` whose target resolved (among
+/// `before`, the notes before a rename / move) to a note in `moved`, to
+/// that note's new name (v1.5.2). Keeps the link's form: a path stays a
+/// path, a bare name a bare name, an `.md` / `.txt` ending and a
+/// `#heading` part stay, an `|alias` stays as written. Links in fenced
+/// code and inline code are left alone. `None` when nothing changed.
+#[must_use]
+pub fn rewrite(text: &str, before: &[NotePath], moved: &[(NotePath, NotePath)]) -> Option<String> {
+    let stem = |s: &str| s.rsplit_once('.').map_or(s, |(a, _)| a).to_owned();
+    let mut out = String::with_capacity(text.len());
+    let mut changed = false;
+    let mut fence = false;
+    for line in text.split_inclusive('\n') {
+        let t = line.trim_start();
+        if t.starts_with("```") || t.starts_with("~~~") {
+            fence = !fence;
+            out.push_str(line);
+            continue;
+        }
+        if fence {
+            out.push_str(line);
+            continue;
+        }
+        let mut rest = line;
+        let mut code = false;
+        while !rest.is_empty() {
+            if rest.starts_with('`') {
+                code = !code;
+                out.push('`');
+                rest = &rest[1..];
+                continue;
+            }
+            if !code && rest.starts_with("[[") {
+                if let Some(end) = rest[2..].find("]]") {
+                    let inner = &rest[2..2 + end];
+                    let (target, alias) = match inner.split_once('|') {
+                        Some((t, a)) => (t, Some(a)),
+                        None => (inner, None),
+                    };
+                    let (name, frag) = match target.split_once('#') {
+                        Some((n, f)) => (n, Some(f)),
+                        None => (target, None),
+                    };
+                    let hit = resolve(name, before)
+                        .and_then(|p| moved.iter().find(|(o, _)| o == p))
+                        .map(|(_, n)| n);
+                    if let Some(new) = hit {
+                        let trimmed = name.trim();
+                        let lower = trimmed.to_lowercase();
+                        let ext = [".md", ".txt"]
+                            .into_iter()
+                            .find(|e| lower.ends_with(e))
+                            .map_or(String::new(), |e| {
+                                trimmed[trimmed.len() - e.len()..].to_owned()
+                            });
+                        let base = if trimmed.contains('/') {
+                            stem(new.as_str())
+                        } else {
+                            stem(new.name())
+                        };
+                        out.push_str("[[");
+                        out.push_str(&base);
+                        out.push_str(&ext);
+                        if let Some(f) = frag {
+                            out.push('#');
+                            out.push_str(f);
+                        }
+                        if let Some(a) = alias {
+                            out.push('|');
+                            out.push_str(a);
+                        }
+                        out.push_str("]]");
+                        changed = true;
+                        rest = &rest[end + 4..];
+                        continue;
+                    }
+                    out.push_str(&rest[..end + 4]);
+                    rest = &rest[end + 4..];
+                    continue;
+                }
+            }
+            let c = rest.chars().next().unwrap_or(' ');
+            out.push(c);
+            rest = &rest[c.len_utf8()..];
+        }
+    }
+    (changed && out != text).then_some(out)
+}
+
 /// Where tapping a link to a missing note creates it: in the named folder
 /// if the target has a path and that folder exists, else beside the note
 /// that links to it. The name is cleaned like any new note.
@@ -181,6 +270,37 @@ mod tests {
         assert_eq!(g.edges(), 3);
         assert_eq!(g.out[0].len(), 3, "self link dropped, missing kept");
         assert_eq!(g.out[0][2].to, None);
+    }
+
+    #[test]
+    fn rewrite_keeps_form_alias_heading_and_skips_code() {
+        let before = vec![p("drafts/old.md"), p("other.md"), p("b/old.md")];
+        let moved = vec![(p("drafts/old.md"), p("drafts/new one.md"))];
+        let t = "a [[old]] b [[Old|my alias]] c [[drafts/old#Intro|x]] d [[old.md]]\n\
+                 `[[old]]` [[other]] [[b/old]]\n```\n[[old]]\n```\n";
+        let got = rewrite(t, &before, &moved).unwrap();
+        assert_eq!(
+            got,
+            "a [[new one]] b [[new one|my alias]] c [[drafts/new one#Intro|x]] d [[new one.md]]\n\
+             `[[old]]` [[other]] [[b/old]]\n```\n[[old]]\n```\n"
+        );
+        assert_eq!(rewrite("[[other]] é [[x]]", &before, &moved), None);
+        // Folder move: path links follow, bare names keep the name.
+        let moved = vec![(p("other.md"), p("archive/other.md"))];
+        assert_eq!(
+            rewrite("[[other]]", &before, &moved),
+            None,
+            "bare name unchanged"
+        );
+        assert_eq!(
+            rewrite(
+                "[[archive]] [[./x]] [[other]] [[OTHER.md]]",
+                &before,
+                &moved
+            )
+            .as_deref(),
+            Some("[[archive]] [[./x]] [[other]] [[other.md]]")
+        );
     }
 
     #[test]

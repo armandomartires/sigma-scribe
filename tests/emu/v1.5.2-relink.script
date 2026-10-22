@@ -1,0 +1,15 @@
+# v1.5.2 (S15.2a): renaming a note rewrites [[wiki]] links to it elsewhere (also in the open note).
+copy-notes tests/test-notes/_test
+expect [[test-headings]]
+tap-on Files
+tap-on More:test-headings.md
+tap-on Rename
+clear-field
+type contents-demo
+tap-on OK
+expect-file _test/contents-demo.md
+tap-on Close
+expect [[contents-demo]]
+expect-not [[test-headings]]
+expect-file-contains _test/test-00-start-here.md|[[contents-demo]]
+shot v1.5.2-relink-open-note

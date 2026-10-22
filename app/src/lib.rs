@@ -137,6 +137,18 @@ fn copy_rect(dst: &mut Canvas, src: &Canvas, r: Rect) {
     }
 }
 
+/// Replaces a buffer's text with `new` (undoable), caret kept nearby.
+fn take_text(b: &mut Buffer, new: &str) {
+    let at = b.caret().min(new.len());
+    let at = (0..=at)
+        .rev()
+        .find(|&i| new.is_char_boundary(i))
+        .unwrap_or(0);
+    b.select_all();
+    b.insert(new);
+    b.set_caret(at);
+}
+
 fn rank(r: Refresh) -> u8 {
     match r {
         Refresh::Fast => 0,
@@ -1904,26 +1916,26 @@ impl App {
         Ok(())
     }
 
-    /// After a rename / move rewrote the open note's ink links on disk
-    /// (v1.5.1, `sigma_core::ink::carry`): take the new text into the
+    /// After a rename / move rewrote the open note's ink links (v1.5.1,
+    /// `sigma_core::ink::carry`) or wiki links (v1.5.2) on disk: take the new text into the
     /// buffer, keeping the caret as close as it can.
     fn reload_ink_links(&mut self) {
         let path = self.library.root().join(self.current.as_str());
         let Ok(disk) = std::fs::read_to_string(&path) else {
             return;
         };
-        if disk == self.buffer.text() || !disk.contains("](.ink/") {
-            return;
+        if disk != self.buffer.text() {
+            take_text(&mut self.buffer, &disk);
+            self.save();
         }
-        let at = self.buffer.caret().min(disk.len());
-        let at = (0..=at)
-            .rev()
-            .find(|&i| disk.is_char_boundary(i))
-            .unwrap_or(0);
-        self.buffer.select_all();
-        self.buffer.insert(&disk);
-        self.buffer.set_caret(at);
-        self.save();
+        // v1.5.2: `[[wiki]]` links in the scratch pad may have been
+        // rewritten too.
+        if let Ok(s) = std::fs::read_to_string(self.library.root().join(SCRATCH)) {
+            if s != self.scratch.text() {
+                take_text(&mut self.scratch, &s);
+                self.save_scratch();
+            }
+        }
     }
 
     /// Opens the writing panel (v1.5.0).
@@ -2116,6 +2128,7 @@ impl App {
             RenameTarget::Entry(p) => p.clone(),
         };
         self.save();
+        self.save_scratch();
         match self.library.rename(&path, field.text()) {
             Ok(new) => {
                 if self.current == path {
@@ -2219,6 +2232,7 @@ impl App {
                     let dest = f.targets.get(i).cloned().unwrap_or_default();
                     f.moving = None;
                     self.save();
+                    self.save_scratch();
                     match lib.move_to(&target, &dest) {
                         Ok(new) => {
                             if self.current == target {
