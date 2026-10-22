@@ -155,9 +155,11 @@ fn main() -> ExitCode {
             }
             // Touch gestures (v0.2.2): press / move / release / wait, with
             // helpers that aim at words and selection handles.
-            "press" | "move" | "press-word" | "move-word" | "move-handle-end"
-            | "move-handle-start" | "grab-handle" => {
+            "press" | "move" | "press-on" | "move-on" | "press-word" | "move-word"
+            | "move-handle-end" | "move-handle-start" | "grab-handle" => {
                 let at = match cmd {
+                    // v1.4.4: aim at a named control (e.g. a slider stop).
+                    "press-on" | "move-on" => app.control_centre(arg),
                     "press" | "move" => {
                         let v: Vec<i32> = arg
                             .split_whitespace()

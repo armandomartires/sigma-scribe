@@ -174,3 +174,11 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.4.3 | [v1.4.3-keyboard-200-auto-landscape.png](v1.4.3/v1.4.3-keyboard-200-auto-landscape.png) | After: keyboard at 200 % UI, Auto (150 %), landscape | [eink](v1.4.3/eink/v1.4.3-keyboard-200-auto-landscape.png) |
 | v1.4.3 | [v1.4.3-keyboard-input.png](v1.4.3/v1.4.3-keyboard-input.png) | Keyboard & input with Keyboard size | [eink](v1.4.3/eink/v1.4.3-keyboard-input.png) |
 | v1.4.3 | [v1.4.3-keyboard-size-choice.png](v1.4.3/v1.4.3-keyboard-size-choice.png) | Keyboard size choice page | [eink](v1.4.3/eink/v1.4.3-keyboard-size-choice.png) |
+| v1.4.4 | [v1.4.4-before-keyboard-input.png](v1.4.4/v1.4.4-before-keyboard-input.png) | Before (1.4.3): Keyboard & input with the Keyboard size choice row | [eink](v1.4.4/eink/v1.4.4-before-keyboard-input.png) |
+| v1.4.4 | [v1.4.4-before-keyboard-size-choice.png](v1.4.4/v1.4.4-before-keyboard-size-choice.png) | Before (1.4.3): Keyboard size choice page | [eink](v1.4.4/eink/v1.4.4-before-keyboard-size-choice.png) |
+| v1.4.4 | [v1.4.4-keyboard-input-auto.png](v1.4.4/v1.4.4-keyboard-input-auto.png) | After: Auto on, slider muted at the Auto size | [eink](v1.4.4/eink/v1.4.4-keyboard-input-auto.png) |
+| v1.4.4 | [v1.4.4-keyboard-input-manual.png](v1.4.4/v1.4.4-keyboard-input-manual.png) | After: Auto off, slider at 125% | [eink](v1.4.4/eink/v1.4.4-keyboard-input-manual.png) |
+| v1.4.4 | [v1.4.4-keyboard-input-focus.png](v1.4.4/v1.4.4-keyboard-input-focus.png) | After: slider with focus (Left / Right) | [eink](v1.4.4/eink/v1.4.4-keyboard-input-focus.png) |
+| v1.4.4 | [v1.4.4-keyboard-input-night.png](v1.4.4/v1.4.4-keyboard-input-night.png) | After: Night page | [eink](v1.4.4/eink/v1.4.4-keyboard-input-night.png) |
+| v1.4.4 | [v1.4.4-keyboard-input-landscape.png](v1.4.4/v1.4.4-keyboard-input-landscape.png) | After: landscape | [eink](v1.4.4/eink/v1.4.4-keyboard-input-landscape.png) |
+| v1.4.4 | [v1.4.4-keyboard-input-fr.png](v1.4.4/v1.4.4-keyboard-input-fr.png) | After: French | [eink](v1.4.4/eink/v1.4.4-keyboard-input-fr.png) |

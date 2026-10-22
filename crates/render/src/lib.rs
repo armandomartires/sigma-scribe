@@ -16,6 +16,7 @@ pub mod icons;
 pub mod options;
 pub mod pointer;
 pub mod preview;
+pub mod slider;
 pub mod theme;
 
 pub use canvas::{Canvas, Rect};

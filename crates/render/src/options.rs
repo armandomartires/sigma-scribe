@@ -181,6 +181,14 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
             ),
         },
         OptRow {
+            label: "Auto keyboard size",
+            hint: "Follow UI scale, up to 150%",
+            cells: vec![
+                choice("Off", Change::KbAuto(false), s.kb_size != 0),
+                choice("On", Change::KbAuto(true), s.kb_size == 0),
+            ],
+        },
+        OptRow {
             label: "Keyboard size",
             hint: "Auto follows UI scale, up to 150%",
             cells: sigma_core::settings::KB_SIZES
@@ -312,10 +320,13 @@ pub const CATEGORIES: [(&str, &[Section]); 6] = [
     ),
     (
         "Keyboard & input",
-        &[(
-            "On-screen keyboard",
-            &["Keyboard", "Layout", "Keyboard size", "Keyboard tone"],
-        )],
+        &[
+            (
+                "On-screen keyboard",
+                &["Keyboard", "Layout", "Keyboard tone"],
+            ),
+            ("Keyboard size", &["Auto keyboard size", "Keyboard size"]),
+        ],
     ),
     ("Language", &[("Interface", &["Interface language"])]),
     (
@@ -350,6 +361,13 @@ pub enum Kind {
     Link(usize),
     /// Read-only value.
     Info(String),
+    /// Stepped slider (v1.4.4, `crate::slider`): one cell per stop, the
+    /// thumb's index, and whether it can be moved.
+    Slider {
+        stops: Vec<Cell>,
+        value: usize,
+        enabled: bool,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -370,6 +388,8 @@ pub struct OptionsModel<'a> {
     /// Interface language, as shown (e.g. "English").
     pub language: &'a str,
     pub version: &'a str,
+    /// The slider row that has keyboard focus (v1.4.4), if any.
+    pub focus: Option<&'static str>,
 }
 
 /// One drawn line of a page: a section band or a row.
@@ -453,6 +473,18 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
             Kind::Stepper(r.cells[2..].to_vec())
         }
         "Layout" => Kind::Pick(m.settings.kb_layout.label().to_owned()),
+        "Keyboard size" => {
+            let cur = m.settings.keyboard_scale();
+            let stops: Vec<Cell> = sigma_core::settings::KB_SIZES[1..]
+                .iter()
+                .map(|&v| choice(&format!("{v}%"), Change::KbSize(v), v == cur))
+                .collect();
+            Kind::Slider {
+                value: stops.iter().position(|c| c.active).unwrap_or(0),
+                stops,
+                enabled: m.settings.kb_size != 0,
+            }
+        }
         // Auto shows what it is doing, e.g. "Auto (no sensor) — Portrait".
         "Orientation" if m.settings.orientation == Orientation::Auto => {
             Kind::Pick(m.orientation_status.to_owned())
@@ -612,6 +644,92 @@ impl EditorScreen {
         )
     }
 
+    /// The slider's area in a row (v1.4.4): the right part of the row,
+    /// at most 300 brief px, never narrower than 44 px per stop.
+    fn slider_geom(&self, band: Rect, n: usize) -> crate::slider::Geom {
+        let s = self.scale();
+        let min = (n as i32) * self.page_scale().px(44.0) + 2 * s.px(24.0);
+        let w = s.px(300.0).min(band.w / 2).max(min).min(band.w);
+        let h = band.h - s.px(8.0);
+        crate::slider::geom(
+            Rect::new(band.x + band.w - w, band.y + s.px(4.0), w, h),
+            n,
+            s,
+        )
+    }
+
+    /// A slider row on this page: its label, geometry, stops and state.
+    fn sliders(
+        &self,
+        m: &OptionsModel<'_>,
+    ) -> Vec<(&'static str, crate::slider::Geom, Vec<Cell>, usize, bool)> {
+        let l = self.options_layout(m);
+        l.items
+            .iter()
+            .filter_map(|(it, band, _)| match it {
+                Item::Row(DRow {
+                    label,
+                    kind:
+                        Kind::Slider {
+                            stops,
+                            value,
+                            enabled,
+                        },
+                }) => Some((
+                    *label,
+                    self.slider_geom(*band, stops.len()),
+                    stops.clone(),
+                    *value,
+                    *enabled,
+                )),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// The slider under a finger (v1.4.4): its label, and the change for
+    /// the nearest stop when it is enabled.
+    #[must_use]
+    pub fn options_slider_at(
+        &self,
+        m: &OptionsModel<'_>,
+        x: i32,
+        y: i32,
+    ) -> Option<(&'static str, Option<Change>)> {
+        self.sliders(m)
+            .into_iter()
+            .find_map(|(lab, g, stops, _, en)| {
+                g.area.contains(x, y).then(|| {
+                    (
+                        lab,
+                        en.then(|| stops[crate::slider::nearest(&g, x)].change)
+                            .flatten(),
+                    )
+                })
+            })
+    }
+
+    /// Dragging slider `label` to `x` (snaps to the nearest stop).
+    #[must_use]
+    pub fn options_slider_drag(&self, m: &OptionsModel<'_>, label: &str, x: i32) -> Option<Change> {
+        self.sliders(m)
+            .into_iter()
+            .find(|t| t.0 == label && t.4)
+            .and_then(|(_, g, stops, _, _)| stops[crate::slider::nearest(&g, x)].change)
+    }
+
+    /// Left (`-1`) / Right (`+1`) on a focused slider.
+    #[must_use]
+    pub fn options_slider_step(&self, m: &OptionsModel<'_>, label: &str, d: i32) -> Option<Change> {
+        self.sliders(m)
+            .into_iter()
+            .find(|t| t.0 == label && t.4)
+            .and_then(|(_, _, stops, v, _)| {
+                let j = crate::slider::step(v, stops.len(), d);
+                (j != v).then(|| stops[j].change).flatten()
+            })
+    }
+
     #[must_use]
     pub fn options_layout(&self, m: &OptionsModel<'_>) -> OptionsLayout {
         let base = self.layout(false, m.keyboard);
@@ -633,14 +751,19 @@ impl EditorScreen {
         let bottom = self.height as i32 - s.px(12.0);
         // Split into sub-pages; a band never ends a page.
         let all = page_items(m);
+        let slider_h = s.px(84.0);
+        let item_h = |it: &Item| match it {
+            Item::Band(_) => band_h,
+            Item::Row(DRow {
+                kind: Kind::Slider { .. },
+                ..
+            }) => slider_h,
+            _ => row_h,
+        };
         let mut pages: Vec<Vec<Item>> = vec![Vec::new()];
         let mut y = top;
         for (i, it) in all.iter().enumerate() {
-            let h = if matches!(it, Item::Band(_)) {
-                band_h
-            } else {
-                row_h
-            };
+            let h = item_h(it);
             let need = if matches!(it, Item::Band(_)) && i + 1 < all.len() {
                 h + row_h
             } else {
@@ -660,11 +783,7 @@ impl EditorScreen {
         let btn = s.px(44.0);
         let gap = s.px(6.0);
         for it in pages.swap_remove(sub) {
-            let h = if matches!(it, Item::Band(_)) {
-                band_h
-            } else {
-                row_h
-            };
+            let h = item_h(&it);
             let band = Rect::new(pad, y, w - 2 * pad, h);
             let cells = match &it {
                 Item::Row(DRow {
@@ -682,6 +801,15 @@ impl EditorScreen {
                             r
                         })
                         .collect()
+                }
+                Item::Row(DRow {
+                    kind: Kind::Slider { stops, .. },
+                    ..
+                }) => {
+                    let g = self.slider_geom(band, stops.len());
+                    let mut v = vec![g.area];
+                    v.extend(g.stops);
+                    v
                 }
                 Item::Row(DRow {
                     kind: Kind::Check { .. },
@@ -729,7 +857,7 @@ impl EditorScreen {
         if l.pager.is_some_and(|b| b.contains(x, y)) {
             return OptionsHit::Page;
         }
-        for (it, _, cells) in &l.items {
+        for (it, band, cells) in &l.items {
             for (j, r) in cells.iter().enumerate() {
                 if !r.inset(-self.scale().px(3.0) / 2).contains(x, y) {
                     continue;
@@ -750,6 +878,15 @@ impl EditorScreen {
                         },
                         Kind::Link(i) => OptionsHit::Help(*i),
                         Kind::Info(_) => OptionsHit::Nothing,
+                        Kind::Slider { stops, enabled, .. } => {
+                            if !*enabled {
+                                return OptionsHit::Nothing;
+                            }
+                            let g = self.slider_geom(*band, stops.len());
+                            stops[crate::slider::nearest(&g, x)]
+                                .change
+                                .map_or(OptionsHit::Nothing, OptionsHit::Change)
+                        }
                     },
                     Item::Band(_) => OptionsHit::Nothing,
                 };
@@ -801,6 +938,12 @@ impl EditorScreen {
                     }
                     Kind::Pick(_) | Kind::Link(_) => out.push((d.label.into(), cells[0])),
                     Kind::Info(_) => {}
+                    Kind::Slider { stops, .. } => {
+                        out.push((d.label.into(), cells[0]));
+                        for (cell, r) in stops.iter().zip(&cells[1..]) {
+                            out.push((format!("{}/{}", d.label, cell.label), *r));
+                        }
+                    }
                 },
                 Item::Band(_) => {}
             }
@@ -996,6 +1139,20 @@ impl EditorScreen {
                         Kind::Pick(v) => italic(c, &tr(v), t.ink),
                         Kind::Link(_) => italic(c, &tr("Open"), t.ink),
                         Kind::Info(v) => italic(c, v, t.mute),
+                        Kind::Slider {
+                            stops,
+                            value,
+                            enabled,
+                        } => {
+                            let g = self.slider_geom(*band, stops.len());
+                            let sl = crate::slider::Slider {
+                                stops: stops.iter().map(|x| tr(&x.label).into_owned()).collect(),
+                                value: *value,
+                                enabled: *enabled,
+                                focused: m.focus == Some(d.label),
+                            };
+                            crate::slider::draw(c, &g, &sl, &self.fonts, ui, s, t.paper < 128);
+                        }
                         Kind::Inline(cs) | Kind::Stepper(cs) => {
                             for (r, cell) in cells.iter().zip(cs) {
                                 let fg = if cell.change.is_none() {
@@ -1097,6 +1254,7 @@ mod tests {
             sub,
             language: "English",
             version: "1.4.2",
+            focus: None,
         }
     }
 

@@ -352,6 +352,12 @@ Keyboard tone
 Keyboard size
 = Tamanho do teclado
 
+Auto keyboard size
+= Tamanho automático do teclado
+
+Follow UI scale, up to 150%
+= Segue a escala, até 150%
+
 Auto follows UI scale, up to 150%
 = Auto segue a escala, até 150%
 

@@ -304,6 +304,11 @@ pub struct App {
     /// Settings page shown while `options` (v1.4.2) and its sub-page.
     pub settings_page: sigma_render::SettingsPage,
     pub settings_sub: usize,
+    /// Settings slider with keyboard focus (v1.4.4): Left / Right move it.
+    pub settings_focus: Option<&'static str>,
+    /// A finger went down on a Settings slider (v1.4.4): the drag owns the
+    /// touch until it lifts.
+    slider_touch: Option<&'static str>,
     /// Panel size as the device reports it (portrait on the Forma).
     phys: (u32, u32),
     /// Rotated copy of the canvas sent to the panel in landscape.
@@ -406,6 +411,8 @@ impl App {
             options: false,
             settings_page: sigma_render::SettingsPage::Root,
             settings_sub: 0,
+            settings_focus: None,
+            slider_touch: None,
             phys: (width, height),
             phys_canvas: Canvas::new(width, height, 255),
             drawer: [false; 3],
@@ -929,6 +936,7 @@ impl App {
         self.options = true;
         self.settings_page = sigma_render::SettingsPage::Root;
         self.settings_sub = 0;
+        self.settings_focus = None;
     }
 
     fn options_model(&self) -> OptionsModel<'_> {
@@ -945,6 +953,7 @@ impl App {
                 _ => "English",
             },
             version: env!("CARGO_PKG_VERSION"),
+            focus: self.settings_focus,
         }
     }
 
@@ -970,6 +979,51 @@ impl App {
     }
 
     fn options_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
+        let focus = self
+            .screen
+            .options_slider_at(&self.options_model(), x, y)
+            .map(|t| t.0);
+        let refocus = focus != self.settings_focus;
+        self.settings_focus = focus;
+        let r = self.options_hit_tap(x, y);
+        if refocus && r.is_none() {
+            return Some(Refresh::Partial);
+        }
+        r
+    }
+
+    /// A finger on Settings (v1.4.4): a touch that starts on a slider is a
+    /// drag that snaps to the nearest stop; anything else goes on to the
+    /// gesture recogniser (taps).
+    fn options_touch(&mut self, phase: Phase, x: i32, y: i32) -> Option<Option<Refresh>> {
+        match phase {
+            Phase::Down => {
+                let (lab, ch) = self.screen.options_slider_at(&self.options_model(), x, y)?;
+                self.slider_touch = Some(lab);
+                self.settings_focus = Some(lab);
+                Some(Some(match ch {
+                    Some(c) => self.change(c),
+                    None => Refresh::Partial,
+                }))
+            }
+            Phase::Move | Phase::Up => {
+                let lab = self.slider_touch?;
+                if phase == Phase::Up {
+                    self.slider_touch = None;
+                }
+                let ch = self
+                    .screen
+                    .options_slider_drag(&self.options_model(), lab, x);
+                Some(match ch {
+                    Some(Change::KbSize(v)) if v == self.settings.kb_size => None,
+                    Some(c) => Some(self.change(c)),
+                    None => None,
+                })
+            }
+        }
+    }
+
+    fn options_hit_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
         match self.screen.options_hit(&self.options_model(), x, y) {
             OptionsHit::Close => {
                 self.options = false;
@@ -2308,6 +2362,11 @@ impl App {
         match e {
             Event::Tilt { .. } => None,
             Event::Touch { phase, x, y, t } => {
+                if self.options {
+                    if let Some(r) = self.options_touch(phase, x, y) {
+                        return r;
+                    }
+                }
                 let g = match phase {
                     Phase::Down => self.gestures.down(x, y, t),
                     Phase::Move => self.gestures.moved(x, y, t),
@@ -2362,7 +2421,20 @@ impl App {
                 None
             }
             Event::Tap { x, y } if self.options => self.options_tap(x, y),
-            Event::Key(HwKey::Escape) if self.options => Some(self.settings_back()),
+            Event::Key(HwKey::Escape) if self.options => {
+                self.settings_focus = None;
+                Some(self.settings_back())
+            }
+            Event::Key(k @ (HwKey::Left | HwKey::Right))
+                if self.options && self.settings_focus.is_some() =>
+            {
+                let lab = self.settings_focus?;
+                let d = if k == HwKey::Left { -1 } else { 1 };
+                let c = self
+                    .screen
+                    .options_slider_step(&self.options_model(), lab, d)?;
+                Some(self.change(c))
+            }
             Event::PageTurn { forward } if self.options => {
                 let n = self
                     .screen
