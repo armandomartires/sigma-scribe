@@ -1516,8 +1516,14 @@ impl App {
             .iter()
             .map(|p| (stem(p.as_str()).to_owned(), p.as_str().to_owned()))
             .collect();
-        self.screen
-            .build_preview_with(self.buffer.text(), &self.keyboard, &known, Some(&back))
+        let note = self.library.root().join(self.current.as_str());
+        self.screen.build_preview_in(
+            self.buffer.text(),
+            &self.keyboard,
+            &known,
+            Some(&back),
+            note.parent(),
+        )
     }
 
     /// Back to write mode; caret, selection and scroll are as they were.
@@ -1898,6 +1904,28 @@ impl App {
         Ok(())
     }
 
+    /// After a rename / move rewrote the open note's ink links on disk
+    /// (v1.5.1, `sigma_core::ink::carry`): take the new text into the
+    /// buffer, keeping the caret as close as it can.
+    fn reload_ink_links(&mut self) {
+        let path = self.library.root().join(self.current.as_str());
+        let Ok(disk) = std::fs::read_to_string(&path) else {
+            return;
+        };
+        if disk == self.buffer.text() || !disk.contains("](.ink/") {
+            return;
+        }
+        let at = self.buffer.caret().min(disk.len());
+        let at = (0..=at)
+            .rev()
+            .find(|&i| disk.is_char_boundary(i))
+            .unwrap_or(0);
+        self.buffer.select_all();
+        self.buffer.insert(&disk);
+        self.buffer.set_caret(at);
+        self.save();
+    }
+
     /// Opens the writing panel (v1.5.0).
     pub fn open_ink(&mut self) {
         self.sel_ui = None;
@@ -1923,7 +1951,9 @@ impl App {
         let l = self.screen.ink_layout();
         let width = pen_px(self.settings.ink_pen);
         let refresh = self.ink_refresh();
-        let p = Point { x, y, t };
+        // Contact size when the panel reports it (v1.5.1); else None.
+        let major = sigma_device::evdev::contact_major();
+        let p = Point { x, y, t, major };
         let ink = self.ink.as_mut()?;
         let add = |r: Option<Rect>, n: Rect| Some(r.map_or(n, |o| o.union(&n)));
         match phase {
@@ -1950,6 +1980,7 @@ impl App {
                     x: x.clamp(l.area.x, l.area.x + l.area.w - 1),
                     y: y.clamp(l.area.y, l.area.y + l.area.h - 1),
                     t,
+                    major,
                 };
                 let Some((a, b)) = ink.ink.moved(q) else {
                     return Some(None);
@@ -2025,15 +2056,22 @@ impl App {
             Ok(Some(md)) => {
                 let text = self.buffer.text();
                 let at = self.buffer.caret();
-                let before = if at == 0 || text[..at].ends_with('\n') {
+                // A block of its own (blank lines around it), so preview
+                // draws it (v1.5.1).
+                let (head, tail) = (&text[..at], &text[at..]);
+                let before = if head.is_empty() || head.ends_with("\n\n") {
                     ""
-                } else {
+                } else if head.ends_with('\n') {
                     "\n"
+                } else {
+                    "\n\n"
                 };
-                let after = if text[at..].starts_with('\n') {
+                let after = if tail.starts_with("\n\n") {
                     ""
-                } else {
+                } else if tail.starts_with('\n') || tail.is_empty() {
                     "\n"
+                } else {
+                    "\n\n"
                 };
                 self.buffer.insert(&format!("{before}{md}{after}"));
                 self.save();
@@ -2092,6 +2130,7 @@ impl App {
                     }
                 }
                 let _ = self.library.set_last_opened(&self.current);
+                self.reload_ink_links();
                 self.refresh_files();
             }
             Err(e) => {
@@ -2194,6 +2233,7 @@ impl App {
                                 }
                             }
                             let _ = lib.set_last_opened(&self.current);
+                            self.reload_ink_links();
                             self.refresh_files();
                         }
                         Err(e) => {

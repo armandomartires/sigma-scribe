@@ -53,6 +53,12 @@ Installed on the Forma today: **1.4.0** (2026-10-22). Built and waiting: 1.4.1 �
 - [ ] Undo, Clear, Cancel, Insert; the note gets the `![ink](…)` line; the SVG and strokes files are on the Kobo next to the note and open on a computer.
 - [ ] Landscape and UI 200 %: buttons easy to hit; closing the panel leaves no ink ghost.
 
+## Ink preview, rename and contact size (v1.5.1, S15.1)
+- [ ] Inserted ink shows in preview, crisp, no grey edges (Paper black, Night white); page turns over it leave no ghost.
+- [ ] Renaming a note with ink keeps its images in preview; the `.ink/<new name>/` folder is on the Kobo, the old one gone.
+- [ ] Moving a note with ink to another folder keeps its images; `.ink/` follows it.
+- [ ] A strokes file written on the Forma has `"contact":"touch_major"` and four numbers per point (or `null` if the panel does not report it — note which, and the finger vs stylus values for Auto later).
+
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).
 

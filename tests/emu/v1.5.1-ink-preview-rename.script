@@ -1,0 +1,47 @@
+# v1.5.1 (S15.1): ink drawn in preview (1-bit, Paper and Night); .ink/ follows rename and move.
+copy-notes tests/test-notes/_test
+tap-on Write
+press-on InkArea
+move 500 1500
+move 700 1400
+move 900 1560
+move 1100 1420
+release
+wait 700
+tap-on Insert
+tap-on Preview
+shot v1.5.1-preview-ink-paper
+tap-on Pencil
+tap-on Options
+tap-on Display
+tap-on Paper/Night
+tap-on Close
+tap-on Preview
+shot v1.5.1-preview-ink-night
+tap-on Pencil
+tap-on Options
+tap-on Display
+tap-on Paper/Day
+tap-on Close
+tap-on Title
+clear-field
+type ink-walk
+tap-on OK
+expect-open _test/ink-walk.md
+expect-file _test/.ink/ink-walk/ink-001.svg
+expect-file _test/.ink/ink-walk/ink-001.strokes.json
+expect-no-file _test/.ink/test-00-start-here
+expect ](.ink/ink-walk/ink-001.svg)
+expect-file-contains _test/ink-walk.md|](.ink/ink-walk/ink-001.svg)
+shot v1.5.1-after-rename
+tap-on Files
+tap-on More:ink-walk.md
+tap-on Move
+tap-on _test / folders
+expect-open _test/folders/ink-walk.md
+expect-file _test/folders/.ink/ink-walk/ink-001.svg
+expect-no-file _test/.ink
+tap-on Close
+tap-on Preview
+shot v1.5.1-preview-after-move
+tap-on Pencil

@@ -79,6 +79,58 @@ pub fn draw_strokes(c: &mut Canvas, ink: &Ink, width: i32, clip: Rect) {
     }
 }
 
+/// A 1-bit ink image (v1.5.1): `on[y * w + x]` is an ink pixel.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Raster {
+    pub w: u32,
+    pub h: u32,
+    pub on: Vec<bool>,
+}
+
+impl Raster {
+    /// Rasterises an SVG with resvg at its natural size (mm → 300 ppi),
+    /// shrunk to `max_w` if wider; coverage ≥ 50 % becomes ink, so the
+    /// result is pure 1-bit (DU-safe). `None` if it does not parse.
+    #[must_use]
+    pub fn from_svg(svg: &str, max_w: i32) -> Option<Self> {
+        use resvg::{tiny_skia, usvg};
+        let opt = usvg::Options {
+            dpi: 300.0,
+            ..usvg::Options::default()
+        };
+        let tree = usvg::Tree::from_str(svg, &opt).ok()?;
+        let sz = tree.size();
+        let k = (max_w.max(1) as f32 / sz.width()).min(1.0);
+        let (w, h) = (
+            (sz.width() * k).ceil().max(1.0) as u32,
+            (sz.height() * k).ceil().max(1.0) as u32,
+        );
+        if w > 4096 || h > 4096 {
+            return None;
+        }
+        let mut pm = tiny_skia::Pixmap::new(w, h)?;
+        resvg::render(
+            &tree,
+            tiny_skia::Transform::from_scale(k, k),
+            &mut pm.as_mut(),
+        );
+        let on = pm.data().chunks_exact(4).map(|p| p[3] >= 128).collect();
+        Some(Self { w, h, on })
+    }
+
+    /// Draws the ink pixels in `v` at (x, y), clipped to `clip`.
+    pub fn blit(&self, c: &mut Canvas, x: i32, y: i32, v: u8, clip: Rect) {
+        let clip = clip.intersect(&c.bounds());
+        for yy in 0..self.h as i32 {
+            for xx in 0..self.w as i32 {
+                if self.on[(yy * self.w as i32 + xx) as usize] && clip.contains(x + xx, y + yy) {
+                    c.pixels[((y + yy) * c.width as i32 + x + xx) as usize] = v;
+                }
+            }
+        }
+    }
+}
+
 impl EditorScreen {
     /// The panel: the bottom 45 % (portrait) or 55 % (landscape).
     #[must_use]
@@ -191,11 +243,17 @@ mod tests {
     fn segments_are_pure_black_and_clipped() {
         let mut c = Canvas::new(100, 60, WHITE);
         let clip = Rect::new(10, 10, 80, 40);
-        let a = Point { x: 5, y: 20, t: 0 };
+        let a = Point {
+            x: 5,
+            y: 20,
+            t: 0,
+            major: None,
+        };
         let b = Point {
             x: 60,
             y: 30,
             t: 10,
+            major: None,
         };
         let r = draw_segment(&mut c, a, b, 6, clip);
         assert!(c.pixels.iter().all(|&p| p == WHITE || p == BLACK));
@@ -207,6 +265,22 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn svg_rasterises_to_pure_one_bit_at_300_ppi() {
+        let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10mm\" height=\"5mm\" viewBox=\"0 0 10 5\"><path d=\"M1 2.5 L9 2.5\" stroke=\"#000\" stroke-width=\"1\" fill=\"none\"/></svg>";
+        let r = Raster::from_svg(svg, 1000).unwrap();
+        assert_eq!((r.w, r.h), (119, 60));
+        let n = r.on.iter().filter(|&&b| b).count();
+        assert!(n > 800 && n < 1400, "{n}");
+        let small = Raster::from_svg(svg, 50).unwrap();
+        assert_eq!(small.w, 50);
+        assert!(Raster::from_svg("not svg", 100).is_none());
+        let mut c = Canvas::new(200, 100, 240);
+        let b = c.bounds();
+        r.blit(&mut c, 10, 10, 0, b);
+        assert!(c.pixels.iter().all(|&p| p == 240 || p == 0));
     }
 
     #[test]

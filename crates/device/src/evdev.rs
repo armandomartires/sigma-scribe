@@ -96,6 +96,17 @@ impl Transform {
     }
 }
 
+/// Contact size (`ABS_MT_TOUCH_MAJOR`) of the primary finger at the last
+/// touch Down / Move the decoder sent (v1.5.1), or -1 when the input does
+/// not report it. One touchscreen per process, so one value.
+static CONTACT_MAJOR: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new(-1);
+
+/// The contact size at the latest touch event, if the panel reports one.
+#[must_use]
+pub fn contact_major() -> Option<u16> {
+    u16::try_from(CONTACT_MAJOR.load(std::sync::atomic::Ordering::Relaxed)).ok()
+}
+
 /// Turns a stream of raw events into touches and keys.
 #[derive(Clone, Debug)]
 pub struct Decoder {
@@ -106,6 +117,10 @@ pub struct Decoder {
     was_down: bool,
     slot: i32,
     sent: (i32, i32),
+    /// Last `ABS_MT_TOUCH_MAJOR` of the primary contact this touch.
+    major: Option<i32>,
+    /// What the last touch event published to `contact_major`.
+    sent_major: i32,
 }
 
 impl Decoder {
@@ -119,7 +134,15 @@ impl Decoder {
             was_down: false,
             slot: 0,
             sent: (i32::MIN, i32::MIN),
+            major: None,
+            sent_major: -1,
         }
+    }
+
+    /// The contact size this decoder published with its last touch event.
+    #[must_use]
+    pub fn contact(&self) -> Option<u16> {
+        u16::try_from(self.sent_major).ok()
     }
 
     /// Feeds one raw event; `now` is a monotonic clock in ms.
@@ -144,6 +167,8 @@ impl Decoder {
             (EV_ABS, ABS_MT_PRESSURE | ABS_MT_TOUCH_MAJOR) if primary => {
                 if e.value == 0 {
                     self.down = false;
+                } else if e.code == ABS_MT_TOUCH_MAJOR {
+                    self.major = Some(e.value);
                 }
                 None
             }
@@ -171,6 +196,18 @@ impl Decoder {
                     _ => None,
                 };
                 self.was_down = self.down;
+                if phase.is_some() {
+                    let m = if self.down {
+                        self.major.unwrap_or(-1)
+                    } else {
+                        -1
+                    };
+                    self.sent_major = m;
+                    CONTACT_MAJOR.store(m, std::sync::atomic::Ordering::Relaxed);
+                }
+                if !self.down {
+                    self.major = None;
+                }
                 phase.map(|phase| {
                     self.sent = (x, y);
                     Event::Touch {
@@ -192,6 +229,32 @@ mod tests {
 
     fn ev(kind: u16, code: u16, value: i32) -> RawEvent {
         RawEvent { kind, code, value }
+    }
+
+    #[test]
+    fn contact_major_is_kept_per_touch_and_absent_without_it() {
+        let mut d = Decoder::new(Transform::from_spec("none", (100, 100), (100, 100)));
+        let f = |d: &mut Decoder, evs: &[RawEvent]| {
+            for &e in evs {
+                d.feed(e, 0);
+            }
+            d.feed(ev(EV_SYN, 0, 0), 0)
+        };
+        f(
+            &mut d,
+            &[
+                ev(EV_ABS, ABS_MT_TOUCH_MAJOR, 9),
+                ev(EV_ABS, ABS_MT_POSITION_X, 10),
+            ],
+        );
+        assert_eq!(d.contact(), Some(9));
+        f(&mut d, &[ev(EV_ABS, ABS_MT_POSITION_X, 90)]);
+        assert_eq!(d.contact(), Some(9), "kept while the finger stays down");
+        f(&mut d, &[ev(EV_ABS, ABS_MT_TRACKING_ID, -1)]);
+        assert_eq!(d.contact(), None);
+        // A panel that never reports it.
+        f(&mut d, &[ev(EV_ABS, ABS_MT_POSITION_X, 10)]);
+        assert_eq!(d.contact(), None);
     }
 
     #[test]

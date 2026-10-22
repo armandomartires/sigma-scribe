@@ -15,6 +15,9 @@ pub struct Point {
     pub x: i32,
     pub y: i32,
     pub t: u64,
+    /// Contact size (`ABS_MT_TOUCH_MAJOR`, device units) when the panel
+    /// reports it (v1.5.1); `None` otherwise.
+    pub major: Option<u16>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -108,6 +111,15 @@ impl Ink {
         true
     }
 
+    /// Whether any point carries a contact size.
+    #[must_use]
+    pub fn has_contact(&self) -> bool {
+        self.strokes
+            .iter()
+            .flat_map(|s| s.points.iter())
+            .any(|p| p.major.is_some())
+    }
+
     /// Bounding box of all points: (x0, y0, x1, y1).
     #[must_use]
     pub fn bounds(&self) -> Option<(i32, i32, i32, i32)> {
@@ -160,10 +172,15 @@ impl Ink {
             .and_then(|s| s.points.first())
             .map_or(0, |p| p.t);
         let mut s = format!(
-            "{{\"format\":\"sigma-scribe-ink\",\"version\":1,\"px_per_mm\":{PX_PER_MM:.4},\"pen\":\"{}\",\"strokes\":[",
+            "{{\"format\":\"sigma-scribe-ink\",\"version\":2,\"px_per_mm\":{PX_PER_MM:.4},\"pen\":\"{}\",\"contact\":{},\"strokes\":[",
             match pen {
                 Pen::Finger => "finger",
                 Pen::Stylus => "stylus",
+            },
+            if self.has_contact() {
+                "\"touch_major\""
+            } else {
+                "null"
             }
         );
         for (i, st) in self.strokes.iter().enumerate() {
@@ -175,7 +192,11 @@ impl Ink {
                 if j > 0 {
                     s.push(',');
                 }
-                let _ = write!(s, "[{},{},{}]", p.x, p.y, p.t.saturating_sub(t0));
+                let _ = write!(s, "[{},{},{}", p.x, p.y, p.t.saturating_sub(t0));
+                if let Some(m) = p.major {
+                    let _ = write!(s, ",{m}");
+                }
+                s.push(']');
             }
             s.push(']');
         }
@@ -220,12 +241,61 @@ pub fn save(ink: &Ink, pen: Pen, note: &Path) -> std::io::Result<Option<String>>
     Ok(Some(md))
 }
 
+fn ink_dir(note: &Path) -> Option<(PathBuf, String)> {
+    let stem = note.file_stem()?.to_string_lossy().into_owned();
+    Some((note.parent()?.join(".ink").join(&stem), stem))
+}
+
+/// After a note moved from `old` to `new` (v1.5.1): moves its
+/// `.ink/<stem>/` folder along and rewrites the note's `](.ink/<old>/`
+/// links when the stem changed. A taken target folder gets `-2`, `-3`…
+/// Nothing happens for a note without ink.
+///
+/// # Errors
+/// A filesystem error moving the folder or rewriting the note.
+pub fn carry(old: &Path, new: &Path) -> std::io::Result<()> {
+    let (Some((from, old_stem)), Some((base, new_stem))) = (ink_dir(old), ink_dir(new)) else {
+        return Ok(());
+    };
+    if !from.is_dir() || from == base {
+        return Ok(());
+    }
+    let (mut to, mut stem) = (base.clone(), new_stem.clone());
+    let mut n = 2;
+    while to.exists() {
+        stem = format!("{new_stem}-{n}");
+        to = base.with_file_name(&stem);
+        n += 1;
+    }
+    if let Some(d) = to.parent() {
+        std::fs::create_dir_all(d)?;
+    }
+    std::fs::rename(&from, &to)?;
+    if let Some(d) = from.parent() {
+        // Leave no empty `.ink/` behind.
+        let _ = std::fs::remove_dir(d);
+    }
+    if stem != old_stem {
+        let text = std::fs::read_to_string(new)?;
+        let fixed = text.replace(&format!("](.ink/{old_stem}/"), &format!("](.ink/{stem}/"));
+        if fixed != text {
+            crate::store::write_atomic(new, &fixed)?;
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn p(x: i32, y: i32, t: u64) -> Point {
-        Point { x, y, t }
+        Point {
+            x,
+            y,
+            t,
+            major: None,
+        }
     }
 
     fn two_strokes() -> Ink {
@@ -275,6 +345,43 @@ mod tests {
             j.contains("\"strokes\":[[[10,10,0],[40,10,20]],[[20,30,100]]]"),
             "{j}"
         );
+    }
+
+    #[test]
+    fn carry_moves_the_folder_and_rewrites_links() {
+        let d = std::env::temp_dir().join(format!("sigma-carry-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(d.join("sub")).unwrap();
+        let note = d.join("trip.md");
+        let md = save(&two_strokes(), Pen::Finger, &note).unwrap().unwrap();
+        std::fs::write(&note, format!("a\n{md}\n[x](.ink/trip/no)\n")).unwrap();
+        // Rename trip -> walk (the file has already moved).
+        let walk = d.join("walk.md");
+        std::fs::rename(&note, &walk).unwrap();
+        carry(&note, &walk).unwrap();
+        assert!(d.join(".ink/walk/ink-001.svg").exists() && !d.join(".ink/trip").exists());
+        let t = std::fs::read_to_string(&walk).unwrap();
+        assert!(t.contains("![ink](.ink/walk/ink-001.svg)") && t.contains("](.ink/walk/no)"));
+        // Move into sub/ with the same stem: folder follows, text unchanged.
+        let moved = d.join("sub/walk.md");
+        std::fs::rename(&walk, &moved).unwrap();
+        carry(&walk, &moved).unwrap();
+        assert!(d.join("sub/.ink/walk/ink-001.svg").exists());
+        assert!(!d.join(".ink").exists(), "empty .ink removed");
+        assert_eq!(std::fs::read_to_string(&moved).unwrap(), t);
+        // A taken target folder gets a suffix.
+        std::fs::create_dir_all(d.join("sub/.ink/run")).unwrap();
+        let run = d.join("sub/run.md");
+        std::fs::rename(&moved, &run).unwrap();
+        carry(&moved, &run).unwrap();
+        assert!(d.join("sub/.ink/run-2/ink-001.svg").exists());
+        assert!(std::fs::read_to_string(&run)
+            .unwrap()
+            .contains("](.ink/run-2/ink-001.svg)"));
+        // No ink: nothing to do.
+        std::fs::write(d.join("plain.md"), "x").unwrap();
+        carry(&d.join("plain.md"), &d.join("plain.md")).unwrap();
+        let _ = std::fs::remove_dir_all(&d);
     }
 
     #[test]

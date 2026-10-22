@@ -1580,6 +1580,20 @@ impl EditorScreen {
         known: &dyn Fn(&str) -> bool,
         backlinks: Option<&[(String, String)]>,
     ) -> Doc {
+        self.build_preview_in(text, keyboard, known, backlinks, None)
+    }
+
+    /// As [`Self::build_preview_with`]; `note_dir` is where `.ink/` image
+    /// links resolve (v1.5.1). Unreadable images stay `[image: …]`.
+    #[must_use]
+    pub fn build_preview_in(
+        &self,
+        text: &str,
+        keyboard: &Keyboard,
+        known: &dyn Fn(&str) -> bool,
+        backlinks: Option<&[(String, String)]>,
+        note_dir: Option<&std::path::Path>,
+    ) -> Doc {
         use sigma_core::markdown::{Block, BlockKind, LinkKind, Run, Style};
         let area = self.preview_area(keyboard);
         let ty = Type {
@@ -1640,7 +1654,11 @@ impl EditorScreen {
                 ));
             }
         }
-        let lines = preview::layout(&blocks, &self.fonts, area.w, ty, known);
+        let images = |src: &str, max_w: i32| {
+            let svg = std::fs::read_to_string(note_dir?.join(src)).ok()?;
+            crate::ink::Raster::from_svg(&svg, max_w).map(std::sync::Arc::new)
+        };
+        let lines = preview::layout_with_images(&blocks, &self.fonts, area.w, ty, known, &images);
         Doc {
             pages: preview::paginate(&lines, area.h),
             lines,
