@@ -63,7 +63,7 @@ Keine
 Ordner
 Mehr
 Umbenennen
-Verschieben
+Bewegen
 Löschen
 Zum Löschen erneut tippen
 Neue Notiz

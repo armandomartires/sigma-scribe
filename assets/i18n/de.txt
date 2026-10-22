@@ -197,7 +197,7 @@ Rename
 = Umbenennen
 
 Move
-= Verschieben
+= Bewegen
 
 Delete
 = Löschen

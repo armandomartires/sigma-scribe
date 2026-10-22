@@ -210,16 +210,10 @@ pub enum UiLang {
     Ca,
     Da,
     Sv,
-    Fi,
-    Nb,
-    Tr,
-    Pl,
-    Cs,
-    Ro,
 }
 
 impl UiLang {
-    pub const ALL: [UiLang; 16] = [
+    pub const ALL: [UiLang; 10] = [
         UiLang::En,
         UiLang::Fr,
         UiLang::Pt,
@@ -230,12 +224,6 @@ impl UiLang {
         UiLang::Ca,
         UiLang::Da,
         UiLang::Sv,
-        UiLang::Fi,
-        UiLang::Nb,
-        UiLang::Tr,
-        UiLang::Pl,
-        UiLang::Cs,
-        UiLang::Ro,
     ];
 
     #[must_use]
@@ -251,12 +239,6 @@ impl UiLang {
             Self::Ca => "ca",
             Self::Da => "da",
             Self::Sv => "sv",
-            Self::Fi => "fi",
-            Self::Nb => "nb",
-            Self::Tr => "tr",
-            Self::Pl => "pl",
-            Self::Cs => "cs",
-            Self::Ro => "ro",
         }
     }
 
@@ -279,12 +261,6 @@ impl UiLang {
             Self::Ca => "Català",
             Self::Da => "Dansk",
             Self::Sv => "Svenska",
-            Self::Fi => "Suomi",
-            Self::Nb => "Norsk",
-            Self::Tr => "Türkçe",
-            Self::Pl => "Polski",
-            Self::Cs => "Čeština",
-            Self::Ro => "Română",
         }
     }
 }

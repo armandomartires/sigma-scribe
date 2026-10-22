@@ -33,12 +33,6 @@ pub enum Lang {
     Ca,
     Da,
     Sv,
-    Fi,
-    Nb,
-    Tr,
-    Pl,
-    Cs,
-    Ro,
     /// Test only: +40 % length and accents, to catch overflow.
     PseudoLong,
     /// Test only: English words, right-to-left chrome (v1.6 groundwork).
@@ -53,7 +47,6 @@ impl Lang {
         let p = v.trim().to_ascii_lowercase();
         let prefix = p.split(['_', '-', '.']).next().unwrap_or("");
         match prefix {
-            "no" | "nn" => return Self::Nb,
             "" => return Self::En,
             _ => {}
         }
@@ -75,12 +68,6 @@ impl Lang {
             Self::Ca => "ca",
             Self::Da => "da",
             Self::Sv => "sv",
-            Self::Fi => "fi",
-            Self::Nb => "nb",
-            Self::Tr => "tr",
-            Self::Pl => "pl",
-            Self::Cs => "cs",
-            Self::Ro => "ro",
             Self::PseudoLong => "en-XA",
             Self::PseudoRtl => "en-XB",
         }
@@ -124,12 +111,6 @@ pub static REAL: &[(Lang, &str, &str)] = &[
     (Lang::Ca, "ca", include_str!("../../../assets/i18n/ca.txt")),
     (Lang::Da, "da", include_str!("../../../assets/i18n/da.txt")),
     (Lang::Sv, "sv", include_str!("../../../assets/i18n/sv.txt")),
-    (Lang::Fi, "fi", include_str!("../../../assets/i18n/fi.txt")),
-    (Lang::Nb, "nb", include_str!("../../../assets/i18n/nb.txt")),
-    (Lang::Tr, "tr", include_str!("../../../assets/i18n/tr.txt")),
-    (Lang::Pl, "pl", include_str!("../../../assets/i18n/pl.txt")),
-    (Lang::Cs, "cs", include_str!("../../../assets/i18n/cs.txt")),
-    (Lang::Ro, "ro", include_str!("../../../assets/i18n/ro.txt")),
 ];
 static FR: &str = REAL[0].2;
 static PT: &str = REAL[1].2;
@@ -300,8 +281,6 @@ mod tests {
         assert_eq!(Lang::from_locale("pt_BR"), Lang::Pt);
         assert_eq!(Lang::from_locale("PT-pt"), Lang::Pt);
         assert_eq!(Lang::from_locale("de_DE"), Lang::De);
-        assert_eq!(Lang::from_locale("nb_NO"), Lang::Nb);
-        assert_eq!(Lang::from_locale("no"), Lang::Nb);
         assert_eq!(Lang::from_locale("es_MX"), Lang::Es);
         assert_eq!(Lang::from_locale("ja"), Lang::En, "unknown → English");
         assert_eq!(Lang::from_locale(""), Lang::En);
