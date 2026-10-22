@@ -350,7 +350,10 @@ pub const CATEGORIES: [(&str, &[Section]); 6] = [
                 &["Keyboard", "Layout", "Keyboard tone"],
             ),
             ("Keyboard size", &["Auto keyboard size", "Keyboard size"]),
-            ("Handwriting", &["Ink pen", "Fast ink (A2)"]),
+            (
+                "Handwriting",
+                &["Ink pen", "Fast ink (A2)", "My handwriting"],
+            ),
         ],
     ),
     ("Language", &[("Interface", &["Interface language"])]),
@@ -415,6 +418,8 @@ pub struct OptionsModel<'a> {
     pub version: &'a str,
     /// The slider row that has keyboard focus (v1.4.4), if any.
     pub focus: Option<&'static str>,
+    /// Enrolled handwriting samples (v1.5.2).
+    pub hw_samples: usize,
 }
 
 /// One drawn line of a page: a section band or a row.
@@ -515,6 +520,11 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
             Kind::Pick(m.orientation_status.to_owned())
         }
         "Interface language" => Kind::Info(m.language.to_owned()),
+        // v1.5.2: what Train saved, and a way to delete it.
+        "My handwriting" => Kind::Inline(vec![
+            value(format!("{}: {}", tr("Samples"), m.hw_samples)),
+            choice("Delete", Change::DeleteSamples, false),
+        ]),
         "App info" => Kind::Link(0),
         "Markdown reference" => Kind::Link(1),
         "USB keyboard, mouse & export" => Kind::Link(2),
@@ -1281,6 +1291,7 @@ mod tests {
             language: "English",
             version: "1.4.2",
             focus: None,
+            hw_samples: 0,
         }
     }
 

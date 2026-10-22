@@ -20,6 +20,7 @@ path = "src/bin/sigma-emu.rs"
 sigma-core = { path = "../crates/core" }
 sigma-render = { path = "../crates/render" }
 sigma-device = { path = "../crates/device" }
+sigma-hwr = { path = "../crates/hwr" }
 
 [target.'cfg(not(target_arch = "arm"))'.dependencies]
 minifb = { version = "0.27", default-features = false, features = ["x11"] }

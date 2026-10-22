@@ -2,6 +2,15 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.5.2 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
+- **Letters** (sprint S15.2, decision 53): in the Write panel, tap **Letters** and write one character per box; it is typed at the caret. Five candidates appear after each letter; tap one to replace it. Space, Erase, Return, Draw (back to free ink), Done. Works offline with the app's own small model (105 kB), English, French and Portuguese letters with accents, digits and punctuation (126 characters).
+- **Train** (opt-in): write samples of your own hand, one character at a time; they are saved only in `notes/.handwriting/samples.txt` and the model adapts to them on the device. Settings → Keyboard & input → Handwriting → **My handwriting** shows the count and **Delete** removes them.
+- The default model is trained only on synthetic ink drawn from OFL fonts with random jitter (`tools/hwr-train`, reproducible). Held-out synthetic results: 97.4 % top-1 on new jitter of the training fonts; 82.5 % top-1 and 98.4 % top-5 on two fonts it never saw. Est. 1–3 ms per character on the Forma.
+- **Wiki links follow rename and move** (sprint S15.2a, decision 52, PR #28): renaming or moving a note rewrites `[[links]]` to it in every other note and the scratch pad, keeping aliases (`[[note|label]]`), headings (`[[note#part]]`), path or bare-name form and the extension; code is left alone.
+- The Write panel's Draw view gains the Letters button (left of Undo).
+- Emulator: `tests/emu/v1.5.2-letters.script`, `tests/emu/v1.5.2-relink.script`. Screenshots `docs/screenshots/v1.5.2/`. Device checks: `docs/device-checklist-prerelease.md`.
+- HASHES
+
 ## 1.5.1 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
 - **Ink in preview** (sprint S15.1, decision 51): inserted ink blocks are drawn in preview instead of `[image: ink]`, rasterised with resvg to **1-bit** (pure black on Paper, pure white on Night), so they never leave grey for DU. Only `.ink/` images are read; a missing file keeps the placeholder. Insert now puts the image in its own paragraph.
 - **Rename and move keep ink:** the note's `.ink/<name>/` folder moves with it and the note's links are rewritten (also in the open note).

@@ -592,8 +592,8 @@ Needs a powered hub or a Y-cable: the reader does not power the port. See Help �
 Credits
 = Crédits
 
-Literata and Atkinson Hyperlegible fonts (SIL Open Font License {n}). FBInk by NiLuJe (GPL-{m}-or-later). NickelMenu by pgaskin. Icons: Lucide (ISC licence), lucide.dev.
-= Polices Literata et Atkinson Hyperlegible (SIL Open Font License {n}). FBInk par NiLuJe (GPL-{m}-or-later). NickelMenu par pgaskin. Icônes : Lucide (licence ISC), lucide.dev.
+Literata and Atkinson Hyperlegible fonts (SIL Open Font License {n}). Letter recognition: own model, trained only on synthetic ink from OFL fonts. FBInk by NiLuJe (GPL-{m}-or-later). NickelMenu by pgaskin. Icons: Lucide (ISC licence), lucide.dev.
+= Polices Literata et Atkinson Hyperlegible (SIL Open Font License {n}). Reconnaissance des lettres : modèle maison, entraîné uniquement sur de l'encre synthétique issue de polices OFL. FBInk par NiLuJe (GPL-{m}-or-later). NickelMenu par pgaskin. Icônes : Lucide (licence ISC), lucide.dev.
 
 Language
 = Langue
@@ -685,3 +685,33 @@ Fast ink (A2)
 
 Experimental 1-bit waveform for live ink
 = Forme d'onde 1 bit expérimentale pour l'encre
+
+Letters
+= Lettres
+
+Draw
+= Dessin
+
+Erase
+= Effacer
+
+Train
+= Entraîner
+
+Skip
+= Passer
+
+Save
+= Garder
+
+Write:
+= Écrivez :
+
+Samples
+= Échantillons
+
+My handwriting
+= Mon écriture
+
+Handwriting samples for letter recognition
+= Échantillons pour la reconnaissance des lettres

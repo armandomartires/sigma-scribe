@@ -59,6 +59,16 @@ Installed on the Forma today: **1.4.0** (2026-10-22). Built and waiting: 1.4.1 �
 - [ ] Moving a note with ink to another folder keeps its images; `.ink/` follows it.
 - [ ] A strokes file written on the Forma has `"contact":"touch_major"` and four numbers per point (or `null` if the panel does not report it — note which, and the finger vs stylus values for Auto later).
 
+## Letters and wiki relinks (v1.5.2, S15.2, S15.2a)
+- [ ] Write → Letters: 5 boxes (6 landscape) with baselines; ink is crisp black (DU) in a box and does not spill into the next box.
+- [ ] Write a few words box by box at a natural speed: each letter appears at the caret after ~0.8 s or as soon as the next box starts; nothing is lost when writing fast. Note how often the first guess is right (lowercase, capitals, digits, accents é è ê ç à ã õ, punctuation . , ' ? !).
+- [ ] Candidate chips: tapping one replaces the letter; Space, Erase, Return, Draw, Done do what they say; the page behind updates without ghosts.
+- [ ] Time a letter read on the device (the log or a stopwatch): should feel instant (estimate 1–3 ms recognition + one partial refresh).
+- [ ] Train: write ~20 characters, Save each; Done; the first read after it is not slowed (fine-tuning runs in the background, est. 1.5–2 s for 126 samples); accuracy on those characters improves. `sigma-scribe/notes/.handwriting/samples.txt` exists on the Kobo and is plain text; Files does not show it.
+- [ ] Settings → Handwriting → My handwriting shows the sample count; Delete removes the file and the folder.
+- [ ] Finger vs capacitive stylus: does stroke width or contact change accuracy? Note for Auto (v1.5.x).
+- [ ] Rename a note that other notes link to (`[[name]]`, `[[name|label]]`, `[[name#part]]`): the links in the other notes and the scratch pad now point at the new name; move a note to a folder: path links follow.
+
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).
 
