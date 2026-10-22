@@ -208,7 +208,7 @@ fn insert_writes_svg_and_strokes_next_to_the_note() {
     assert!(j.contains("\"format\":\"sigma-scribe-ink\"") && j.contains("\"pen\":\"stylus\""));
     assert_eq!(
         r.app.buffer.text(),
-        format!("first line\n![ink](.ink/{stem}/ink-001.svg)\nsecond")
+        format!("first line\n\n![ink](.ink/{stem}/ink-001.svg)\n\nsecond")
     );
     // A second block takes the next name; an empty panel inserts nothing.
     r.tap("Write");
@@ -255,4 +255,81 @@ fn panel_fits_portrait_and_landscape_at_every_ui_scale() {
         r.stroke(0);
         assert!(r.black_in_area() > base);
     }
+}
+
+#[test]
+fn preview_draws_inserted_ink_pure_black_and_pure_white_at_night() {
+    for night in [false, true] {
+        let mut r = Rig::new(&format!("pv{night}"), 1440, 1920);
+        if night {
+            r.app
+                .change(Change::Paper(sigma_core::settings::Paper::Night));
+        }
+        r.tap("Write");
+        r.stroke(0);
+        r.tap("Insert");
+        r.app.enter_preview();
+        r.app.render(&mut r.dev, Refresh::Full).unwrap();
+        let doc = &r.app.preview.as_ref().unwrap().doc;
+        let line = doc
+            .lines
+            .iter()
+            .find(|l| l.image.is_some())
+            .expect("ink line");
+        let img = line.image.as_ref().unwrap();
+        assert!(img.w > 100 && img.h > 20, "{}x{}", img.w, img.h);
+        assert!(
+            !doc.lines
+                .iter()
+                .flat_map(|l| &l.pieces)
+                .any(|p| p.text.contains("[image")),
+            "no placeholder text"
+        );
+        let want = if night { 255 } else { 0 };
+        let n = r.app.canvas.pixels.iter().filter(|&&p| p == want).count();
+        assert!(
+            n > img.on.iter().filter(|&&b| b).count() / 2,
+            "ink drawn ({n})"
+        );
+    }
+}
+
+#[test]
+fn preview_keeps_the_placeholder_for_missing_or_foreign_images() {
+    let mut r = Rig::new("pvmissing", 1440, 1920);
+    r.app.buffer.select_all();
+    r.app
+        .buffer
+        .insert("![ink](.ink/nope/ink-001.svg)\n\n![pic](../etc/x.svg)\n");
+    r.app.enter_preview();
+    let doc = &r.app.preview.as_ref().unwrap().doc;
+    assert!(doc.lines.iter().all(|l| l.image.is_none()));
+    let text: String = doc
+        .lines
+        .iter()
+        .flat_map(|l| &l.pieces)
+        .map(|p| p.text.as_str())
+        .collect();
+    assert!(
+        text.contains("[image: ink]") && text.contains("[image: pic]"),
+        "{text}"
+    );
+}
+
+#[test]
+fn strokes_record_contact_size_only_when_the_panel_reports_it() {
+    let mut r = Rig::new("contact", 1440, 1920);
+    r.tap("Write");
+    r.stroke(0);
+    r.tap("Insert");
+    let note = r.dir.join(r.app.current.as_str());
+    let stem = note.file_stem().unwrap().to_string_lossy().into_owned();
+    let j =
+        std::fs::read_to_string(note.with_file_name(format!(".ink/{stem}/ink-001.strokes.json")))
+            .unwrap();
+    // The desktop/emulator input has no ABS_MT_TOUCH_MAJOR: points stay [x,y,t].
+    assert!(
+        j.contains("\"contact\":null") && j.contains("\"version\":2"),
+        "{j}"
+    );
 }

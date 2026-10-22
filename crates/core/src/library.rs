@@ -345,6 +345,9 @@ impl Library {
         } else {
             fs::rename(&src, self.fs_path(&target))?;
         }
+        if !self.fs_path(&target).is_dir() {
+            crate::ink::carry(&src, &self.fs_path(&target))?;
+        }
         Ok(target)
     }
 
@@ -367,7 +370,11 @@ impl Library {
             return Ok(p.clone());
         }
         let target = self.unique(dest, p.name());
+        let was_dir = self.fs_path(p).is_dir();
         fs::rename(self.fs_path(p), self.fs_path(&target))?;
+        if !was_dir {
+            crate::ink::carry(&self.fs_path(p), &self.fs_path(&target))?;
+        }
         Ok(target)
     }
 

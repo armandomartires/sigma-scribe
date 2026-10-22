@@ -2,6 +2,14 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.5.1 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
+- **Ink in preview** (sprint S15.1, decision 51): inserted ink blocks are drawn in preview instead of `[image: ink]`, rasterised with resvg to **1-bit** (pure black on Paper, pure white on Night), so they never leave grey for DU. Only `.ink/` images are read; a missing file keeps the placeholder. Insert now puts the image in its own paragraph.
+- **Rename and move keep ink:** the note's `.ink/<name>/` folder moves with it and the note's links are rewritten (also in the open note).
+- **Contact size** in the strokes file when the touch panel reports `ABS_MT_TOUCH_MAJOR` (format version 2); without it the file says `"contact":null` and points stay `[x, y, t]`.
+- Roadmap: character boxes move to 1.5.2.
+- Emulator: `tests/emu/v1.5.1-ink-preview-rename.script`. Screenshots `docs/screenshots/v1.5.1/`. Device checks: `docs/device-checklist-prerelease.md`.
+- Device binary sha256 (CI build) `4f55e94be77d5fd6af7e8fbe471789cf4d89ae56ab930635759ac90e13c323fd`; tarball `c4dd63aeb4bc1e4954f8b44df35f3686cb04c39f1c995091610f80a922608093`; binary 4.05 MB (1.5.0: 3.15 MB, +0.9 MB for resvg).
+
 ## 1.5.0 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
 - **Write panel** (sprint S15.0, decisions 49–50, plan §12): a **Write** button in the status bar opens a pure white panel with **pure black ink** for a finger or a capacitive stylus. Live strokes go out as small **DU** updates that are never waited for; 0.6 s after a stroke one **GL16** pass cleans the inked area.
 - **Undo** (last stroke, or a Clear), **Clear**, **Cancel**, **Insert**. Insert saves the drawing next to the note as `.ink/<note>/ink-NNN.svg` plus `ink-NNN.strokes.json` (raw points for later recognition) and adds `![ink](.ink/<note>/ink-NNN.svg)` at the caret.

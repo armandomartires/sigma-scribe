@@ -66,6 +66,8 @@ pub struct Line {
     pub src: usize,
     /// Vertical space between blocks: dropped at the top of a page.
     pub spacer: bool,
+    /// An ink block drawn on this line (v1.5.1), at x = 0.
+    pub image: Option<std::sync::Arc<crate::ink::Raster>>,
 }
 
 /// A laid-out note: lines and the pages they fall into.
@@ -140,6 +142,7 @@ impl Builder<'_> {
                 deco: Vec::new(),
                 src,
                 spacer: true,
+                image: None,
             });
         }
     }
@@ -175,6 +178,7 @@ impl Builder<'_> {
                 deco,
                 src,
                 spacer: false,
+                image: None,
             });
             *first = false;
         };
@@ -351,6 +355,31 @@ pub fn layout(
     ty: Type,
     known: &dyn Fn(&str) -> bool,
 ) -> Vec<Line> {
+    layout_with_images(blocks, fonts, width, ty, known, &|_, _| None)
+}
+
+/// An image source to draw: `.ink/…/*.svg` only (our own ink blocks).
+#[must_use]
+pub fn ink_src(r: &Run) -> Option<&str> {
+    let t = r.target.as_deref()?;
+    (r.style.link == Some(LinkKind::Image)
+        && t.starts_with(".ink/")
+        && t.ends_with(".svg")
+        && !t.split('/').any(|p| p == ".."))
+    .then_some(t)
+}
+
+/// As [`layout`]; a paragraph that is only ink images draws them
+/// (v1.5.1). `images(src, max_w)` rasterises one, `None` keeps the
+/// `[image: …]` text.
+pub fn layout_with_images(
+    blocks: &[Block],
+    fonts: &Fonts,
+    width: i32,
+    ty: Type,
+    known: &dyn Fn(&str) -> bool,
+    images: &dyn Fn(&str, i32) -> Option<std::sync::Arc<crate::ink::Raster>>,
+) -> Vec<Line> {
     let body = ty.body;
     let em = |f: f32| (body * f).round() as i32;
     let body_h = (body * ty.leading).round() as i32;
@@ -386,6 +415,33 @@ pub fn layout(
                 b.flow(&t, 0, 0, h, base, &[], &[], src);
                 // Heading margin is 0.4 em of its own size, then the gap.
                 b.spacer((size * 0.4).round() as i32 - gap / 2, src);
+            }
+            BlockKind::Paragraph
+                if blk.runs.iter().any(|r| ink_src(r).is_some())
+                    && blk
+                        .runs
+                        .iter()
+                        .all(|r| ink_src(r).is_some() || r.text.trim().is_empty())
+                    && blk
+                        .runs
+                        .iter()
+                        .filter_map(ink_src)
+                        .all(|src| images(src, width).is_some()) =>
+            {
+                let pad = em(0.25);
+                for path in blk.runs.iter().filter_map(ink_src) {
+                    let img = images(path, width);
+                    let h = img.as_ref().map_or(0, |i| i.h as i32) + 2 * pad;
+                    b.lines.push(Line {
+                        h,
+                        base: pad,
+                        pieces: Vec::new(),
+                        deco: Vec::new(),
+                        src,
+                        spacer: false,
+                        image: img,
+                    });
+                }
             }
             BlockKind::Paragraph => {
                 let t = tokens(&blk.runs, body, false, Tone::Ink, known);
@@ -497,6 +553,7 @@ pub fn layout(
                     deco: vec![wash],
                     src,
                     spacer: false,
+                    image: None,
                 };
                 b.lines.push(pad_line(pv));
                 let inner = Builder {
@@ -527,6 +584,7 @@ pub fn layout(
                     deco: vec![Deco::Rule],
                     src,
                     spacer: false,
+                    image: None,
                 });
             }
         }
@@ -631,6 +689,12 @@ pub fn draw_page(
     let mut y = area.y;
     let thin = s.px(1.0).max(1);
     for l in &lines[range] {
+        if let Some(img) = &l.image {
+            // Pure ink on the page colour (v1.5.1): black on Paper, white
+            // on Night, never grey, so later DU updates stay exact.
+            let v = if t.paper >= 128 { 0 } else { 255 };
+            img.blit(c, area.x, y + l.base, v, area);
+        }
         for d in &l.deco {
             match *d {
                 Deco::Wash { x, w } => c.fill(Rect::new(area.x + x, y, w, l.h), t.wash),
