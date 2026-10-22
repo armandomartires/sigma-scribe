@@ -123,3 +123,12 @@ esc
 usb-type Coração, você / ?
 expect Coração, você / ?
 shot v1.6.0-landscape-brazil
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+shot v1.6.0-landscape-layout-choices
+page next
+shot v1.6.0-landscape-layout-choices-page2
+esc
+esc
+esc
