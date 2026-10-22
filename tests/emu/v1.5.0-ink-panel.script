@@ -1,0 +1,22 @@
+# v1.5.0 (S15.0): Write panel: white panel, black DU ink, undo / clear, insert as SVG + strokes.
+copy-notes tests/test-notes/_test
+shot v1.5.0-before-write
+tap-on Write
+shot v1.5.0-panel-empty
+press-on InkArea
+move 500 1500
+move 700 1400
+move 900 1560
+release
+wait 700
+shot v1.5.0-panel-ink
+tap-on Clear
+shot v1.5.0-panel-cleared
+tap-on Undo
+tap-on Insert
+expect ![ink](.ink/
+shot v1.5.0-after-insert
+tap-on Options
+tap-on Keyboard & input
+shot v1.5.0-settings-handwriting
+tap-on Close

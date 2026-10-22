@@ -2,6 +2,14 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.5.0 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
+- **Write panel** (sprint S15.0, decisions 49–50, plan §12): a **Write** button in the status bar opens a pure white panel with **pure black ink** for a finger or a capacitive stylus. Live strokes go out as small **DU** updates that are never waited for; 0.6 s after a stroke one **GL16** pass cleans the inked area.
+- **Undo** (last stroke, or a Clear), **Clear**, **Cancel**, **Insert**. Insert saves the drawing next to the note as `.ink/<note>/ink-NNN.svg` plus `ink-NNN.strokes.json` (raw points for later recognition) and adds `![ink](.ink/<note>/ink-NNN.svg)` at the caret.
+- Settings → Keyboard & input → **Handwriting**: Ink pen Finger (1.2 mm) / Stylus (0.6 mm); **Fast ink (A2)**, an experimental 1-bit waveform, **off by default**. New keys `ink_pen=`, `ink_a2=`; older settings load unchanged.
+- Not yet: ink drawn in preview (shows `[image: ink]`), `.ink/` following a renamed note, recognition (v1.5.1).
+- Emulator: `tests/emu/v1.5.0-ink-panel.script`. Screenshots `docs/screenshots/v1.5.0/`. Device checks: `docs/device-checklist-prerelease.md` (decision 48).
+- Device binary sha256 (CI build) `TBD`; tarball `TBD`.
+
 ## 1.4.6 — 2026-10-22 (built, not installed, not tagged)
 - **Fix: empty box before "Up to Files"** (sprint S14.6, decision 47). Atkinson Hyperlegible has no "←" (U+2190), so the Files crumb drew a box. The crumb, and Help's "Back to Help", now draw the Lucide **arrow-left** icon (resvg-baked, like the title-bar icons) instead of a text glyph.
 - **Glyph audit:** every UI string in EN, FR, PT and the pseudo-long test locale, plus every non-ASCII character in the UI code's string literals, was checked against the five bundled faces. Also missing from Atkinson: → ↑ ↓ (Graph list "→ / ← links", USB hint "Help → …", keyboard labels). Text drawing now falls back per character to the first bundled face that has the glyph (Literata has the arrows), so nothing draws as a box. New test `app/tests/glyphs.rs` fails on any character no bundled face can draw.

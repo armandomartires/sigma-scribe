@@ -68,6 +68,8 @@ pub struct SelGeom {
 pub enum Hit {
     Key(Key),
     ToggleKeys,
+    /// The Write button: open the ink panel (v1.5.0).
+    Ink,
     /// Byte offset in the buffer where the caret should go.
     Caret(usize),
     /// Selection handle 0 = start, 1 = end.
@@ -117,6 +119,8 @@ pub struct Layout {
     pub page: Rect,
     pub status: Rect,
     pub keys_button: Rect,
+    /// "Write" (v1.5.0): opens the ink panel; left of Keys.
+    pub ink_button: Rect,
     pub keyboard: Rect,
     pub keys: Vec<(Rect, Key)>,
     /// Title-bar icons, v1.0 (S9.2): twice the brief's size, in the
@@ -309,7 +313,7 @@ impl EditorScreen {
         text[rows[0].start..rows[0].end].split_whitespace().count()
     }
 
-    fn px(&self, v: f32) -> i32 {
+    pub(crate) fn px(&self, v: f32) -> i32 {
         self.s.px(v)
     }
 
@@ -385,6 +389,13 @@ impl EditorScreen {
             kb_w,
             self.px(44.0),
         );
+        let ink_w = self.px(72.0);
+        let ink_button = Rect::new(
+            keys_button.x - self.px(8.0) - ink_w,
+            keys_button.y,
+            ink_w,
+            keys_button.h,
+        );
         let (keys, kb_buttons) = if keys_on {
             self.board(keyboard, keyboard_rect, key_h, gap, pad, bar_h)
         } else {
@@ -427,6 +438,7 @@ impl EditorScreen {
             page,
             status,
             keys_button,
+            ink_button,
             keyboard: keyboard_rect,
             keys,
             files_button,
@@ -961,6 +973,9 @@ impl EditorScreen {
         if l.keys_button.inset(-self.px(4.0)).contains(x, y) {
             return Hit::ToggleKeys;
         }
+        if l.ink_button.inset(-self.px(2.0)).contains(x, y) {
+            return Hit::Ink;
+        }
         if let Some(&(_, k)) = l
             .keys
             .iter()
@@ -1110,7 +1125,7 @@ impl EditorScreen {
         );
         let right = self.status_right(t, model.save);
         let rw = self.fonts.width(Face::Atkinson, ui, &right);
-        let rx = l.keys_button.x as f32 - self.px(16.0) as f32 - rw;
+        let rx = l.ink_button.x as f32 - self.px(16.0) as f32 - rw;
         self.fonts
             .draw(c, Face::Atkinson, ui, rx, sb, &right, t.mute);
         let kb = l.keys_button;
@@ -1128,6 +1143,19 @@ impl EditorScreen {
             kb.x as f32 + (kb.w as f32 - kw) / 2.0,
             sb,
             &tr("Keys"),
+            t.ink,
+        );
+
+        let ib = l.ink_button;
+        c.stroke(ib, 1, t.rule);
+        let iw = self.fonts.width(Face::Atkinson, ui, &tr("Write"));
+        self.fonts.draw(
+            c,
+            Face::Atkinson,
+            ui,
+            ib.x as f32 + (ib.w as f32 - iw) / 2.0,
+            sb,
+            &tr("Write"),
             t.ink,
         );
 

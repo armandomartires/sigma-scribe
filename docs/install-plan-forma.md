@@ -136,7 +136,19 @@ Package: CI artifact `sigma-scribe-1.4.6-probe-kobo` from release.yml run 397641
 
 **Afterwards:** either keep 1.4.6-probe (behaves like 1.4.6) or put the 1.4.6 binary back (same procedure, 1.4.6 hash). The log decides the 0x19 / 0x1a mapping; turning `ENABLED` on is a separate change and approval.
 
-## Upgrade 1.4.0 → 1.4.6 (not run; needs approval; replaces the 1.4.5, 1.4.4, 1.4.3, 1.4.2 and 1.4.1 plans below)
+## Upgrade 1.4.0 → 1.5.0 (not run; needs approval; under decision 48 this waits for the single pre-release device pass; replaces the 1.4.6 plan below)
+Same procedure as 1.4.0:
+1. Verify the serial (<FORMA-SERIAL>) and touch no other disk (never sdb).
+2. Read the log and copy it into the backup.
+3. Make a checksum-verified backup into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v1.5.0` (`.adds/sigma-scribe`, `.adds/nm`, `sigma-scribe/notes`, log).
+4. From the CI 1.5.0 package:
+   - replace `.adds/sigma-scribe/sigma-scribe` (via `.new` + sync + hash check + rename), binary sha256 `TBD`, tarball `TBD`;
+   - add `.adds/sigma-scribe/THIRD-PARTY.txt` if it is not there yet, sha256 `f61a648623ee545238601212f3d29eb056bddca7ed738f1427a2ca1bfc712ee4`.
+5. Verify the sha256 on the device, then sync, unmount and power off.
+
+Nothing else changes. `.sigma-settings` is kept; 1.5.0 adds `keyboard_size=auto`, `ink_pen=finger` and `ink_a2=off` on the next save. Ink blocks are written under `sigma-scribe/notes/**/.ink/` (include it in backups from now on). Rollback: the 1.4.0 binary from the backup (it ignores the new keys; `![ink](…)` lines stay as text). Checks: `docs/device-checklist-prerelease.md` (all sections up to "Write panel").
+
+## Upgrade 1.4.0 → 1.4.6 (not run; superseded by 1.5.0)
 Same procedure as 1.4.0:
 1. Verify the serial (<FORMA-SERIAL>) and touch no other disk (never sdb).
 2. Read the log and copy it into the backup.
