@@ -1151,7 +1151,8 @@ impl EditorScreen {
                                 enabled: *enabled,
                                 focused: m.focus == Some(d.label),
                             };
-                            crate::slider::draw(c, &g, &sl, &self.fonts, ui, s, t.paper < 128);
+                            let ink = if t.paper < 128 { 0xFF } else { 0x00 };
+                            crate::slider::draw(c, &g, &sl, &self.fonts, ui, s, (ink, t.paper));
                         }
                         Kind::Inline(cs) | Kind::Stepper(cs) => {
                             for (r, cell) in cells.iter().zip(cs) {

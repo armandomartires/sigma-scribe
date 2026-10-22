@@ -1,0 +1,30 @@
+# v1.4.5 (S14.5): slider straight on the page; grey while Auto is on, black when off.
+copy-notes tests/test-notes/_test
+tap-on Options
+tap-on Keyboard & input
+shot v1.4.5-auto-on-paper
+tap-on Auto keyboard size/Off
+expect-setting keyboard_size=150
+shot v1.4.5-auto-off-paper
+tap-on Keyboard size/125%
+expect-setting keyboard_size=125
+usb plug
+usb-key left
+expect-setting keyboard_size=100
+usb-key right
+expect-setting keyboard_size=125
+usb unplug
+shot v1.4.5-auto-off-focus-paper
+tap-on Back
+tap-on Display
+tap-on Paper/Night
+tap-on Back
+tap-on Keyboard & input
+shot v1.4.5-auto-off-night
+tap-on Auto keyboard size/On
+expect-setting keyboard_size=auto
+shot v1.4.5-auto-on-night
+tap-on Back
+tap-on Display
+tap-on Paper/Day
+tap-on Close
