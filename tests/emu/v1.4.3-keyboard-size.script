@@ -15,8 +15,7 @@ esc
 esc
 tap-on Options
 tap-on Display
-tap-on Orientation
-tap-on Landscape
+tap-on Orientation/Landscape
 expect-setting orientation=landscape
 esc
 esc

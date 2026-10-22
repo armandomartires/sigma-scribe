@@ -1,0 +1,12 @@
+# Display -> Orientation is three buttons in the row (Auto / Portrait / Landscape), no sub-page.
+expect-open field-notes.md
+tap-on Options
+tap-on Display
+shot v1.6.3-orientation-buttons
+tap-on Orientation/Landscape
+expect-setting orientation=landscape
+shot v1.6.3-orientation-landscape
+tap-on Orientation/Portrait
+expect-setting orientation=portrait
+tap-on Orientation/Auto
+expect-setting orientation=auto
