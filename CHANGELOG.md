@@ -8,7 +8,7 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
 - **Contact size** in the strokes file when the touch panel reports `ABS_MT_TOUCH_MAJOR` (format version 2); without it the file says `"contact":null` and points stay `[x, y, t]`.
 - Roadmap: character boxes move to 1.5.2.
 - Emulator: `tests/emu/v1.5.1-ink-preview-rename.script`. Screenshots `docs/screenshots/v1.5.1/`. Device checks: `docs/device-checklist-prerelease.md`.
-- Device binary sha256 (CI build) `TBD`; tarball `TBD`.
+- Device binary sha256 (CI build) `4f55e94be77d5fd6af7e8fbe471789cf4d89ae56ab930635759ac90e13c323fd`; tarball `c4dd63aeb4bc1e4954f8b44df35f3686cb04c39f1c995091610f80a922608093`; binary 4.05 MB (1.5.0: 3.15 MB, +0.9 MB for resvg).
 
 ## 1.5.0 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
 - **Write panel** (sprint S15.0, decisions 49–50, plan §12): a **Write** button in the status bar opens a pure white panel with **pure black ink** for a finger or a capacitive stylus. Live strokes go out as small **DU** updates that are never waited for; 0.6 s after a stroke one **GL16** pass cleans the inked area.
