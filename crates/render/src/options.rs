@@ -53,6 +53,16 @@ fn stepper(v: String, minus: Change, plus: Change) -> Vec<Cell> {
     ]
 }
 
+/// The Size slider stop nearest to `v`: its index and value.
+fn size_stop(v: f32) -> (usize, f32) {
+    sigma_core::settings::SIZE_STOPS
+        .iter()
+        .copied()
+        .enumerate()
+        .min_by(|a, b| (a.1 - v).abs().total_cmp(&(b.1 - v).abs()))
+        .unwrap_or((0, v))
+}
+
 fn num(v: f32) -> String {
     if (v - v.round()).abs() < 0.05 {
         format!("{}", v.round() as i32)
@@ -123,7 +133,10 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
             } else {
                 "Type size"
             },
-            cells: stepper(num(s.size), Change::Size(-1), Change::Size(1)),
+            cells: sigma_core::settings::SIZE_STOPS
+                .iter()
+                .map(|&v| choice("", Change::SizeTo(v), v == size_stop(s.size).1))
+                .collect(),
         },
         OptRow {
             label: "Leading",
@@ -549,6 +562,18 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
             Kind::Stepper(r.cells[2..].to_vec())
         }
         "Layout" => Kind::Pick(m.settings.kb_layout.label().to_owned()),
+        // v1.6.3: a slider with no unit and no labels (it is not points).
+        "Size" => {
+            let (value, cur) = size_stop(m.settings.size);
+            Kind::Slider {
+                value,
+                stops: sigma_core::settings::SIZE_STOPS
+                    .iter()
+                    .map(|&v| choice("", Change::SizeTo(v), v == cur))
+                    .collect(),
+                enabled: true,
+            }
+        }
         "Keyboard size" => {
             let cur = m.settings.keyboard_scale();
             let stops: Vec<Cell> = sigma_core::settings::KB_SIZES[1..]
@@ -618,14 +643,12 @@ fn summary(m: &OptionsModel<'_>, cat: usize) -> String {
     let s = m.settings;
     let on_off = |b: bool| tr(if b { "On" } else { "Off" }).into_owned();
     match cat {
-        0 => format!(
-            "{}, {}",
-            tr(match s.face {
-                Typeface::Literata => "Literata",
-                Typeface::Atkinson => "Atkinson",
-            }),
-            num(s.size)
-        ),
+        // The type size has no unit worth showing (v1.6.3: it is a slider).
+        0 => tr(match s.face {
+            Typeface::Literata => "Literata",
+            Typeface::Atkinson => "Atkinson",
+        })
+        .into_owned(),
         1 => format!(
             "{}, {} %",
             tr(if s.paper == Paper::Night {
@@ -1026,8 +1049,14 @@ impl EditorScreen {
                     Kind::Info(_) | Kind::Muted(_) => {}
                     Kind::Slider { stops, .. } => {
                         out.push((d.label.into(), cells[0]));
-                        for (cell, r) in stops.iter().zip(&cells[1..]) {
-                            out.push((format!("{}/{}", d.label, cell.label), *r));
+                        for (i, (cell, r)) in stops.iter().zip(&cells[1..]).enumerate() {
+                            // Unlabelled stops (Size) are `Size/1`, `Size/2` ….
+                            let name = if cell.label.is_empty() {
+                                (i + 1).to_string()
+                            } else {
+                                cell.label.clone()
+                            };
+                            out.push((format!("{}/{name}", d.label), *r));
                         }
                     }
                 },
@@ -1412,7 +1441,7 @@ mod tests {
         assert!(matches!(kind("Line"), Kind::Check { .. }));
         assert!(matches!(kind("Paper"), Kind::Inline(_)));
         assert!(matches!(kind("Scroll"), Kind::Inline(_)));
-        assert!(matches!(kind("Size"), Kind::Stepper(_)));
+        assert!(matches!(kind("Size"), Kind::Slider { .. }));
         assert!(matches!(kind("Orientation"), Kind::Pick(_)));
         assert!(matches!(kind("Layout"), Kind::Pick(_)));
         assert_eq!(choices(&st, "Layout").len(), sigma_core::layouts::ALL.len());

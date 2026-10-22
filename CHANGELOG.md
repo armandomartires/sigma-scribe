@@ -2,6 +2,11 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## Unreleased
+- **Fix: stray lines when writing letters.** A touch report outside the letter box (seen on the Forma as lines from the box's top corners to the pen point) was clamped to the box edge and drawn; it is now dropped. Cause of the stray reports not yet known: the app now logs odd touch input (second contact, slot or tracking-id change, jumps over 300 px, dropped moves) to `sigma-scribe.log`, capped at 400 lines per run.
+- **Settings → Writing → Size is now a slider** (nine stops, no number, no unit, so it is not mistaken for points or pixels). The default is the third stop; values set in an older settings file stay and show at the nearest stop. The Writing line on the Settings page shows only the typeface. Leading and Margin are still steppers. Emulator: `tests/emu/v1.6.3-size-slider.script` (screenshots `docs/screenshots/v1.6.3/`); `v0.4-options.script` now taps `Size/4`, `Size/5` (unlabelled stops are `Size/1`…`Size/9`).
+- Test: `stray_reports_outside_the_box_do_not_draw_lines_to_its_corners` (`app/tests/letters.rs`).
+
 ## 1.6.2 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
 - **UI languages: German, Spanish, Italian, Dutch, Catalan, Danish, Swedish** (sprint S16.2, decision 60; v1.6 wave W1, third part): the interface follows the Kobo `CurrentLocale` for `de es it nl ca da sv`, or Settings → Language → Interface language; 10 languages in all with English, French and Portuguese. Fi, nb, tr, pl, cs, ro move to v1.6.3.
 - Catalogs are machine-drafted, best effort (About says so); `assets/i18n/*.txt`, each checked against French for identical keys. German "Move" shortened to fit.

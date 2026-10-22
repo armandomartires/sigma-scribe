@@ -1,0 +1,12 @@
+# Size is a slider with no unit (it is not points); nine stops, default 20 is the third.
+expect-open field-notes.md
+tap-on Options
+tap-on Writing
+shot v1.6.3-size-slider-default
+tap-on Size/5
+expect-setting size=26
+shot v1.6.3-size-slider-larger
+tap-on Size/1
+expect-setting size=14
+tap-on Size/9
+expect-setting size=38

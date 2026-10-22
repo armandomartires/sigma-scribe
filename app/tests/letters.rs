@@ -223,3 +223,30 @@ fn free_area_is_the_default_and_reads_printed_letters() {
     r.tap("Letters");
     assert_eq!(r.app.ink.as_ref().unwrap().mode, InkMode::Free);
 }
+
+#[test]
+fn stray_reports_outside_the_box_do_not_draw_lines_to_its_corners() {
+    let mut r = Rig::new("stray");
+    r.app.change(Change::InkBoxes(true));
+    r.tap("Write");
+    let b = r.app.letter_box(0).expect("box");
+    let (cx, cy) = (b.x + b.w / 2, b.y + b.h / 3);
+    r.touch(Phase::Down, cx, cy);
+    // Bogus reports far outside the box (panel corner, above the panel).
+    r.touch(Phase::Move, 0, 0);
+    r.touch(Phase::Move, 1439, 0);
+    for k in 1..=6 {
+        r.touch(Phase::Move, cx, cy + k * 8);
+    }
+    r.touch(Phase::Up, cx, cy + 48);
+    let ink = r.app.ink.as_ref().unwrap();
+    let stroke = ink.ink.strokes.last().expect("one stroke");
+    assert!(
+        stroke
+            .points
+            .iter()
+            .all(|p| p.x == cx && (cy..=cy + 48).contains(&p.y)),
+        "points: {:?}",
+        stroke.points
+    );
+}

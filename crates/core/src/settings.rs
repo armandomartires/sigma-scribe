@@ -135,6 +135,8 @@ pub const LEADING_RANGE: (f32, f32) = (1.2, 2.0);
 pub const MARGIN_RANGE: (f32, f32) = (8.0, 400.0);
 pub const WORDS_RANGE: (u8, u8) = (8, 16);
 pub const SIZE_STEP: f32 = 1.0;
+/// Stops of the Size slider (no unit is shown); the default 20 is one.
+pub const SIZE_STOPS: [f32; 9] = [14.0, 17.0, 20.0, 23.0, 26.0, 29.0, 32.0, 35.0, 38.0];
 pub const LEADING_STEP: f32 = 0.1;
 pub const MARGIN_STEP: f32 = 4.0;
 
@@ -319,6 +321,8 @@ pub enum Change {
     LineWords(i8),
     /// +1 / -1 step.
     Size(i8),
+    /// Size to a value (the slider's stops, `SIZE_STOPS`).
+    SizeTo(f32),
     Leading(i8),
     Margin(i8),
     TabSpaces(bool),
@@ -370,7 +374,7 @@ impl Change {
     #[must_use]
     pub fn refit(self) -> Option<Option<bool>> {
         match self {
-            Self::Size(_) => Some(Some(true)),
+            Self::Size(_) | Self::SizeTo(_) => Some(Some(true)),
             Self::Margin(_) => Some(Some(false)),
             Self::LineOn(_)
             | Self::LineWords(_)
@@ -426,6 +430,7 @@ impl Settings {
             Change::Size(d) => {
                 self.size = clampf(tenth(self.size + f32::from(d) * SIZE_STEP), SIZE_RANGE);
             }
+            Change::SizeTo(v) => self.size = clampf(tenth(v), SIZE_RANGE),
             Change::Leading(d) => {
                 self.leading = clampf(
                     tenth(self.leading + f32::from(d) * LEADING_STEP),
@@ -816,6 +821,20 @@ mod tests {
         assert_eq!(g.margin, MARGIN_RANGE.0);
         assert_eq!(g.line_words, 16);
         assert_eq!(g.tab_width, 4);
+    }
+
+    #[test]
+    fn size_slider_stops_are_valid_and_include_the_default() {
+        assert!(SIZE_STOPS.contains(&Settings::default().size));
+        for v in SIZE_STOPS {
+            let mut s = Settings::default();
+            s.apply(Change::SizeTo(v));
+            assert_eq!(s.size, v);
+            assert!((SIZE_RANGE.0..=SIZE_RANGE.1).contains(&v));
+        }
+        let mut s = Settings::default();
+        s.apply(Change::SizeTo(500.0));
+        assert_eq!(s.size, SIZE_RANGE.1);
     }
 
     #[test]
