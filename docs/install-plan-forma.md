@@ -137,7 +137,7 @@ Package: CI artifact `sigma-scribe-1.4.6-probe-kobo` from release.yml run 397641
 **Afterwards:** either keep 1.4.6-probe (behaves like 1.4.6) or put the 1.4.6 binary back (same procedure, 1.4.6 hash). The log decides the 0x19 / 0x1a mapping; turning `ENABLED` on is a separate change and approval.
 
 ## Upgrade 1.5.4 → 1.6.0 (also valid from 1.5.5 or 1.4.0; not run; needs approval)
-Same steps as 1.5.4 → 1.5.5 below, with backup folder `<date>-pre-v1.6.0` and the CI 1.6.0 package: binary sha256 `BIN_SHA`, tarball `TAR_SHA` (CI release.yml run RUN_ID). Nothing else changes; `.sigma-settings` is kept (a new layout value such as `layout=pl` is read as US by older binaries). Rollback: the previous binary from the backup. Checks: `docs/device-checklist-prerelease.md` → "Language override (v1.5.5)" and "Latin layouts (v1.6.0)".
+Same steps as 1.5.4 → 1.5.5 below, with backup folder `<date>-pre-v1.6.0` and the CI 1.6.0 package: binary sha256 `f0241692a62f5c57ac295182a469862bd878514867d4bdb1c8a6d258f14133f9`, tarball `f6ed0f851ab1aa75f9363732ac89b19698831574d27febd1daeed3786ae28266` (CI release.yml run 39816994477). Nothing else changes; `.sigma-settings` is kept (a new layout value such as `layout=pl` is read as US by older binaries). Rollback: the previous binary from the backup. Checks: `docs/device-checklist-prerelease.md` → "Language override (v1.5.5)" and "Latin layouts (v1.6.0)".
 
 ## Upgrade 1.5.4 → 1.5.5 (also valid from 1.4.0; not run; needs approval)
 The Forma runs 1.5.4 since 2026-10-22 (run log below), so `THIRD-PARTY.txt` is already there; from 1.4.0 add it as in the 1.5.4 plan.
