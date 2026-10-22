@@ -7,6 +7,7 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
 - Catalogs are machine-drafted, best effort (About says so); `assets/i18n/*.txt`, each checked against French for identical keys. German "Move" shortened to fit.
 - Internal: language table (`REAL`) drives locale lookup, catalogs and the picker; unused statics removed.
 - Emulator: `tests/emu/v1.6.2-ui-languages.script`. Screenshots `docs/screenshots/v1.6.2/`. Device checks: `docs/device-checklist-prerelease.md`.
+- Device binary sha256 (CI build, PR #36 release run 39831043595) `46787595ce50d17c9b9b7b0218032f59368244c49ba1193eaca45cfab8f54011`; tarball `dbbfeece6eb5f83d0e2f10a51382e4758ba93f64c43743f9ec4619f8f4aa42f6`; binary 4,518,432 bytes (1.6.1: 4,417,072; **+101,360 bytes**, the seven catalogs).
 
 ## 1.6.1 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
 - **Russian, Ukrainian and Greek keyboard layouts** (sprint S16.1, decision 59; v1.6 wave W1, second part): ЙЦУКЕН (xkb ru), Ukrainian (xkb ua, ґ on the key above Enter, ₴ on Shift+\`) and Greek (xkb gr, tonos ´ and dialytika ¨ dead keys: ά έ ή ί ό ύ ώ, ϊ ϋ); 21 layouts in all.
