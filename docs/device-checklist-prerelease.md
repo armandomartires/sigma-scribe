@@ -69,6 +69,14 @@ Installed on the Forma today: **1.4.0** (2026-10-22). Built and waiting: 1.4.1 �
 - [ ] Finger vs capacitive stylus: does stroke width or contact change accuracy? Note for Auto (v1.5.x).
 - [ ] Rename a note that other notes link to (`[[name]]`, `[[name|label]]`, `[[name#part]]`): the links in the other notes and the scratch pad now point at the new name; move a note to a folder: path links follow.
 
+## Free writing and word mode (v1.5.3, S15.3)
+- [ ] Write opens the new panel: candidate bar, 3 × 4 keys, blank area; all black and white, no grey left after strokes (DU), keys easy to hit with a finger; same in landscape.
+- [ ] Print a few words with small gaps between letters: after ~1.2 s each is typed with a space; note how many characters are wrong (compare: 19–28 % on held-out synthetic fonts). Try capitals, digits with 123, accents with the globe on FR/PT.
+- [ ] Write a word with joined letters: is it readable? Then turn on Word mode (experimental) and compare.
+- [ ] Candidate bar: a word replaces the last reading; ‹ › page; × closes; ⌫, ↵, , . ? ! @ and space type at once.
+- [ ] Timing: a printed word reads at once (estimate ≤ 25 ms), joined words ≤ 0.4 s.
+- [ ] Settings → Letter boxes On brings back the 1.5.2 boxes; Train still works and returns to the free area.
+
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).
 

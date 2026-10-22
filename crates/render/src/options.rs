@@ -228,6 +228,22 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
             ],
         },
         OptRow {
+            label: "Letter boxes",
+            hint: "One character per box instead of free writing",
+            cells: vec![
+                choice("Off", Change::InkBoxes(false), !s.ink_boxes),
+                choice("On", Change::InkBoxes(true), s.ink_boxes),
+            ],
+        },
+        OptRow {
+            label: "Word mode (experimental)",
+            hint: "Read every word against a word list; off is more accurate",
+            cells: vec![
+                choice("Off", Change::InkWords(false), !s.ink_words),
+                choice("On", Change::InkWords(true), s.ink_words),
+            ],
+        },
+        OptRow {
             label: "Keyboard tone",
             hint: "The keyboard can differ from the page",
             cells: vec![
@@ -352,7 +368,13 @@ pub const CATEGORIES: [(&str, &[Section]); 6] = [
             ("Keyboard size", &["Auto keyboard size", "Keyboard size"]),
             (
                 "Handwriting",
-                &["Ink pen", "Fast ink (A2)", "My handwriting"],
+                &[
+                    "Ink pen",
+                    "Fast ink (A2)",
+                    "Letter boxes",
+                    "Word mode (experimental)",
+                    "My handwriting",
+                ],
             ),
         ],
     ),
@@ -523,6 +545,7 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
         // v1.5.2: what Train saved, and a way to delete it.
         "My handwriting" => Kind::Inline(vec![
             value(format!("{}: {}", tr("Samples"), m.hw_samples)),
+            choice("Train", Change::TrainSamples, false),
             choice("Delete", Change::DeleteSamples, false),
         ]),
         "App info" => Kind::Link(0),

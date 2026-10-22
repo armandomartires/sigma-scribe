@@ -171,6 +171,8 @@ pub struct EditorScreen {
     pub usb_live: bool,
     /// Navigation history is not empty: show the Back arrow (v1.0.2).
     pub back_on: bool,
+    /// Settings → Word mode is on (v1.5.3): Letters offers Words.
+    pub ink_words: bool,
     s: Scale,
     /// Keyboard scale (v1.4.3): page scale × `Settings::keyboard_scale`.
     k: Scale,
@@ -227,6 +229,7 @@ impl EditorScreen {
             cfg: Settings::default(),
             usb_live: false,
             back_on: false,
+            ink_words: false,
             drawer_open: [false; 3],
             find_open: false,
             preview_drawer: None,

@@ -30,6 +30,13 @@ pub enum InkButton {
     Save,
     /// The n-th candidate of the last letter.
     Cand(usize),
+    /// Free panel (v1.5.3): ‹ › candidate pages, a key that types its
+    /// character, 123 (digits) and the language key.
+    Prev,
+    Next,
+    Type(char),
+    Digits,
+    Lang,
 }
 
 /// What the panel shows: free ink, character boxes, or enrolment of the
@@ -40,15 +47,23 @@ pub enum InkMode {
     Draw,
     Letters,
     Train(usize),
+    /// Free writing, Boox-style (v1.5.3, decision 55): candidate bar,
+    /// key grid, open writing area.
+    Free,
 }
 
 /// What the letters view needs beyond the strokes.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct LettersView {
     /// Candidates for the last letter, best first.
-    pub cands: Vec<char>,
+    pub cands: Vec<String>,
     /// Enrolment: samples saved this session.
     pub saved: usize,
+    /// Free: first candidate shown (‹ › page through them).
+    pub first: usize,
+    /// Free: 123 (digits and signs only) and the language key's filter.
+    pub digits: bool,
+    pub lang: Option<&'static str>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -69,6 +84,29 @@ pub struct InkLayout {
 /// Buttons and the labels they may show (widest wins).
 type Row = &'static [(InkButton, &'static [&'static str])];
 
+/// A rounded outline (1-bit): pixels between the outer rounded rectangle
+/// and the one `t` inside it.
+pub fn round_outline(c: &mut Canvas, r: Rect, rad: i32, t: i32) {
+    let inside = |x: i32, y: i32, r: Rect, rad: i32| -> bool {
+        if !r.contains(x, y) {
+            return false;
+        }
+        let cx = x.clamp(r.x + rad, r.x + r.w - 1 - rad);
+        let cy = y.clamp(r.y + rad, r.y + r.h - 1 - rad);
+        let (dx, dy) = (x - cx, y - cy);
+        dx * dx + dy * dy <= rad * rad
+    };
+    let inner = Rect::new(r.x + t, r.y + t, r.w - 2 * t, r.h - 2 * t);
+    let b = c.bounds();
+    for y in r.y..r.y + r.h {
+        for x in r.x..r.x + r.w {
+            if inside(x, y, r, rad) && !inside(x, y, inner, (rad - t).max(0)) && b.contains(x, y) {
+                c.pixels[(y * c.width as i32 + x) as usize] = BLACK;
+            }
+        }
+    }
+}
+
 /// Boxes per row: portrait 5, landscape 6.
 #[must_use]
 pub fn box_count(w: i32, h: i32) -> usize {
@@ -88,7 +126,7 @@ pub fn box_units(b: Rect, x: i32, y: i32) -> (f32, f32) {
     )
 }
 
-fn label_of(b: InkButton, pen: Pen, mode: InkMode) -> String {
+fn label_of(b: InkButton, pen: Pen, mode: InkMode, words: bool) -> String {
     let l = match b {
         InkButton::Undo => "Undo",
         InkButton::Clear => "Clear",
@@ -103,6 +141,7 @@ fn label_of(b: InkButton, pen: Pen, mode: InkMode) -> String {
         InkButton::Insert => "Insert",
         InkButton::Mode => match mode {
             InkMode::Draw => "Letters",
+            InkMode::Letters if words => "Words",
             _ => "Draw",
         },
         InkButton::Space => "Space",
@@ -111,7 +150,12 @@ fn label_of(b: InkButton, pen: Pen, mode: InkMode) -> String {
         InkButton::Train => "Train",
         InkButton::Skip => "Skip",
         InkButton::Save => "Save",
-        InkButton::Cand(_) => "",
+        InkButton::Cand(_)
+        | InkButton::Prev
+        | InkButton::Next
+        | InkButton::Type(_)
+        | InkButton::Digits
+        | InkButton::Lang => "",
     };
     tr(l).into_owned()
 }
@@ -242,7 +286,7 @@ impl EditorScreen {
         let (left, right): (Row, Row) = match mode {
             InkMode::Draw => (
                 &[
-                    (InkButton::Mode, &["Letters", "Draw"]),
+                    (InkButton::Mode, &["Letters", "Draw", "Words"]),
                     (InkButton::Undo, &["Undo"]),
                     (InkButton::Clear, &["Clear"]),
                     (InkButton::Pen, &["Stylus", "Finger"]),
@@ -252,9 +296,9 @@ impl EditorScreen {
                     (InkButton::Cancel, &["Cancel"]),
                 ],
             ),
-            InkMode::Letters => (
+            InkMode::Letters | InkMode::Free => (
                 &[
-                    (InkButton::Mode, &["Letters", "Draw"]),
+                    (InkButton::Mode, &["Letters", "Draw", "Words"]),
                     (InkButton::Undo, &["Undo"]),
                     (InkButton::Space, &["Space"]),
                     (InkButton::Back, &["Erase"]),
@@ -290,10 +334,9 @@ impl EditorScreen {
             let sh = bh + pad;
             strip = Rect::new(area.x, area.y, area.w, bh);
             let avail = Rect::new(area.x, area.y + sh, area.w, area.h - sh);
-            let n = if mode == InkMode::Letters {
-                box_count(w, h)
-            } else {
-                1
+            let n = match mode {
+                InkMode::Letters => box_count(w, h),
+                _ => 1,
             };
             let gap = pad;
             let side = ((avail.w - gap * (n as i32 - 1)) / n as i32)
@@ -302,12 +345,23 @@ impl EditorScreen {
             let total = side * n as i32 + gap * (n as i32 - 1);
             let x0 = avail.x + (avail.w - total) / 2;
             let y0 = avail.y + (avail.h - side) / 2;
-            for i in 0..n {
-                boxes.push(Rect::new(x0 + i as i32 * (side + gap), y0, side, side));
+            if mode == InkMode::Free {
+                // One writing line, the whole width, a Letters box high.
+                let side = ((avail.w - gap * 4) / 5).min(avail.h).max(1);
+                let y0 = avail.y + (avail.h - side) / 2;
+                boxes.push(Rect::new(avail.x, y0, avail.w, side));
+            } else {
+                for i in 0..n {
+                    boxes.push(Rect::new(x0 + i as i32 * (side + gap), y0, side, side));
+                }
             }
-            if mode == InkMode::Letters {
-                // Candidate chips, left to right.
-                let cw = bh * 3 / 2;
+            if matches!(mode, InkMode::Letters | InkMode::Free) {
+                // Candidate chips, left to right (words need wider ones).
+                let cw = if mode == InkMode::Free {
+                    (strip.w - 4 * pad) / 5
+                } else {
+                    bh * 3 / 2
+                };
                 for k in 0..5 {
                     let r = Rect::new(strip.x + k * (cw + pad), strip.y, cw, bh);
                     buttons.push((r, InkButton::Cand(k as usize)));
@@ -326,6 +380,213 @@ impl EditorScreen {
             boxes,
             strip,
         }
+    }
+
+    /// The Free panel (v1.5.3, decision 55), after the Boox one: a
+    /// full-width candidate bar (‹, words, ›, ×), a 3 × 4 grid of outlined
+    /// keys on the left and an open writing area (no boxes, no baseline,
+    /// no frame) on the right. Every target is at least 44 px.
+    #[must_use]
+    pub fn free_layout(&self, v: &LettersView) -> InkLayout {
+        let (w, h) = (self.width as i32, self.height as i32);
+        let ph = h * if w > h { 55 } else { 45 } / 100;
+        let panel = Rect::new(0, h - ph, w, ph);
+        let pad = self.px(8.0);
+        let bh = self.px(48.0).max(44);
+        let ui = self.ui_px();
+        let mut buttons = Vec::new();
+        let bar = Rect::new(0, panel.y + self.px(2.0).max(2), w, bh + pad);
+        let by = bar.y + pad / 2;
+        buttons.push((Rect::new(pad, by, bh, bh), InkButton::Prev));
+        let xr = w - pad - bh;
+        buttons.push((Rect::new(xr, by, bh, bh), InkButton::Cancel));
+        let nx = xr - pad - bh;
+        buttons.push((Rect::new(nx, by, bh, bh), InkButton::Next));
+        // Candidates: plain words, a wide space apart, as many as fit.
+        let left = pad + bh + pad * 2;
+        let right = nx - pad * 2;
+        let gap = self.fonts.width(Face::Atkinson, ui, "  ") as i32 + pad;
+        let mut x = left;
+        for (k, t) in v.cands.iter().enumerate().skip(v.first) {
+            let tw = (self.fonts.width(Face::Atkinson, ui * 1.15, t) as i32 + pad).max(bh);
+            if x + tw > right {
+                break;
+            }
+            buttons.push((Rect::new(x, by, tw, bh), InkButton::Cand(k)));
+            x += tw + gap;
+        }
+        // The key grid: 3 × 4, the space key two columns wide.
+        let top = bar.y + bar.h + pad;
+        let avail = panel.y + ph - pad - top;
+        let kh = ((avail - 3 * pad) / 4).clamp(44, self.px(56.0).max(44));
+        let kw = self.px(64.0).max(kh);
+        let grid: [[Option<InkButton>; 3]; 4] = [
+            [
+                Some(InkButton::Mode),
+                Some(InkButton::Back),
+                Some(InkButton::Enter),
+            ],
+            [
+                Some(InkButton::Type(',')),
+                Some(InkButton::Type('.')),
+                Some(InkButton::Type('?')),
+            ],
+            [
+                Some(InkButton::Digits),
+                Some(InkButton::Type('!')),
+                Some(InkButton::Type('@')),
+            ],
+            [Some(InkButton::Lang), Some(InkButton::Space), None],
+        ];
+        for (r, row) in grid.iter().enumerate() {
+            for (c, b) in row.iter().enumerate() {
+                let Some(b) = b else { continue };
+                let span = if *b == InkButton::Space { 2 } else { 1 };
+                let rect = Rect::new(
+                    pad + c as i32 * (kw + pad),
+                    top + r as i32 * (kh + pad),
+                    kw * span + pad * (span - 1),
+                    kh,
+                );
+                buttons.push((rect, *b));
+            }
+        }
+        let ax = pad + 3 * kw + 3 * pad + pad;
+        let area = Rect::new(ax, top, w - ax - pad, panel.y + ph - top - pad);
+        InkLayout {
+            baseline_y: area.y + area.h * 7 / 10,
+            panel,
+            area,
+            buttons,
+            boxes: vec![area],
+            strip: bar,
+        }
+    }
+
+    /// The panel layout for a mode and what it shows.
+    #[must_use]
+    pub fn ink_layout_for(&self, mode: InkMode, v: &LettersView) -> InkLayout {
+        if mode == InkMode::Free {
+            self.free_layout(v)
+        } else {
+            self.ink_layout_in(mode)
+        }
+    }
+
+    /// Text in 1-bit ink (coverage ≥ 50 % → `ink`): the Free panel stays
+    /// pure black and white, DU-safe.
+    fn text_1bit(&self, c: &mut Canvas, face: Face, size: f32, x: f32, base: f32, t: &str) {
+        let tw = self.fonts.width(face, size, t).ceil() as i32 + 4;
+        let th = (size * 1.6).ceil() as i32;
+        let (ox, oy) = (x.floor() as i32 - 2, (base - size * 1.15).floor() as i32);
+        let mut tmp = Canvas::new(tw.max(1) as u32, th.max(1) as u32, WHITE);
+        self.fonts.draw(
+            &mut tmp,
+            face,
+            size,
+            x - ox as f32,
+            base - oy as f32,
+            t,
+            BLACK,
+        );
+        let b = c.bounds();
+        for yy in 0..th {
+            for xx in 0..tw {
+                if tmp.pixels[(yy * tw + xx) as usize] < 128 && b.contains(ox + xx, oy + yy) {
+                    c.pixels[((oy + yy) * c.width as i32 + ox + xx) as usize] = BLACK;
+                }
+            }
+        }
+    }
+
+    /// Draws the Free panel: all pure black on pure white.
+    pub fn draw_free(&self, c: &mut Canvas, l: &InkLayout, ink: &Ink, pen: Pen, v: &LettersView) {
+        use crate::icons::{draw_icon_1bit, Icon};
+        c.fill(l.panel, WHITE);
+        let rule = self.px(2.0).max(2);
+        let thin = self.px(1.0).max(1);
+        c.fill(Rect::new(l.panel.x, l.panel.y, l.panel.w, rule), BLACK);
+        let bar = l.strip;
+        c.fill(Rect::new(0, bar.y + bar.h, l.panel.w, thin), BLACK);
+        let ui = self.ui_px();
+        let rad = self.px(8.0).max(4);
+        let line = self.px(1.5).max(1);
+        let mut cand_x = (i32::MAX, i32::MIN);
+        for (r, b) in &l.buttons {
+            let icon = match b {
+                InkButton::Prev => Some(Icon::PrevPage),
+                InkButton::Next => Some(Icon::NextPage),
+                InkButton::Cancel => Some(Icon::Close),
+                InkButton::Mode => Some(Icon::Swap),
+                InkButton::Back => Some(Icon::Backspace),
+                InkButton::Enter => Some(Icon::Return),
+                InkButton::Lang => Some(Icon::Globe),
+                InkButton::Space => Some(Icon::Space),
+                _ => None,
+            };
+            let key = !matches!(
+                b,
+                InkButton::Prev | InkButton::Next | InkButton::Cancel | InkButton::Cand(_)
+            );
+            if key {
+                round_outline(c, *r, rad, line);
+            }
+            if let Some(i) = icon {
+                draw_icon_1bit(c, i, *r, BLACK);
+            }
+            let text = match b {
+                InkButton::Cand(k) => {
+                    cand_x = (cand_x.0.min(r.x), cand_x.1.max(r.x + r.w));
+                    v.cands.get(*k).cloned()
+                }
+                InkButton::Type(ch) => Some(ch.to_string()),
+                InkButton::Digits => Some(if v.digits { "abc".into() } else { "123".into() }),
+                _ => None,
+            };
+            if let Some(t) = text {
+                let size = if matches!(b, InkButton::Cand(_)) {
+                    ui * 1.15
+                } else {
+                    ui
+                };
+                let tw = self.fonts.width(Face::Atkinson, size, &t);
+                self.text_1bit(
+                    c,
+                    Face::Atkinson,
+                    size,
+                    r.x as f32 + (r.w as f32 - tw) / 2.0,
+                    (r.y + r.h / 2) as f32 + size * 0.35,
+                    &t,
+                );
+            }
+            if *b == InkButton::Lang {
+                if let Some(code) = v.lang {
+                    let s = ui * 0.7;
+                    self.text_1bit(
+                        c,
+                        Face::Atkinson,
+                        s,
+                        (r.x + r.w - rad) as f32 - self.fonts.width(Face::Atkinson, s, code),
+                        (r.y + r.h - rad / 2) as f32,
+                        &code.to_uppercase(),
+                    );
+                }
+            }
+        }
+        // Thin separators after ‹ and before ›.
+        let sep_h = bar.h * 5 / 10;
+        let sy = bar.y + (bar.h - sep_h) / 2;
+        for (r, b) in &l.buttons {
+            match b {
+                InkButton::Prev => {
+                    c.fill(Rect::new(r.x + r.w + self.px(6.0), sy, thin, sep_h), BLACK)
+                }
+                InkButton::Next => c.fill(Rect::new(r.x - self.px(6.0), sy, thin, sep_h), BLACK),
+                _ => {}
+            }
+        }
+        let _ = cand_x;
+        draw_strokes(c, ink, pen_px(pen), l.area);
     }
 
     /// The letters / enrolment panel (v1.5.2): buttons, candidate chips
@@ -349,10 +610,10 @@ impl EditorScreen {
         for (r, b) in &l.buttons {
             let t = match b {
                 InkButton::Cand(k) => match v.cands.get(*k) {
-                    Some(ch) => ch.to_string(),
+                    Some(ch) => ch.clone(),
                     None => continue,
                 },
-                _ => label_of(*b, pen, mode),
+                _ => label_of(*b, pen, mode, self.ink_words),
             };
             let filled = matches!(b, InkButton::Save | InkButton::Cand(0));
             if filled {
@@ -435,7 +696,7 @@ impl EditorScreen {
             } else {
                 c.stroke(*r, self.px(1.5).max(1), BLACK);
             }
-            let t = label_of(*b, pen, InkMode::Draw);
+            let t = label_of(*b, pen, InkMode::Draw, self.ink_words);
             let tw = self.fonts.width(Face::Atkinson, ui, &t);
             let ink_c = if *b == InkButton::Insert {
                 WHITE

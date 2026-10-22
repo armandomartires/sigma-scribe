@@ -60,6 +60,38 @@ fn main() {
                 t.elapsed().as_secs_f64() * 1e6 / unseen.len() as f64
             );
         }
-        _ => eprintln!("usage: hwr-train train|eval"),
+        "words" => {
+            let m = Model::from_bytes(&std::fs::read(out).expect("model")).expect("parse");
+            let r = Recogniser::new(m);
+            let words = sigma_hwr::word::builtin_words();
+            let seen = hwr_train::word_score(&r, TRAIN_FONTS, &words, 30, 11);
+            println!("words, training fonts (new jitter): {seen:?}");
+            for font in HELD_OUT_FONTS {
+                let plain = hwr_train::word_score(&r, &[font], &words, 150, 12);
+                let mut ru = r.clone();
+                ru.set_samples(&hwr_train::enrol_samples(font, 1, 4004));
+                let enr = hwr_train::word_score(&ru, &[font], &words, 150, 12);
+                println!("words, {font}: no enrolment {plain:?}\n  1 sample/char {enr:?}");
+            }
+        }
+        "free" => {
+            let m = Model::from_bytes(&std::fs::read(out).expect("model")).expect("parse");
+            let r = Recogniser::new(m);
+            let printed = (0.06, 0.16);
+            let touching = (-0.02, 0.05);
+            println!(
+                "free, training fonts, printed: {:?}",
+                hwr_train::free_score(&r, TRAIN_FONTS, 30, printed, 21)
+            );
+            for font in HELD_OUT_FONTS {
+                let plain = hwr_train::free_score(&r, &[font], 150, printed, 22);
+                let mut ru = r.clone();
+                ru.set_samples(&hwr_train::enrol_samples(font, 1, 4004));
+                let enr = hwr_train::free_score(&ru, &[font], 150, printed, 22);
+                let tch = hwr_train::free_score(&ru, &[font], 150, touching, 23);
+                println!("free, {font}, printed: no enrolment {plain:?}\n  1 sample/char {enr:?}\n  touching letters, enrolled {tch:?}");
+            }
+        }
+        _ => eprintln!("usage: hwr-train train|eval|words|free"),
     }
 }

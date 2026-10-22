@@ -2,6 +2,16 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.5.3 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
+- **New Write panel** (sprint S15.3, decision 55), in the style of Boox's handwriting keyboard: a candidate bar across the top (‹ › for more, × to close), a 3 × 4 block of keys on the left (⇄ Draw, ⌫, ↵, `,` `.` `?`, 123, `!`, `@`, globe, space) and a **large blank area** to write in freely. Pure black and white, every key ≥ 44 px, portrait and landscape.
+- **Free writing:** write letters or words anywhere in the area; 1.2 s after you stop, the ink is cut into characters automatically and typed at the caret, followed by a space. Tap a word in the candidate bar to replace the last reading. **123** reads digits only; the **globe** limits letters to English, French or Portuguese.
+- **Word mode (experimental), off by default** (decision 54): reads every word against a word list (built-in EN/FR/PT plus the words in your notes). It missed its accuracy gate (24–28 % character errors on held-out fonts against ≤ 15 %), so it is a setting; free writing already uses the word list for letters that touch.
+- **Letter boxes** (the 1.5.2 boxes) are now a setting, off by default. Train still uses boxes.
+- Settings → Keyboard & input → Handwriting: Ink pen, Fast ink (A2), Letter boxes, Word mode (experimental), My handwriting (Samples, Train, Delete). New keys `ink_boxes=`, `ink_words=`.
+- CI prints the handwriting figures (`--nocapture`, step "Handwriting figures").
+- Emulator: `tests/emu/v1.5.3-word-mode.script`. Screenshots `docs/screenshots/v1.5.3/`. Device checks: `docs/device-checklist-prerelease.md`.
+- Device binary sha256 (CI build) `BIN_SHA`; tarball `TAR_SHA`; binary BIN_SIZE.
+
 ## 1.5.2 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
 - **Letters** (sprint S15.2, decision 53): in the Write panel, tap **Letters** and write one character per box; it is typed at the caret. Five candidates appear after each letter; tap one to replace it. Space, Erase, Return, Draw (back to free ink), Done. Works offline with the app's own small model (105 kB), English, French and Portuguese letters with accents, digits and punctuation (126 characters).
 - **Train** (opt-in): write samples of your own hand, one character at a time; they are saved only in `notes/.handwriting/samples.txt` and the model adapts to them on the device. Settings → Keyboard & input → Handwriting → **My handwriting** shows the count and **Delete** removes them.

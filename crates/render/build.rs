@@ -18,6 +18,14 @@ const ICONS: &[&str] = &[
     "arrow-left",
     "folder",
     "x",
+    // v1.5.3 handwriting panel.
+    "arrow-left-right",
+    "delete",
+    "corner-down-left",
+    "globe",
+    "chevron-left",
+    "chevron-right",
+    "space",
 ];
 
 /// A touch target is 44 brief units; the glyph is half of it.

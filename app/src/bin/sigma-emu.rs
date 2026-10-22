@@ -155,7 +155,10 @@ fn main() -> ExitCode {
             }
             // v1.5.2: `ink-box <i> x,y x,y;x,y …`: strokes in box units
             // into letter box i (20 ms between points).
-            "ink-box" => {
+            // v1.5.3: `ink-line` is the same with x in line heights too
+            // (the Words line is wider than high).
+            "ink-box" | "ink-line" => {
+                let line = cmd == "ink-line";
                 let (i, rest) = arg.split_once(' ').unwrap_or((arg, ""));
                 let Some(b) = i.parse().ok().and_then(|i| app.letter_box(i)) else {
                     return fail(format!("no letter box {i}"));
@@ -166,7 +169,8 @@ fn main() -> ExitCode {
                         .filter_map(|p| {
                             let (x, y) = p.split_once(',')?;
                             let (x, y): (f32, f32) = (x.parse().ok()?, y.parse().ok()?);
-                            Some((b.x + (x * b.w as f32) as i32, b.y + (y * b.h as f32) as i32))
+                            let bw = if line { b.h } else { b.w };
+                            Some((b.x + (x * bw as f32) as i32, b.y + (y * b.h as f32) as i32))
                         })
                         .collect();
                     for (k, &(x, y)) in pts.iter().enumerate() {

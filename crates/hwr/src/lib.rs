@@ -14,6 +14,9 @@
 
 use std::fmt::Write as _;
 
+pub mod free;
+pub mod word;
+
 /// EN/FR/PT letters (with the accents those languages use), digits and
 /// common punctuation, in model order.
 pub const CHARSET: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\
@@ -429,6 +432,19 @@ impl Recogniser {
     /// Ranking from a feature vector.
     #[must_use]
     pub fn rank(&self, f: &[f32], n: usize) -> Vec<(char, f32)> {
+        let p = self.probs(f);
+        let mut idx: Vec<usize> = (0..p.len()).collect();
+        idx.sort_by(|&a, &b| p[b].total_cmp(&p[a]));
+        idx.into_iter()
+            .take(n)
+            .map(|i| (self.model.chars[i], p[i]))
+            .collect()
+    }
+
+    /// Probabilities over `model.chars` (network, fine-tuned layer and
+    /// user samples blended).
+    #[must_use]
+    pub fn probs(&self, f: &[f32]) -> Vec<f32> {
         let mut p = match &self.adapted {
             None => self.model.probs(f),
             Some((w, b)) => {
@@ -468,12 +484,7 @@ impl Recogniser {
                 *x /= s;
             }
         }
-        let mut idx: Vec<usize> = (0..p.len()).collect();
-        idx.sort_by(|&a, &b| p[b].total_cmp(&p[a]));
-        idx.into_iter()
-            .take(n)
-            .map(|i| (self.model.chars[i], p[i]))
-            .collect()
+        p
     }
 }
 

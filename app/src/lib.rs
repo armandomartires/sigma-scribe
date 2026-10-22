@@ -182,14 +182,24 @@ pub struct InkState {
     pub boxi: Option<usize>,
     /// Letters: candidates for the last letter, and that it was typed by
     /// recognition (so a candidate tap may replace it).
-    pub cands: Vec<char>,
+    pub cands: Vec<String>,
     replace_ok: bool,
+    /// Words: characters typed for the last word (with its space), so a
+    /// candidate can replace it; and the lexicon for this panel.
+    last_len: usize,
+    lex: Option<sigma_hwr::word::Lexicon>,
+    /// Free (v1.5.3): first candidate shown, 123, language filter.
+    pub first: usize,
+    pub digits: bool,
+    pub lang: Option<&'static str>,
     /// Train: samples saved this session.
     pub saved: usize,
 }
 
 /// Letters: idle time after a stroke before the box is read (ms).
 pub const LETTER_MS: u64 = 800;
+/// Words (v1.5.3): idle time before the line is read (ms).
+pub const WORD_MS: u64 = 1200;
 
 /// The user's handwriting samples, inside the notes folder (hidden).
 #[must_use]
@@ -632,6 +642,14 @@ impl App {
     /// re-lays out (and resizes on rotation), saves the settings file.
     /// Paper and orientation need a full (flashing) refresh.
     pub fn change(&mut self, c: Change) -> Refresh {
+        if c == Change::TrainSamples {
+            self.options = false;
+            self.open_ink();
+            if let Some(ink) = &mut self.ink {
+                ink.mode = sigma_render::ink::InkMode::Train(0);
+            }
+            return Refresh::Full;
+        }
         if c == Change::DeleteSamples {
             let p = samples_path(self.library.root());
             if let Err(e) = std::fs::remove_file(&p) {
@@ -646,6 +664,7 @@ impl App {
             return Refresh::Partial;
         }
         self.settings.apply(c);
+        self.screen.ink_words = self.settings.ink_words;
         if let Change::Keyboard(l) = c {
             self.keyboard = Keyboard {
                 layout: l,
@@ -1894,16 +1913,16 @@ impl App {
                     .draw_drawer(&mut c, &l, &self.drawer_model(&hs, &todos));
             }
         }
-        if let Some(ink) = &mut self.ink {
-            let l = self.screen.ink_layout_in(ink.mode);
+        let v = self.ink_view();
+        if let (Some(ink), Some(v)) = (&mut self.ink, v) {
+            let l = self.screen.ink_layout_for(ink.mode, &v);
             if ink.mode == sigma_render::ink::InkMode::Draw {
                 self.screen
                     .draw_ink(&mut c, &l, &ink.ink, self.settings.ink_pen);
+            } else if ink.mode == sigma_render::ink::InkMode::Free {
+                self.screen
+                    .draw_free(&mut c, &l, &ink.ink, self.settings.ink_pen, &v);
             } else {
-                let v = sigma_render::ink::LettersView {
-                    cands: ink.cands.clone(),
-                    saved: ink.saved,
-                };
                 self.screen
                     .draw_letters(&mut c, &l, &ink.ink, self.settings.ink_pen, ink.mode, &v);
             }
@@ -2029,7 +2048,17 @@ impl App {
     /// Opens the writing panel (v1.5.0).
     pub fn open_ink(&mut self) {
         self.sel_ui = None;
-        self.ink = Some(InkState::default());
+        self.screen.ink_words = self.settings.ink_words;
+        // v1.5.3 (decision 55): the free writing area is the main input;
+        // boxes only with Settings → Letter boxes; Draw is one ⇄ away.
+        self.ink = Some(InkState {
+            mode: if self.settings.ink_boxes {
+                sigma_render::ink::InkMode::Letters
+            } else {
+                sigma_render::ink::InkMode::Free
+            },
+            ..InkState::default()
+        });
     }
 
     /// The live-ink refresh: DU, or A2 when Settings → Fast ink is on.
@@ -2048,7 +2077,7 @@ impl App {
         use sigma_core::ink::Point;
         use sigma_render::ink::{draw_segment, pen_px};
         let mode = self.ink.as_ref()?.mode;
-        let l = self.screen.ink_layout_in(mode);
+        let l = self.panel_layout()?;
         if mode != sigma_render::ink::InkMode::Draw {
             return Some(self.letters_touch(phase, x, y, t, &l));
         }
@@ -2194,7 +2223,7 @@ impl App {
     /// The pending box's strokes in box units.
     fn letter_strokes(&self) -> Option<Vec<Vec<(f32, f32)>>> {
         let ink = self.ink.as_ref()?;
-        let l = self.screen.ink_layout_in(ink.mode);
+        let l = self.panel_layout()?;
         let b = *l.boxes.get(ink.boxi?)?;
         let v: Vec<Vec<(f32, f32)>> = ink
             .ink
@@ -2203,7 +2232,14 @@ impl App {
             .map(|s| {
                 s.points
                     .iter()
-                    .map(|p| sigma_render::ink::box_units(b, p.x, p.y))
+                    .map(|p| {
+                        if ink.mode == sigma_render::ink::InkMode::Free {
+                            // Free: panel pixels; the reader sizes the ink.
+                            (p.x as f32, p.y as f32)
+                        } else {
+                            sigma_render::ink::box_units(b, p.x, p.y)
+                        }
+                    })
                     .collect()
             })
             .filter(|s: &Vec<(f32, f32)>| !s.is_empty())
@@ -2214,6 +2250,9 @@ impl App {
     /// Letters: reads the pending box, types the best character at the
     /// caret and offers the rest as candidates; the box empties.
     fn read_letter(&mut self) -> Option<Refresh> {
+        if self.ink.as_ref()?.mode == sigma_render::ink::InkMode::Free {
+            return self.read_word();
+        }
         let strokes = self.letter_strokes();
         let ink = self.ink.as_mut()?;
         ink.boxi = None;
@@ -2229,14 +2268,82 @@ impl App {
         self.buffer.insert(&best.to_string());
         self.save();
         let ink = self.ink.as_mut()?;
-        ink.cands = top.iter().map(|(c, _)| *c).collect();
+        ink.cands = top.iter().map(|(c, _)| c.to_string()).collect();
+        ink.replace_ok = true;
+        Some(Refresh::Partial)
+    }
+
+    /// Free (v1.5.3): reads all ink in the area (characters split at the
+    /// gaps, decision 55), types it and a space at the caret; the reading
+    /// and its alternatives go to the candidate bar.
+    fn read_word(&mut self) -> Option<Refresh> {
+        let strokes = self.letter_strokes();
+        let ink = self.ink.as_mut()?;
+        ink.boxi = None;
+        ink.ink = sigma_core::ink::Ink::default();
+        ink.last_up = None;
+        let strokes = strokes?;
+        if self.hwr.rec.is_none() {
+            self.hwr.load(self.library.root());
+        }
+        self.hwr.poll(false);
+        let rec = self.hwr.rec.as_ref()?;
+        if self.ink.as_ref()?.lex.is_none() {
+            let mut words = sigma_hwr::word::builtin_words();
+            let mut text = self.buffer.text().to_owned();
+            text.push('\n');
+            text.push_str(self.scratch.text());
+            words.extend(sigma_hwr::word::Lexicon::words_in(&text, 3000));
+            let lex = sigma_hwr::word::Lexicon::new(rec, &words);
+            self.ink.as_mut()?.lex = Some(lex);
+        }
+        let ink = self.ink.as_ref()?;
+        let per: Vec<Vec<sigma_hwr::Seg>> = strokes
+            .iter()
+            .map(|s| sigma_hwr::segments(std::slice::from_ref(s)))
+            .collect();
+        let allow = sigma_hwr::free::allow_lang(rec, ink.lang, ink.digits);
+        // Word mode (experimental) reads every word with the lexicon;
+        // otherwise only touching letters do.
+        let wide = if self.settings.ink_words {
+            0.0
+        } else {
+            sigma_hwr::free::WIDE
+        };
+        let lex = (!ink.digits).then_some(ink.lex.as_ref()).flatten();
+        let r = sigma_hwr::free::read_lex(rec, &per, allow.as_deref(), lex, wide);
+        if r.text.is_empty() {
+            return None;
+        }
+        let mut top: Vec<(String, f32)> = vec![(r.text.clone(), 0.0)];
+        top.extend(r.alts.into_iter().map(|a| (a, 0.0)));
+        let best = top.first()?.0.clone();
+        let typed = if best.ends_with(|c: char| c.is_alphanumeric()) {
+            format!("{best} ")
+        } else {
+            best.clone()
+        };
+        self.buffer.insert(&typed);
+        self.save();
+        let ink = self.ink.as_mut()?;
+        ink.last_len = typed.chars().count();
+        ink.cands = top.into_iter().map(|(w, _)| w).collect();
+        ink.first = 0;
         ink.replace_ok = true;
         Some(Refresh::Partial)
     }
 
     /// Types `s` from the letters panel (reads a pending box first).
     fn letters_type(&mut self, s: &str, back: bool) -> Option<Refresh> {
-        let _ = self.read_letter();
+        let words = self.ink.as_ref()?.mode == sigma_render::ink::InkMode::Free;
+        let read = self.read_letter().is_some();
+        if words && read && s == " " {
+            // The word already brought its space.
+            if let Some(ink) = &mut self.ink {
+                ink.replace_ok = false;
+            }
+            return Some(Refresh::Partial);
+        }
         if back {
             self.buffer.backspace();
         } else {
@@ -2295,18 +2402,98 @@ impl App {
         let mode = self.ink.as_ref()?.mode;
         match (mode, b) {
             (InkMode::Draw, InkButton::Mode) => {
+                let boxes = self.settings.ink_boxes;
                 let ink = self.ink.as_mut()?;
                 ink.ink = sigma_core::ink::Ink::default();
-                ink.mode = InkMode::Letters;
+                ink.mode = if boxes {
+                    InkMode::Letters
+                } else {
+                    InkMode::Free
+                };
                 ink.boxi = None;
                 return Some(Refresh::Partial);
             }
-            (InkMode::Letters, InkButton::Mode) => {
+            (InkMode::Letters | InkMode::Free, InkButton::Mode) => {
                 let _ = self.read_letter();
                 let ink = self.ink.as_mut()?;
                 ink.mode = InkMode::Draw;
                 ink.cands.clear();
+                ink.replace_ok = false;
                 return Some(Refresh::Partial);
+            }
+            (InkMode::Free, InkButton::Cand(k)) => {
+                let ink = self.ink.as_mut()?;
+                let w = ink.cands.get(k)?.clone();
+                if !ink.replace_ok || k == 0 {
+                    return None;
+                }
+                let n = ink.last_len;
+                ink.cands.swap(0, k);
+                let typed = format!("{w} ");
+                ink.last_len = typed.chars().count();
+                for _ in 0..n {
+                    self.buffer.backspace();
+                }
+                self.buffer.insert(&typed);
+                self.save();
+                return Some(Refresh::Partial);
+            }
+            (InkMode::Free, InkButton::Space) => return self.letters_type(" ", false),
+            (InkMode::Free, InkButton::Type(ch)) => {
+                return self.letters_type(&ch.to_string(), false);
+            }
+            (InkMode::Free, InkButton::Digits) => {
+                let ink = self.ink.as_mut()?;
+                ink.digits = !ink.digits;
+                return Some(Refresh::Partial);
+            }
+            (InkMode::Free, InkButton::Lang) => {
+                let ink = self.ink.as_mut()?;
+                ink.lang = match ink.lang {
+                    None => Some("en"),
+                    Some("en") => Some("fr"),
+                    Some("fr") => Some("pt"),
+                    _ => None,
+                };
+                return Some(Refresh::Partial);
+            }
+            (InkMode::Free, InkButton::Prev | InkButton::Next) => {
+                let l = self.panel_layout()?;
+                let shown = l
+                    .buttons
+                    .iter()
+                    .filter(|(_, b)| matches!(b, InkButton::Cand(_)))
+                    .count()
+                    .max(1);
+                let ink = self.ink.as_mut()?;
+                let old = ink.first;
+                ink.first = if b == InkButton::Next {
+                    if ink.first + shown < ink.cands.len() {
+                        ink.first + shown
+                    } else {
+                        ink.first
+                    }
+                } else {
+                    ink.first.saturating_sub(shown)
+                };
+                return (ink.first != old).then_some(Refresh::Partial);
+            }
+            (InkMode::Free, InkButton::Enter) => return self.letters_type("\n", false),
+            (InkMode::Free, InkButton::Back) => return self.letters_type("", true),
+            (InkMode::Free, InkButton::Cancel) => {
+                let _ = self.read_letter();
+                self.ink = None;
+                return Some(Refresh::Partial);
+            }
+            (InkMode::Free, InkButton::Undo) => {
+                let ink = self.ink.as_mut()?;
+                if ink.ink.undo() {
+                    if ink.ink.strokes.is_empty() {
+                        ink.boxi = None;
+                    }
+                    return Some(Refresh::Partial);
+                }
+                return None;
             }
             (InkMode::Letters, InkButton::Cancel) => {
                 let _ = self.read_letter();
@@ -2318,13 +2505,13 @@ impl App {
             (InkMode::Letters, InkButton::Back) => return self.letters_type("", true),
             (InkMode::Letters, InkButton::Cand(k)) => {
                 let ink = self.ink.as_mut()?;
-                let c = *ink.cands.get(k)?;
+                let c = ink.cands.get(k)?.clone();
                 if !ink.replace_ok || k == 0 {
                     return None;
                 }
                 ink.cands.swap(0, k);
                 self.buffer.backspace();
-                self.buffer.insert(&c.to_string());
+                self.buffer.insert(&c);
                 self.save();
                 return Some(Refresh::Partial);
             }
@@ -2350,6 +2537,9 @@ impl App {
                 ink.ink = sigma_core::ink::Ink::default();
                 ink.boxi = None;
                 ink.mode = InkMode::Letters;
+                if !self.settings.ink_boxes {
+                    ink.mode = InkMode::Free;
+                }
                 if saved > 0 {
                     // Fine-tune on the new samples (background).
                     self.hwr.load(self.library.root());
@@ -2393,14 +2583,20 @@ impl App {
     /// was inked (plan §12.4).
     fn ink_tick(&mut self, t: u64) -> Option<Refresh> {
         let ink = self.ink.as_mut()?;
-        if ink.mode == sigma_render::ink::InkMode::Letters
-            && ink.boxi.is_some()
-            && ink.ink.live.is_none()
-            && ink.last_up.is_some_and(|u| t >= u + LETTER_MS)
-        {
-            return self.read_letter();
+        let wait = match ink.mode {
+            sigma_render::ink::InkMode::Letters => Some(LETTER_MS),
+            sigma_render::ink::InkMode::Free => Some(WORD_MS),
+            _ => None,
+        };
+        if let Some(ms) = wait {
+            if ink.boxi.is_some()
+                && ink.ink.live.is_none()
+                && ink.last_up.is_some_and(|u| t >= u + ms)
+            {
+                return self.read_letter();
+            }
         }
-        if ink.mode == sigma_render::ink::InkMode::Letters && ink.boxi.is_some() {
+        if wait.is_some() && ink.boxi.is_some() {
             // The read redraws the panel; no separate cleanup.
             return None;
         }
@@ -2978,7 +3174,7 @@ impl App {
         match e {
             Event::Tilt { .. } => None,
             Event::Tap { x, y } if self.ink.is_some() => {
-                let l = self.screen.ink_layout_in(self.ink.as_ref()?.mode);
+                let l = self.panel_layout()?;
                 let b = self.screen.ink_hit(&l, x, y)?;
                 self.ink_button(b)
             }
@@ -3326,11 +3522,28 @@ impl App {
             .map(|(r, _)| centre(*r))
     }
 
+    /// What the open panel shows (v1.5.3).
+    fn ink_view(&self) -> Option<sigma_render::ink::LettersView> {
+        let ink = self.ink.as_ref()?;
+        Some(sigma_render::ink::LettersView {
+            cands: ink.cands.clone(),
+            saved: ink.saved,
+            first: ink.first,
+            digits: ink.digits,
+            lang: ink.lang,
+        })
+    }
+
+    /// The open panel's layout.
+    fn panel_layout(&self) -> Option<sigma_render::ink::InkLayout> {
+        let v = self.ink_view()?;
+        Some(self.screen.ink_layout_for(self.ink.as_ref()?.mode, &v))
+    }
+
     /// Letter box `i` of the open panel (emulator scripts, v1.5.2).
     #[must_use]
     pub fn letter_box(&self, i: usize) -> Option<Rect> {
-        let ink = self.ink.as_ref()?;
-        self.screen.ink_layout_in(ink.mode).boxes.get(i).copied()
+        self.panel_layout()?.boxes.get(i).copied()
     }
 
     /// Centre of a named control (emulator scripts): `Files`, `Title`,
@@ -3340,7 +3553,7 @@ impl App {
     pub fn control_centre(&self, label: &str) -> Option<(i32, i32)> {
         if self.ink.is_some() {
             use sigma_render::ink::InkButton;
-            let l = self.screen.ink_layout_in(self.ink.as_ref()?.mode);
+            let l = self.panel_layout()?;
             if let Some(i) = label
                 .strip_prefix("Box")
                 .and_then(|n| n.parse::<usize>().ok())
@@ -3353,7 +3566,13 @@ impl App {
                 "Pen" => InkButton::Pen,
                 "Cancel" | "Done" => InkButton::Cancel,
                 "Insert" => InkButton::Insert,
-                "Letters" | "Draw" => InkButton::Mode,
+                "Letters" | "Draw" | "Words" | "Mode" | "Swap" => InkButton::Mode,
+                "Prev" => InkButton::Prev,
+                "Next" => InkButton::Next,
+                "Close" | "×" => InkButton::Cancel,
+                "123" | "Digits" => InkButton::Digits,
+                "Globe" | "Lang" => InkButton::Lang,
+                "," | "." | "?" | "!" | "@" => InkButton::Type(label.chars().next()?),
                 "Space" => InkButton::Space,
                 "Erase" => InkButton::Back,
                 "Return" => InkButton::Enter,
