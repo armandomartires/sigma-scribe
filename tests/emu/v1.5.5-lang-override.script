@@ -33,8 +33,7 @@ shot v1.5.5-fr-chosen-night
 tap-on Back
 tap-on Display
 tap-on Paper/Day
-tap-on Orientation
-tap-on Landscape
+tap-on Orientation/Landscape
 tap-on Back
 tap-on Language
 shot v1.5.5-fr-chosen-landscape

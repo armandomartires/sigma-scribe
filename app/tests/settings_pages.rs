@@ -29,14 +29,13 @@ fn aa_opens_the_root_and_back_esc_walk_up() {
     assert!(app.options && app.settings_page == SettingsPage::Root);
     tap(&mut app, "Display");
     assert_eq!(app.settings_page, SettingsPage::Category(1));
-    tap(&mut app, "Orientation");
-    assert_eq!(app.settings_page, SettingsPage::Choice(1, "Orientation"));
-    tap(&mut app, "Landscape");
+    // v1.6.3: Orientation is three buttons in the row, not a list.
+    tap(&mut app, "Orientation/Landscape");
     assert_eq!(app.settings.orientation, Orientation::Landscape);
     assert_eq!(
         app.settings_page,
         SettingsPage::Category(1),
-        "a pick goes back"
+        "stays on Display"
     );
     tap(&mut app, "Upside down/On");
     assert!(app.settings.upside_down, "checkbox toggles");

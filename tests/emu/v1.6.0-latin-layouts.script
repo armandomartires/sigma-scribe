@@ -110,8 +110,7 @@ usb-type ¿Qué tal? ¡Señor!
 expect ¿Qué tal? ¡Señor!
 tap-on Options
 tap-on Display
-tap-on Orientation
-tap-on Landscape
+tap-on Orientation/Landscape
 tap-on Back
 tap-on Keyboard & input
 tap-on Layout

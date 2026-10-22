@@ -12,9 +12,7 @@ expect-setting tab_width=4
 tap-on Back
 tap-on Display
 shot v1.4.2-display
-tap-on Orientation
-shot v1.4.2-orientation-choice
-tap-on Landscape
+tap-on Orientation/Landscape
 expect-setting orientation=landscape
 shot v1.4.2-display-landscape
 tap-on Orientation/Portrait

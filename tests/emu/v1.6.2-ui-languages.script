@@ -23,8 +23,7 @@ expect-setting ui_lang=sv
 tap-on Back
 shot v1.6.2-sv-settings
 tap-on Display
-tap-on Orientation
-tap-on Landscape
+tap-on Orientation/Landscape
 tap-on Back
 tap-on Language
 tap-on Interface language

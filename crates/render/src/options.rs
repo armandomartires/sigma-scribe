@@ -586,9 +586,10 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
                 enabled: m.settings.kb_size != 0,
             }
         }
-        // Auto shows what it is doing, e.g. "Auto (no sensor) — Portrait".
-        "Orientation" if m.settings.orientation == Orientation::Auto => {
-            Kind::Pick(m.orientation_status.to_owned())
+        // v1.6.3: three buttons in the row, like Paper and Drawer (no list).
+        "Orientation" => {
+            let r = rows.iter().find(|r| r.label == "Orientation")?;
+            Kind::Inline(r.cells.clone())
         }
         // v1.5.5 (decision 57): greyed system language unless overridden.
         "Interface language" if m.settings.lang_override => {
@@ -1390,7 +1391,7 @@ mod tests {
         for c in 0..CATEGORIES.len() {
             v.push(SettingsPage::Category(c));
         }
-        for l in ["Orientation", "Keyboard tone", "Tab width", "Layout"] {
+        for l in ["Keyboard tone", "Tab width", "Layout"] {
             v.push(SettingsPage::Choice(category_of(l).unwrap(), l));
         }
         v
@@ -1442,7 +1443,7 @@ mod tests {
         assert!(matches!(kind("Paper"), Kind::Inline(_)));
         assert!(matches!(kind("Scroll"), Kind::Inline(_)));
         assert!(matches!(kind("Size"), Kind::Slider { .. }));
-        assert!(matches!(kind("Orientation"), Kind::Pick(_)));
+        assert!(matches!(kind("Orientation"), Kind::Inline(_)));
         assert!(matches!(kind("Layout"), Kind::Pick(_)));
         assert_eq!(choices(&st, "Layout").len(), sigma_core::layouts::ALL.len());
     }
@@ -1466,15 +1467,14 @@ mod tests {
         );
         let (x, y) = e.options_control(&m, "Upside down/Off").unwrap();
         assert_eq!(e.options_hit(&m, x, y), OptionsHit::Nothing, "already off");
-        let (x, y) = e.options_control(&m, "Orientation").unwrap();
-        let p = SettingsPage::Choice(1, "Orientation");
-        assert_eq!(e.options_hit(&m, x, y), OptionsHit::Open(p));
-        let m = model(&st, &k, p, 0);
+        // v1.6.3: Orientation is three buttons in the row, no sub-page.
         let (x, y) = e.options_control(&m, "Orientation/Landscape").unwrap();
         assert_eq!(
             e.options_hit(&m, x, y),
-            OptionsHit::Pick(Change::Orientation(Orientation::Landscape))
+            OptionsHit::Change(Change::Orientation(Orientation::Landscape))
         );
+        let p = SettingsPage::Choice(1, "Keyboard tone");
+        let m = model(&st, &k, p, 0);
         let (x, y) = e.options_control(&m, "Back").unwrap();
         assert_eq!(e.options_hit(&m, x, y), OptionsHit::Back);
         assert_eq!(e.options_step(&m, "Paper/Night").as_deref(), Some("Back"));

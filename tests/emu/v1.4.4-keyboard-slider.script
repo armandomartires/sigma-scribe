@@ -32,16 +32,14 @@ shot v1.4.4-keyboard-input-night
 tap-on Back
 tap-on Display
 tap-on Paper/Day
-tap-on Orientation
-tap-on Landscape
+tap-on Orientation/Landscape
 tap-on Back
 tap-on Keyboard & input
 shot v1.4.4-keyboard-input-landscape
 tap-on Close
 tap-on Options
 tap-on Display
-tap-on Orientation
-tap-on Portrait
+tap-on Orientation/Portrait
 tap-on Close
 locale-conf tests/fixtures/kobo-ereader-fr.conf
 tap-on Options
