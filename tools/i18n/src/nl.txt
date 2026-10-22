@@ -1,0 +1,260 @@
+Bestanden
+Graaf
+Opties
+Help
+Help / App-info
+Help / Markdown-overzicht
+Help / USB-toetsenbord, muis en export
+Terug naar Help
+Omhoog naar Bestanden
+{name} verplaatsen naar
+Annuleren
+OK
+{n} woorden
+{n} woord
+regel {n}
+voorbeeld
+pagina {n} van {m}
+knoppen slaan om
+Papier
+Nacht
+opgeslagen
+opslaan
+niet opgeslagen
+USB
+geen USB
+Toetsen
+Knippen
+Kopiëren
+Plakken
+Alles
+Shift
+Terug
+Del
+Spatie
+Enter
+Return
+Caps
+Home
+End
+Compact
+Volledig
+Gesplitst
+Midden
+Blok links
+Blok rechts
+Pijlen
+Inhoud
+Taken
+Kladblok
+Alle
+Openen
+Klaar
+nog {n}…
+Geen koppen in deze notitie. Begin een regel met #.
+Geen taken. Begin een regel met - [ ].
+Zoeken
+Vervangen
+Vorige
+Volgende
+Geen
+{n} van {m}
+– van {n}
+Map
+Meer
+Hernoemen
+Verplaats
+Wissen
+Tik nogmaals om te wissen
+Nieuwe notitie
+Nieuwe map
+Geen mappen.
+Nog geen notities. Tik op Nieuwe notitie.
+{n} notities
+{n} notitie
+{n} links
+{n} link
+Geen links
+tik nogmaals om te openen
+schrijf [[een notitienaam]] om twee notities te verbinden
+UI-schaal
+Knoppen, menu's en toetsen; de notitie houdt haar Grootte
+Nacht is dezelfde pagina, omgekeerd
+Dag
+Letter
+Schreef om te lezen, schreefloos voor in de bus
+Literata
+Atkinson
+Regel
+Woorden per regel, {n} tot {m}
+Uit
+Aan
+Grootte
+Lettergrootte
+Gekoppeld aan Marge zolang Regel aan staat
+Regelafstand
+Ruimte tussen regels
+Marge
+Ruimte voor een duim
+Tab-toets
+Markdown gebruikt standaard spaties
+Tab
+Spaties
+Tabbreedte
+Ingevoegde spaties, of kolommen per tab
+Toetsenbord
+Indeling op scherm
+Indeling
+Volledig schermtoetsenbord en USB-toetsenborden
+VS
+VK
+Frans AZERTY
+Duits QWERTZ
+Spaans
+Portugees
+Italiaans
+Toetsenbordtoon
+Toetsenbordgrootte
+Automatische toetsenbordgrootte
+Volgt de UI-schaal, tot 150%
+Auto volgt de UI-schaal, tot 150%
+Het toetsenbord kan afwijken van de pagina
+Thema
+Licht
+Donker
+Lade
+Inhoud, taken en kladblok openen hier (v{n})
+Links
+Rechts
+USB-toetsenbord en muis
+Vereist een hub met voeding: de lezer voedt de poort niet
+Scrollen
+Richting van wiel en twee vingers; Natuurlijk beweegt de pagina als een touchscreen
+Traditioneel
+Natuurlijk
+Oriëntatie
+Auto volgt hoe je hem vasthoudt
+Auto
+Auto (geen sensor)
+Staand
+Liggend
+Staand omgekeerd
+Liggend omgekeerd
+Ondersteboven
+Draait Staand of Liggend {n}°
+App-info
+Versie, licentie en auteur
+Markdown-overzicht
+De syntaxis die deze pagina kan tonen
+USB-toetsenbord, muis en export
+Hub, sneltoetsen, bestanden kopiëren
+Hub met voeding
+De Forma voedt zijn USB-poort niet. Sluit het toetsenbord aan op een USB-hub met voeding, of op een Y-kabel met eigen voeding, en de hub op de lezer met een micro-USB OTG-adapter.
+Aansluiten
+Zet eerst Opties → USB-toetsenbord en muis aan: de poort gaat dan in hostmodus, dus een computer ziet de Kobo pas weer als je het uitzet of de app sluit. Sluit daarna het toetsenbord aan; de statusbalk toont USB binnen een seconde (geen USB zolang er geen gevonden is). Het schermtoetsenbord blijft werken en loskoppelen is veilig.
+Sneltoetsen
+Hetzelfde als de Ctrl-toets op het scherm.
+Muis en touchpad
+Een USB-muis of touchpad (ook het touchpad van een toetsenbord zoals de Logitech K{n} Plus) toont een kleine pijl. Klik = tik; slepen in de notitie selecteert; dubbelklik selecteert een woord; het wiel of scrollen met twee vingers beweegt de notitie en slaat pagina's om in voorbeeld en lijsten. De pijl verdwijnt na {m} seconden stilstand en tijdens het typen. Rechtsklikken doet niets.
+Opties → Indeling stelt het toetsenbord in: VS, VK, Frans, Duits, Spaans, Portugees of Italiaans. Esc sluit Zoeken, panelen en selecties.
+Exporteren
+Je notities zijn gewone .md-bestanden. Sluit de Kobo via USB aan op een computer (sluit eerst Sigma Scribe), kies Verbinden en kopieer de map sigma-scribe/notes. Meer is niet nodig; synchronisatie (bv. Syncthing) kan later komen.
+Als er niets gebeurt
+Controleer de voeding van de hub, probeer een ander toetsenbord (eenvoudige bedrade werken het best) en sluit en open de app opnieuw. Het logboek .adds/sigma-scribe/sigma-scribe.log noteert elk gevonden toetsenbord.
+Kop
+Dit zijn de regels in Inhoud.
+Vet en cursief
+Twee sterretjes voor vet, één voor cursief.
+Lijst
+Een streepje, of een getal en een punt. Haken maken een selectievakje.
+Citaat
+Een groter-dan-teken aan het begin.
+Lijn
+Drie streepjes op een eigen regel.
+Code
+Backticks. Drie ervan omsluiten een blok.
+Afbeelding
+Een uitroepteken, woorden voor de afbeelding, dan het adres. Getoond als [image: …] op de Kobo.
+Weblink
+Onderstreept getoond; de Kobo heeft geen browser om hem te openen. Een notitie gebruikt nog steeds dubbele haken.
+Tabel
+Een kop, een rij streepjes, dan de cellen. Voorlopig als gewone tekst getoond.
+Doorhalen
+Twee tildes aan elke kant.
+Link naar een notitie
+De notitienaam, of een naam en de te tonen woorden. Een gestippelde link maakt de notitie aan. Links zijn wat de graaf tekent.
+Sigma Scribe
+Versie {n} Een notitieboek voor de Kobo Forma: gewone Markdown-bestanden op een e-inkpagina, getypt op het glas.
+Licentie
+Alleen AGPL-{n}. De broncode staat op GitHub: armandomartires/sigma-scribe.
+Auteur
+Sigma Recon.
+Je notities
+Gewone .md- en .txt-bestanden in {name}. Sluit de Kobo via USB aan om ze te kopiëren. Het kladblok is het verborgen bestand .scratchpad.md.
+Knoppen
+De paginaknoppen scrollen de pagina. De aan/uit-knop slaat op en gaat terug naar de lezer. Elke wijziging wordt tijdens het typen opgeslagen.
+Vereist een hub met voeding of een Y-kabel: de lezer voedt de poort niet. Zie Help → USB-toetsenbord, muis en export.
+Credits
+Lettertypen Literata en Atkinson Hyperlegible (SIL Open Font License {n}). Letterherkenning: eigen model, alleen getraind op synthetische inkt uit OFL-lettertypen. FBInk van NiLuJe (GPL-{m}-or-later). NickelMenu van pgaskin. Pictogrammen: Lucide (ISC-licentie), lucide.dev.
+Taal
+kon de notitie niet lezen
+Instellingen
+Schrijven
+Scherm
+Toetsenbord en invoer
+USB en apparaten
+Help en info
+Tekst
+Regellengte
+Woorden per regel
+Pagina
+Schermtoetsenbord
+Interface
+Interfacetaal
+Pagina {n} van {m}
+English
+Français
+Português
+Schrijven
+Ongedaan
+Wissen
+Vinger
+Stylus
+Invoegen
+Handschrift
+Pen
+Lijndikte in het Schrijven-paneel
+Snelle inkt (A2)
+Experimentele 1-bit-golfvorm voor live inkt
+Letters
+Tekenen
+Gummen
+Trainen
+Overslaan
+Opslaan
+Schrijf:
+Voorbeelden
+Mijn handschrift
+Handschriftvoorbeelden voor letterherkenning
+Lettervakjes
+Eén teken per vakje in plaats van vrij schrijven
+Woordmodus (experimenteel)
+Toetst elk woord aan een woordenlijst; uit is nauwkeuriger
+Systeemtaal negeren
+Kies de taal van de app in plaats van die van de Kobo
+Gebruikt zolang Systeemtaal negeren aan staat
+VS internationaal
+Belgisch AZERTY
+Deens
+Noors
+Zweeds / Fins
+Pools (programmeur)
+Tsjechisch QWERTZ
+Roemeens
+Turks Q
+Spaans (Latijns-Amerika)
+Portugees (Brazilië)
+Russisch
+Oekraïens
+Grieks
+Machinaal opgestelde vertaling, naar beste kunnen; een moedertaalcontrole is nodig. Volgt de taal van de Kobo.

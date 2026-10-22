@@ -1,0 +1,260 @@
+Fitxers
+Graf
+Opcions
+Ajuda
+Ajuda / Info de l'app
+Ajuda / Referència de Markdown
+Ajuda / Teclat USB, ratolí i exportació
+Torna a l'Ajuda
+Puja a Fitxers
+Mou {name} a
+Cancel·la
+D'acord
+{n} paraules
+{n} paraula
+línia {n}
+previsualització
+pàgina {n} de {m}
+els botons passen pàgina
+Paper
+Nit
+desat
+desant
+no desat
+USB
+sense USB
+Tecles
+Retalla
+Copia
+Enganxa
+Tot
+Maj
+Esborra
+Supr
+Espai
+Retorn
+Retorn
+Bloq
+Inici
+Fi
+Compacte
+Complet
+Dividit
+Centre
+Bloc esq.
+Bloc dret
+Fletxes
+Índex
+Tasques
+Esborrany
+Tot
+Obre
+Fet
+{n} més…
+No hi ha encapçalaments en aquesta nota. Comença una línia amb #.
+No hi ha tasques. Comença una línia amb - [ ].
+Cerca
+Substitueix
+Ant.
+Seg.
+Cap
+{n} de {m}
+– de {n}
+Carpeta
+Més
+Reanomena
+Mou
+Suprimeix
+Toca de nou per suprimir
+Nota nova
+Carpeta nova
+No hi ha carpetes.
+Encara no hi ha notes. Toca Nota nova.
+{n} notes
+{n} nota
+{n} enllaços
+{n} enllaç
+Sense enllaços
+toca de nou per obrir
+escriu [[nom d'una nota]] per unir dues notes
+Escala de la interfície
+Botons, menús i tecles; la nota manté la seva Mida
+Nit és la mateixa pàgina, invertida
+Dia
+Lletra
+Serif per llegir, sans per a l'autobús
+Literata
+Atkinson
+Línia
+Paraules per línia, de {n} a {m}
+No
+Sí
+Mida
+Mida de lletra
+Lligada al Marge mentre Línia és activa
+Interlineat
+Espai entre línies
+Marge
+Lloc per al polze
+Tecla Tab
+En Markdown el normal són espais
+Tab
+Espais
+Amplada del tab
+Espais inserits, o columnes que ocupa un tab
+Teclat
+Distribució en pantalla
+Distribució
+Teclat complet en pantalla i teclats USB
+EUA
+RU
+Francès AZERTY
+Alemany QWERTZ
+Espanyol
+Portuguès
+Italià
+To del teclat
+Mida del teclat
+Mida automàtica del teclat
+Segueix l'escala de la interfície, fins al 150%
+Auto segueix l'escala de la interfície, fins al 150%
+El teclat pot ser diferent de la pàgina
+Tema
+Clar
+Fosc
+Calaix
+Índex, tasques i esborrany s'obren aquí (v{n})
+Esquerra
+Dreta
+Teclat i ratolí USB
+Cal un concentrador amb alimentació: el lector no alimenta el port
+Desplaçament
+Direcció de la roda i dos dits; Natural mou la pàgina com una pantalla tàctil
+Tradicional
+Natural
+Orientació
+Auto segueix com el subjectes
+Auto
+Auto (sense sensor)
+Vertical
+Horitzontal
+Vertical invertida
+Horitzontal invertida
+Cap per avall
+Gira Vertical o Horitzontal {n}°
+Info de l'app
+Versió, llicència i autor
+Referència de Markdown
+La sintaxi que aquesta pàgina pot mostrar
+Teclat USB, ratolí i exportació
+Concentrador, dreceres, treure fitxers
+Concentrador amb alimentació
+La Forma no alimenta el seu port USB. Connecta el teclat a un concentrador USB amb alimentació, o a un cable en Y amb font pròpia, i el concentrador al lector amb un adaptador micro-USB OTG.
+Connexió
+Activa primer Opcions → Teclat i ratolí USB: posa el port en mode amfitrió, de manera que un ordinador no veu el Kobo fins que el desactives o surts de l'app. Després connecta el teclat; la barra d'estat mostra USB en un segon (sense USB mentre no en troba cap). El teclat en pantalla continua funcionant i desconnectar és segur.
+Dreceres
+Igual que la tecla Ctrl en pantalla.
+Ratolí i ratolí tàctil
+Un ratolí o ratolí tàctil USB (també el d'un teclat com el Logitech K{n} Plus) mostra una fletxa petita. Clic = tocar; arrossegar a la nota selecciona; doble clic selecciona una paraula; la roda o el desplaçament amb dos dits mou la nota i passa pàgines a la previsualització i a les llistes. La fletxa s'amaga després de {m} segons quieta i quan escrius. El clic dret no fa res.
+Opcions → Distribució fixa el teclat: EUA, RU, francès, alemany, espanyol, portuguès o italià. Esc tanca Cerca, fulls i seleccions.
+Exporta
+Les teves notes són fitxers .md senzills. Connecta el Kobo a un ordinador per USB (surt abans de Sigma Scribe), tria Connecta i copia la carpeta sigma-scribe/notes. No cal res més; la sincronització (p. ex. Syncthing) pot arribar més endavant.
+Si no passa res
+Comprova l'alimentació del concentrador, prova un altre teclat (els senzills amb cable funcionen millor) i després surt i torna a obrir l'app. El registre .adds/sigma-scribe/sigma-scribe.log anota cada teclat trobat.
+Encapçalament
+Són les files de l'Índex.
+Negreta i cursiva
+Dos asteriscs per a negreta, un per a cursiva.
+Llista
+Un guionet, o un número i un punt. Els claudàtors fan una casella.
+Cita
+Un signe més gran que al començament.
+Línia horitzontal
+Tres guionets en una línia sola.
+Codi
+Accents greus. Tres tanquen un bloc.
+Imatge
+Un signe d'exclamació, paraules per a la imatge i després l'adreça. Es mostra com [image: …] al Kobo.
+Enllaç web
+Es mostra subratllat; el Kobo no té navegador per obrir-lo. Una nota continua fent servir claudàtors dobles.
+Taula
+Una capçalera, una fila de guionets i després les cel·les. De moment es mostra com a text.
+Ratllat
+Dues titlles a cada costat.
+Enllaç a una nota
+El nom de la nota, o un nom i les paraules a mostrar. Un enllaç discontinu crea la nota. Els enllaços són el que dibuixa el graf.
+Sigma Scribe
+Versió {n} Un quadern per al Kobo Forma: fitxers Markdown senzills en una pàgina de tinta electrònica, escrits sobre el vidre.
+Llicència
+Només AGPL-{n}. El codi és a GitHub: armandomartires/sigma-scribe.
+Autor
+Sigma Recon.
+Les teves notes
+Fitxers .md i .txt senzills a {name}. Connecta el Kobo per USB per copiar-los. L'esborrany és el fitxer ocult .scratchpad.md.
+Botons
+Els botons de pàgina desplacen la pàgina. El botó d'engegada desa i torna al lector. Cada canvi es desa mentre escrius.
+Cal un concentrador amb alimentació o un cable en Y: el lector no alimenta el port. Vegeu Ajuda → Teclat USB, ratolí i exportació.
+Crèdits
+Tipus de lletra Literata i Atkinson Hyperlegible (SIL Open Font License {n}). Reconeixement de lletres: model propi, entrenat només amb tinta sintètica de tipus OFL. FBInk de NiLuJe (GPL-{m}-or-later). NickelMenu de pgaskin. Icones: Lucide (llicència ISC), lucide.dev.
+Idioma
+no s'ha pogut llegir la nota
+Configuració
+Escriptura
+Pantalla
+Teclat i entrada
+USB i dispositius
+Ajuda i informació
+Text
+Llargada de línia
+Paraules per línia
+Pàgina
+Teclat en pantalla
+Interfície
+Idioma de la interfície
+Pàgina {n} de {m}
+English
+Français
+Português
+Escriu
+Desfés
+Neteja
+Dit
+Llapis
+Insereix
+Escriptura a mà
+Traç
+Gruix del traç al tauler Escriu
+Tinta ràpida (A2)
+Forma d'ona experimental d'1 bit per a tinta en directe
+Lletres
+Dibuixa
+Esborra
+Entrena
+Omet
+Desa
+Escriu:
+Mostres
+La meva lletra
+Mostres de lletra per al reconeixement
+Caselles de lletres
+Un caràcter per casella en lloc d'escriptura lliure
+Mode paraula (experimental)
+Compara cada paraula amb una llista; desactivat és més precís
+Substitueix l'idioma del sistema
+Tria l'idioma de l'app en lloc del del Kobo
+S'usa mentre Substitueix l'idioma del sistema és actiu
+EUA internacional
+Belga AZERTY
+Danès
+Noruec
+Suec / finès
+Polonès (programador)
+Txec QWERTZ
+Romanès
+Turc Q
+Espanyol (Amèrica Llatina)
+Portuguès (Brasil)
+Rus
+Ucraïnès
+Grec
+Traducció feta per màquina, com millor s'ha pogut; cal una revisió nativa. Segueix l'idioma del Kobo.

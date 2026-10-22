@@ -1,0 +1,260 @@
+Filer
+Graf
+Indstillinger
+Hjælp
+Hjælp / Om appen
+Hjælp / Markdown-oversigt
+Hjælp / USB-tastatur, mus og eksport
+Tilbage til Hjælp
+Op til Filer
+Flyt {name} til
+Annuller
+OK
+{n} ord
+{n} ord
+linje {n}
+forhåndsvisning
+side {n} af {m}
+knapperne bladrer
+Papir
+Nat
+gemt
+gemmer
+ikke gemt
+USB
+ingen USB
+Taster
+Klip
+Kopiér
+Indsæt
+Alt
+Shift
+Tilbage
+Slet
+Mellemrum
+Enter
+Retur
+Caps
+Home
+End
+Kompakt
+Fuld
+Delt
+Midte
+Blok v.
+Blok h.
+Pile
+Indhold
+Opgaver
+Kladde
+Alle
+Åbn
+Færdig
+{n} mere…
+Ingen overskrifter i denne note. Start en linje med #.
+Ingen opgaver. Start en linje med - [ ].
+Søg
+Erstat
+Forrige
+Næste
+Ingen
+{n} af {m}
+– af {n}
+Mappe
+Mere
+Omdøb
+Flyt
+Slet
+Tryk igen for at slette
+Ny note
+Ny mappe
+Ingen mapper.
+Ingen noter endnu. Tryk på Ny note.
+{n} noter
+{n} note
+{n} links
+{n} link
+Ingen links
+tryk igen for at åbne
+skriv [[et notenavn]] for at forbinde to noter
+UI-skala
+Knapper, menuer og taster; noten beholder sin Størrelse
+Nat er den samme side, inverteret
+Dag
+Skrift
+Serif til læsning, sans til bussen
+Literata
+Atkinson
+Linje
+Ord pr. linje, {n} til {m}
+Fra
+Til
+Størrelse
+Skriftstørrelse
+Knyttet til Margen mens Linje er slået til
+Linjeafstand
+Plads mellem linjer
+Margen
+Plads til en tommelfinger
+Tab-tast
+Markdown bruger normalt mellemrum
+Tab
+Mellemrum
+Tab-bredde
+Indsatte mellemrum, eller kolonner pr. tab
+Tastatur
+Layout på skærmen
+Layout
+Fuldt skærmtastatur og USB-tastaturer
+US
+UK
+Fransk AZERTY
+Tysk QWERTZ
+Spansk
+Portugisisk
+Italiensk
+Tastaturtone
+Tastaturstørrelse
+Automatisk tastaturstørrelse
+Følger UI-skalaen, op til 150%
+Auto følger UI-skalaen, op til 150%
+Tastaturet kan afvige fra siden
+Tema
+Lyst
+Mørkt
+Skuffe
+Indhold, opgaver og kladde åbner her (v{n})
+Venstre
+Højre
+USB-tastatur og mus
+Kræver en hub med strøm: læseren giver ikke strøm til porten
+Rulning
+Retning for hjul og to fingre; Naturlig flytter siden som en touchskærm
+Traditionel
+Naturlig
+Retning
+Auto følger, hvordan du holder den
+Auto
+Auto (ingen sensor)
+Stående
+Liggende
+Stående omvendt
+Liggende omvendt
+På hovedet
+Drejer Stående eller Liggende {n}°
+Om appen
+Version, licens og forfatter
+Markdown-oversigt
+Den syntaks denne side kan vise
+USB-tastatur, mus og eksport
+Hub, genveje, få filer ud
+Hub med strøm
+Forma giver ikke strøm til sin USB-port. Sæt tastaturet i en USB-hub med strøm, eller et Y-kabel med egen strøm, og hubben i læseren med en micro-USB OTG-adapter.
+Tilslutning
+Slå først Indstillinger → USB-tastatur og mus til: porten skifter til værtstilstand, så en computer ikke ser Kobo'en, før du slår det fra eller lukker appen. Sæt derefter tastaturet i; statuslinjen viser USB inden for et sekund (ingen USB, så længe der ikke er fundet et). Skærmtastaturet virker stadig, og det er sikkert at tage stikket ud.
+Genveje
+Det samme som Ctrl-tasten på skærmen.
+Mus og touchpad
+En USB-mus eller touchpad (også touchpad'en på et tastatur som Logitech K{n} Plus) viser en lille pil. Klik = tryk; træk i noten markerer; dobbeltklik markerer et ord; hjulet eller rulning med to fingre flytter noten og bladrer i forhåndsvisning og lister. Pilen skjules efter {m} sekunder i ro og når du skriver. Højreklik gør intet.
+Indstillinger → Layout vælger tastaturet: US, UK, fransk, tysk, spansk, portugisisk eller italiensk. Esc lukker Søg, ark og markeringer.
+Eksport
+Dine noter er almindelige .md-filer. Slut Kobo'en til en computer via USB (luk Sigma Scribe først), vælg Tilslut, og kopiér mappen sigma-scribe/notes. Der skal ikke mere til; synkronisering (f.eks. Syncthing) kan komme senere.
+Hvis intet sker
+Tjek hubbens strøm, prøv et andet tastatur (simple kablede virker bedst), og luk og åbn appen igen. Loggen .adds/sigma-scribe/sigma-scribe.log noterer hvert fundet tastatur.
+Overskrift
+Det er rækkerne i Indhold.
+Fed og kursiv
+To stjerner for fed, én for kursiv.
+Liste
+En bindestreg, eller et tal og et punktum. Kantede parenteser laver et afkrydsningsfelt.
+Citat
+Et større-end-tegn i starten.
+Streg
+Tre bindestreger på deres egen linje.
+Kode
+Backticks. Tre af dem omslutter en blok.
+Billede
+Et udråbstegn, ord til billedet og derefter adressen. Vises som [image: …] på Kobo'en.
+Weblink
+Vises understreget; Kobo'en har ingen browser til at åbne det. En note bruger stadig dobbelte kantede parenteser.
+Tabel
+En overskrift, en række streger og så cellerne. Vises indtil videre som almindelig tekst.
+Gennemstreget
+To tilder på hver side.
+Link til en note
+Notens navn, eller et navn og de ord der skal vises. Et stiplet link opretter noten. Links er det, grafen tegner.
+Sigma Scribe
+Version {n} En notesbog til Kobo Forma: almindelige Markdown-filer på en e-ink-side, skrevet på glasset.
+Licens
+Kun AGPL-{n}. Koden ligger på GitHub: armandomartires/sigma-scribe.
+Forfatter
+Sigma Recon.
+Dine noter
+Almindelige .md- og .txt-filer i {name}. Slut Kobo'en til via USB for at kopiere dem. Kladden er den skjulte fil .scratchpad.md.
+Knapper
+Sideknapperne ruller siden. Tænd/sluk-knappen gemmer og går tilbage til læseren. Hver ændring gemmes, mens du skriver.
+Kræver en hub med strøm eller et Y-kabel: læseren giver ikke strøm til porten. Se Hjælp → USB-tastatur, mus og eksport.
+Tak til
+Skrifttyperne Literata og Atkinson Hyperlegible (SIL Open Font License {n}). Bogstavgenkendelse: egen model, kun trænet på syntetisk blæk fra OFL-skrifttyper. FBInk af NiLuJe (GPL-{m}-or-later). NickelMenu af pgaskin. Ikoner: Lucide (ISC-licens), lucide.dev.
+Sprog
+kunne ikke læse noten
+Indstillinger
+Skrivning
+Skærm
+Tastatur og input
+USB og enheder
+Hjælp og om
+Tekst
+Linjelængde
+Ord pr. linje
+Side
+Skærmtastatur
+Brugerflade
+Sprog i brugerfladen
+Side {n} af {m}
+English
+Français
+Português
+Skriv
+Fortryd
+Ryd
+Finger
+Pen
+Indsæt
+Håndskrift
+Pen
+Stregbredde i Skriv-panelet
+Hurtigt blæk (A2)
+Eksperimentel 1-bit-bølgeform til levende blæk
+Bogstaver
+Tegn
+Visk ud
+Træn
+Spring over
+Gem
+Skriv:
+Prøver
+Min håndskrift
+Håndskriftsprøver til bogstavgenkendelse
+Bogstavfelter
+Ét tegn pr. felt i stedet for fri skrift
+Ordtilstand (eksperimentel)
+Tjekker hvert ord mod en ordliste; fra er mere præcis
+Tilsidesæt systemsprog
+Vælg appens sprog i stedet for Kobo'ens
+Bruges mens Tilsidesæt systemsprog er slået til
+US international
+Belgisk AZERTY
+Dansk
+Norsk
+Svensk / finsk
+Polsk (programmør)
+Tjekkisk QWERTZ
+Rumænsk
+Tyrkisk Q
+Spansk (Latinamerika)
+Portugisisk (Brasilien)
+Russisk
+Ukrainsk
+Græsk
+Maskinoversat efter bedste evne; en gennemlæsning af en modersmålstaler er nødvendig. Følger Kobo'ens sprog.

@@ -1,0 +1,782 @@
+# Sigma Scribe — Svenska. machine-drafted, best effort; needs a native review.
+# Format: English text, then "= " and the translation. See crates/render/src/i18n.rs.
+
+Files
+= Filer
+
+Graph
+= Graf
+
+Options
+= Alternativ
+
+Help
+= Hjälp
+
+Help / App info
+= Hjälp / Om appen
+
+Help / Markdown reference
+= Hjälp / Markdown-referens
+
+Help / USB keyboard, mouse & export
+= Hjälp / USB-tangentbord, mus och export
+
+Back to Help
+= Tillbaka till Hjälp
+
+Up to Files
+= Upp till Filer
+
+Move {name} to
+= Flytta {name} till
+
+Cancel
+= Avbryt
+
+OK
+= OK
+
+{n} words
+= {n} ord
+
+{n} word
+= {n} ord
+
+line {n}
+= rad {n}
+
+preview
+= förhandsvisning
+
+page {n} of {m}
+= sida {n} av {m}
+
+page buttons turn
+= knapparna bläddrar
+
+Paper
+= Papper
+
+Night
+= Natt
+
+saved
+= sparad
+
+saving
+= sparar
+
+not saved
+= inte sparad
+
+USB
+= USB
+
+no USB
+= ingen USB
+
+Keys
+= Tangenter
+
+Cut
+= Klipp ut
+
+Copy
+= Kopiera
+
+Paste
+= Klistra in
+
+Select all
+= Allt
+
+Shift
+= Shift
+
+Back
+= Bakåt
+
+Del
+= Del
+
+Space
+= Mellanslag
+
+Enter
+= Enter
+
+Return
+= Retur
+
+Caps
+= Caps
+
+Home
+= Home
+
+End
+= End
+
+Compact
+= Kompakt
+
+Full
+= Full
+
+Split
+= Delad
+
+Centre
+= Mitten
+
+Pad left
+= Block v.
+
+Pad right
+= Block h.
+
+Arrows
+= Pilar
+
+Contents
+= Innehåll
+
+To-dos
+= Att göra
+
+Scratch
+= Kladd
+
+All
+= Alla
+
+Open
+= Öppna
+
+Done
+= Klar
+
+{n} more…
+= {n} till…
+
+No headings in this note. Start a line with #.
+= Inga rubriker i den här anteckningen. Börja en rad med #.
+
+No to-dos. Start a line with - [ ].
+= Inga uppgifter. Börja en rad med - [ ].
+
+Find
+= Sök
+
+Replace
+= Ersätt
+
+Prev
+= Föreg.
+
+Next
+= Nästa
+
+None
+= Ingen
+
+{n} of {m}
+= {n} av {m}
+
+– of {n}
+= – av {n}
+
+Folder
+= Mapp
+
+More
+= Mer
+
+Rename
+= Byt namn
+
+Move
+= Flytta
+
+Delete
+= Radera
+
+Tap again to delete
+= Tryck igen för att radera
+
+New note
+= Ny anteckning
+
+New folder
+= Ny mapp
+
+No folders.
+= Inga mappar.
+
+No notes here yet. Tap New note.
+= Inga anteckningar än. Tryck på Ny anteckning.
+
+{n} notes
+= {n} anteckningar
+
+{n} note
+= {n} anteckning
+
+{n} links
+= {n} länkar
+
+{n} link
+= {n} länk
+
+No links
+= Inga länkar
+
+tap again to open
+= tryck igen för att öppna
+
+write [[a note name]] to join two notes
+= skriv [[ett anteckningsnamn]] för att koppla ihop två anteckningar
+
+UI scale
+= UI-skala
+
+Buttons, menus and keys; the note keeps its Size
+= Knappar, menyer och tangenter; anteckningen behåller sin Storlek
+
+Night is the same page, inverted
+= Natt är samma sida, inverterad
+
+Day
+= Dag
+
+Type
+= Typsnitt
+
+Serif for reading, sans for the bus
+= Serif för läsning, sans för bussen
+
+Literata
+= Literata
+
+Atkinson
+= Atkinson
+
+Line
+= Rad
+
+Words per line, {n} to {m}
+= Ord per rad, {n} till {m}
+
+Off
+= Av
+
+On
+= På
+
+Size
+= Storlek
+
+Type size
+= Textstorlek
+
+Tied to Margin while Line is on
+= Kopplad till Marginal medan Rad är på
+
+Leading
+= Radavstånd
+
+Space between lines
+= Utrymme mellan rader
+
+Margin
+= Marginal
+
+Room for a thumb
+= Plats för en tumme
+
+Tab key
+= Tabbtangent
+
+Markdown default is spaces
+= Markdown använder normalt mellanslag
+
+Tab
+= Tabb
+
+Spaces
+= Mellanslag
+
+Tab width
+= Tabbredd
+
+Spaces inserted, or columns a tab stands for
+= Infogade mellanslag, eller kolumner per tabb
+
+Keyboard
+= Tangentbord
+
+On-screen layout
+= Layout på skärmen
+
+Layout
+= Layout
+
+On-screen Full board and USB keyboards
+= Fullt skärmtangentbord och USB-tangentbord
+
+US
+= US
+
+UK
+= UK
+
+French AZERTY
+= Franska AZERTY
+
+German QWERTZ
+= Tyska QWERTZ
+
+Spanish
+= Spanska
+
+Portuguese
+= Portugisiska
+
+Italian
+= Italienska
+
+Keyboard tone
+= Tangentbordston
+
+Keyboard size
+= Tangentbordsstorlek
+
+Auto keyboard size
+= Automatisk tangentbordsstorlek
+
+Follow UI scale, up to 150%
+= Följer UI-skalan, upp till 150%
+
+Auto follows UI scale, up to 150%
+= Auto följer UI-skalan, upp till 150%
+
+The keyboard can differ from the page
+= Tangentbordet kan skilja sig från sidan
+
+Theme
+= Tema
+
+Light
+= Ljust
+
+Dark
+= Mörkt
+
+Drawer
+= Låda
+
+Contents, to-dos and scratch open here (v{n})
+= Innehåll, att göra och kladd öppnas här (v{n})
+
+Left
+= Vänster
+
+Right
+= Höger
+
+USB keyboard & mouse
+= USB-tangentbord och mus
+
+Needs a powered hub: the reader does not power the port
+= Kräver en strömförsörjd hubb: läsaren ger inte ström till porten
+
+Scroll
+= Rullning
+
+Wheel and two-finger direction; Natural moves the page like a touch screen
+= Riktning för hjul och två fingrar; Naturlig flyttar sidan som en pekskärm
+
+Traditional
+= Traditionell
+
+Natural
+= Naturlig
+
+Orientation
+= Orientering
+
+Auto follows how you hold it
+= Auto följer hur du håller den
+
+Auto
+= Auto
+
+Auto (no sensor)
+= Auto (ingen sensor)
+
+Portrait
+= Stående
+
+Landscape
+= Liggande
+
+Portrait inverted
+= Stående omvänd
+
+Landscape inverted
+= Liggande omvänd
+
+Upside down
+= Upp och ner
+
+Turns Portrait or Landscape {n}°
+= Vrider Stående eller Liggande {n}°
+
+App info
+= Om appen
+
+Version, license, and author
+= Version, licens och upphovsperson
+
+Markdown reference
+= Markdown-referens
+
+The syntax this page can render
+= Syntaxen den här sidan kan visa
+
+USB keyboard, mouse & export
+= USB-tangentbord, mus och export
+
+Hub, shortcuts, getting files off
+= Hubb, kortkommandon, få ut filer
+
+Powered hub
+= Strömförsörjd hubb
+
+The Forma does not power its USB port. Plug the keyboard into a powered USB hub, or a Y-cable with its own power supply, and the hub into the reader with a micro-USB OTG adapter.
+= Forma ger inte ström till sin USB-port. Anslut tangentbordet till en strömförsörjd USB-hubb, eller en Y-kabel med egen ström, och hubben till läsaren med en micro-USB OTG-adapter.
+
+Connecting
+= Ansluta
+
+Turn on Options → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
+= Slå först på Alternativ → USB-tangentbord och mus: porten växlar till värdläge, så en dator ser inte Koboen förrän du slår av det eller avslutar appen. Anslut sedan tangentbordet; statusfältet visar USB inom en sekund (ingen USB så länge inget hittats). Skärmtangentbordet fungerar fortfarande och det är säkert att koppla ur.
+
+Shortcuts
+= Kortkommandon
+
+The same as the on-screen Ctrl key.
+= Samma som Ctrl-tangenten på skärmen.
+
+Mouse and touchpad
+= Mus och pekplatta
+
+A USB mouse or touchpad (also the touchpad of a keyboard such as the Logitech K{n} Plus) shows a small arrow. Click = tap; drag on the note selects; double-click selects a word; the wheel or two-finger scroll moves the note and turns pages in preview and lists. The arrow hides after {m} seconds still and when you type. Right click does nothing.
+= En USB-mus eller pekplatta (även pekplattan på ett tangentbord som Logitech K{n} Plus) visar en liten pil. Klick = tryck; dra i anteckningen markerar; dubbelklick markerar ett ord; hjulet eller rullning med två fingrar flyttar anteckningen och bläddrar i förhandsvisning och listor. Pilen döljs efter {m} sekunder stilla och när du skriver. Högerklick gör ingenting.
+
+Options → Layout sets the keyboard: US, UK, French, German, Spanish, Portuguese or Italian. Esc closes Find, sheets and selections.
+= Alternativ → Layout väljer tangentbordet: US, UK, franska, tyska, spanska, portugisiska eller italienska. Esc stänger Sök, paneler och markeringar.
+
+Export
+= Exportera
+
+Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
+= Dina anteckningar är vanliga .md-filer. Anslut Koboen till en dator via USB (avsluta Sigma Scribe först), välj Anslut och kopiera mappen sigma-scribe/notes. Inget mer behövs; synkronisering (t.ex. Syncthing) kan komma senare.
+
+If nothing happens
+= Om inget händer
+
+Check the hub's power, try another keyboard (simple wired ones work best), then leave and reopen the app. The device log .adds/sigma-scribe/sigma-scribe.log notes each keyboard found.
+= Kontrollera hubbens ström, prova ett annat tangentbord (enkla med sladd fungerar bäst) och avsluta och öppna appen igen. Loggen .adds/sigma-scribe/sigma-scribe.log noterar varje hittat tangentbord.
+
+Heading
+= Rubrik
+
+These are the rows in Contents.
+= Det här är raderna i Innehåll.
+
+Bold and italic
+= Fet och kursiv
+
+Two stars for bold, one for italic.
+= Två stjärnor för fet, en för kursiv.
+
+List
+= Lista
+
+A hyphen, or a number and a dot. Brackets make a checkbox.
+= Ett bindestreck, eller en siffra och en punkt. Hakparenteser gör en kryssruta.
+
+Quote
+= Citat
+
+A greater-than sign at the start.
+= Ett större än-tecken i början.
+
+Rule
+= Linje
+
+Three hyphens on their own line.
+= Tre bindestreck på en egen rad.
+
+Code
+= Kod
+
+Backticks. Three of them fence a block.
+= Backticks. Tre av dem omsluter ett block.
+
+Picture
+= Bild
+
+An exclamation mark, words for the picture, then the address. Shown as [image: …] on the Kobo.
+= Ett utropstecken, ord för bilden och sedan adressen. Visas som [image: …] på Koboen.
+
+Web link
+= Webblänk
+
+Shown underlined; the Kobo has no browser to open it. A note still uses double brackets.
+= Visas understruken; Koboen har ingen webbläsare för att öppna den. En anteckning använder fortfarande dubbla hakparenteser.
+
+Table
+= Tabell
+
+A header, a row of dashes, then the cells. Shown as plain text for now.
+= En rubrik, en rad streck och sedan cellerna. Visas som vanlig text tills vidare.
+
+Strike
+= Genomstruken
+
+Two tildes on each side.
+= Två tilde på varje sida.
+
+Link to a note
+= Länk till en anteckning
+
+The note name, or a name and the words to show. A dashed link creates the note. Links are what the graph draws.
+= Anteckningens namn, eller ett namn och orden som ska visas. En streckad länk skapar anteckningen. Länkar är det grafen ritar.
+
+Sigma Scribe
+= Sigma Scribe
+
+Version {n} A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.
+= Version {n} En anteckningsbok för Kobo Forma: vanliga Markdown-filer på en e-ink-sida, skrivna på glaset.
+
+License
+= Licens
+
+AGPL-{n}-only. The source is on GitHub: armandomartires/sigma-scribe.
+= Endast AGPL-{n}. Koden finns på GitHub: armandomartires/sigma-scribe.
+
+Author
+= Upphov
+
+Sigma Recon.
+= Sigma Recon.
+
+Your notes
+= Dina anteckningar
+
+Plain .md and .txt files in {name}. Connect the Kobo over USB to copy them. The scratch pad is the hidden file .scratchpad.md.
+= Vanliga .md- och .txt-filer i {name}. Anslut Koboen via USB för att kopiera dem. Kladden är den dolda filen .scratchpad.md.
+
+Buttons
+= Knappar
+
+The page buttons scroll the page. The power button saves and goes back to the reader. Every change is saved as you type.
+= Sidknapparna rullar sidan. Strömknappen sparar och går tillbaka till läsaren. Varje ändring sparas medan du skriver.
+
+Needs a powered hub or a Y-cable: the reader does not power the port. See Help → USB keyboard, mouse & export.
+= Kräver en strömförsörjd hubb eller en Y-kabel: läsaren ger inte ström till porten. Se Hjälp → USB-tangentbord, mus och export.
+
+Credits
+= Tack
+
+Literata and Atkinson Hyperlegible fonts (SIL Open Font License {n}). Letter recognition: own model, trained only on synthetic ink from OFL fonts. FBInk by NiLuJe (GPL-{m}-or-later). NickelMenu by pgaskin. Icons: Lucide (ISC licence), lucide.dev.
+= Typsnitten Literata och Atkinson Hyperlegible (SIL Open Font License {n}). Bokstavsigenkänning: egen modell, tränad endast på syntetiskt bläck från OFL-typsnitt. FBInk av NiLuJe (GPL-{m}-or-later). NickelMenu av pgaskin. Ikoner: Lucide (ISC-licens), lucide.dev.
+
+Language
+= Språk
+
+could not read the note
+= kunde inte läsa anteckningen
+
+Settings
+= Inställningar
+
+Writing
+= Skrivande
+
+Display
+= Skärm
+
+Keyboard & input
+= Tangentbord och inmatning
+
+USB & devices
+= USB och enheter
+
+Help & about
+= Hjälp och om
+
+Text
+= Text
+
+Line length
+= Radlängd
+
+Words per line
+= Ord per rad
+
+Page
+= Sida
+
+On-screen keyboard
+= Skärmtangentbord
+
+Interface
+= Gränssnitt
+
+Interface language
+= Gränssnittsspråk
+
+Page {n} of {m}
+= Sida {n} av {m}
+
+English
+= English
+
+Français
+= Français
+
+Português
+= Português
+
+Write
+= Skriv
+
+Undo
+= Ångra
+
+Clear
+= Rensa
+
+Finger
+= Finger
+
+Stylus
+= Penna
+
+Insert
+= Infoga
+
+Handwriting
+= Handskrift
+
+Ink pen
+= Penna
+
+Stroke width in the Write panel
+= Linjebredd i Skriv-panelen
+
+Fast ink (A2)
+= Snabbt bläck (A2)
+
+Experimental 1-bit waveform for live ink
+= Experimentell 1-bitars vågform för levande bläck
+
+Letters
+= Bokstäver
+
+Draw
+= Rita
+
+Erase
+= Sudda
+
+Train
+= Träna
+
+Skip
+= Hoppa över
+
+Save
+= Spara
+
+Write:
+= Skriv:
+
+Samples
+= Prover
+
+My handwriting
+= Min handstil
+
+Handwriting samples for letter recognition
+= Handstilsprover för bokstavsigenkänning
+
+Letter boxes
+= Bokstavsrutor
+
+One character per box instead of free writing
+= Ett tecken per ruta i stället för fri skrift
+
+Word mode (experimental)
+= Ordläge (experimentellt)
+
+Read every word against a word list; off is more accurate
+= Jämför varje ord med en ordlista; av är mer exakt
+
+Override system language
+= Åsidosätt systemspråk
+
+Choose the app's language instead of the Kobo's
+= Välj appens språk i stället för Koboens
+
+Used while Override system language is on
+= Används medan Åsidosätt systemspråk är på
+
+US International
+= US internationell
+
+Belgian AZERTY
+= Belgisk AZERTY
+
+Danish
+= Danska
+
+Norwegian
+= Norska
+
+Swedish / Finnish
+= Svenska / finska
+
+Polish (programmer)
+= Polska (programmerare)
+
+Czech QWERTZ
+= Tjeckiska QWERTZ
+
+Romanian
+= Rumänska
+
+Turkish Q
+= Turkiska Q
+
+Spanish (Latin America)
+= Spanska (Latinamerika)
+
+Portuguese (Brazil)
+= Portugisiska (Brasilien)
+
+Russian
+= Ryska
+
+Ukrainian
+= Ukrainska
+
+Greek
+= Grekiska
+
+Machine-drafted translation, best effort; a native review is needed. Follows the Kobo's language.
+= Maskinöversatt efter bästa förmåga; en granskning av en infödd talare behövs. Följer Koboens språk.

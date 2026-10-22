@@ -1,0 +1,260 @@
+Dateien
+Graph
+Optionen
+Hilfe
+Hilfe / App-Info
+Hilfe / Markdown-Referenz
+Hilfe / USB-Tastatur, Maus & Export
+Zurück zur Hilfe
+Hoch zu Dateien
+{name} verschieben nach
+Abbrechen
+OK
+{n} Wörter
+{n} Wort
+Zeile {n}
+Vorschau
+Seite {n} von {m}
+Seitentasten blättern
+Papier
+Nacht
+gespeichert
+speichert
+nicht gespeichert
+USB
+kein USB
+Tasten
+Ausschn.
+Kopieren
+Einfügen
+Alles wählen
+Umschalt
+Zurück
+Entf
+Leer
+Enter
+Eingabe
+Feststell
+Pos1
+Ende
+Kompakt
+Voll
+Geteilt
+Mitte
+Block links
+Block rechts
+Pfeile
+Inhalt
+Aufgaben
+Notizblock
+Alle
+Öffnen
+Fertig
+{n} weitere…
+Keine Überschriften in dieser Notiz. Beginne eine Zeile mit #.
+Keine Aufgaben. Beginne eine Zeile mit - [ ].
+Suchen
+Ersetzen
+Zurück
+Weiter
+Keine
+{n} von {m}
+– von {n}
+Ordner
+Mehr
+Umbenennen
+Bewegen
+Löschen
+Zum Löschen erneut tippen
+Neue Notiz
+Neuer Ordner
+Keine Ordner.
+Noch keine Notizen. Tippe auf Neue Notiz.
+{n} Notizen
+{n} Notiz
+{n} Links
+{n} Link
+Keine Links
+zum Öffnen erneut tippen
+schreibe [[Name einer Notiz]], um zwei Notizen zu verbinden
+UI-Größe
+Tasten, Menüs und Tastatur; die Notiz behält ihre Größe
+Nacht ist dieselbe Seite, invertiert
+Tag
+Schrift
+Serif zum Lesen, Sans für unterwegs
+Literata
+Atkinson
+Zeile
+Wörter pro Zeile, {n} bis {m}
+Aus
+An
+Größe
+Schriftgröße
+An den Rand gebunden, solange Zeile an ist
+Zeilenabstand
+Abstand zwischen den Zeilen
+Rand
+Platz für den Daumen
+Tabulatortaste
+In Markdown sind Leerzeichen üblich
+Tab
+Leerzeichen
+Tabbreite
+Eingefügte Leerzeichen oder Spalten pro Tab
+Tastatur
+Bildschirm-Layout
+Layout
+Volle Bildschirmtastatur und USB-Tastaturen
+US
+UK
+Französisch AZERTY
+Deutsch QWERTZ
+Spanisch
+Portugiesisch
+Italienisch
+Tastaturton
+Tastaturgröße
+Automatische Tastaturgröße
+Folgt der UI-Größe, bis 150%
+Auto folgt der UI-Größe, bis 150%
+Die Tastatur kann von der Seite abweichen
+Design
+Hell
+Dunkel
+Seitenleiste
+Inhalt, Aufgaben und Notizblock öffnen hier (v{n})
+Links
+Rechts
+USB-Tastatur & Maus
+Braucht einen Hub mit Strom: der Reader versorgt den Anschluss nicht
+Scrollen
+Richtung von Rad und zwei Fingern; Natürlich bewegt die Seite wie ein Touchscreen
+Klassisch
+Natürlich
+Ausrichtung
+Auto folgt der Haltung des Geräts
+Auto
+Auto (kein Sensor)
+Hochformat
+Querformat
+Hochformat gedreht
+Querformat gedreht
+Kopfüber
+Dreht Hoch- oder Querformat um {n}°
+App-Info
+Version, Lizenz und Autor
+Markdown-Referenz
+Die Syntax, die diese Seite darstellen kann
+USB-Tastatur, Maus & Export
+Hub, Kürzel, Dateien herunterladen
+Hub mit Strom
+Die Forma versorgt ihren USB-Anschluss nicht mit Strom. Stecke die Tastatur in einen USB-Hub mit Netzteil oder ein Y-Kabel mit eigener Stromversorgung und den Hub über einen Micro-USB-OTG-Adapter in den Reader.
+Verbinden
+Schalte zuerst Optionen → USB-Tastatur & Maus ein: Der Anschluss wechselt in den Host-Modus, daher sieht ein Computer den Kobo erst, wenn du es ausschaltest oder die App verlässt. Stecke dann die Tastatur ein; die Statusleiste zeigt innerhalb einer Sekunde USB (kein USB, solange keine gefunden wird). Die Bildschirmtastatur funktioniert weiter, und Abziehen ist sicher.
+Tastenkürzel
+Wie die Strg-Taste auf dem Bildschirm.
+Maus und Touchpad
+Eine USB-Maus oder ein Touchpad (auch das Touchpad einer Tastatur wie der Logitech K{n} Plus) zeigt einen kleinen Pfeil. Klick = Tippen; Ziehen in der Notiz wählt aus; Doppelklick wählt ein Wort; Rad oder Zwei-Finger-Scrollen bewegt die Notiz und blättert in Vorschau und Listen. Der Pfeil verschwindet nach {m} Sekunden Ruhe und beim Tippen. Rechtsklick tut nichts.
+Optionen → Layout legt die Tastatur fest: US, UK, Französisch, Deutsch, Spanisch, Portugiesisch oder Italienisch. Esc schließt Suche, Blätter und Auswahlen.
+Export
+Deine Notizen sind einfache .md-Dateien. Verbinde den Kobo per USB mit einem Computer (verlasse vorher Sigma Scribe), wähle Verbinden und kopiere den Ordner sigma-scribe/notes. Mehr ist nicht nötig; Synchronisierung (z. B. Syncthing) kommt vielleicht später.
+Wenn nichts passiert
+Prüfe die Stromversorgung des Hubs, versuche eine andere Tastatur (einfache kabelgebundene funktionieren am besten), verlasse dann die App und öffne sie erneut. Das Geräteprotokoll .adds/sigma-scribe/sigma-scribe.log vermerkt jede gefundene Tastatur.
+Überschrift
+Das sind die Zeilen im Inhalt.
+Fett und kursiv
+Zwei Sterne für fett, einer für kursiv.
+Liste
+Ein Bindestrich oder eine Zahl mit Punkt. Klammern ergeben ein Kästchen.
+Zitat
+Ein Größer-als-Zeichen am Anfang.
+Linie
+Drei Bindestriche in einer eigenen Zeile.
+Code
+Backticks. Drei davon umschließen einen Block.
+Bild
+Ein Ausrufezeichen, Worte für das Bild, dann die Adresse. Auf dem Kobo als [image: …] angezeigt.
+Weblink
+Unterstrichen angezeigt; der Kobo hat keinen Browser zum Öffnen. Eine Notiz nutzt weiterhin doppelte Klammern.
+Tabelle
+Eine Kopfzeile, eine Zeile Striche, dann die Zellen. Vorerst als einfacher Text angezeigt.
+Durchgestrichen
+Zwei Tilden auf jeder Seite.
+Link zu einer Notiz
+Der Notizname oder ein Name und die anzuzeigenden Worte. Ein gestrichelter Link erstellt die Notiz. Links zeichnet der Graph.
+Sigma Scribe
+Version {n} Ein Notizbuch für die Kobo Forma: einfache Markdown-Dateien auf einer E-Ink-Seite, auf dem Glas getippt.
+Lizenz
+Nur AGPL-{n}. Der Quellcode ist auf GitHub: armandomartires/sigma-scribe.
+Autor
+Sigma Recon.
+Deine Notizen
+Einfache .md- und .txt-Dateien in {name}. Verbinde den Kobo per USB, um sie zu kopieren. Der Notizblock ist die versteckte Datei .scratchpad.md.
+Tasten
+Die Seitentasten scrollen die Seite. Die Ein/Aus-Taste speichert und kehrt zum Reader zurück. Jede Änderung wird beim Tippen gespeichert.
+Braucht einen Hub mit Strom oder ein Y-Kabel: der Reader versorgt den Anschluss nicht. Siehe Hilfe → USB-Tastatur, Maus & Export.
+Danksagung
+Schriften Literata und Atkinson Hyperlegible (SIL Open Font License {n}). Buchstabenerkennung: eigenes Modell, nur mit synthetischer Tinte aus OFL-Schriften trainiert. FBInk von NiLuJe (GPL-{m}-or-later). NickelMenu von pgaskin. Symbole: Lucide (ISC-Lizenz), lucide.dev.
+Sprache
+Notiz konnte nicht gelesen werden
+Einstellungen
+Schreiben
+Anzeige
+Tastatur & Eingabe
+USB & Geräte
+Hilfe & Info
+Text
+Zeilenlänge
+Wörter pro Zeile
+Seite
+Bildschirmtastatur
+Oberfläche
+Sprache der Oberfläche
+Seite {n} von {m}
+English
+Français
+Português
+Schreiben
+Rückgängig
+Leeren
+Finger
+Stift
+Einfügen
+Handschrift
+Tintenstift
+Strichbreite im Schreibfeld
+Schnelle Tinte (A2)
+Experimentelle 1-Bit-Wellenform für Live-Tinte
+Buchstaben
+Zeichnen
+Radieren
+Trainieren
+Überspringen
+Speichern
+Schreibe:
+Proben
+Meine Handschrift
+Handschriftproben für die Buchstabenerkennung
+Buchstabenfelder
+Ein Zeichen pro Feld statt freiem Schreiben
+Wortmodus (experimentell)
+Jedes Wort mit einer Wortliste abgleichen; aus ist genauer
+Systemsprache überschreiben
+Die Sprache der App statt der des Kobo wählen
+Gilt, solange Systemsprache überschreiben an ist
+US International
+Belgisch AZERTY
+Dänisch
+Norwegisch
+Schwedisch / Finnisch
+Polnisch (Programmierer)
+Tschechisch QWERTZ
+Rumänisch
+Türkisch Q
+Spanisch (Lateinamerika)
+Portugiesisch (Brasilien)
+Russisch
+Ukrainisch
+Griechisch
+Maschinell erstellte Übersetzung, nach bestem Bemühen; eine muttersprachliche Prüfung ist nötig. Folgt der Sprache des Kobo.

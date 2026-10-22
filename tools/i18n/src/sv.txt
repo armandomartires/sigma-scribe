@@ -1,0 +1,260 @@
+Filer
+Graf
+Alternativ
+Hjälp
+Hjälp / Om appen
+Hjälp / Markdown-referens
+Hjälp / USB-tangentbord, mus och export
+Tillbaka till Hjälp
+Upp till Filer
+Flytta {name} till
+Avbryt
+OK
+{n} ord
+{n} ord
+rad {n}
+förhandsvisning
+sida {n} av {m}
+knapparna bläddrar
+Papper
+Natt
+sparad
+sparar
+inte sparad
+USB
+ingen USB
+Tangenter
+Klipp ut
+Kopiera
+Klistra in
+Allt
+Shift
+Bakåt
+Del
+Mellanslag
+Enter
+Retur
+Caps
+Home
+End
+Kompakt
+Full
+Delad
+Mitten
+Block v.
+Block h.
+Pilar
+Innehåll
+Att göra
+Kladd
+Alla
+Öppna
+Klar
+{n} till…
+Inga rubriker i den här anteckningen. Börja en rad med #.
+Inga uppgifter. Börja en rad med - [ ].
+Sök
+Ersätt
+Föreg.
+Nästa
+Ingen
+{n} av {m}
+– av {n}
+Mapp
+Mer
+Byt namn
+Flytta
+Radera
+Tryck igen för att radera
+Ny anteckning
+Ny mapp
+Inga mappar.
+Inga anteckningar än. Tryck på Ny anteckning.
+{n} anteckningar
+{n} anteckning
+{n} länkar
+{n} länk
+Inga länkar
+tryck igen för att öppna
+skriv [[ett anteckningsnamn]] för att koppla ihop två anteckningar
+UI-skala
+Knappar, menyer och tangenter; anteckningen behåller sin Storlek
+Natt är samma sida, inverterad
+Dag
+Typsnitt
+Serif för läsning, sans för bussen
+Literata
+Atkinson
+Rad
+Ord per rad, {n} till {m}
+Av
+På
+Storlek
+Textstorlek
+Kopplad till Marginal medan Rad är på
+Radavstånd
+Utrymme mellan rader
+Marginal
+Plats för en tumme
+Tabbtangent
+Markdown använder normalt mellanslag
+Tabb
+Mellanslag
+Tabbredd
+Infogade mellanslag, eller kolumner per tabb
+Tangentbord
+Layout på skärmen
+Layout
+Fullt skärmtangentbord och USB-tangentbord
+US
+UK
+Franska AZERTY
+Tyska QWERTZ
+Spanska
+Portugisiska
+Italienska
+Tangentbordston
+Tangentbordsstorlek
+Automatisk tangentbordsstorlek
+Följer UI-skalan, upp till 150%
+Auto följer UI-skalan, upp till 150%
+Tangentbordet kan skilja sig från sidan
+Tema
+Ljust
+Mörkt
+Låda
+Innehåll, att göra och kladd öppnas här (v{n})
+Vänster
+Höger
+USB-tangentbord och mus
+Kräver en strömförsörjd hubb: läsaren ger inte ström till porten
+Rullning
+Riktning för hjul och två fingrar; Naturlig flyttar sidan som en pekskärm
+Traditionell
+Naturlig
+Orientering
+Auto följer hur du håller den
+Auto
+Auto (ingen sensor)
+Stående
+Liggande
+Stående omvänd
+Liggande omvänd
+Upp och ner
+Vrider Stående eller Liggande {n}°
+Om appen
+Version, licens och upphovsperson
+Markdown-referens
+Syntaxen den här sidan kan visa
+USB-tangentbord, mus och export
+Hubb, kortkommandon, få ut filer
+Strömförsörjd hubb
+Forma ger inte ström till sin USB-port. Anslut tangentbordet till en strömförsörjd USB-hubb, eller en Y-kabel med egen ström, och hubben till läsaren med en micro-USB OTG-adapter.
+Ansluta
+Slå först på Alternativ → USB-tangentbord och mus: porten växlar till värdläge, så en dator ser inte Koboen förrän du slår av det eller avslutar appen. Anslut sedan tangentbordet; statusfältet visar USB inom en sekund (ingen USB så länge inget hittats). Skärmtangentbordet fungerar fortfarande och det är säkert att koppla ur.
+Kortkommandon
+Samma som Ctrl-tangenten på skärmen.
+Mus och pekplatta
+En USB-mus eller pekplatta (även pekplattan på ett tangentbord som Logitech K{n} Plus) visar en liten pil. Klick = tryck; dra i anteckningen markerar; dubbelklick markerar ett ord; hjulet eller rullning med två fingrar flyttar anteckningen och bläddrar i förhandsvisning och listor. Pilen döljs efter {m} sekunder stilla och när du skriver. Högerklick gör ingenting.
+Alternativ → Layout väljer tangentbordet: US, UK, franska, tyska, spanska, portugisiska eller italienska. Esc stänger Sök, paneler och markeringar.
+Exportera
+Dina anteckningar är vanliga .md-filer. Anslut Koboen till en dator via USB (avsluta Sigma Scribe först), välj Anslut och kopiera mappen sigma-scribe/notes. Inget mer behövs; synkronisering (t.ex. Syncthing) kan komma senare.
+Om inget händer
+Kontrollera hubbens ström, prova ett annat tangentbord (enkla med sladd fungerar bäst) och avsluta och öppna appen igen. Loggen .adds/sigma-scribe/sigma-scribe.log noterar varje hittat tangentbord.
+Rubrik
+Det här är raderna i Innehåll.
+Fet och kursiv
+Två stjärnor för fet, en för kursiv.
+Lista
+Ett bindestreck, eller en siffra och en punkt. Hakparenteser gör en kryssruta.
+Citat
+Ett större än-tecken i början.
+Linje
+Tre bindestreck på en egen rad.
+Kod
+Backticks. Tre av dem omsluter ett block.
+Bild
+Ett utropstecken, ord för bilden och sedan adressen. Visas som [image: …] på Koboen.
+Webblänk
+Visas understruken; Koboen har ingen webbläsare för att öppna den. En anteckning använder fortfarande dubbla hakparenteser.
+Tabell
+En rubrik, en rad streck och sedan cellerna. Visas som vanlig text tills vidare.
+Genomstruken
+Två tilde på varje sida.
+Länk till en anteckning
+Anteckningens namn, eller ett namn och orden som ska visas. En streckad länk skapar anteckningen. Länkar är det grafen ritar.
+Sigma Scribe
+Version {n} En anteckningsbok för Kobo Forma: vanliga Markdown-filer på en e-ink-sida, skrivna på glaset.
+Licens
+Endast AGPL-{n}. Koden finns på GitHub: armandomartires/sigma-scribe.
+Upphov
+Sigma Recon.
+Dina anteckningar
+Vanliga .md- och .txt-filer i {name}. Anslut Koboen via USB för att kopiera dem. Kladden är den dolda filen .scratchpad.md.
+Knappar
+Sidknapparna rullar sidan. Strömknappen sparar och går tillbaka till läsaren. Varje ändring sparas medan du skriver.
+Kräver en strömförsörjd hubb eller en Y-kabel: läsaren ger inte ström till porten. Se Hjälp → USB-tangentbord, mus och export.
+Tack
+Typsnitten Literata och Atkinson Hyperlegible (SIL Open Font License {n}). Bokstavsigenkänning: egen modell, tränad endast på syntetiskt bläck från OFL-typsnitt. FBInk av NiLuJe (GPL-{m}-or-later). NickelMenu av pgaskin. Ikoner: Lucide (ISC-licens), lucide.dev.
+Språk
+kunde inte läsa anteckningen
+Inställningar
+Skrivande
+Skärm
+Tangentbord och inmatning
+USB och enheter
+Hjälp och om
+Text
+Radlängd
+Ord per rad
+Sida
+Skärmtangentbord
+Gränssnitt
+Gränssnittsspråk
+Sida {n} av {m}
+English
+Français
+Português
+Skriv
+Ångra
+Rensa
+Finger
+Penna
+Infoga
+Handskrift
+Penna
+Linjebredd i Skriv-panelen
+Snabbt bläck (A2)
+Experimentell 1-bitars vågform för levande bläck
+Bokstäver
+Rita
+Sudda
+Träna
+Hoppa över
+Spara
+Skriv:
+Prover
+Min handstil
+Handstilsprover för bokstavsigenkänning
+Bokstavsrutor
+Ett tecken per ruta i stället för fri skrift
+Ordläge (experimentellt)
+Jämför varje ord med en ordlista; av är mer exakt
+Åsidosätt systemspråk
+Välj appens språk i stället för Koboens
+Används medan Åsidosätt systemspråk är på
+US internationell
+Belgisk AZERTY
+Danska
+Norska
+Svenska / finska
+Polska (programmerare)
+Tjeckiska QWERTZ
+Rumänska
+Turkiska Q
+Spanska (Latinamerika)
+Portugisiska (Brasilien)
+Ryska
+Ukrainska
+Grekiska
+Maskinöversatt efter bästa förmåga; en granskning av en infödd talare behövs. Följer Koboens språk.

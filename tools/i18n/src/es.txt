@@ -1,0 +1,260 @@
+Archivos
+Grafo
+Opciones
+Ayuda
+Ayuda / Info de la app
+Ayuda / Referencia de Markdown
+Ayuda / Teclado USB, ratón y exportar
+Volver a Ayuda
+Subir a Archivos
+Mover {name} a
+Cancelar
+OK
+{n} palabras
+{n} palabra
+línea {n}
+vista previa
+página {n} de {m}
+los botones pasan página
+Papel
+Noche
+guardado
+guardando
+sin guardar
+USB
+sin USB
+Teclas
+Cortar
+Copiar
+Pegar
+Todo
+Mayús
+Borrar
+Supr
+Espacio
+Intro
+Intro
+Bloq
+Inicio
+Fin
+Compacto
+Completo
+Dividido
+Centro
+Bloque izq.
+Bloque der.
+Flechas
+Índice
+Tareas
+Borrador
+Todo
+Abrir
+Hecho
+{n} más…
+No hay encabezados en esta nota. Empieza una línea con #.
+No hay tareas. Empieza una línea con - [ ].
+Buscar
+Reemplazar
+Ant.
+Sig.
+Ninguno
+{n} de {m}
+– de {n}
+Carpeta
+Más
+Renombrar
+Mover
+Eliminar
+Toca otra vez para eliminar
+Nueva nota
+Nueva carpeta
+No hay carpetas.
+Aún no hay notas. Toca Nueva nota.
+{n} notas
+{n} nota
+{n} enlaces
+{n} enlace
+Sin enlaces
+toca otra vez para abrir
+escribe [[nombre de una nota]] para unir dos notas
+Escala de la interfaz
+Botones, menús y teclas; la nota mantiene su Tamaño
+Noche es la misma página, invertida
+Día
+Letra
+Serif para leer, sans para el autobús
+Literata
+Atkinson
+Línea
+Palabras por línea, de {n} a {m}
+No
+Sí
+Tamaño
+Tamaño de letra
+Ligado al Margen mientras Línea está activa
+Interlineado
+Espacio entre líneas
+Margen
+Sitio para el pulgar
+Tecla Tab
+En Markdown lo habitual son espacios
+Tab
+Espacios
+Ancho de tab
+Espacios insertados, o columnas que ocupa un tab
+Teclado
+Distribución en pantalla
+Distribución
+Teclado completo en pantalla y teclados USB
+EE. UU.
+R. U.
+Francés AZERTY
+Alemán QWERTZ
+Español
+Portugués
+Italiano
+Tono del teclado
+Tamaño del teclado
+Tamaño automático del teclado
+Sigue la escala de la interfaz, hasta 150%
+Auto sigue la escala de la interfaz, hasta 150%
+El teclado puede diferir de la página
+Tema
+Claro
+Oscuro
+Panel
+Índice, tareas y borrador se abren aquí (v{n})
+Izquierda
+Derecha
+Teclado y ratón USB
+Necesita un hub con alimentación: el lector no alimenta el puerto
+Desplazamiento
+Dirección de la rueda y dos dedos; Natural mueve la página como una pantalla táctil
+Tradicional
+Natural
+Orientación
+Auto sigue cómo lo sostienes
+Auto
+Auto (sin sensor)
+Vertical
+Horizontal
+Vertical invertida
+Horizontal invertida
+Boca abajo
+Gira Vertical u Horizontal {n}°
+Info de la app
+Versión, licencia y autor
+Referencia de Markdown
+La sintaxis que esta página puede mostrar
+Teclado USB, ratón y exportar
+Hub, atajos, sacar archivos
+Hub con alimentación
+La Forma no alimenta su puerto USB. Conecta el teclado a un hub USB con alimentación, o a un cable en Y con su propia fuente, y el hub al lector con un adaptador micro-USB OTG.
+Conectar
+Activa primero Opciones → Teclado y ratón USB: pone el puerto en modo host, así que un ordenador no ve el Kobo hasta que lo desactives o salgas de la app. Después conecta el teclado; la barra de estado muestra USB en un segundo (sin USB mientras no encuentre ninguno). El teclado en pantalla sigue funcionando y desconectar es seguro.
+Atajos
+Igual que la tecla Ctrl en pantalla.
+Ratón y touchpad
+Un ratón o touchpad USB (también el touchpad de un teclado como el Logitech K{n} Plus) muestra una pequeña flecha. Clic = tocar; arrastrar en la nota selecciona; doble clic selecciona una palabra; la rueda o el desplazamiento con dos dedos mueve la nota y pasa páginas en la vista previa y las listas. La flecha se oculta tras {m} segundos quieta y al escribir. El clic derecho no hace nada.
+Opciones → Distribución fija el teclado: EE. UU., R. U., francés, alemán, español, portugués o italiano. Esc cierra Buscar, hojas y selecciones.
+Exportar
+Tus notas son archivos .md sencillos. Conecta el Kobo a un ordenador por USB (sal antes de Sigma Scribe), elige Conectar y copia la carpeta sigma-scribe/notes. No hace falta nada más; la sincronización (p. ej. Syncthing) puede llegar más adelante.
+Si no pasa nada
+Comprueba la alimentación del hub, prueba otro teclado (los sencillos con cable funcionan mejor) y luego sal y vuelve a abrir la app. El registro .adds/sigma-scribe/sigma-scribe.log anota cada teclado encontrado.
+Encabezado
+Son las filas del Índice.
+Negrita y cursiva
+Dos asteriscos para negrita, uno para cursiva.
+Lista
+Un guion, o un número y un punto. Los corchetes crean una casilla.
+Cita
+Un signo mayor que al principio.
+Línea horizontal
+Tres guiones en una línea sola.
+Código
+Comillas invertidas. Tres de ellas encierran un bloque.
+Imagen
+Un signo de exclamación, palabras para la imagen y luego la dirección. Se muestra como [image: …] en el Kobo.
+Enlace web
+Se muestra subrayado; el Kobo no tiene navegador para abrirlo. Una nota sigue usando dobles corchetes.
+Tabla
+Una cabecera, una fila de guiones y luego las celdas. Por ahora se muestra como texto.
+Tachado
+Dos virgulillas a cada lado.
+Enlace a una nota
+El nombre de la nota, o un nombre y las palabras a mostrar. Un enlace discontinuo crea la nota. Los enlaces son lo que dibuja el grafo.
+Sigma Scribe
+Versión {n} Un cuaderno para el Kobo Forma: archivos Markdown sencillos en una página de tinta electrónica, escritos sobre el cristal.
+Licencia
+Solo AGPL-{n}. El código está en GitHub: armandomartires/sigma-scribe.
+Autor
+Sigma Recon.
+Tus notas
+Archivos .md y .txt sencillos en {name}. Conecta el Kobo por USB para copiarlos. El borrador es el archivo oculto .scratchpad.md.
+Botones
+Los botones de página desplazan la página. El botón de encendido guarda y vuelve al lector. Cada cambio se guarda mientras escribes.
+Necesita un hub con alimentación o un cable en Y: el lector no alimenta el puerto. Ver Ayuda → Teclado USB, ratón y exportar.
+Créditos
+Fuentes Literata y Atkinson Hyperlegible (SIL Open Font License {n}). Reconocimiento de letras: modelo propio, entrenado solo con tinta sintética de fuentes OFL. FBInk de NiLuJe (GPL-{m}-or-later). NickelMenu de pgaskin. Iconos: Lucide (licencia ISC), lucide.dev.
+Idioma
+no se pudo leer la nota
+Ajustes
+Escritura
+Pantalla
+Teclado y entrada
+USB y dispositivos
+Ayuda e información
+Texto
+Longitud de línea
+Palabras por línea
+Página
+Teclado en pantalla
+Interfaz
+Idioma de la interfaz
+Página {n} de {m}
+English
+Français
+Português
+Escribir
+Deshacer
+Limpiar
+Dedo
+Lápiz
+Insertar
+Escritura a mano
+Trazo
+Grosor del trazo en el panel Escribir
+Tinta rápida (A2)
+Forma de onda experimental de 1 bit para tinta en vivo
+Letras
+Dibujar
+Borrar
+Entrenar
+Saltar
+Guardar
+Escribe:
+Muestras
+Mi letra
+Muestras de letra para el reconocimiento
+Casillas de letras
+Un carácter por casilla en vez de escritura libre
+Modo palabra (experimental)
+Compara cada palabra con una lista; desactivado es más preciso
+Anular idioma del sistema
+Elegir el idioma de la app en lugar del del Kobo
+Se usa mientras Anular idioma del sistema está activo
+EE. UU. internacional
+Belga AZERTY
+Danés
+Noruego
+Sueco / finés
+Polaco (programador)
+Checo QWERTZ
+Rumano
+Turco Q
+Español (Latinoamérica)
+Portugués (Brasil)
+Ruso
+Ucraniano
+Griego
+Traducción hecha por máquina, lo mejor posible; necesita revisión de un hablante nativo. Sigue el idioma del Kobo.

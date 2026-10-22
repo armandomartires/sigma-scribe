@@ -688,12 +688,7 @@ impl App {
         if c == Change::LangOverride(true) {
             // Start from the language in use, so turning it on changes nothing.
             use sigma_core::settings::UiLang;
-            use sigma_render::i18n::Lang;
-            self.settings.ui_lang = match self.system_lang {
-                Lang::Fr => UiLang::Fr,
-                Lang::Pt => UiLang::Pt,
-                _ => UiLang::En,
-            };
+            self.settings.ui_lang = UiLang::from_code(self.system_lang.code()).unwrap_or_default();
         }
         if matches!(c, Change::LangOverride(_) | Change::UiLang(_)) {
             sigma_render::i18n::set_lang(resolve_lang(&self.settings, self.system_lang));
@@ -1116,11 +1111,9 @@ impl App {
             orientation_status: &self.orientation_label,
             page: self.settings_page,
             sub: self.settings_sub,
-            language: match sigma_render::i18n::lang() {
-                sigma_render::i18n::Lang::Fr => "Français",
-                sigma_render::i18n::Lang::Pt => "Português",
-                _ => "English",
-            },
+            language: sigma_core::settings::UiLang::from_code(sigma_render::i18n::lang().code())
+                .unwrap_or_default()
+                .name(),
             version: env!("CARGO_PKG_VERSION"),
             focus: self.settings_focus,
             hw_samples: self.hwr.samples,
@@ -4602,7 +4595,16 @@ impl App {
         let language = match lang {
             Lang::Fr => "Français. Traduction rédigée par machine, au mieux ; une relecture par un locuteur natif est nécessaire. Suit la langue du Kobo.".to_owned(),
             Lang::Pt => "Português. Tradução redigida por máquina, da melhor forma possível; precisa de revisão por um falante nativo. Segue o idioma do Kobo.".to_owned(),
-            _ => "English. Follows the Kobo's language (English, Français, Português).".to_owned(),
+            Lang::En | Lang::PseudoLong | Lang::PseudoRtl => {
+                "English. Follows the Kobo's language, or Settings → Language.".to_owned()
+            }
+            l => format!(
+                "{}. {}",
+                sigma_core::settings::UiLang::from_code(l.code())
+                    .unwrap_or_default()
+                    .name(),
+                tr("Machine-drafted translation, best effort; a native review is needed. Follows the Kobo's language.")
+            ),
         };
         let rows: Vec<(String, String)> = vec![
             (
@@ -4848,14 +4850,8 @@ impl App {
 /// The interface language (v1.5.5, decision 57): the Kobo's unless
 /// Settings → Language → Override system language is on.
 fn resolve_lang(s: &Settings, system: sigma_render::i18n::Lang) -> sigma_render::i18n::Lang {
-    use sigma_core::settings::UiLang;
-    use sigma_render::i18n::Lang;
     if !s.lang_override {
         return system;
     }
-    match s.ui_lang {
-        UiLang::En => Lang::En,
-        UiLang::Fr => Lang::Fr,
-        UiLang::Pt => Lang::Pt,
-    }
+    sigma_render::i18n::Lang::from_locale(s.ui_lang.code())
 }
