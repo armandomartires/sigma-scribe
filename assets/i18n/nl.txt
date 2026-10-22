@@ -1,0 +1,782 @@
+# Sigma Scribe — Nederlands. machine-drafted, best effort; needs a native review.
+# Format: English text, then "= " and the translation. See crates/render/src/i18n.rs.
+
+Files
+= Bestanden
+
+Graph
+= Graaf
+
+Options
+= Opties
+
+Help
+= Help
+
+Help / App info
+= Help / App-info
+
+Help / Markdown reference
+= Help / Markdown-overzicht
+
+Help / USB keyboard, mouse & export
+= Help / USB-toetsenbord, muis en export
+
+Back to Help
+= Terug naar Help
+
+Up to Files
+= Omhoog naar Bestanden
+
+Move {name} to
+= {name} verplaatsen naar
+
+Cancel
+= Annuleren
+
+OK
+= OK
+
+{n} words
+= {n} woorden
+
+{n} word
+= {n} woord
+
+line {n}
+= regel {n}
+
+preview
+= voorbeeld
+
+page {n} of {m}
+= pagina {n} van {m}
+
+page buttons turn
+= knoppen slaan om
+
+Paper
+= Papier
+
+Night
+= Nacht
+
+saved
+= opgeslagen
+
+saving
+= opslaan
+
+not saved
+= niet opgeslagen
+
+USB
+= USB
+
+no USB
+= geen USB
+
+Keys
+= Toetsen
+
+Cut
+= Knippen
+
+Copy
+= Kopiëren
+
+Paste
+= Plakken
+
+Select all
+= Alles
+
+Shift
+= Shift
+
+Back
+= Terug
+
+Del
+= Del
+
+Space
+= Spatie
+
+Enter
+= Enter
+
+Return
+= Return
+
+Caps
+= Caps
+
+Home
+= Home
+
+End
+= End
+
+Compact
+= Compact
+
+Full
+= Volledig
+
+Split
+= Gesplitst
+
+Centre
+= Midden
+
+Pad left
+= Blok links
+
+Pad right
+= Blok rechts
+
+Arrows
+= Pijlen
+
+Contents
+= Inhoud
+
+To-dos
+= Taken
+
+Scratch
+= Kladblok
+
+All
+= Alle
+
+Open
+= Openen
+
+Done
+= Klaar
+
+{n} more…
+= nog {n}…
+
+No headings in this note. Start a line with #.
+= Geen koppen in deze notitie. Begin een regel met #.
+
+No to-dos. Start a line with - [ ].
+= Geen taken. Begin een regel met - [ ].
+
+Find
+= Zoeken
+
+Replace
+= Vervangen
+
+Prev
+= Vorige
+
+Next
+= Volgende
+
+None
+= Geen
+
+{n} of {m}
+= {n} van {m}
+
+– of {n}
+= – van {n}
+
+Folder
+= Map
+
+More
+= Meer
+
+Rename
+= Hernoemen
+
+Move
+= Verplaats
+
+Delete
+= Wissen
+
+Tap again to delete
+= Tik nogmaals om te wissen
+
+New note
+= Nieuwe notitie
+
+New folder
+= Nieuwe map
+
+No folders.
+= Geen mappen.
+
+No notes here yet. Tap New note.
+= Nog geen notities. Tik op Nieuwe notitie.
+
+{n} notes
+= {n} notities
+
+{n} note
+= {n} notitie
+
+{n} links
+= {n} links
+
+{n} link
+= {n} link
+
+No links
+= Geen links
+
+tap again to open
+= tik nogmaals om te openen
+
+write [[a note name]] to join two notes
+= schrijf [[een notitienaam]] om twee notities te verbinden
+
+UI scale
+= UI-schaal
+
+Buttons, menus and keys; the note keeps its Size
+= Knoppen, menu's en toetsen; de notitie houdt haar Grootte
+
+Night is the same page, inverted
+= Nacht is dezelfde pagina, omgekeerd
+
+Day
+= Dag
+
+Type
+= Letter
+
+Serif for reading, sans for the bus
+= Schreef om te lezen, schreefloos voor in de bus
+
+Literata
+= Literata
+
+Atkinson
+= Atkinson
+
+Line
+= Regel
+
+Words per line, {n} to {m}
+= Woorden per regel, {n} tot {m}
+
+Off
+= Uit
+
+On
+= Aan
+
+Size
+= Grootte
+
+Type size
+= Lettergrootte
+
+Tied to Margin while Line is on
+= Gekoppeld aan Marge zolang Regel aan staat
+
+Leading
+= Regelafstand
+
+Space between lines
+= Ruimte tussen regels
+
+Margin
+= Marge
+
+Room for a thumb
+= Ruimte voor een duim
+
+Tab key
+= Tab-toets
+
+Markdown default is spaces
+= Markdown gebruikt standaard spaties
+
+Tab
+= Tab
+
+Spaces
+= Spaties
+
+Tab width
+= Tabbreedte
+
+Spaces inserted, or columns a tab stands for
+= Ingevoegde spaties, of kolommen per tab
+
+Keyboard
+= Toetsenbord
+
+On-screen layout
+= Indeling op scherm
+
+Layout
+= Indeling
+
+On-screen Full board and USB keyboards
+= Volledig schermtoetsenbord en USB-toetsenborden
+
+US
+= VS
+
+UK
+= VK
+
+French AZERTY
+= Frans AZERTY
+
+German QWERTZ
+= Duits QWERTZ
+
+Spanish
+= Spaans
+
+Portuguese
+= Portugees
+
+Italian
+= Italiaans
+
+Keyboard tone
+= Toetsenbordtoon
+
+Keyboard size
+= Toetsenbordgrootte
+
+Auto keyboard size
+= Automatische toetsenbordgrootte
+
+Follow UI scale, up to 150%
+= Volgt de UI-schaal, tot 150%
+
+Auto follows UI scale, up to 150%
+= Auto volgt de UI-schaal, tot 150%
+
+The keyboard can differ from the page
+= Het toetsenbord kan afwijken van de pagina
+
+Theme
+= Thema
+
+Light
+= Licht
+
+Dark
+= Donker
+
+Drawer
+= Lade
+
+Contents, to-dos and scratch open here (v{n})
+= Inhoud, taken en kladblok openen hier (v{n})
+
+Left
+= Links
+
+Right
+= Rechts
+
+USB keyboard & mouse
+= USB-toetsenbord en muis
+
+Needs a powered hub: the reader does not power the port
+= Vereist een hub met voeding: de lezer voedt de poort niet
+
+Scroll
+= Scrollen
+
+Wheel and two-finger direction; Natural moves the page like a touch screen
+= Richting van wiel en twee vingers; Natuurlijk beweegt de pagina als een touchscreen
+
+Traditional
+= Traditioneel
+
+Natural
+= Natuurlijk
+
+Orientation
+= Oriëntatie
+
+Auto follows how you hold it
+= Auto volgt hoe je hem vasthoudt
+
+Auto
+= Auto
+
+Auto (no sensor)
+= Auto (geen sensor)
+
+Portrait
+= Staand
+
+Landscape
+= Liggend
+
+Portrait inverted
+= Staand omgekeerd
+
+Landscape inverted
+= Liggend omgekeerd
+
+Upside down
+= Ondersteboven
+
+Turns Portrait or Landscape {n}°
+= Draait Staand of Liggend {n}°
+
+App info
+= App-info
+
+Version, license, and author
+= Versie, licentie en auteur
+
+Markdown reference
+= Markdown-overzicht
+
+The syntax this page can render
+= De syntaxis die deze pagina kan tonen
+
+USB keyboard, mouse & export
+= USB-toetsenbord, muis en export
+
+Hub, shortcuts, getting files off
+= Hub, sneltoetsen, bestanden kopiëren
+
+Powered hub
+= Hub met voeding
+
+The Forma does not power its USB port. Plug the keyboard into a powered USB hub, or a Y-cable with its own power supply, and the hub into the reader with a micro-USB OTG adapter.
+= De Forma voedt zijn USB-poort niet. Sluit het toetsenbord aan op een USB-hub met voeding, of op een Y-kabel met eigen voeding, en de hub op de lezer met een micro-USB OTG-adapter.
+
+Connecting
+= Aansluiten
+
+Turn on Options → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
+= Zet eerst Opties → USB-toetsenbord en muis aan: de poort gaat dan in hostmodus, dus een computer ziet de Kobo pas weer als je het uitzet of de app sluit. Sluit daarna het toetsenbord aan; de statusbalk toont USB binnen een seconde (geen USB zolang er geen gevonden is). Het schermtoetsenbord blijft werken en loskoppelen is veilig.
+
+Shortcuts
+= Sneltoetsen
+
+The same as the on-screen Ctrl key.
+= Hetzelfde als de Ctrl-toets op het scherm.
+
+Mouse and touchpad
+= Muis en touchpad
+
+A USB mouse or touchpad (also the touchpad of a keyboard such as the Logitech K{n} Plus) shows a small arrow. Click = tap; drag on the note selects; double-click selects a word; the wheel or two-finger scroll moves the note and turns pages in preview and lists. The arrow hides after {m} seconds still and when you type. Right click does nothing.
+= Een USB-muis of touchpad (ook het touchpad van een toetsenbord zoals de Logitech K{n} Plus) toont een kleine pijl. Klik = tik; slepen in de notitie selecteert; dubbelklik selecteert een woord; het wiel of scrollen met twee vingers beweegt de notitie en slaat pagina's om in voorbeeld en lijsten. De pijl verdwijnt na {m} seconden stilstand en tijdens het typen. Rechtsklikken doet niets.
+
+Options → Layout sets the keyboard: US, UK, French, German, Spanish, Portuguese or Italian. Esc closes Find, sheets and selections.
+= Opties → Indeling stelt het toetsenbord in: VS, VK, Frans, Duits, Spaans, Portugees of Italiaans. Esc sluit Zoeken, panelen en selecties.
+
+Export
+= Exporteren
+
+Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
+= Je notities zijn gewone .md-bestanden. Sluit de Kobo via USB aan op een computer (sluit eerst Sigma Scribe), kies Verbinden en kopieer de map sigma-scribe/notes. Meer is niet nodig; synchronisatie (bv. Syncthing) kan later komen.
+
+If nothing happens
+= Als er niets gebeurt
+
+Check the hub's power, try another keyboard (simple wired ones work best), then leave and reopen the app. The device log .adds/sigma-scribe/sigma-scribe.log notes each keyboard found.
+= Controleer de voeding van de hub, probeer een ander toetsenbord (eenvoudige bedrade werken het best) en sluit en open de app opnieuw. Het logboek .adds/sigma-scribe/sigma-scribe.log noteert elk gevonden toetsenbord.
+
+Heading
+= Kop
+
+These are the rows in Contents.
+= Dit zijn de regels in Inhoud.
+
+Bold and italic
+= Vet en cursief
+
+Two stars for bold, one for italic.
+= Twee sterretjes voor vet, één voor cursief.
+
+List
+= Lijst
+
+A hyphen, or a number and a dot. Brackets make a checkbox.
+= Een streepje, of een getal en een punt. Haken maken een selectievakje.
+
+Quote
+= Citaat
+
+A greater-than sign at the start.
+= Een groter-dan-teken aan het begin.
+
+Rule
+= Lijn
+
+Three hyphens on their own line.
+= Drie streepjes op een eigen regel.
+
+Code
+= Code
+
+Backticks. Three of them fence a block.
+= Backticks. Drie ervan omsluiten een blok.
+
+Picture
+= Afbeelding
+
+An exclamation mark, words for the picture, then the address. Shown as [image: …] on the Kobo.
+= Een uitroepteken, woorden voor de afbeelding, dan het adres. Getoond als [image: …] op de Kobo.
+
+Web link
+= Weblink
+
+Shown underlined; the Kobo has no browser to open it. A note still uses double brackets.
+= Onderstreept getoond; de Kobo heeft geen browser om hem te openen. Een notitie gebruikt nog steeds dubbele haken.
+
+Table
+= Tabel
+
+A header, a row of dashes, then the cells. Shown as plain text for now.
+= Een kop, een rij streepjes, dan de cellen. Voorlopig als gewone tekst getoond.
+
+Strike
+= Doorhalen
+
+Two tildes on each side.
+= Twee tildes aan elke kant.
+
+Link to a note
+= Link naar een notitie
+
+The note name, or a name and the words to show. A dashed link creates the note. Links are what the graph draws.
+= De notitienaam, of een naam en de te tonen woorden. Een gestippelde link maakt de notitie aan. Links zijn wat de graaf tekent.
+
+Sigma Scribe
+= Sigma Scribe
+
+Version {n} A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.
+= Versie {n} Een notitieboek voor de Kobo Forma: gewone Markdown-bestanden op een e-inkpagina, getypt op het glas.
+
+License
+= Licentie
+
+AGPL-{n}-only. The source is on GitHub: armandomartires/sigma-scribe.
+= Alleen AGPL-{n}. De broncode staat op GitHub: armandomartires/sigma-scribe.
+
+Author
+= Auteur
+
+Sigma Recon.
+= Sigma Recon.
+
+Your notes
+= Je notities
+
+Plain .md and .txt files in {name}. Connect the Kobo over USB to copy them. The scratch pad is the hidden file .scratchpad.md.
+= Gewone .md- en .txt-bestanden in {name}. Sluit de Kobo via USB aan om ze te kopiëren. Het kladblok is het verborgen bestand .scratchpad.md.
+
+Buttons
+= Knoppen
+
+The page buttons scroll the page. The power button saves and goes back to the reader. Every change is saved as you type.
+= De paginaknoppen scrollen de pagina. De aan/uit-knop slaat op en gaat terug naar de lezer. Elke wijziging wordt tijdens het typen opgeslagen.
+
+Needs a powered hub or a Y-cable: the reader does not power the port. See Help → USB keyboard, mouse & export.
+= Vereist een hub met voeding of een Y-kabel: de lezer voedt de poort niet. Zie Help → USB-toetsenbord, muis en export.
+
+Credits
+= Credits
+
+Literata and Atkinson Hyperlegible fonts (SIL Open Font License {n}). Letter recognition: own model, trained only on synthetic ink from OFL fonts. FBInk by NiLuJe (GPL-{m}-or-later). NickelMenu by pgaskin. Icons: Lucide (ISC licence), lucide.dev.
+= Lettertypen Literata en Atkinson Hyperlegible (SIL Open Font License {n}). Letterherkenning: eigen model, alleen getraind op synthetische inkt uit OFL-lettertypen. FBInk van NiLuJe (GPL-{m}-or-later). NickelMenu van pgaskin. Pictogrammen: Lucide (ISC-licentie), lucide.dev.
+
+Language
+= Taal
+
+could not read the note
+= kon de notitie niet lezen
+
+Settings
+= Instellingen
+
+Writing
+= Schrijven
+
+Display
+= Scherm
+
+Keyboard & input
+= Toetsenbord en invoer
+
+USB & devices
+= USB en apparaten
+
+Help & about
+= Help en info
+
+Text
+= Tekst
+
+Line length
+= Regellengte
+
+Words per line
+= Woorden per regel
+
+Page
+= Pagina
+
+On-screen keyboard
+= Schermtoetsenbord
+
+Interface
+= Interface
+
+Interface language
+= Interfacetaal
+
+Page {n} of {m}
+= Pagina {n} van {m}
+
+English
+= English
+
+Français
+= Français
+
+Português
+= Português
+
+Write
+= Schrijven
+
+Undo
+= Ongedaan
+
+Clear
+= Wissen
+
+Finger
+= Vinger
+
+Stylus
+= Stylus
+
+Insert
+= Invoegen
+
+Handwriting
+= Handschrift
+
+Ink pen
+= Pen
+
+Stroke width in the Write panel
+= Lijndikte in het Schrijven-paneel
+
+Fast ink (A2)
+= Snelle inkt (A2)
+
+Experimental 1-bit waveform for live ink
+= Experimentele 1-bit-golfvorm voor live inkt
+
+Letters
+= Letters
+
+Draw
+= Tekenen
+
+Erase
+= Gummen
+
+Train
+= Trainen
+
+Skip
+= Overslaan
+
+Save
+= Opslaan
+
+Write:
+= Schrijf:
+
+Samples
+= Voorbeelden
+
+My handwriting
+= Mijn handschrift
+
+Handwriting samples for letter recognition
+= Handschriftvoorbeelden voor letterherkenning
+
+Letter boxes
+= Lettervakjes
+
+One character per box instead of free writing
+= Eén teken per vakje in plaats van vrij schrijven
+
+Word mode (experimental)
+= Woordmodus (experimenteel)
+
+Read every word against a word list; off is more accurate
+= Toetst elk woord aan een woordenlijst; uit is nauwkeuriger
+
+Override system language
+= Systeemtaal negeren
+
+Choose the app's language instead of the Kobo's
+= Kies de taal van de app in plaats van die van de Kobo
+
+Used while Override system language is on
+= Gebruikt zolang Systeemtaal negeren aan staat
+
+US International
+= VS internationaal
+
+Belgian AZERTY
+= Belgisch AZERTY
+
+Danish
+= Deens
+
+Norwegian
+= Noors
+
+Swedish / Finnish
+= Zweeds / Fins
+
+Polish (programmer)
+= Pools (programmeur)
+
+Czech QWERTZ
+= Tsjechisch QWERTZ
+
+Romanian
+= Roemeens
+
+Turkish Q
+= Turks Q
+
+Spanish (Latin America)
+= Spaans (Latijns-Amerika)
+
+Portuguese (Brazil)
+= Portugees (Brazilië)
+
+Russian
+= Russisch
+
+Ukrainian
+= Oekraïens
+
+Greek
+= Grieks
+
+Machine-drafted translation, best effort; a native review is needed. Follows the Kobo's language.
+= Machinaal opgestelde vertaling, naar beste kunnen; een moedertaalcontrole is nodig. Volgt de taal van de Kobo.
