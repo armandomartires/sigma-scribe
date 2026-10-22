@@ -63,7 +63,11 @@ pub fn spawn(version: &'static str, epoch: std::time::Instant) {
     use std::sync::{Arc, Mutex};
     let devices = std::fs::read_to_string("/proc/bus/input/devices").unwrap_or_default();
     let nodes = crate::gsensor::find_nodes(&devices);
-    let Ok(mut log) = std::fs::OpenOptions::new().create(true).append(true).open(LOG) else {
+    let Ok(mut log) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(LOG)
+    else {
         return;
     };
     let _ = log.write_all(header(version, &devices, &nodes).as_bytes());
