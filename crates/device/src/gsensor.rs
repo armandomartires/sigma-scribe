@@ -44,6 +44,14 @@ impl Tilt {
 /// `MSC_RAW`, from the text of `/proc/bus/input/devices`.
 #[must_use]
 pub fn find_node(devices: &str) -> Option<String> {
+    find_nodes(devices).into_iter().next()
+}
+
+/// Every input node whose device reports `MSC_RAW` (gpio-keys can too, so
+/// the probe logs all of them instead of trusting the first).
+#[must_use]
+pub fn find_nodes(devices: &str) -> Vec<String> {
+    let mut out = Vec::new();
     for block in devices.split("\n\n") {
         let msc_raw = block.lines().any(|l| {
             l.strip_prefix("B: MSC=")
@@ -53,12 +61,14 @@ pub fn find_node(devices: &str) -> Option<String> {
         if !msc_raw {
             continue;
         }
-        let handlers = block.lines().find_map(|l| l.strip_prefix("H: Handlers="))?;
+        let Some(handlers) = block.lines().find_map(|l| l.strip_prefix("H: Handlers=")) else {
+            continue;
+        };
         if let Some(ev) = handlers.split_whitespace().find(|h| h.starts_with("event")) {
-            return Some(format!("/dev/input/{ev}"));
+            out.push(format!("/dev/input/{ev}"));
         }
     }
-    None
+    out
 }
 
 #[cfg(test)]
