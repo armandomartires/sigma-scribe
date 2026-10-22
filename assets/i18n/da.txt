@@ -1,0 +1,782 @@
+# Sigma Scribe — Dansk. machine-drafted, best effort; needs a native review.
+# Format: English text, then "= " and the translation. See crates/render/src/i18n.rs.
+
+Files
+= Filer
+
+Graph
+= Graf
+
+Options
+= Indstillinger
+
+Help
+= Hjælp
+
+Help / App info
+= Hjælp / Om appen
+
+Help / Markdown reference
+= Hjælp / Markdown-oversigt
+
+Help / USB keyboard, mouse & export
+= Hjælp / USB-tastatur, mus og eksport
+
+Back to Help
+= Tilbage til Hjælp
+
+Up to Files
+= Op til Filer
+
+Move {name} to
+= Flyt {name} til
+
+Cancel
+= Annuller
+
+OK
+= OK
+
+{n} words
+= {n} ord
+
+{n} word
+= {n} ord
+
+line {n}
+= linje {n}
+
+preview
+= forhåndsvisning
+
+page {n} of {m}
+= side {n} af {m}
+
+page buttons turn
+= knapperne bladrer
+
+Paper
+= Papir
+
+Night
+= Nat
+
+saved
+= gemt
+
+saving
+= gemmer
+
+not saved
+= ikke gemt
+
+USB
+= USB
+
+no USB
+= ingen USB
+
+Keys
+= Taster
+
+Cut
+= Klip
+
+Copy
+= Kopiér
+
+Paste
+= Indsæt
+
+Select all
+= Alt
+
+Shift
+= Shift
+
+Back
+= Tilbage
+
+Del
+= Slet
+
+Space
+= Mellemrum
+
+Enter
+= Enter
+
+Return
+= Retur
+
+Caps
+= Caps
+
+Home
+= Home
+
+End
+= End
+
+Compact
+= Kompakt
+
+Full
+= Fuld
+
+Split
+= Delt
+
+Centre
+= Midte
+
+Pad left
+= Blok v.
+
+Pad right
+= Blok h.
+
+Arrows
+= Pile
+
+Contents
+= Indhold
+
+To-dos
+= Opgaver
+
+Scratch
+= Kladde
+
+All
+= Alle
+
+Open
+= Åbn
+
+Done
+= Færdig
+
+{n} more…
+= {n} mere…
+
+No headings in this note. Start a line with #.
+= Ingen overskrifter i denne note. Start en linje med #.
+
+No to-dos. Start a line with - [ ].
+= Ingen opgaver. Start en linje med - [ ].
+
+Find
+= Søg
+
+Replace
+= Erstat
+
+Prev
+= Forrige
+
+Next
+= Næste
+
+None
+= Ingen
+
+{n} of {m}
+= {n} af {m}
+
+– of {n}
+= – af {n}
+
+Folder
+= Mappe
+
+More
+= Mere
+
+Rename
+= Omdøb
+
+Move
+= Flyt
+
+Delete
+= Slet
+
+Tap again to delete
+= Tryk igen for at slette
+
+New note
+= Ny note
+
+New folder
+= Ny mappe
+
+No folders.
+= Ingen mapper.
+
+No notes here yet. Tap New note.
+= Ingen noter endnu. Tryk på Ny note.
+
+{n} notes
+= {n} noter
+
+{n} note
+= {n} note
+
+{n} links
+= {n} links
+
+{n} link
+= {n} link
+
+No links
+= Ingen links
+
+tap again to open
+= tryk igen for at åbne
+
+write [[a note name]] to join two notes
+= skriv [[et notenavn]] for at forbinde to noter
+
+UI scale
+= UI-skala
+
+Buttons, menus and keys; the note keeps its Size
+= Knapper, menuer og taster; noten beholder sin Størrelse
+
+Night is the same page, inverted
+= Nat er den samme side, inverteret
+
+Day
+= Dag
+
+Type
+= Skrift
+
+Serif for reading, sans for the bus
+= Serif til læsning, sans til bussen
+
+Literata
+= Literata
+
+Atkinson
+= Atkinson
+
+Line
+= Linje
+
+Words per line, {n} to {m}
+= Ord pr. linje, {n} til {m}
+
+Off
+= Fra
+
+On
+= Til
+
+Size
+= Størrelse
+
+Type size
+= Skriftstørrelse
+
+Tied to Margin while Line is on
+= Knyttet til Margen mens Linje er slået til
+
+Leading
+= Linjeafstand
+
+Space between lines
+= Plads mellem linjer
+
+Margin
+= Margen
+
+Room for a thumb
+= Plads til en tommelfinger
+
+Tab key
+= Tab-tast
+
+Markdown default is spaces
+= Markdown bruger normalt mellemrum
+
+Tab
+= Tab
+
+Spaces
+= Mellemrum
+
+Tab width
+= Tab-bredde
+
+Spaces inserted, or columns a tab stands for
+= Indsatte mellemrum, eller kolonner pr. tab
+
+Keyboard
+= Tastatur
+
+On-screen layout
+= Layout på skærmen
+
+Layout
+= Layout
+
+On-screen Full board and USB keyboards
+= Fuldt skærmtastatur og USB-tastaturer
+
+US
+= US
+
+UK
+= UK
+
+French AZERTY
+= Fransk AZERTY
+
+German QWERTZ
+= Tysk QWERTZ
+
+Spanish
+= Spansk
+
+Portuguese
+= Portugisisk
+
+Italian
+= Italiensk
+
+Keyboard tone
+= Tastaturtone
+
+Keyboard size
+= Tastaturstørrelse
+
+Auto keyboard size
+= Automatisk tastaturstørrelse
+
+Follow UI scale, up to 150%
+= Følger UI-skalaen, op til 150%
+
+Auto follows UI scale, up to 150%
+= Auto følger UI-skalaen, op til 150%
+
+The keyboard can differ from the page
+= Tastaturet kan afvige fra siden
+
+Theme
+= Tema
+
+Light
+= Lyst
+
+Dark
+= Mørkt
+
+Drawer
+= Skuffe
+
+Contents, to-dos and scratch open here (v{n})
+= Indhold, opgaver og kladde åbner her (v{n})
+
+Left
+= Venstre
+
+Right
+= Højre
+
+USB keyboard & mouse
+= USB-tastatur og mus
+
+Needs a powered hub: the reader does not power the port
+= Kræver en hub med strøm: læseren giver ikke strøm til porten
+
+Scroll
+= Rulning
+
+Wheel and two-finger direction; Natural moves the page like a touch screen
+= Retning for hjul og to fingre; Naturlig flytter siden som en touchskærm
+
+Traditional
+= Traditionel
+
+Natural
+= Naturlig
+
+Orientation
+= Retning
+
+Auto follows how you hold it
+= Auto følger, hvordan du holder den
+
+Auto
+= Auto
+
+Auto (no sensor)
+= Auto (ingen sensor)
+
+Portrait
+= Stående
+
+Landscape
+= Liggende
+
+Portrait inverted
+= Stående omvendt
+
+Landscape inverted
+= Liggende omvendt
+
+Upside down
+= På hovedet
+
+Turns Portrait or Landscape {n}°
+= Drejer Stående eller Liggende {n}°
+
+App info
+= Om appen
+
+Version, license, and author
+= Version, licens og forfatter
+
+Markdown reference
+= Markdown-oversigt
+
+The syntax this page can render
+= Den syntaks denne side kan vise
+
+USB keyboard, mouse & export
+= USB-tastatur, mus og eksport
+
+Hub, shortcuts, getting files off
+= Hub, genveje, få filer ud
+
+Powered hub
+= Hub med strøm
+
+The Forma does not power its USB port. Plug the keyboard into a powered USB hub, or a Y-cable with its own power supply, and the hub into the reader with a micro-USB OTG adapter.
+= Forma giver ikke strøm til sin USB-port. Sæt tastaturet i en USB-hub med strøm, eller et Y-kabel med egen strøm, og hubben i læseren med en micro-USB OTG-adapter.
+
+Connecting
+= Tilslutning
+
+Turn on Options → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
+= Slå først Indstillinger → USB-tastatur og mus til: porten skifter til værtstilstand, så en computer ikke ser Kobo'en, før du slår det fra eller lukker appen. Sæt derefter tastaturet i; statuslinjen viser USB inden for et sekund (ingen USB, så længe der ikke er fundet et). Skærmtastaturet virker stadig, og det er sikkert at tage stikket ud.
+
+Shortcuts
+= Genveje
+
+The same as the on-screen Ctrl key.
+= Det samme som Ctrl-tasten på skærmen.
+
+Mouse and touchpad
+= Mus og touchpad
+
+A USB mouse or touchpad (also the touchpad of a keyboard such as the Logitech K{n} Plus) shows a small arrow. Click = tap; drag on the note selects; double-click selects a word; the wheel or two-finger scroll moves the note and turns pages in preview and lists. The arrow hides after {m} seconds still and when you type. Right click does nothing.
+= En USB-mus eller touchpad (også touchpad'en på et tastatur som Logitech K{n} Plus) viser en lille pil. Klik = tryk; træk i noten markerer; dobbeltklik markerer et ord; hjulet eller rulning med to fingre flytter noten og bladrer i forhåndsvisning og lister. Pilen skjules efter {m} sekunder i ro og når du skriver. Højreklik gør intet.
+
+Options → Layout sets the keyboard: US, UK, French, German, Spanish, Portuguese or Italian. Esc closes Find, sheets and selections.
+= Indstillinger → Layout vælger tastaturet: US, UK, fransk, tysk, spansk, portugisisk eller italiensk. Esc lukker Søg, ark og markeringer.
+
+Export
+= Eksport
+
+Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
+= Dine noter er almindelige .md-filer. Slut Kobo'en til en computer via USB (luk Sigma Scribe først), vælg Tilslut, og kopiér mappen sigma-scribe/notes. Der skal ikke mere til; synkronisering (f.eks. Syncthing) kan komme senere.
+
+If nothing happens
+= Hvis intet sker
+
+Check the hub's power, try another keyboard (simple wired ones work best), then leave and reopen the app. The device log .adds/sigma-scribe/sigma-scribe.log notes each keyboard found.
+= Tjek hubbens strøm, prøv et andet tastatur (simple kablede virker bedst), og luk og åbn appen igen. Loggen .adds/sigma-scribe/sigma-scribe.log noterer hvert fundet tastatur.
+
+Heading
+= Overskrift
+
+These are the rows in Contents.
+= Det er rækkerne i Indhold.
+
+Bold and italic
+= Fed og kursiv
+
+Two stars for bold, one for italic.
+= To stjerner for fed, én for kursiv.
+
+List
+= Liste
+
+A hyphen, or a number and a dot. Brackets make a checkbox.
+= En bindestreg, eller et tal og et punktum. Kantede parenteser laver et afkrydsningsfelt.
+
+Quote
+= Citat
+
+A greater-than sign at the start.
+= Et større-end-tegn i starten.
+
+Rule
+= Streg
+
+Three hyphens on their own line.
+= Tre bindestreger på deres egen linje.
+
+Code
+= Kode
+
+Backticks. Three of them fence a block.
+= Backticks. Tre af dem omslutter en blok.
+
+Picture
+= Billede
+
+An exclamation mark, words for the picture, then the address. Shown as [image: …] on the Kobo.
+= Et udråbstegn, ord til billedet og derefter adressen. Vises som [image: …] på Kobo'en.
+
+Web link
+= Weblink
+
+Shown underlined; the Kobo has no browser to open it. A note still uses double brackets.
+= Vises understreget; Kobo'en har ingen browser til at åbne det. En note bruger stadig dobbelte kantede parenteser.
+
+Table
+= Tabel
+
+A header, a row of dashes, then the cells. Shown as plain text for now.
+= En overskrift, en række streger og så cellerne. Vises indtil videre som almindelig tekst.
+
+Strike
+= Gennemstreget
+
+Two tildes on each side.
+= To tilder på hver side.
+
+Link to a note
+= Link til en note
+
+The note name, or a name and the words to show. A dashed link creates the note. Links are what the graph draws.
+= Notens navn, eller et navn og de ord der skal vises. Et stiplet link opretter noten. Links er det, grafen tegner.
+
+Sigma Scribe
+= Sigma Scribe
+
+Version {n} A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.
+= Version {n} En notesbog til Kobo Forma: almindelige Markdown-filer på en e-ink-side, skrevet på glasset.
+
+License
+= Licens
+
+AGPL-{n}-only. The source is on GitHub: armandomartires/sigma-scribe.
+= Kun AGPL-{n}. Koden ligger på GitHub: armandomartires/sigma-scribe.
+
+Author
+= Forfatter
+
+Sigma Recon.
+= Sigma Recon.
+
+Your notes
+= Dine noter
+
+Plain .md and .txt files in {name}. Connect the Kobo over USB to copy them. The scratch pad is the hidden file .scratchpad.md.
+= Almindelige .md- og .txt-filer i {name}. Slut Kobo'en til via USB for at kopiere dem. Kladden er den skjulte fil .scratchpad.md.
+
+Buttons
+= Knapper
+
+The page buttons scroll the page. The power button saves and goes back to the reader. Every change is saved as you type.
+= Sideknapperne ruller siden. Tænd/sluk-knappen gemmer og går tilbage til læseren. Hver ændring gemmes, mens du skriver.
+
+Needs a powered hub or a Y-cable: the reader does not power the port. See Help → USB keyboard, mouse & export.
+= Kræver en hub med strøm eller et Y-kabel: læseren giver ikke strøm til porten. Se Hjælp → USB-tastatur, mus og eksport.
+
+Credits
+= Tak til
+
+Literata and Atkinson Hyperlegible fonts (SIL Open Font License {n}). Letter recognition: own model, trained only on synthetic ink from OFL fonts. FBInk by NiLuJe (GPL-{m}-or-later). NickelMenu by pgaskin. Icons: Lucide (ISC licence), lucide.dev.
+= Skrifttyperne Literata og Atkinson Hyperlegible (SIL Open Font License {n}). Bogstavgenkendelse: egen model, kun trænet på syntetisk blæk fra OFL-skrifttyper. FBInk af NiLuJe (GPL-{m}-or-later). NickelMenu af pgaskin. Ikoner: Lucide (ISC-licens), lucide.dev.
+
+Language
+= Sprog
+
+could not read the note
+= kunne ikke læse noten
+
+Settings
+= Indstillinger
+
+Writing
+= Skrivning
+
+Display
+= Skærm
+
+Keyboard & input
+= Tastatur og input
+
+USB & devices
+= USB og enheder
+
+Help & about
+= Hjælp og om
+
+Text
+= Tekst
+
+Line length
+= Linjelængde
+
+Words per line
+= Ord pr. linje
+
+Page
+= Side
+
+On-screen keyboard
+= Skærmtastatur
+
+Interface
+= Brugerflade
+
+Interface language
+= Sprog i brugerfladen
+
+Page {n} of {m}
+= Side {n} af {m}
+
+English
+= English
+
+Français
+= Français
+
+Português
+= Português
+
+Write
+= Skriv
+
+Undo
+= Fortryd
+
+Clear
+= Ryd
+
+Finger
+= Finger
+
+Stylus
+= Pen
+
+Insert
+= Indsæt
+
+Handwriting
+= Håndskrift
+
+Ink pen
+= Pen
+
+Stroke width in the Write panel
+= Stregbredde i Skriv-panelet
+
+Fast ink (A2)
+= Hurtigt blæk (A2)
+
+Experimental 1-bit waveform for live ink
+= Eksperimentel 1-bit-bølgeform til levende blæk
+
+Letters
+= Bogstaver
+
+Draw
+= Tegn
+
+Erase
+= Visk ud
+
+Train
+= Træn
+
+Skip
+= Spring over
+
+Save
+= Gem
+
+Write:
+= Skriv:
+
+Samples
+= Prøver
+
+My handwriting
+= Min håndskrift
+
+Handwriting samples for letter recognition
+= Håndskriftsprøver til bogstavgenkendelse
+
+Letter boxes
+= Bogstavfelter
+
+One character per box instead of free writing
+= Ét tegn pr. felt i stedet for fri skrift
+
+Word mode (experimental)
+= Ordtilstand (eksperimentel)
+
+Read every word against a word list; off is more accurate
+= Tjekker hvert ord mod en ordliste; fra er mere præcis
+
+Override system language
+= Tilsidesæt systemsprog
+
+Choose the app's language instead of the Kobo's
+= Vælg appens sprog i stedet for Kobo'ens
+
+Used while Override system language is on
+= Bruges mens Tilsidesæt systemsprog er slået til
+
+US International
+= US international
+
+Belgian AZERTY
+= Belgisk AZERTY
+
+Danish
+= Dansk
+
+Norwegian
+= Norsk
+
+Swedish / Finnish
+= Svensk / finsk
+
+Polish (programmer)
+= Polsk (programmør)
+
+Czech QWERTZ
+= Tjekkisk QWERTZ
+
+Romanian
+= Rumænsk
+
+Turkish Q
+= Tyrkisk Q
+
+Spanish (Latin America)
+= Spansk (Latinamerika)
+
+Portuguese (Brazil)
+= Portugisisk (Brasilien)
+
+Russian
+= Russisk
+
+Ukrainian
+= Ukrainsk
+
+Greek
+= Græsk
+
+Machine-drafted translation, best effort; a native review is needed. Follows the Kobo's language.
+= Maskinoversat efter bedste evne; en gennemlæsning af en modersmålstaler er nødvendig. Følger Kobo'ens sprog.

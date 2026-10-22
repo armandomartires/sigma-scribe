@@ -1,0 +1,782 @@
+# Sigma Scribe — Català. machine-drafted, best effort; needs a native review.
+# Format: English text, then "= " and the translation. See crates/render/src/i18n.rs.
+
+Files
+= Fitxers
+
+Graph
+= Graf
+
+Options
+= Opcions
+
+Help
+= Ajuda
+
+Help / App info
+= Ajuda / Info de l'app
+
+Help / Markdown reference
+= Ajuda / Referència de Markdown
+
+Help / USB keyboard, mouse & export
+= Ajuda / Teclat USB, ratolí i exportació
+
+Back to Help
+= Torna a l'Ajuda
+
+Up to Files
+= Puja a Fitxers
+
+Move {name} to
+= Mou {name} a
+
+Cancel
+= Cancel·la
+
+OK
+= D'acord
+
+{n} words
+= {n} paraules
+
+{n} word
+= {n} paraula
+
+line {n}
+= línia {n}
+
+preview
+= previsualització
+
+page {n} of {m}
+= pàgina {n} de {m}
+
+page buttons turn
+= els botons passen pàgina
+
+Paper
+= Paper
+
+Night
+= Nit
+
+saved
+= desat
+
+saving
+= desant
+
+not saved
+= no desat
+
+USB
+= USB
+
+no USB
+= sense USB
+
+Keys
+= Tecles
+
+Cut
+= Retalla
+
+Copy
+= Copia
+
+Paste
+= Enganxa
+
+Select all
+= Tot
+
+Shift
+= Maj
+
+Back
+= Esborra
+
+Del
+= Supr
+
+Space
+= Espai
+
+Enter
+= Retorn
+
+Return
+= Retorn
+
+Caps
+= Bloq
+
+Home
+= Inici
+
+End
+= Fi
+
+Compact
+= Compacte
+
+Full
+= Complet
+
+Split
+= Dividit
+
+Centre
+= Centre
+
+Pad left
+= Bloc esq.
+
+Pad right
+= Bloc dret
+
+Arrows
+= Fletxes
+
+Contents
+= Índex
+
+To-dos
+= Tasques
+
+Scratch
+= Esborrany
+
+All
+= Tot
+
+Open
+= Obre
+
+Done
+= Fet
+
+{n} more…
+= {n} més…
+
+No headings in this note. Start a line with #.
+= No hi ha encapçalaments en aquesta nota. Comença una línia amb #.
+
+No to-dos. Start a line with - [ ].
+= No hi ha tasques. Comença una línia amb - [ ].
+
+Find
+= Cerca
+
+Replace
+= Substitueix
+
+Prev
+= Ant.
+
+Next
+= Seg.
+
+None
+= Cap
+
+{n} of {m}
+= {n} de {m}
+
+– of {n}
+= – de {n}
+
+Folder
+= Carpeta
+
+More
+= Més
+
+Rename
+= Reanomena
+
+Move
+= Mou
+
+Delete
+= Suprimeix
+
+Tap again to delete
+= Toca de nou per suprimir
+
+New note
+= Nota nova
+
+New folder
+= Carpeta nova
+
+No folders.
+= No hi ha carpetes.
+
+No notes here yet. Tap New note.
+= Encara no hi ha notes. Toca Nota nova.
+
+{n} notes
+= {n} notes
+
+{n} note
+= {n} nota
+
+{n} links
+= {n} enllaços
+
+{n} link
+= {n} enllaç
+
+No links
+= Sense enllaços
+
+tap again to open
+= toca de nou per obrir
+
+write [[a note name]] to join two notes
+= escriu [[nom d'una nota]] per unir dues notes
+
+UI scale
+= Escala de la interfície
+
+Buttons, menus and keys; the note keeps its Size
+= Botons, menús i tecles; la nota manté la seva Mida
+
+Night is the same page, inverted
+= Nit és la mateixa pàgina, invertida
+
+Day
+= Dia
+
+Type
+= Lletra
+
+Serif for reading, sans for the bus
+= Serif per llegir, sans per a l'autobús
+
+Literata
+= Literata
+
+Atkinson
+= Atkinson
+
+Line
+= Línia
+
+Words per line, {n} to {m}
+= Paraules per línia, de {n} a {m}
+
+Off
+= No
+
+On
+= Sí
+
+Size
+= Mida
+
+Type size
+= Mida de lletra
+
+Tied to Margin while Line is on
+= Lligada al Marge mentre Línia és activa
+
+Leading
+= Interlineat
+
+Space between lines
+= Espai entre línies
+
+Margin
+= Marge
+
+Room for a thumb
+= Lloc per al polze
+
+Tab key
+= Tecla Tab
+
+Markdown default is spaces
+= En Markdown el normal són espais
+
+Tab
+= Tab
+
+Spaces
+= Espais
+
+Tab width
+= Amplada del tab
+
+Spaces inserted, or columns a tab stands for
+= Espais inserits, o columnes que ocupa un tab
+
+Keyboard
+= Teclat
+
+On-screen layout
+= Distribució en pantalla
+
+Layout
+= Distribució
+
+On-screen Full board and USB keyboards
+= Teclat complet en pantalla i teclats USB
+
+US
+= EUA
+
+UK
+= RU
+
+French AZERTY
+= Francès AZERTY
+
+German QWERTZ
+= Alemany QWERTZ
+
+Spanish
+= Espanyol
+
+Portuguese
+= Portuguès
+
+Italian
+= Italià
+
+Keyboard tone
+= To del teclat
+
+Keyboard size
+= Mida del teclat
+
+Auto keyboard size
+= Mida automàtica del teclat
+
+Follow UI scale, up to 150%
+= Segueix l'escala de la interfície, fins al 150%
+
+Auto follows UI scale, up to 150%
+= Auto segueix l'escala de la interfície, fins al 150%
+
+The keyboard can differ from the page
+= El teclat pot ser diferent de la pàgina
+
+Theme
+= Tema
+
+Light
+= Clar
+
+Dark
+= Fosc
+
+Drawer
+= Calaix
+
+Contents, to-dos and scratch open here (v{n})
+= Índex, tasques i esborrany s'obren aquí (v{n})
+
+Left
+= Esquerra
+
+Right
+= Dreta
+
+USB keyboard & mouse
+= Teclat i ratolí USB
+
+Needs a powered hub: the reader does not power the port
+= Cal un concentrador amb alimentació: el lector no alimenta el port
+
+Scroll
+= Desplaçament
+
+Wheel and two-finger direction; Natural moves the page like a touch screen
+= Direcció de la roda i dos dits; Natural mou la pàgina com una pantalla tàctil
+
+Traditional
+= Tradicional
+
+Natural
+= Natural
+
+Orientation
+= Orientació
+
+Auto follows how you hold it
+= Auto segueix com el subjectes
+
+Auto
+= Auto
+
+Auto (no sensor)
+= Auto (sense sensor)
+
+Portrait
+= Vertical
+
+Landscape
+= Horitzontal
+
+Portrait inverted
+= Vertical invertida
+
+Landscape inverted
+= Horitzontal invertida
+
+Upside down
+= Cap per avall
+
+Turns Portrait or Landscape {n}°
+= Gira Vertical o Horitzontal {n}°
+
+App info
+= Info de l'app
+
+Version, license, and author
+= Versió, llicència i autor
+
+Markdown reference
+= Referència de Markdown
+
+The syntax this page can render
+= La sintaxi que aquesta pàgina pot mostrar
+
+USB keyboard, mouse & export
+= Teclat USB, ratolí i exportació
+
+Hub, shortcuts, getting files off
+= Concentrador, dreceres, treure fitxers
+
+Powered hub
+= Concentrador amb alimentació
+
+The Forma does not power its USB port. Plug the keyboard into a powered USB hub, or a Y-cable with its own power supply, and the hub into the reader with a micro-USB OTG adapter.
+= La Forma no alimenta el seu port USB. Connecta el teclat a un concentrador USB amb alimentació, o a un cable en Y amb font pròpia, i el concentrador al lector amb un adaptador micro-USB OTG.
+
+Connecting
+= Connexió
+
+Turn on Options → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
+= Activa primer Opcions → Teclat i ratolí USB: posa el port en mode amfitrió, de manera que un ordinador no veu el Kobo fins que el desactives o surts de l'app. Després connecta el teclat; la barra d'estat mostra USB en un segon (sense USB mentre no en troba cap). El teclat en pantalla continua funcionant i desconnectar és segur.
+
+Shortcuts
+= Dreceres
+
+The same as the on-screen Ctrl key.
+= Igual que la tecla Ctrl en pantalla.
+
+Mouse and touchpad
+= Ratolí i ratolí tàctil
+
+A USB mouse or touchpad (also the touchpad of a keyboard such as the Logitech K{n} Plus) shows a small arrow. Click = tap; drag on the note selects; double-click selects a word; the wheel or two-finger scroll moves the note and turns pages in preview and lists. The arrow hides after {m} seconds still and when you type. Right click does nothing.
+= Un ratolí o ratolí tàctil USB (també el d'un teclat com el Logitech K{n} Plus) mostra una fletxa petita. Clic = tocar; arrossegar a la nota selecciona; doble clic selecciona una paraula; la roda o el desplaçament amb dos dits mou la nota i passa pàgines a la previsualització i a les llistes. La fletxa s'amaga després de {m} segons quieta i quan escrius. El clic dret no fa res.
+
+Options → Layout sets the keyboard: US, UK, French, German, Spanish, Portuguese or Italian. Esc closes Find, sheets and selections.
+= Opcions → Distribució fixa el teclat: EUA, RU, francès, alemany, espanyol, portuguès o italià. Esc tanca Cerca, fulls i seleccions.
+
+Export
+= Exporta
+
+Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
+= Les teves notes són fitxers .md senzills. Connecta el Kobo a un ordinador per USB (surt abans de Sigma Scribe), tria Connecta i copia la carpeta sigma-scribe/notes. No cal res més; la sincronització (p. ex. Syncthing) pot arribar més endavant.
+
+If nothing happens
+= Si no passa res
+
+Check the hub's power, try another keyboard (simple wired ones work best), then leave and reopen the app. The device log .adds/sigma-scribe/sigma-scribe.log notes each keyboard found.
+= Comprova l'alimentació del concentrador, prova un altre teclat (els senzills amb cable funcionen millor) i després surt i torna a obrir l'app. El registre .adds/sigma-scribe/sigma-scribe.log anota cada teclat trobat.
+
+Heading
+= Encapçalament
+
+These are the rows in Contents.
+= Són les files de l'Índex.
+
+Bold and italic
+= Negreta i cursiva
+
+Two stars for bold, one for italic.
+= Dos asteriscs per a negreta, un per a cursiva.
+
+List
+= Llista
+
+A hyphen, or a number and a dot. Brackets make a checkbox.
+= Un guionet, o un número i un punt. Els claudàtors fan una casella.
+
+Quote
+= Cita
+
+A greater-than sign at the start.
+= Un signe més gran que al començament.
+
+Rule
+= Línia horitzontal
+
+Three hyphens on their own line.
+= Tres guionets en una línia sola.
+
+Code
+= Codi
+
+Backticks. Three of them fence a block.
+= Accents greus. Tres tanquen un bloc.
+
+Picture
+= Imatge
+
+An exclamation mark, words for the picture, then the address. Shown as [image: …] on the Kobo.
+= Un signe d'exclamació, paraules per a la imatge i després l'adreça. Es mostra com [image: …] al Kobo.
+
+Web link
+= Enllaç web
+
+Shown underlined; the Kobo has no browser to open it. A note still uses double brackets.
+= Es mostra subratllat; el Kobo no té navegador per obrir-lo. Una nota continua fent servir claudàtors dobles.
+
+Table
+= Taula
+
+A header, a row of dashes, then the cells. Shown as plain text for now.
+= Una capçalera, una fila de guionets i després les cel·les. De moment es mostra com a text.
+
+Strike
+= Ratllat
+
+Two tildes on each side.
+= Dues titlles a cada costat.
+
+Link to a note
+= Enllaç a una nota
+
+The note name, or a name and the words to show. A dashed link creates the note. Links are what the graph draws.
+= El nom de la nota, o un nom i les paraules a mostrar. Un enllaç discontinu crea la nota. Els enllaços són el que dibuixa el graf.
+
+Sigma Scribe
+= Sigma Scribe
+
+Version {n} A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.
+= Versió {n} Un quadern per al Kobo Forma: fitxers Markdown senzills en una pàgina de tinta electrònica, escrits sobre el vidre.
+
+License
+= Llicència
+
+AGPL-{n}-only. The source is on GitHub: armandomartires/sigma-scribe.
+= Només AGPL-{n}. El codi és a GitHub: armandomartires/sigma-scribe.
+
+Author
+= Autor
+
+Sigma Recon.
+= Sigma Recon.
+
+Your notes
+= Les teves notes
+
+Plain .md and .txt files in {name}. Connect the Kobo over USB to copy them. The scratch pad is the hidden file .scratchpad.md.
+= Fitxers .md i .txt senzills a {name}. Connecta el Kobo per USB per copiar-los. L'esborrany és el fitxer ocult .scratchpad.md.
+
+Buttons
+= Botons
+
+The page buttons scroll the page. The power button saves and goes back to the reader. Every change is saved as you type.
+= Els botons de pàgina desplacen la pàgina. El botó d'engegada desa i torna al lector. Cada canvi es desa mentre escrius.
+
+Needs a powered hub or a Y-cable: the reader does not power the port. See Help → USB keyboard, mouse & export.
+= Cal un concentrador amb alimentació o un cable en Y: el lector no alimenta el port. Vegeu Ajuda → Teclat USB, ratolí i exportació.
+
+Credits
+= Crèdits
+
+Literata and Atkinson Hyperlegible fonts (SIL Open Font License {n}). Letter recognition: own model, trained only on synthetic ink from OFL fonts. FBInk by NiLuJe (GPL-{m}-or-later). NickelMenu by pgaskin. Icons: Lucide (ISC licence), lucide.dev.
+= Tipus de lletra Literata i Atkinson Hyperlegible (SIL Open Font License {n}). Reconeixement de lletres: model propi, entrenat només amb tinta sintètica de tipus OFL. FBInk de NiLuJe (GPL-{m}-or-later). NickelMenu de pgaskin. Icones: Lucide (llicència ISC), lucide.dev.
+
+Language
+= Idioma
+
+could not read the note
+= no s'ha pogut llegir la nota
+
+Settings
+= Configuració
+
+Writing
+= Escriptura
+
+Display
+= Pantalla
+
+Keyboard & input
+= Teclat i entrada
+
+USB & devices
+= USB i dispositius
+
+Help & about
+= Ajuda i informació
+
+Text
+= Text
+
+Line length
+= Llargada de línia
+
+Words per line
+= Paraules per línia
+
+Page
+= Pàgina
+
+On-screen keyboard
+= Teclat en pantalla
+
+Interface
+= Interfície
+
+Interface language
+= Idioma de la interfície
+
+Page {n} of {m}
+= Pàgina {n} de {m}
+
+English
+= English
+
+Français
+= Français
+
+Português
+= Português
+
+Write
+= Escriu
+
+Undo
+= Desfés
+
+Clear
+= Neteja
+
+Finger
+= Dit
+
+Stylus
+= Llapis
+
+Insert
+= Insereix
+
+Handwriting
+= Escriptura a mà
+
+Ink pen
+= Traç
+
+Stroke width in the Write panel
+= Gruix del traç al tauler Escriu
+
+Fast ink (A2)
+= Tinta ràpida (A2)
+
+Experimental 1-bit waveform for live ink
+= Forma d'ona experimental d'1 bit per a tinta en directe
+
+Letters
+= Lletres
+
+Draw
+= Dibuixa
+
+Erase
+= Esborra
+
+Train
+= Entrena
+
+Skip
+= Omet
+
+Save
+= Desa
+
+Write:
+= Escriu:
+
+Samples
+= Mostres
+
+My handwriting
+= La meva lletra
+
+Handwriting samples for letter recognition
+= Mostres de lletra per al reconeixement
+
+Letter boxes
+= Caselles de lletres
+
+One character per box instead of free writing
+= Un caràcter per casella en lloc d'escriptura lliure
+
+Word mode (experimental)
+= Mode paraula (experimental)
+
+Read every word against a word list; off is more accurate
+= Compara cada paraula amb una llista; desactivat és més precís
+
+Override system language
+= Substitueix l'idioma del sistema
+
+Choose the app's language instead of the Kobo's
+= Tria l'idioma de l'app en lloc del del Kobo
+
+Used while Override system language is on
+= S'usa mentre Substitueix l'idioma del sistema és actiu
+
+US International
+= EUA internacional
+
+Belgian AZERTY
+= Belga AZERTY
+
+Danish
+= Danès
+
+Norwegian
+= Noruec
+
+Swedish / Finnish
+= Suec / finès
+
+Polish (programmer)
+= Polonès (programador)
+
+Czech QWERTZ
+= Txec QWERTZ
+
+Romanian
+= Romanès
+
+Turkish Q
+= Turc Q
+
+Spanish (Latin America)
+= Espanyol (Amèrica Llatina)
+
+Portuguese (Brazil)
+= Portuguès (Brasil)
+
+Russian
+= Rus
+
+Ukrainian
+= Ucraïnès
+
+Greek
+= Grec
+
+Machine-drafted translation, best effort; a native review is needed. Follows the Kobo's language.
+= Traducció feta per màquina, com millor s'ha pogut; cal una revisió nativa. Segueix l'idioma del Kobo.
