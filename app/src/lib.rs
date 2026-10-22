@@ -401,6 +401,8 @@ pub struct App {
     gsensor: bool,
     /// `orientation_status()`, kept for the Options model borrow.
     orientation_label: String,
+    /// The Kobo's language (v1.5.5), used while the override is off.
+    system_lang: sigma_render::i18n::Lang,
     /// A sensor reading waiting for 0.6 s of stability (Auto).
     tilt: Option<(Rotation, u64)>,
     /// Latest event time seen and the last typing time, ms (Auto pause).
@@ -488,9 +490,10 @@ impl App {
         let mut settings = load_settings(&root);
         // v1.4: the interface follows the Kobo's language (read-only).
         let locale = sigma_core::locale::read_locale(&sigma_core::locale::conf_path());
-        sigma_render::i18n::set_lang(locale.map_or(sigma_render::i18n::Lang::En, |l| {
+        let system_lang = locale.map_or(sigma_render::i18n::Lang::En, |l| {
             sigma_render::i18n::Lang::from_locale(&l)
-        }));
+        });
+        sigma_render::i18n::set_lang(resolve_lang(&settings, system_lang));
         let (lw, lh) = logical_size((width, height), settings.rotation);
         let mut screen = EditorScreen::new(lw, lh);
         screen.configure(&mut settings, None);
@@ -527,6 +530,7 @@ impl App {
             pointer_fast: false,
             gsensor: false,
             orientation_label: String::new(),
+            system_lang,
             tilt: None,
             now: 0,
             last_typed: None,
@@ -631,7 +635,8 @@ impl App {
     /// The interface language (v1.4); normally from the Kobo's locale at
     /// start. Re-lays out so translated labels are measured.
     pub fn set_language(&mut self, l: sigma_render::i18n::Lang) {
-        sigma_render::i18n::set_lang(l);
+        self.system_lang = l;
+        sigma_render::i18n::set_lang(resolve_lang(&self.settings, l));
         self.orientation_label = self.orientation_status();
     }
 
@@ -680,6 +685,10 @@ impl App {
         }
         self.settings.apply(c);
         self.screen.ink_words = self.settings.ink_words;
+        if matches!(c, Change::LangOverride(_) | Change::UiLang(_)) {
+            sigma_render::i18n::set_lang(resolve_lang(&self.settings, self.system_lang));
+            self.orientation_label = self.orientation_status();
+        }
         if let Change::Keyboard(l) = c {
             self.keyboard = Keyboard {
                 layout: l,
@@ -4823,5 +4832,20 @@ impl App {
     pub fn min_target(&self) -> i32 {
         // 44 px at the device scale; the UI scale only ever enlarges.
         self.screen.page_scale().px(44.0)
+    }
+}
+
+/// The interface language (v1.5.5, decision 57): the Kobo's unless
+/// Settings → Language → Override system language is on.
+fn resolve_lang(s: &Settings, system: sigma_render::i18n::Lang) -> sigma_render::i18n::Lang {
+    use sigma_core::settings::UiLang;
+    use sigma_render::i18n::Lang;
+    if !s.lang_override {
+        return system;
+    }
+    match s.ui_lang {
+        UiLang::En => Lang::En,
+        UiLang::Fr => Lang::Fr,
+        UiLang::Pt => Lang::Pt,
     }
 }

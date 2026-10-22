@@ -244,6 +244,22 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
             ],
         },
         OptRow {
+            label: "Override system language",
+            hint: "Choose the app's language instead of the Kobo's",
+            cells: vec![
+                choice("Off", Change::LangOverride(false), !s.lang_override),
+                choice("On", Change::LangOverride(true), s.lang_override),
+            ],
+        },
+        OptRow {
+            label: "Interface language",
+            hint: "Used while Override system language is on",
+            cells: sigma_core::settings::UiLang::ALL
+                .iter()
+                .map(|&l| choice(l.name(), Change::UiLang(l), s.ui_lang == l))
+                .collect(),
+        },
+        OptRow {
             label: "Keyboard tone",
             hint: "The keyboard can differ from the page",
             cells: vec![
@@ -378,7 +394,13 @@ pub const CATEGORIES: [(&str, &[Section]); 6] = [
             ),
         ],
     ),
-    ("Language", &[("Interface", &["Interface language"])]),
+    (
+        "Language",
+        &[(
+            "Interface",
+            &["Override system language", "Interface language"],
+        )],
+    ),
     (
         "USB & devices",
         &[("USB keyboard & mouse", &["USB keyboard & mouse", "Scroll"])],
@@ -411,6 +433,8 @@ pub enum Kind {
     Link(usize),
     /// Read-only value.
     Info(String),
+    /// A disabled choice (v1.5.5): its value in the slider's grey, no tap.
+    Muted(String),
     /// Stepped slider (v1.4.4, `crate::slider`): one cell per stop, the
     /// thumb's index, and whether it can be moved.
     Slider {
@@ -541,7 +565,11 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
         "Orientation" if m.settings.orientation == Orientation::Auto => {
             Kind::Pick(m.orientation_status.to_owned())
         }
-        "Interface language" => Kind::Info(m.language.to_owned()),
+        // v1.5.5 (decision 57): greyed system language unless overridden.
+        "Interface language" if m.settings.lang_override => {
+            Kind::Pick(m.settings.ui_lang.name().to_owned())
+        }
+        "Interface language" => Kind::Muted(m.language.to_owned()),
         // v1.5.2: what Train saved, and a way to delete it.
         "My handwriting" => Kind::Inline(vec![
             value(format!("{}: {}", tr("Samples"), m.hw_samples)),
@@ -935,7 +963,7 @@ impl EditorScreen {
                             _ => OptionsHit::Nothing,
                         },
                         Kind::Link(i) => OptionsHit::Help(*i),
-                        Kind::Info(_) => OptionsHit::Nothing,
+                        Kind::Info(_) | Kind::Muted(_) => OptionsHit::Nothing,
                         Kind::Slider { stops, enabled, .. } => {
                             if !*enabled {
                                 return OptionsHit::Nothing;
@@ -995,7 +1023,7 @@ impl EditorScreen {
                         }
                     }
                     Kind::Pick(_) | Kind::Link(_) => out.push((d.label.into(), cells[0])),
-                    Kind::Info(_) => {}
+                    Kind::Info(_) | Kind::Muted(_) => {}
                     Kind::Slider { stops, .. } => {
                         out.push((d.label.into(), cells[0]));
                         for (cell, r) in stops.iter().zip(&cells[1..]) {
@@ -1197,6 +1225,7 @@ impl EditorScreen {
                         Kind::Pick(v) => italic(c, &tr(v), t.ink),
                         Kind::Link(_) => italic(c, &tr("Open"), t.ink),
                         Kind::Info(v) => italic(c, v, t.mute),
+                        Kind::Muted(v) => italic(c, v, crate::slider::MUTED),
                         Kind::Slider {
                             stops,
                             value,

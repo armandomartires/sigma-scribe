@@ -188,6 +188,49 @@ pub struct Settings {
     pub ink_words: bool,
     /// Letter boxes instead of the free area (v1.5.3 fallback). `ink_boxes=`.
     pub ink_boxes: bool,
+    /// Language → Override system language (v1.5.5, decision 57). Off: the
+    /// interface follows the Kobo's `CurrentLocale` (read-only, never
+    /// written). `ui_lang_override=`.
+    pub lang_override: bool,
+    /// The interface language chosen while the override is on. `ui_lang=`.
+    pub ui_lang: UiLang,
+}
+
+/// An interface language the user can pick (v1.5.5).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum UiLang {
+    #[default]
+    En,
+    Fr,
+    Pt,
+}
+
+impl UiLang {
+    pub const ALL: [UiLang; 3] = [UiLang::En, UiLang::Fr, UiLang::Pt];
+
+    #[must_use]
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::En => "en",
+            Self::Fr => "fr",
+            Self::Pt => "pt",
+        }
+    }
+
+    #[must_use]
+    pub fn from_code(v: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|l| l.code() == v)
+    }
+
+    /// The language's own name (not translated).
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::En => "English",
+            Self::Fr => "Français",
+            Self::Pt => "Português",
+        }
+    }
 }
 
 /// Keyboard size choices (v1.4.3); 0 is Auto.
@@ -228,6 +271,8 @@ impl Default for Settings {
             ink_a2: false,
             ink_words: false,
             ink_boxes: false,
+            lang_override: false,
+            ui_lang: UiLang::En,
         }
     }
 }
@@ -275,6 +320,10 @@ pub enum Change {
     InkWords(bool),
     /// Letter boxes on / off (v1.5.3).
     InkBoxes(bool),
+    /// Override system language on / off (v1.5.5).
+    LangOverride(bool),
+    /// Interface language while the override is on (v1.5.5).
+    UiLang(UiLang),
     /// Open Train from Settings (v1.5.3; not a setting).
     TrainSamples,
     /// Delete the enrolled handwriting samples (v1.5.2). Not a setting:
@@ -312,6 +361,8 @@ impl Change {
                 | Self::UpsideDown(_)
                 | Self::Rotate(_)
                 | Self::Keyboard(_)
+                | Self::LangOverride(_)
+                | Self::UiLang(_)
                 | Self::LandKeys(_)
                 | Self::Pad(_)
                 | Self::PadSide(_)
@@ -370,6 +421,8 @@ impl Settings {
             Change::InkA2(on) => self.ink_a2 = on,
             Change::InkWords(on) => self.ink_words = on,
             Change::InkBoxes(on) => self.ink_boxes = on,
+            Change::LangOverride(on) => self.lang_override = on,
+            Change::UiLang(l) => self.ui_lang = l,
             Change::TrainSamples => {}
             Change::DeleteSamples => {}
             Change::Orientation(o) => {
@@ -564,6 +617,8 @@ impl Settings {
                 "ink_a2" => s.ink_a2 = b().unwrap_or(s.ink_a2),
                 "ink_words" => s.ink_words = b().unwrap_or(s.ink_words),
                 "ink_boxes" => s.ink_boxes = b().unwrap_or(s.ink_boxes),
+                "ui_lang_override" => s.lang_override = b().unwrap_or(s.lang_override),
+                "ui_lang" => s.ui_lang = UiLang::from_code(v).unwrap_or(s.ui_lang),
                 _ => {}
             }
         }
@@ -601,7 +656,7 @@ impl Settings {
         format!(
             "keyboard={}\npaper={}\ntype={}\nline={}\nline_words={}\nsize={}\nleading={}\nmargin={}\n\
              tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\nusb={}\nscroll={}\norientation={}\n\
-             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\nink_words={}\nink_boxes={}\n",
+             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\nink_words={}\nink_boxes={}\nui_lang_override={}\nui_lang={}\n",
             self.keyboard.name(),
             match self.paper {
                 Paper::Day => "day",
@@ -657,6 +712,8 @@ impl Settings {
             on(self.ink_a2),
             on(self.ink_words),
             on(self.ink_boxes),
+            on(self.lang_override),
+            self.ui_lang.code(),
         )
     }
 }
