@@ -8,7 +8,7 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
 - **Focus** (after a tap, for Left / Right on a USB keyboard): a bigger thumb with a thicker ring instead of a frame.
 - Settings key, behaviour and tap targets (≥ 44 px) unchanged.
 - Emulator: `tests/emu/v1.4.5-slider-grey.script`. Screenshots `docs/screenshots/v1.4.5/`.
-- Device binary sha256 (CI build) `BIN_HASH`; tarball `TAR_HASH`.
+- Device binary sha256 (CI build) `9fcbbed743bbe3d64b886ce4c3206f483b77dd0bd5c91d5d02892a3aa46e3a3e`; tarball `7e77ede427f317bc1a9a3e9b6fcf5b038584c7c8b2eba123fb80a48debdf7744`.
 
 ## 1.4.4 — 2026-10-22 (built, not installed, not tagged)
 - **Keyboard size control** (sprint S14.4, decision 45, user request): the 1.4.3 choice page is replaced, inline on Settings → Keyboard & input (section "Keyboard size"), by an **Auto keyboard size** checkbox (on by default) and a horizontal **slider** with three dots, 100% / 125% / 150%.
