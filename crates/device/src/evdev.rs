@@ -185,12 +185,18 @@ impl Decoder {
                 self.down = e.value >= 0;
                 None
             }
-            (EV_ABS, ABS_MT_POSITION_X | ABS_MT_POSITION_Y | ABS_X | ABS_Y) if !primary && self.was_down => {
+            (EV_ABS, ABS_MT_POSITION_X | ABS_MT_POSITION_Y | ABS_X | ABS_Y)
+                if !primary && self.was_down =>
+            {
                 // A second contact (slot != 0) while the first is down.
                 log_anomaly(format_args!(
                     "slot {} reports {}={} while slot 0 is down",
                     self.slot,
-                    if matches!(e.code, ABS_MT_POSITION_X | ABS_X) { "x" } else { "y" },
+                    if matches!(e.code, ABS_MT_POSITION_X | ABS_X) {
+                        "x"
+                    } else {
+                        "y"
+                    },
                     e.value
                 ));
                 None
