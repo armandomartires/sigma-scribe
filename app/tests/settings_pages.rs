@@ -66,7 +66,13 @@ fn every_page_fits_at_200_percent_in_each_language_and_orientation() {
             app.open_options();
             let mut pages = vec![SettingsPage::Root];
             pages.extend((0..CATEGORIES.len()).map(SettingsPage::Category));
-            for r in ["Orientation", "Layout", "Keyboard tone", "Tab width"] {
+            for r in [
+                "Orientation",
+                "Layout",
+                "Keyboard size",
+                "Keyboard tone",
+                "Tab width",
+            ] {
                 pages.push(SettingsPage::Choice(category_of(r).unwrap(), r));
             }
             for p in pages {

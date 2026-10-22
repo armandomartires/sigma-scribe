@@ -115,7 +115,19 @@ Procedure (same as 0.4.0): confirm it is the same Forma (serial <FORMA-SERIAL>) 
 
 Rollback: copy the 0.4.0 binary back (sha256 `689b84c4e763119cbdfa19eb07ade52d5709cdf034bf971fc2e5116e97c02043`, also in the pre-v1.0.0 backup). `.scratchpad.md` is hidden and ignored by 0.4.0; notes created from links are ordinary `.md` files and stay. `launch.sh` reboots on exit, which also returns the USB port to normal (gadget) mode.
 
-## Upgrade 1.4.0 → 1.4.2 (not run; needs approval; replaces the 1.4.1 plan below)
+## Upgrade 1.4.0 → 1.4.3 (not run; needs approval; replaces the 1.4.2 and 1.4.1 plans below)
+Same procedure as 1.4.0:
+1. Verify the serial (<FORMA-SERIAL>) and touch no other disk (never sdb).
+2. Read the log and copy it into the backup.
+3. Make a checksum-verified backup into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v1.4.3` (`.adds/sigma-scribe`, `.adds/nm`, `sigma-scribe/notes`, log).
+4. From the CI 1.4.3 package:
+   - replace `.adds/sigma-scribe/sigma-scribe` (via `.new` + sync + hash check + rename), binary sha256 `BIN_HASH`, tarball `TAR_HASH`;
+   - add `.adds/sigma-scribe/THIRD-PARTY.txt` (Lucide ISC notice, missing on the device since 1.1), sha256 `f61a648623ee545238601212f3d29eb056bddca7ed738f1427a2ca1bfc712ee4`.
+5. Verify both sha256 on the device, then sync, unmount and power off.
+
+Nothing else changes (`launch.sh`, `touch.conf`, licences and the NickelMenu entry are identical). `.sigma-settings` is kept as is; 1.4.3 reads it unchanged and adds `keyboard_size=auto` on the next save. Rollback: the 1.4.0 binary from the backup (it ignores the new key). Checklist: `sprints/S14.1-pointer-black.md`, `sprints/S14.2-settings-redesign.md` and `sprints/S14.3-keyboard-size.md`.
+
+## Upgrade 1.4.0 → 1.4.2 (not run; superseded by 1.4.3)
 Same procedure as 1.4.0:
 1. Verify the serial (<FORMA-SERIAL>) and touch no other disk (never sdb).
 2. Read the log and copy it into the backup.

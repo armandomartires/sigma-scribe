@@ -2,6 +2,13 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.4.3 — 2026-10-22 (built, not installed, not tagged)
+- **Keyboard size** (sprint S14.3, decision 44, user report: the on-screen keyboard is too big above 150 % UI scale; 125–150 % is fine). The keyboard has its own scale, separate from the UI scale. New setting under Settings → Keyboard & input: **Keyboard size** Auto / 100% / 125% / 150%, a choice page. **Auto (default)** follows the UI scale up to 150 %, so at the default 200 % UI the keyboard is the 150 % size while the rest of the interface stays at 200 %.
+- The keys, gaps, key labels, arrows and the landscape Split / Full / Centre bar use the keyboard scale; key targets stay at least 44 px. Tested: every size fits in portrait and landscape at UI scales 100–200 % in EN, FR, PT and the pseudo-long locale (`app/tests/keyboard_size.rs`).
+- **Settings carry over:** new key `keyboard_size=auto|100|125|150`; files without it (1.4.2 and older) load as Auto. 1.4.0–1.4.2 ignore the key, so a rollback still reads the file.
+- Emulator: `tests/emu/v1.4.3-keyboard-size.script`. Screenshots `docs/screenshots/v1.4.3/` (keyboard at 200 % UI before and after).
+- Device binary sha256 (CI build) `BIN_HASH`; tarball `TAR_HASH`.
+
 ## 1.4.2 — 2026-10-22 (built, not installed, not tagged)
 - Settings redesign (sprint S14.2, decision 43; proposal PR #16, approved): the Aa icon opens a Kobo-style **Settings** page with six categories: Writing, Display, Keyboard & input, Language, USB & devices, Help & about. Each category shows a summary and opens its own page. Each page has a back arrow, a small centred "Settings", a large serif page title, grey section bands with small capitals, and serif rows (label on the left, value on the right) with thin separators. Long pages turn with the page buttons or by tapping "Page i of n".
 - Controls: on/off settings are **checkboxes** ("☐ On"), two-way choices stay **inline buttons**, numbers keep − / + steppers, and longer lists (Orientation, Layout, Keyboard tone, Tab width) open a choice page that goes back when you pick. The back arrow or Esc goes up one level; X closes from any page. Help pages are under Help & about (the ? icon still opens Help).

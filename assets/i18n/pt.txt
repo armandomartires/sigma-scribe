@@ -349,6 +349,12 @@ Italian
 Keyboard tone
 = Tom do teclado
 
+Keyboard size
+= Tamanho do teclado
+
+Auto follows UI scale, up to 150%
+= Auto segue a escala, até 150%
+
 The keyboard can differ from the page
 = O teclado pode ser diferente da página
 

@@ -174,7 +174,15 @@ pub struct Settings {
     pub ui_scale: u16,
     /// Options → Layout (v1.3): on-screen Full board and USB keyboards.
     pub kb_layout: crate::layouts::KeyLayout,
+    /// Keyboard & input → Keyboard size (v1.4.3): 0 = Auto (the UI scale,
+    /// at most 150 %), or 100 / 125 / 150. Saved as `keyboard_size=`.
+    pub kb_size: u16,
 }
+
+/// Keyboard size choices (v1.4.3); 0 is Auto.
+pub const KB_SIZES: [u16; 4] = [0, 100, 125, 150];
+/// Auto keyboard size never goes above this (v1.4.3, user report).
+pub const KB_AUTO_MAX: u16 = 150;
 
 /// UI scale steps (v1.1, S11).
 pub const UI_SCALES: [u16; 5] = [100, 125, 150, 175, 200];
@@ -204,6 +212,7 @@ impl Default for Settings {
             pad_side: Side::Right,
             ui_scale: 200,
             kb_layout: crate::layouts::KeyLayout::Us,
+            kb_size: 0,
         }
     }
 }
@@ -238,6 +247,8 @@ pub enum Change {
     UiScale(i8),
     /// One step through the keyboard layouts (v1.3).
     KbLayout(i8),
+    /// Keyboard size (v1.4.3): 0 = Auto, or a percentage from `KB_SIZES`.
+    KbSize(u16),
 }
 
 impl Change {
@@ -345,6 +356,11 @@ impl Settings {
                 let i = ALL.iter().position(|&l| l == self.kb_layout).unwrap_or(0) as i32;
                 let n = ALL.len() as i32;
                 self.kb_layout = ALL[(i + i32::from(d)).rem_euclid(n) as usize];
+            }
+            Change::KbSize(v) => {
+                if KB_SIZES.contains(&v) {
+                    self.kb_size = v;
+                }
             }
             Change::UiScale(d) => {
                 let i = UI_SCALES
@@ -456,6 +472,15 @@ impl Settings {
                         }
                     }
                 }
+                "keyboard_size" => {
+                    if v == "auto" {
+                        s.kb_size = 0;
+                    } else if let Ok(n) = v.parse::<u16>() {
+                        if KB_SIZES.contains(&n) {
+                            s.kb_size = n;
+                        }
+                    }
+                }
                 "scroll" => {
                     s.natural_scroll = match v {
                         "natural" => true,
@@ -504,6 +529,17 @@ impl Settings {
         s
     }
 
+    /// The keyboard's scale in percent (v1.4.3): Auto follows the UI scale
+    /// up to 150 %; a fixed size ignores the UI scale.
+    #[must_use]
+    pub fn keyboard_scale(&self) -> u16 {
+        if self.kb_size == 0 {
+            self.ui_scale.min(KB_AUTO_MAX)
+        } else {
+            self.kb_size
+        }
+    }
+
     /// The file body; [`Settings::parse`] reads it back unchanged.
     #[must_use]
     pub fn serialize(&self) -> String {
@@ -515,7 +551,7 @@ impl Settings {
         format!(
             "keyboard={}\npaper={}\ntype={}\nline={}\nline_words={}\nsize={}\nleading={}\nmargin={}\n\
              tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\nusb={}\nscroll={}\norientation={}\n\
-             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\n",
+             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\n",
             self.keyboard.name(),
             match self.paper {
                 Paper::Day => "day",
@@ -559,6 +595,11 @@ impl Settings {
             side(self.pad_side),
             self.ui_scale,
             self.kb_layout.name(),
+            if self.kb_size == 0 {
+                "auto".to_owned()
+            } else {
+                self.kb_size.to_string()
+            },
         )
     }
 }

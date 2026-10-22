@@ -181,6 +181,21 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
             ),
         },
         OptRow {
+            label: "Keyboard size",
+            hint: "Auto follows UI scale, up to 150%",
+            cells: sigma_core::settings::KB_SIZES
+                .iter()
+                .map(|&v| {
+                    let l = if v == 0 {
+                        "Auto".to_owned()
+                    } else {
+                        format!("{v}%")
+                    };
+                    choice(&l, Change::KbSize(v), s.kb_size == v)
+                })
+                .collect(),
+        },
+        OptRow {
             label: "Keyboard tone",
             hint: "The keyboard can differ from the page",
             cells: vec![
@@ -299,7 +314,7 @@ pub const CATEGORIES: [(&str, &[Section]); 6] = [
         "Keyboard & input",
         &[(
             "On-screen keyboard",
-            &["Keyboard", "Layout", "Keyboard tone"],
+            &["Keyboard", "Layout", "Keyboard size", "Keyboard tone"],
         )],
     ),
     ("Language", &[("Interface", &["Interface language"])]),
