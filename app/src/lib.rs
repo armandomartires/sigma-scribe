@@ -355,6 +355,11 @@ impl App {
         let buffer = Buffer::new(body);
         let _ = library.set_last_opened(&current);
         let mut settings = load_settings(&root);
+        // v1.4: the interface follows the Kobo's language (read-only).
+        let locale = sigma_core::locale::read_locale(&sigma_core::locale::conf_path());
+        sigma_render::i18n::set_lang(locale.map_or(sigma_render::i18n::Lang::En, |l| {
+            sigma_render::i18n::Lang::from_locale(&l)
+        }));
         let (lw, lh) = logical_size((width, height), settings.rotation);
         let mut screen = EditorScreen::new(lw, lh);
         screen.configure(&mut settings, None);
@@ -486,6 +491,13 @@ impl App {
         Some(self.change(Change::Rotate(r)))
     }
 
+    /// The interface language (v1.4); normally from the Kobo's locale at
+    /// start. Re-lays out so translated labels are measured.
+    pub fn set_language(&mut self, l: sigma_render::i18n::Lang) {
+        sigma_render::i18n::set_lang(l);
+        self.orientation_label = self.orientation_status();
+    }
+
     /// An accelerometer is present (from `Device::has_gsensor`).
     pub fn set_gsensor(&mut self, on: bool) {
         self.gsensor = on;
@@ -495,12 +507,12 @@ impl App {
     /// Options → Orientation hint: what Auto is doing (v1.2).
     #[must_use]
     pub fn orientation_status(&self) -> String {
+        use sigma_render::i18n::tr;
+        let r = tr(self.settings.rotation.name());
         match (self.settings.orientation, self.gsensor) {
-            (Orientation::Auto, true) => format!("Auto — {}", self.settings.rotation.name()),
-            (Orientation::Auto, false) => {
-                format!("Auto (no sensor) — {}", self.settings.rotation.name())
-            }
-            _ => self.settings.rotation.name().to_owned(),
+            (Orientation::Auto, true) => format!("{} — {r}", tr("Auto")),
+            (Orientation::Auto, false) => format!("{} — {r}", tr("Auto (no sensor)")),
+            _ => r.into_owned(),
         }
     }
 
@@ -3394,7 +3406,14 @@ impl App {
     /// App info rows: version, licence, author, where notes live, credits.
     #[must_use]
     pub fn about(&self) -> Vec<(String, String)> {
-        vec![
+        use sigma_render::i18n::{tr, tr_name, Lang};
+        let lang = sigma_render::i18n::lang();
+        let language = match lang {
+            Lang::Fr => "Français. Traduction rédigée par machine, au mieux ; une relecture par un locuteur natif est nécessaire. Suit la langue du Kobo.".to_owned(),
+            Lang::Pt => "Português. Tradução redigida por máquina, da melhor forma possível; precisa de revisão por um falante nativo. Segue o idioma do Kobo.".to_owned(),
+            _ => "English. Follows the Kobo's language (English, Français, Português).".to_owned(),
+        };
+        let rows: Vec<(String, String)> = vec![
             (
                 "Sigma Scribe".into(),
                 format!(
@@ -3409,9 +3428,9 @@ impl App {
             ("Author".into(), "Sigma Recon.".into()),
             (
                 "Your notes".into(),
-                format!(
-                    "Plain .md and .txt files in {}. Connect the Kobo over USB to copy them. The scratch pad is the hidden file .scratchpad.md.",
-                    self.library.root().display()
+                tr_name(
+                    "Plain .md and .txt files in {name}. Connect the Kobo over USB to copy them. The scratch pad is the hidden file .scratchpad.md.",
+                    &self.library.root().display().to_string(),
                 ),
             ),
             (
@@ -3426,7 +3445,13 @@ impl App {
                 "Credits".into(),
                 "Literata and Atkinson Hyperlegible fonts (SIL Open Font License 1.1). FBInk by NiLuJe (GPL-3.0-or-later). NickelMenu by pgaskin. Icons: Lucide (ISC licence), lucide.dev.".into(),
             ),
-        ]
+        ];
+        let mut out: Vec<(String, String)> = rows
+            .into_iter()
+            .map(|(k, v)| (tr(&k).into_owned(), tr(&v).into_owned()))
+            .collect();
+        out.push((tr("Language").into_owned(), language));
+        out
     }
 
     pub fn open_help(&mut self) {

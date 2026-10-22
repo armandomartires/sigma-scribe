@@ -8,6 +8,7 @@
 use crate::canvas::{Canvas, Rect};
 use crate::editor::{EditorScreen, Layout};
 use crate::fonts::Face;
+use crate::i18n::tr;
 use crate::theme::Theme;
 use sigma_core::Keyboard;
 
@@ -147,7 +148,7 @@ impl EditorScreen {
             c.fill(Rect::new(0, 0, l.area.w, l.area.y), t.paper);
             c.fill(Rect::new(0, l.foot.y, l.foot.w, l.foot.h), t.paper);
         }
-        self.draw_title(c, &l.base, "Graph", None, t, false);
+        self.draw_title(c, &l.base, &tr("Graph"), None, t, false);
         self.draw_graph_toolbar(c, m, &l);
         crate::icons::draw_icon(c, crate::icons::Icon::Close, l.close, t.ink);
         let tx = s.px(28.0) as f32;
@@ -187,11 +188,12 @@ impl EditorScreen {
                 &row.name,
                 t.ink,
             );
-            let mut detail = row.detail.clone();
+            let mut detail = tr(&row.detail).into_owned();
+            let full_len = detail.len();
             while !detail.is_empty() && self.fonts.width(Face::Atkinson, ui * 0.85, &detail) > max {
                 detail.pop();
             }
-            if detail.len() < row.detail.len() {
+            if detail.len() < full_len {
                 detail.pop();
                 detail.push('\u{2026}');
             }

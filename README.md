@@ -17,7 +17,9 @@ Status: **v1.0.0 release candidate — not yet tested on the device and not rele
 - Library of notes and folders; Markdown preview with pages; wiki links `[[note]]`, backlinks, a graph map of notes and links (or a list).
 - Side drawer: Contents, To-dos across all notes, Scratch pad. Find & Replace.
 - Options: Paper / Night, Literata or Atkinson, Line mode (words per line), size, leading, margin, tab, keyboard tone, landscape.
-- Help pages. USB keyboard (US layout) and mouse/touchpad over USB-OTG with a powered hub or powered OTG cable.
+- Help pages. USB keyboard and mouse/touchpad over USB-OTG with a powered hub or powered OTG cable.
+- Keyboard layouts US, UK, French AZERTY, German QWERTZ, Spanish, Portuguese, Italian (on-screen and USB), with dead keys.
+- Interface in English, French or Portuguese, following the Kobo's language (French and Portuguese are machine-drafted, best effort; native corrections welcome in `assets/i18n/`).
 
 ## Install, update, uninstall
 See [`docs/install.md`](docs/install.md). In short: install NickelMenu, unpack `sigma-scribe-<ver>-kobo.tar.gz` onto the Kobo drive's root, eject, then *Sigma Scribe* is in the NickelMenu. Notes live in `sigma-scribe/notes` on the drive. Uninstall = delete `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`.

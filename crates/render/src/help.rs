@@ -8,6 +8,7 @@
 use crate::canvas::{Canvas, Rect};
 use crate::editor::{EditorScreen, Layout};
 use crate::fonts::Face;
+use crate::i18n::tr;
 use crate::preview::{self, Doc, Type};
 use crate::theme::Theme;
 use sigma_core::markdown::{Block, BlockKind, Run, Style};
@@ -71,7 +72,11 @@ pub const KEYBOARD_HELP: [(&str, &str, &str); 7] = [
         "A USB mouse or touchpad (also the touchpad of a keyboard such as the Logitech K400 Plus) shows a small arrow. Click = tap; drag on the note selects; double-click selects a word; the wheel or two-finger scroll moves the note and turns pages in preview and lists. The arrow hides after 3 seconds still and when you type. Right click does nothing.",
         "",
     ),
-    ("Layout", "US layout. Esc closes Find, sheets and selections.", ""),
+    (
+        "Layout",
+        "Options \u{2192} Layout sets the keyboard: US, UK, French, German, Spanish, Portuguese or Italian. Esc closes Find, sheets and selections.",
+        "",
+    ),
     (
         "Export",
         "Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.",
@@ -183,14 +188,14 @@ pub fn help_blocks(page: HelpPage, about: &[(String, String)]) -> Vec<Block> {
         HelpPage::Menu => {}
         HelpPage::About => {
             for (label, text) in about {
-                out.push(para(label, STRONG));
+                out.push(para(&tr(label), STRONG));
                 out.push(para(text, Style::default()));
             }
         }
         HelpPage::Keyboard => {
             for (name, text, code) in KEYBOARD_HELP {
-                out.push(para(name, STRONG));
-                out.push(para(text, Style::default()));
+                out.push(para(&tr(name), STRONG));
+                out.push(para(&tr(text), Style::default()));
                 if !code.is_empty() {
                     out.push(Block {
                         kind: BlockKind::Code,
@@ -202,13 +207,13 @@ pub fn help_blocks(page: HelpPage, about: &[(String, String)]) -> Vec<Block> {
         }
         HelpPage::Markdown => {
             for (name, source, note) in REFERENCE {
-                out.push(para(name, STRONG));
+                out.push(para(&tr(name), STRONG));
                 out.push(Block {
                     kind: BlockKind::Code,
                     runs: source.lines().map(|l| run(l, Style::default())).collect(),
                     line: 0,
                 });
-                out.push(para(note, Style::default()));
+                out.push(para(&tr(note), Style::default()));
             }
         }
     }
@@ -318,7 +323,7 @@ impl EditorScreen {
         let s = self.scale();
         let ui = self.ui_px();
         c.fill(c.bounds(), t.paper);
-        self.draw_title(c, &l.base, m.page.title(), None, t, false);
+        self.draw_title(c, &l.base, &tr(m.page.title()), None, t, false);
         crate::icons::draw_icon(c, crate::icons::Icon::Close, l.close, t.ink);
         let tx = s.px(28.0) as f32;
         if m.page == HelpPage::Menu {
@@ -329,7 +334,7 @@ impl EditorScreen {
                     ui * 1.1,
                     tx,
                     r.y as f32 + r.h as f32 * 0.45,
-                    label,
+                    &tr(label),
                     t.ink,
                 );
                 self.fonts.draw(
@@ -338,7 +343,7 @@ impl EditorScreen {
                     ui * 0.85,
                     tx,
                     r.y as f32 + r.h as f32 * 0.8,
-                    hint,
+                    &tr(hint),
                     t.mute,
                 );
                 c.fill(Rect::new(0, r.y + r.h - 1, r.w, 1), t.rule);
@@ -353,7 +358,7 @@ impl EditorScreen {
             ui,
             tx,
             by,
-            "\u{2190} Back to Help",
+            &format!("\u{2190} {}", tr("Back to Help")),
             t.ink,
         );
         c.fill(
@@ -367,7 +372,8 @@ impl EditorScreen {
             }
             let n = doc.pages.len();
             if n > 1 {
-                let label = format!("page {} of {n} \u{b7} page buttons turn", at + 1);
+                let label =
+                    tr(&format!("page {} of {n} \u{b7} page buttons turn", at + 1)).into_owned();
                 c.fill(Rect::new(0, l.foot.y, l.foot.w, 1), t.rule);
                 let fy = l.foot.y as f32
                     + l.foot.h as f32 / 2.0

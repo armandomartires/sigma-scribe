@@ -1,0 +1,590 @@
+# Sigma Scribe — Português (PT-PT). machine-drafted, best effort; needs a native review.
+# Format: English text, then "= " and the translation. See crates/render/src/i18n.rs.
+
+Files
+= Ficheiros
+
+Graph
+= Grafo
+
+Options
+= Opções
+
+Help
+= Ajuda
+
+Help / App info
+= Ajuda / Sobre
+
+Help / Markdown reference
+= Ajuda / Referência Markdown
+
+Help / USB keyboard, mouse & export
+= Ajuda / Teclado USB, rato e exportação
+
+Back to Help
+= Voltar à ajuda
+
+Up to Files
+= Subir para Ficheiros
+
+Move {name} to
+= Mover {name} para
+
+Cancel
+= Cancelar
+
+OK
+= OK
+
+{n} words
+= {n} palavras
+
+{n} word
+= {n} palavra
+
+line {n}
+= linha {n}
+
+preview
+= pré-visualização
+
+page {n} of {m}
+= página {n} de {m}
+
+page buttons turn
+= os botões mudam de página
+
+Paper
+= Papel
+
+Night
+= Noite
+
+saved
+= guardado
+
+saving
+= a guardar
+
+not saved
+= não guardado
+
+USB
+= USB
+
+no USB
+= sem USB
+
+Keys
+= Teclado
+
+Cut
+= Cortar
+
+Copy
+= Copiar
+
+Paste
+= Colar
+
+Select all
+= Selecionar tudo
+
+Shift
+= Shift
+
+Back
+= Apagar
+
+Del
+= Sup
+
+Space
+= Espaço
+
+Enter
+= Enter
+
+Return
+= Enter
+
+Caps
+= Caps
+
+Home
+= Iní
+
+End
+= Fim
+
+Compact
+= Compacto
+
+Full
+= Completo
+
+Split
+= Dividido
+
+Centre
+= Centrado
+
+Pad left
+= Teclado à esq.
+
+Pad right
+= Teclado à dir.
+
+Arrows
+= Setas
+
+Contents
+= Índice
+
+To-dos
+= Tarefas
+
+Scratch
+= Rascunho
+
+All
+= Todas
+
+Open
+= Abertas
+
+Done
+= Feitas
+
+{n} more…
+= mais {n}…
+
+No headings in this note. Start a line with #.
+= Sem títulos nesta nota. Comece uma linha com #.
+
+No to-dos. Start a line with - [ ].
+= Sem tarefas. Comece uma linha com - [ ].
+
+Find
+= Procurar
+
+Replace
+= Substituir
+
+Prev
+= Ant.
+
+Next
+= Seg.
+
+None
+= Nenhum
+
+{n} of {m}
+= {n} de {m}
+
+– of {n}
+= – de {n}
+
+Folder
+= Pasta
+
+More
+= Mais
+
+Rename
+= Mudar nome
+
+Move
+= Mover
+
+Delete
+= Apagar
+
+Tap again to delete
+= Toque de novo para apagar
+
+New note
+= Nova nota
+
+New folder
+= Nova pasta
+
+No folders.
+= Sem pastas.
+
+No notes here yet. Tap New note.
+= Ainda não há notas aqui. Toque em Nova nota.
+
+{n} notes
+= {n} notas
+
+{n} note
+= {n} nota
+
+{n} links
+= {n} ligações
+
+{n} link
+= {n} ligação
+
+No links
+= Sem ligações
+
+tap again to open
+= toque de novo para abrir
+
+write [[a note name]] to join two notes
+= escreva [[nome de uma nota]] para ligar duas notas
+
+UI scale
+= Escala da interface
+
+Buttons, menus and keys; the note keeps its Size
+= Botões, menus e teclas; a nota mantém o tamanho
+
+Night is the same page, inverted
+= Noite é a mesma página, invertida
+
+Day
+= Dia
+
+Type
+= Letra
+
+Serif for reading, sans for the bus
+= Serifada para ler, sem serifa para o autocarro
+
+Literata
+= Literata
+
+Atkinson
+= Atkinson
+
+Line
+= Linha
+
+Words per line, {n} to {m}
+= Palavras por linha, de {n} a {m}
+
+Off
+= Não
+
+On
+= Sim
+
+Size
+= Tamanho
+
+Type size
+= Tamanho do texto
+
+Tied to Margin while Line is on
+= Ligado à margem com Linha ativa
+
+Leading
+= Entrelinha
+
+Space between lines
+= Espaço entre linhas
+
+Margin
+= Margem
+
+Room for a thumb
+= Espaço para o polegar
+
+Tab key
+= Tecla Tab
+
+Markdown default is spaces
+= O Markdown usa espaços por omissão
+
+Tab
+= Tab
+
+Spaces
+= Espaços
+
+Tab width
+= Largura do tab
+
+Spaces inserted, or columns a tab stands for
+= Espaços inseridos, ou colunas de um tab
+
+Keyboard
+= Teclado
+
+On-screen layout
+= Teclado no ecrã
+
+Layout
+= Disposição
+
+On-screen Full board and USB keyboards
+= Teclado completo no ecrã e teclados USB
+
+US
+= EUA
+
+UK
+= RU
+
+French AZERTY
+= Francês AZERTY
+
+German QWERTZ
+= Alemão QWERTZ
+
+Spanish
+= Espanhol
+
+Portuguese
+= Português
+
+Italian
+= Italiano
+
+Keyboard tone
+= Tom do teclado
+
+The keyboard can differ from the page
+= O teclado pode ser diferente da página
+
+Theme
+= Tema
+
+Light
+= Claro
+
+Dark
+= Escuro
+
+Drawer
+= Painel
+
+Contents, to-dos and scratch open here (v{n})
+= Índice, tarefas e rascunho abrem aqui (v{n})
+
+Left
+= Esquerda
+
+Right
+= Direita
+
+USB keyboard & mouse
+= Teclado e rato USB
+
+Needs a powered hub: the reader does not power the port
+= Precisa de um hub alimentado: o leitor não alimenta a porta
+
+Scroll
+= Deslocação
+
+Wheel and two-finger direction; Natural moves the page like a touch screen
+= Roda e dois dedos; Natural segue o dedo
+
+Traditional
+= Tradicional
+
+Natural
+= Natural
+
+Orientation
+= Orientação
+
+Auto follows how you hold it
+= Auto segue a forma como o segura
+
+Auto
+= Auto
+
+Auto (no sensor)
+= Auto (sem sensor)
+
+Portrait
+= Vertical
+
+Landscape
+= Horizontal
+
+Portrait inverted
+= Vertical invertido
+
+Landscape inverted
+= Horizontal invertido
+
+Upside down
+= Invertido
+
+Turns Portrait or Landscape {n}°
+= Roda Vertical ou Horizontal {n}°
+
+App info
+= Sobre
+
+Version, license, and author
+= Versão, licença e autor
+
+Markdown reference
+= Referência Markdown
+
+The syntax this page can render
+= A sintaxe que esta página consegue mostrar
+
+USB keyboard, mouse & export
+= Teclado USB, rato e exportação
+
+Hub, shortcuts, getting files off
+= Hub, atalhos, tirar os ficheiros
+
+Powered hub
+= Hub alimentado
+
+The Forma does not power its USB port. Plug the keyboard into a powered USB hub, or a Y-cable with its own power supply, and the hub into the reader with a micro-USB OTG adapter.
+= A Forma não alimenta a sua porta USB. Ligue o teclado a um hub USB alimentado, ou a um cabo em Y com alimentação própria, e o hub ao leitor com um adaptador micro-USB OTG.
+
+Connecting
+= Ligação
+
+Turn on Options → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
+= Ative primeiro Opções → Teclado e rato USB: a porta passa para modo anfitrião, por isso um computador não vê o Kobo até o desativar ou sair da app. Depois ligue o teclado; a barra de estado mostra USB num segundo (sem USB enquanto nenhum for encontrado). O teclado no ecrã continua a funcionar, e desligar é seguro.
+
+Shortcuts
+= Atalhos
+
+The same as the on-screen Ctrl key.
+= Os mesmos da tecla Ctrl no ecrã.
+
+Mouse and touchpad
+= Rato e touchpad
+
+A USB mouse or touchpad (also the touchpad of a keyboard such as the Logitech K{n} Plus) shows a small arrow. Click = tap; drag on the note selects; double-click selects a word; the wheel or two-finger scroll moves the note and turns pages in preview and lists. The arrow hides after {m} seconds still and when you type. Right click does nothing.
+= Um rato ou touchpad USB (também o touchpad de um teclado como o Logitech K{n} Plus) mostra uma pequena seta. Clique = toque; arrastar na nota seleciona; duplo clique seleciona uma palavra; a roda ou o deslize com dois dedos move a nota e muda de página na pré-visualização e nas listas. A seta esconde-se após {m} segundos parada e quando escreve. O clique direito não faz nada.
+
+Options → Layout sets the keyboard: US, UK, French, German, Spanish, Portuguese or Italian. Esc closes Find, sheets and selections.
+= Opções → Disposição define o teclado: EUA, RU, francês, alemão, espanhol, português ou italiano. Esc fecha a pesquisa, as folhas e as seleções.
+
+Export
+= Exportação
+
+Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
+= As suas notas são simples ficheiros .md. Ligue o Kobo a um computador por USB (saia primeiro do Sigma Scribe), escolha Ligar, e copie a pasta sigma-scribe/notes. Não é preciso mais nada; a sincronização (p. ex. Syncthing) pode vir mais tarde.
+
+If nothing happens
+= Se nada acontecer
+
+Check the hub's power, try another keyboard (simple wired ones work best), then leave and reopen the app. The device log .adds/sigma-scribe/sigma-scribe.log notes each keyboard found.
+= Verifique a alimentação do hub, experimente outro teclado (os simples com fio funcionam melhor), depois saia e volte a abrir a app. O registo .adds/sigma-scribe/sigma-scribe.log anota cada teclado encontrado.
+
+Heading
+= Título
+
+These are the rows in Contents.
+= São as linhas do Índice.
+
+Bold and italic
+= Negrito e itálico
+
+Two stars for bold, one for italic.
+= Dois asteriscos para negrito, um para itálico.
+
+List
+= Lista
+
+A hyphen, or a number and a dot. Brackets make a checkbox.
+= Um hífen, ou um número e um ponto. Os parênteses retos fazem uma caixa de seleção.
+
+Quote
+= Citação
+
+A greater-than sign at the start.
+= Um sinal de maior no início.
+
+Rule
+= Linha horizontal
+
+Three hyphens on their own line.
+= Três hífenes sozinhos numa linha.
+
+Code
+= Código
+
+Backticks. Three of them fence a block.
+= Acentos graves. Três deles delimitam um bloco.
+
+Picture
+= Imagem
+
+An exclamation mark, words for the picture, then the address. Shown as [image: …] on the Kobo.
+= Um ponto de exclamação, palavras para a imagem, depois o endereço. Mostrado como [image: …] no Kobo.
+
+Web link
+= Ligação web
+
+Shown underlined; the Kobo has no browser to open it. A note still uses double brackets.
+= Mostrado sublinhado; o Kobo não tem navegador para o abrir. Uma nota continua a usar parênteses retos duplos.
+
+Table
+= Tabela
+
+A header, a row of dashes, then the cells. Shown as plain text for now.
+= Um cabeçalho, uma linha de traços, depois as células. Mostrado como texto simples por agora.
+
+Strike
+= Riscado
+
+Two tildes on each side.
+= Dois tis de cada lado.
+
+Link to a note
+= Ligação a uma nota
+
+The note name, or a name and the words to show. A dashed link creates the note. Links are what the graph draws.
+= O nome da nota, ou um nome e as palavras a mostrar. Uma ligação tracejada cria a nota. As ligações são o que o grafo desenha.
+
+Sigma Scribe
+= Sigma Scribe
+
+Version {n} A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.
+= Versão {n} Um caderno para o Kobo Forma: simples ficheiros Markdown numa página de tinta eletrónica, escritos no ecrã.
+
+License
+= Licença
+
+AGPL-{n}-only. The source is on GitHub: armandomartires/sigma-scribe.
+= AGPL-{n}-only. O código-fonte está no GitHub: armandomartires/sigma-scribe.
+
+Author
+= Autor
+
+Sigma Recon.
+= Sigma Recon.
+
+Your notes
+= As suas notas
+
+Plain .md and .txt files in {name}. Connect the Kobo over USB to copy them. The scratch pad is the hidden file .scratchpad.md.
+= Simples ficheiros .md e .txt em {name}. Ligue o Kobo por USB para os copiar. O rascunho é o ficheiro oculto .scratchpad.md.
+
+Buttons
+= Botões
+
+The page buttons scroll the page. The power button saves and goes back to the reader. Every change is saved as you type.
+= Os botões de página deslocam a página. O botão de ligar guarda e volta ao leitor. Cada alteração é guardada enquanto escreve.
+
+Needs a powered hub or a Y-cable: the reader does not power the port. See Help → USB keyboard, mouse & export.
+= Precisa de um hub alimentado ou de um cabo em Y: o leitor não alimenta a porta. Veja Ajuda → Teclado USB, rato e exportação.
+
+Credits
+= Créditos
+
+Literata and Atkinson Hyperlegible fonts (SIL Open Font License {n}). FBInk by NiLuJe (GPL-{m}-or-later). NickelMenu by pgaskin. Icons: Lucide (ISC licence), lucide.dev.
+= Tipos de letra Literata e Atkinson Hyperlegible (SIL Open Font License {n}). FBInk de NiLuJe (GPL-{m}-or-later). NickelMenu de pgaskin. Ícones: Lucide (licença ISC), lucide.dev.
+
+Language
+= Idioma
+
+could not read the note
+= não foi possível ler a nota

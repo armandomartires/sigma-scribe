@@ -1,11 +1,12 @@
 //! The Files sheet (brief §6): a full-page overlay listing folders and notes.
-//! Tap a folder to enter, a note to open; "More" reveals Rename / Move /
+//! Tap a folder to enter, a note to open; **More** reveals Rename / Move /
 //! Delete (armed: first tap arms, second confirms); New note / New folder at
 //! the bottom. In move mode the list shows destination folders instead.
 
 use crate::canvas::{Canvas, Rect};
 use crate::editor::{EditorScreen, Layout};
 use crate::fonts::Face;
+use crate::i18n::tr;
 use crate::theme::Theme;
 use sigma_core::{Buffer, Keyboard};
 
@@ -207,8 +208,8 @@ impl EditorScreen {
         let s = self.scale();
         c.fill(c.bounds(), t.paper);
         let title = match m.moving {
-            Some(name) => format!("Move {name} to\u{2026}"),
-            None => m.title.clone(),
+            Some(name) => format!("{}\u{2026}", crate::i18n::tr_name("Move {name} to", name)),
+            None => m.title.replacen("Files", &tr("Files"), 1),
         };
         self.draw_title(c, &l.base, &title, m.rename, t, false);
         if m.rename.is_none() {
@@ -225,7 +226,7 @@ impl EditorScreen {
                     ui,
                     s.px(20.0) as f32,
                     base(l.crumb, Face::Atkinson),
-                    &format!("\u{2190} {crumb}"),
+                    &format!("\u{2190} {}", tr(crumb)),
                     t.ink,
                 );
                 c.fill(
@@ -247,7 +248,7 @@ impl EditorScreen {
                 ui,
                 s.px(20.0) as f32,
                 y as f32,
-                msg,
+                &tr(msg),
                 t.mute,
             );
         }
@@ -291,7 +292,7 @@ impl EditorScreen {
                 ui * 0.85,
                 tx,
                 r.y as f32 + r.h as f32 * 0.8,
-                &row.detail,
+                &tr(&row.detail),
                 t.mute,
             );
             if more.w > 0 {
@@ -300,14 +301,14 @@ impl EditorScreen {
                     c.fill(more, t.wash);
                 }
                 c.stroke(more, 1, if open { t.ink } else { t.rule });
-                let mw = self.fonts.width(Face::Atkinson, ui, "More");
+                let mw = self.fonts.width(Face::Atkinson, ui, &tr("More"));
                 self.fonts.draw(
                     c,
                     Face::Atkinson,
                     ui,
                     more.x as f32 + (more.w as f32 - mw) / 2.0,
                     base(more, Face::Atkinson),
-                    "More",
+                    &tr("More"),
                     t.ink,
                 );
             }
@@ -325,6 +326,7 @@ impl EditorScreen {
                     _ if armed => "Tap again to delete",
                     _ => "Delete",
                 };
+                let label: &str = &tr(label);
                 let inverted = n == 2 && armed;
                 c.fill(*r, if inverted { t.ink } else { t.paper });
                 c.stroke(*r, 1, t.ink);
@@ -348,7 +350,7 @@ impl EditorScreen {
                 ui,
                 s.px(20.0) as f32,
                 y as f32,
-                msg,
+                &tr(msg),
                 t.ink,
             );
         }
@@ -370,6 +372,7 @@ impl EditorScreen {
             if r.w == 0 {
                 continue;
             }
+            let label: &str = &tr(label);
             c.stroke(*r, 1, t.ink);
             let lw = self.fonts.width(Face::AtkinsonBold, ui, label);
             self.fonts.draw(

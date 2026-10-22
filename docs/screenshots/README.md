@@ -144,3 +144,11 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.3 | [v1.3-compact-azerty.png](v1.3/v1.3-compact-azerty.png) | Compact with AZERTY letters | [eink](v1.3/eink/v1.3-compact-azerty.png) |
 | v1.3 | [v1.3-full-qwertz.png](v1.3/v1.3-full-qwertz.png) | Full board, German QWERTZ: ß ü ö ä | [eink](v1.3/eink/v1.3-full-qwertz.png) |
 | v1.3 | [v1.3-landscape-portuguese.png](v1.3/v1.3-landscape-portuguese.png) | Portuguese in landscape: ç º, dead ´ ~ | [eink](v1.3/eink/v1.3-landscape-portuguese.png) |
+| v1.4 | [v1.4-en-editor.png](v1.4/v1.4-en-editor.png) | English (CurrentLocale=en or no config) | [eink](v1.4/eink/v1.4-en-editor.png) |
+| v1.4 | [v1.4-fr-editor.png](v1.4/v1.4-fr-editor.png) | French from the fixture config: status, keys | [eink](v1.4/eink/v1.4-fr-editor.png) |
+| v1.4 | [v1.4-fr-options.png](v1.4/v1.4-fr-options.png) | Options in French | [eink](v1.4/eink/v1.4-fr-options.png) |
+| v1.4 | [v1.4-fr-files.png](v1.4/v1.4-fr-files.png) | Files in French | [eink](v1.4/eink/v1.4-fr-files.png) |
+| v1.4 | [v1.4-fr-help.png](v1.4/v1.4-fr-help.png) | Help in French | [eink](v1.4/eink/v1.4-fr-help.png) |
+| v1.4 | [v1.4-pt-editor.png](v1.4/v1.4-pt-editor.png) | Portuguese: status, keys | [eink](v1.4/eink/v1.4-pt-editor.png) |
+| v1.4 | [v1.4-pt-options.png](v1.4/v1.4-pt-options.png) | Options in Portuguese | [eink](v1.4/eink/v1.4-pt-options.png) |
+| v1.4 | [v1.4-pt-help-landscape.png](v1.4/v1.4-pt-help-landscape.png) | Help in Portuguese, landscape | [eink](v1.4/eink/v1.4-pt-help-landscape.png) |
