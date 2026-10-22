@@ -1179,6 +1179,7 @@ impl App {
                     .options_slider_drag(&self.options_model(), lab, x);
                 Some(match ch {
                     Some(Change::KbSize(v)) if v == self.settings.kb_size => None,
+                    Some(Change::SizeTo(v)) if (v - self.settings.size).abs() < 0.05 => None,
                     Some(c) => Some(self.change(c)),
                     None => None,
                 })

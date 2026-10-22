@@ -25,8 +25,8 @@ expect-words 12
 tap-on Line/-
 expect-words 11
 tap-on Line/+
-tap-on Size/+
-tap-on Size/+
+tap-on Size/4
+tap-on Size/5
 expect-words 12
 tap-on Margin/+
 expect-words 12
