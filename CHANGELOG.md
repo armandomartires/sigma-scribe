@@ -7,7 +7,7 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
 - The keys, gaps, key labels, arrows and the landscape Split / Full / Centre bar use the keyboard scale; key targets stay at least 44 px. Tested: every size fits in portrait and landscape at UI scales 100–200 % in EN, FR, PT and the pseudo-long locale (`app/tests/keyboard_size.rs`).
 - **Settings carry over:** new key `keyboard_size=auto|100|125|150`; files without it (1.4.2 and older) load as Auto. 1.4.0–1.4.2 ignore the key, so a rollback still reads the file.
 - Emulator: `tests/emu/v1.4.3-keyboard-size.script`. Screenshots `docs/screenshots/v1.4.3/` (keyboard at 200 % UI before and after).
-- Device binary sha256 (CI build) `BIN_HASH`; tarball `TAR_HASH`.
+- Device binary sha256 (CI build) `a3bef0bcd147c10c4b4e810773ad38ee93262dbd93056994f1502675b7f17b2c`; tarball `1dd829d9fa17014e04c6751934befcb8cdcda9cefab200204a251158974b2b88`.
 
 ## 1.4.2 — 2026-10-22 (built, not installed, not tagged)
 - Settings redesign (sprint S14.2, decision 43; proposal PR #16, approved): the Aa icon opens a Kobo-style **Settings** page with six categories: Writing, Display, Keyboard & input, Language, USB & devices, Help & about. Each category shows a summary and opens its own page. Each page has a back arrow, a small centred "Settings", a large serif page title, grey section bands with small capitals, and serif rows (label on the left, value on the right) with thin separators. Long pages turn with the page buttons or by tapping "Page i of n".
