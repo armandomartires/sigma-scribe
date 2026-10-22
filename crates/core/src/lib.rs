@@ -13,6 +13,7 @@ pub mod layouts;
 pub mod library;
 pub mod linefit;
 pub mod links;
+pub mod locale;
 pub mod markdown;
 pub mod outline;
 pub mod settings;

@@ -4,6 +4,7 @@
 
 use crate::canvas::{Canvas, Rect};
 use crate::fonts::{Face, Fonts, Measure};
+use crate::i18n::tr;
 use crate::preview::{self, Doc, Type};
 use crate::theme::{Scale, Theme};
 use sigma_core::keyboard::{Dir, Key};
@@ -798,7 +799,7 @@ impl EditorScreen {
         let widths: Vec<i32> = actions
             .iter()
             .map(|a| {
-                (self.fonts.width(Face::AtkinsonBold, ui_px, a.label()) as i32 + 2 * pad)
+                (self.fonts.width(Face::AtkinsonBold, ui_px, &tr(a.label())) as i32 + 2 * pad)
                     .max(self.px(72.0))
             })
             .collect();
@@ -1027,11 +1028,12 @@ impl EditorScreen {
         let sb = l.status.y as f32
             + l.status.h as f32 / 2.0
             + self.fonts.ascent(Face::Atkinson, ui) / 2.6;
-        let left = format!(
+        let left = tr(&format!(
             "{} words \u{b7} line {}",
             sigma_core::text::word_count(text),
             model.buffer.line_number()
-        );
+        ))
+        .into_owned();
         self.fonts.draw(
             c,
             Face::Atkinson,
@@ -1053,14 +1055,14 @@ impl EditorScreen {
         } else {
             c.stroke(kb, 1, t.rule);
         }
-        let kw = self.fonts.width(Face::Atkinson, ui, "Keys");
+        let kw = self.fonts.width(Face::Atkinson, ui, &tr("Keys"));
         self.fonts.draw(
             c,
             Face::Atkinson,
             ui,
             kb.x as f32 + (kb.w as f32 - kw) / 2.0,
             sb,
-            "Keys",
+            &tr("Keys"),
             t.ink,
         );
 
@@ -1109,7 +1111,7 @@ impl EditorScreen {
                         t.mute,
                     );
                 }
-                let w = self.fonts.width(Face::AtkinsonBold, ui, a.label());
+                let w = self.fonts.width(Face::AtkinsonBold, ui, &tr(a.label()));
                 let base = br.y as f32
                     + br.h as f32 / 2.0
                     + self.fonts.ascent(Face::AtkinsonBold, ui) / 2.6;
@@ -1119,7 +1121,7 @@ impl EditorScreen {
                     ui,
                     br.x as f32 + (br.w as f32 - w) / 2.0,
                     base,
-                    a.label(),
+                    &tr(a.label()),
                     t.paper,
                 );
             }
@@ -1131,7 +1133,7 @@ impl EditorScreen {
     /// then `Paper` or
     /// `Night`, then the save state.
     fn status_right(&self, t: Theme, save: &SaveState) -> String {
-        format!(
+        let s = format!(
             "{}{} \u{b7} {}",
             match (self.usb_live, self.cfg.usb) {
                 (true, _) => "USB \u{b7} ",
@@ -1140,7 +1142,8 @@ impl EditorScreen {
             },
             if t == Theme::NIGHT { "Night" } else { "Paper" },
             save.label()
-        )
+        );
+        tr(&s).into_owned()
     }
 
     /// "Aa" in a 44 px target: the Options sheet.
@@ -1219,6 +1222,7 @@ impl EditorScreen {
                 t.ink,
             );
             for (r, label, primary) in [(l.cancel_rect, "Cancel", false), (l.ok_rect, "OK", true)] {
+                let label: &str = &tr(label);
                 c.fill(r, if primary { t.ink } else { t.paper });
                 c.stroke(r, 1, t.ink);
                 let w = self.fonts.width(Face::AtkinsonBold, ui, label);
@@ -1278,7 +1282,7 @@ impl EditorScreen {
             };
             c.fill(r, bg);
             c.stroke(r, 1, if active { t.ink } else { t.rule });
-            let label = self.kb_button_label(b);
+            let label: &str = &tr(self.kb_button_label(b));
             let lw = self.fonts.width(Face::AtkinsonBold, ui, label);
             let by =
                 r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(Face::AtkinsonBold, ui) / 2.6;
@@ -1319,6 +1323,11 @@ impl EditorScreen {
                 continue;
             }
             let label = keyboard.label(k);
+            let label = if matches!(k, Key::Char(_)) {
+                label
+            } else {
+                tr(&label).into_owned()
+            };
             let (face, size) = if matches!(k, Key::Char(_)) {
                 (Face::Atkinson, ks * 1.15)
             } else {
@@ -1677,6 +1686,7 @@ impl EditorScreen {
         if n > 1 {
             left.push_str(&format!(" \u{b7} page {} of {n}", page + 1));
         }
+        let left = tr(&left).into_owned();
         self.fonts.draw(
             c,
             Face::Atkinson,
@@ -1695,7 +1705,7 @@ impl EditorScreen {
     }
 }
 
-fn ellipsize(f: &Fonts, face: Face, size: f32, s: &str, max: f32) -> String {
+pub(crate) fn ellipsize(f: &Fonts, face: Face, size: f32, s: &str, max: f32) -> String {
     if f.width(face, size, s) <= max {
         return s.to_owned();
     }

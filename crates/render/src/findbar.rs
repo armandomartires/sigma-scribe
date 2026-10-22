@@ -5,6 +5,7 @@
 use crate::canvas::{Canvas, Rect};
 use crate::editor::{EditorScreen, Layout};
 use crate::fonts::Face;
+use crate::i18n::tr;
 use crate::theme::Theme;
 use sigma_core::Buffer;
 
@@ -80,7 +81,7 @@ impl EditorScreen {
         let widths: Vec<i32> = TOOLS
             .iter()
             .map(|t| {
-                (self.fonts.width(Face::AtkinsonBold, ui, t) as i32 + 2 * s.px(14.0))
+                (self.fonts.width(Face::AtkinsonBold, ui, &tr(t)) as i32 + 2 * s.px(14.0))
                     .max(s.px(60.0))
             })
             .collect();
@@ -179,7 +180,8 @@ impl EditorScreen {
                 shown.remove(0);
             }
             if buf.text().is_empty() {
-                self.fonts.draw(c, Face::Atkinson, ui, x0, by, ph, t.mute);
+                self.fonts
+                    .draw(c, Face::Atkinson, ui, x0, by, &tr(ph), t.mute);
             } else {
                 self.fonts
                     .draw(c, Face::Atkinson, ui, x0, by, &shown, t.ink);
@@ -205,7 +207,7 @@ impl EditorScreen {
             ui,
             l.count.x as f32,
             base_y(l.count, Face::Atkinson),
-            m.label,
+            &tr(m.label),
             t.mute,
         );
         for (r, label) in [
@@ -216,6 +218,7 @@ impl EditorScreen {
             (l.case, TOOLS[4]),
         ] {
             let active = label == "Aa" && m.case;
+            let label: &str = &tr(label);
             c.fill(r, if active { t.ink } else { t.paper });
             c.stroke(r, 1, if active { t.ink } else { t.rule });
             let w = self.fonts.width(Face::AtkinsonBold, ui, label);

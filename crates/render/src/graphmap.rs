@@ -10,6 +10,7 @@ use crate::canvas::{Canvas, Rect};
 use crate::editor::EditorScreen;
 use crate::fonts::Face;
 use crate::graph::{GraphHit, GraphLayout, GraphModel};
+use crate::i18n::tr;
 
 /// Zoom factors over the fitted scale.
 pub const ZOOMS: [f64; 4] = [1.0, 1.6, 2.6, 4.2];
@@ -268,19 +269,22 @@ impl EditorScreen {
 
     pub(crate) fn map_footer(&self, m: &GraphModel<'_>, v: &MapView<'_>) -> String {
         let n = m.rows.len();
-        let mut f = format!(
+        let mut f = tr(&format!(
             "{n} note{} \u{b7} {} link{}",
             if n == 1 { "" } else { "s" },
             m.edges,
             if m.edges == 1 { "" } else { "s" }
-        );
+        ))
+        .into_owned();
         if let Some(s) = v.selected.and_then(|s| m.rows.get(s)) {
             f.push_str(&format!(
-                " \u{b7} {} \u{2014} tap again to open",
-                label(&s.name)
+                " \u{b7} {} \u{2014} {}",
+                label(&s.name),
+                tr("tap again to open")
             ));
         } else if m.edges == 0 {
-            f.push_str(" \u{b7} write [[a note name]] to join two notes");
+            f.push_str(" \u{b7} ");
+            f.push_str(&tr("write [[a note name]] to join two notes"));
         }
         f
     }

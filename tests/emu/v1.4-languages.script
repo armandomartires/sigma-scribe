@@ -1,0 +1,32 @@
+# v1.4 (S14): UI languages EN/FR/PT from the Kobo CurrentLocale.
+# The real config is a device check; here the fixture is read instead.
+copy-notes tests/test-notes/_test
+expect-language en
+shot v1.4-en-editor
+locale-conf tests/fixtures/kobo-ereader-fr.conf
+expect-language fr
+shot v1.4-fr-editor
+tap-on Options
+shot v1.4-fr-options
+tap-on Close
+tap-on Files
+shot v1.4-fr-files
+tap-on Close
+tap-on Help
+shot v1.4-fr-help
+tap-on Close
+language pt
+expect-language pt
+shot v1.4-pt-editor
+tap-on Options
+shot v1.4-pt-options
+tap-on Orientation/Landscape
+tap-on Close
+tap-on Help
+shot v1.4-pt-help-landscape
+tap-on Close
+tap-on Options
+tap-on Orientation/Portrait
+tap-on Close
+language en
+expect-language en

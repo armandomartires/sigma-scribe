@@ -6,6 +6,7 @@
 use crate::canvas::{Canvas, Rect};
 use crate::editor::{EditorScreen, Layout};
 use crate::fonts::Face;
+use crate::i18n::tr;
 use crate::theme::Theme;
 use sigma_core::keyboard::Layout as KbLayout;
 use sigma_core::settings::{Change, KeyTone, Orientation, Paper, Settings, Side, Typeface};
@@ -289,8 +290,11 @@ pub enum OptionsHit {
 impl EditorScreen {
     fn cell_w(&self, label: &str) -> i32 {
         let s = self.scale();
-        (self.fonts.width(Face::AtkinsonBold, self.ui_px(), label) as i32 + 2 * s.px(14.0))
-            .max(s.px(60.0))
+        (self
+            .fonts
+            .width(Face::AtkinsonBold, self.ui_px(), &tr(label)) as i32
+            + 2 * s.px(14.0))
+        .max(s.px(60.0))
     }
 
     #[must_use]
@@ -369,25 +373,38 @@ impl EditorScreen {
         let s = self.scale();
         let ui = self.ui_px();
         c.fill(c.bounds(), t.paper);
-        self.draw_title(c, &l.base, "Options", None, t, false);
+        self.draw_title(c, &l.base, &tr("Options"), None, t, false);
         crate::icons::draw_icon(c, crate::icons::Icon::Close, l.close, t.ink);
         let rows = option_rows(m.settings);
         let small = ui * 0.82;
         for ((band, cells), row) in l.rows.iter().zip(&rows) {
             let lx = s.px(20.0) as f32;
             let label_base = band.y as f32 + band.h as f32 * 0.44;
-            self.fonts
-                .draw(c, Face::AtkinsonBold, ui, lx, label_base, row.label, t.ink);
+            self.fonts.draw(
+                c,
+                Face::AtkinsonBold,
+                ui,
+                lx,
+                label_base,
+                &tr(row.label),
+                t.ink,
+            );
             self.fonts.draw(
                 c,
                 Face::Atkinson,
                 small,
                 lx,
                 label_base + small * 1.35,
-                if row.label == "Orientation" {
-                    m.orientation_status
-                } else {
-                    row.hint
+                &{
+                    // v1.4: translations can run long; never under a cell.
+                    let hint = if row.label == "Orientation" {
+                        tr(m.orientation_status)
+                    } else {
+                        tr(row.hint)
+                    };
+                    let room =
+                        cells.first().map_or(band.w, |r| r.x) as f32 - lx - s.px(12.0) as f32;
+                    crate::editor::ellipsize(&self.fonts, Face::Atkinson, small, &hint, room)
                 },
                 t.mute,
             );
@@ -406,7 +423,7 @@ impl EditorScreen {
                 } else {
                     Face::Atkinson
                 };
-                let w = self.fonts.width(face, ui, &cell.label);
+                let w = self.fonts.width(face, ui, &tr(&cell.label));
                 let b = r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(face, ui) / 2.6;
                 self.fonts.draw(
                     c,
@@ -414,7 +431,7 @@ impl EditorScreen {
                     ui,
                     r.x as f32 + (r.w as f32 - w) / 2.0,
                     b,
-                    &cell.label,
+                    &tr(&cell.label),
                     fg,
                 );
             }

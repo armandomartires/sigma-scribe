@@ -7,6 +7,7 @@
 use crate::canvas::{Canvas, Rect};
 use crate::editor::{EditorScreen, Layout};
 use crate::fonts::{Face, Measure};
+use crate::i18n::tr;
 use crate::theme::Theme;
 use sigma_core::outline::{Filter, Heading, TodoItem};
 use sigma_core::settings::Side;
@@ -275,7 +276,7 @@ impl EditorScreen {
                 ui,
                 (r.x + self.d(12.0)) as f32,
                 base_of(*header, Face::AtkinsonBold, ui),
-                pane.title(),
+                &tr(pane.title()),
                 t.ink,
             );
             c.fill(
@@ -294,6 +295,7 @@ impl EditorScreen {
                     face: Face::Atkinson,
                     size: small,
                 };
+                let text: &str = &tr(text);
                 let rows = wrap(text, body.w as u32, &m);
                 for (k, row) in rows.iter().enumerate() {
                     self.fonts.draw(
@@ -339,14 +341,16 @@ impl EditorScreen {
                     let (items, filter) = m.todos.unwrap_or((&[], Filter::All));
                     if let Some(f) = l.filter {
                         c.stroke(f, 1, t.ink);
-                        let w = self.fonts.width(Face::AtkinsonBold, small, filter.label());
+                        let w = self
+                            .fonts
+                            .width(Face::AtkinsonBold, small, &tr(filter.label()));
                         self.fonts.draw(
                             c,
                             Face::AtkinsonBold,
                             small,
                             f.x as f32 + (f.w as f32 - w) / 2.0,
                             base_of(f, Face::AtkinsonBold, small),
-                            filter.label(),
+                            &tr(filter.label()),
                             t.ink,
                         );
                     }
@@ -455,7 +459,7 @@ impl EditorScreen {
 
     fn more_line(&self, c: &mut Canvas, body: Rect, n: usize, t: Theme) {
         let small = self.ui_px() * 0.82;
-        let s = format!("{n} more\u{2026}");
+        let s = tr(&format!("{n} more\u{2026}")).into_owned();
         self.fonts.draw(
             c,
             Face::Atkinson,

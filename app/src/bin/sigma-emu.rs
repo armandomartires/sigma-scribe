@@ -707,6 +707,33 @@ fn main() -> ExitCode {
                     return fail(format!("status is {got:?}"));
                 }
             }
+            "locale-conf" => {
+                // v1.4: read CurrentLocale from a Kobo config file (fixture)
+                // with the same read-only parser as the device, then apply it.
+                let loc = sigma_core::locale::read_locale(std::path::Path::new(arg));
+                let l = loc.map_or(sigma_render::i18n::Lang::En, |l| {
+                    sigma_render::i18n::Lang::from_locale(&l)
+                });
+                app.set_language(l);
+
+                if let Err(e) = app.render(&mut dev, sigma_device::Refresh::Full) {
+                    return fail(e.to_string());
+                }
+            }
+            "language" => {
+                // v1.4: en | fr | pt (what CurrentLocale would select).
+                app.set_language(sigma_render::i18n::Lang::from_locale(arg));
+
+                if let Err(e) = app.render(&mut dev, sigma_device::Refresh::Full) {
+                    return fail(e.to_string());
+                }
+            }
+            "expect-language" => {
+                let got = format!("{:?}", sigma_render::i18n::lang()).to_lowercase();
+                if got != arg {
+                    return fail(format!("language is {got}"));
+                }
+            }
             "ui-scale" => {
                 // v1.1: step Options -> UI scale to a value (100..=200).
                 let Ok(want) = arg.trim_end_matches('%').parse::<u16>() else {

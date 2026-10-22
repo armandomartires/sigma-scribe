@@ -2,6 +2,15 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.4.0 — 2026-10-22 (built, not installed, not tagged) — first stable release
+- Interface languages (sprint S14, decision 41): **English, Français, Português (PT-PT)**. The language follows the Kobo: at start the app reads `CurrentLocale` from `[ApplicationPreferences]` in `/mnt/onboard/.kobo/Kobo/Kobo eReader.conf` (read-only, never written); `fr*` → French, `pt*` → Portuguese, anything else, missing or unreadable → English. Help → App info shows the language.
+- Every sheet, button, key label, status text, Help page and the Markdown reference are translated. The French and Portuguese catalogs (`assets/i18n/fr.txt`, `pt.txt`) are **machine-drafted, best effort, and need a native review**; English is the source and the fallback for anything missing. Note names, paths and note text are never translated.
+- Long translated hints in Options are shortened with "…" instead of running under the buttons (all languages).
+- Help → USB keyboard: the old "US layout" line now points to Options → Layout.
+- Not yet: an Options language override, thin-space thousands in word counts, the right-to-left mirroring switch (with v1.6; a pseudo-RTL locale is in the tests).
+- Emulator: `tests/emu/v1.4-languages.script` (steps `locale-conf`, `language`, `expect-language`); screenshots `docs/screenshots/v1.4/`.
+- Device binary sha256 (CI build) `2f89c5fd559ffbb1c8bd070213992e38bb4e7e6b8bc5f97bbd10eabefc85dd1d`; tarball `6b63d580544c97df14039b1d3ef88f412d2c4faea74ea5c26e96c2eb5a7a8cf3`.
+
 ## 1.3.0 — 2026-10-22 (built, not installed, not tagged)
 - Keyboard layouts (sprint S13, decision 40): Options → **Layout** US / UK / French AZERTY / German QWERTZ / Spanish / Portuguese / Italian, for the on-screen Full board and USB keyboards together (`layout=`). The Full board shows each layout's keys (with the extra key left of Z where it exists); Alt gives the AltGr characters (€, @, { } …). Compact gets AZERTY / QWERTZ letters. Dead keys ` ´ ^ ~ ¨ compose with the next letter (ê, ñ, ü …). On USB, right Alt is AltGr and Ctrl shortcuts keep their letter (Ctrl+Z is Z wherever it sits).
 - Not yet: the long-press accent popup on Compact and the candidate bar (deferred, S13-D3); Nordic, Dutch and Brazilian layouts.
