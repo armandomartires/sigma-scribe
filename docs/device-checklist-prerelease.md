@@ -94,6 +94,12 @@ Installed on the Forma today: **1.4.0** (2026-10-22). Built and waiting: 1.4.1 �
 - [ ] USB keyboard on Polish: AltGr+A = ą, Shift+AltGr+L = Ł. On Czech: Shift+´ (caron) then s = š. On Swedish: å ä ö keys type directly.
 - [ ] Restart: the chosen layout is kept.
 
+## Cyrillic and Greek layouts (v1.6.1, S16.1)
+- [ ] Layout lists 21 layouts; pick Russian: the Full board shows ЙЦУКЕН, the Compact board fits 12 keys in its top row (readable, tappable).
+- [ ] USB keyboard on Russian: keys type Cyrillic; AltGr+Q = q, Shift+AltGr+3 = #, Ctrl+Z (Я key) undoes.
+- [ ] Ukrainian: the key above Enter types ґ; Greek: ; then ε types έ (tonos), Shift+; then ι types ϊ.
+- [ ] Key labels in Cyrillic/Greek are readable (serif fallback font) in portrait and landscape.
+
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).
 

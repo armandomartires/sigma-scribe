@@ -2,6 +2,15 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.6.1 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
+- **Russian, Ukrainian and Greek keyboard layouts** (sprint S16.1, decision 59; v1.6 wave W1, second part): ЙЦУКЕН (xkb ru), Ukrainian (xkb ua, ґ on the key above Enter, ₴ on Shift+\`) and Greek (xkb gr, tonos ´ and dialytika ¨ dead keys: ά έ ή ί ό ύ ώ, ϊ ϋ); 21 layouts in all.
+- On these three, **AltGr is the US layout** (Shift+AltGr its Shift layer): Latin letters, `#`, `[[`, `]]` and other Markdown marks without switching layouts; Ctrl shortcuts keep the US letter (Ctrl+Я = Ctrl+Z).
+- Compact board: Cyrillic rows have 12 / 11 / 10 letters; the keys narrow to fit. Greek compact has no tonos key (Full board and USB do).
+- Fonts: Literata already covers Cyrillic and Greek; Atkinson (key labels, UI) does not, so those labels fall back to Literata per character (decision 47). No new font, no size cost.
+- Settings key `layout=` gains `ru`, `ua`, `gr`; older binaries fall back to US.
+- Emulator: `tests/emu/v1.6.1-cyrillic-greek.script`. Screenshots `docs/screenshots/v1.6.1/`. Device checks: `docs/device-checklist-prerelease.md`.
+- Device binary sha256 (CI build) `BIN_SHA`; tarball `TAR_SHA`; binary BIN_SIZE.
+
 ## 1.6.0 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
 - **Eleven more keyboard layouts** (sprint S16.0, decision 58; v1.6 wave W1, first part): US International, Belgian AZERTY, Danish, Norwegian, Swedish / Finnish, Polish (programmer), Czech QWERTZ, Romanian, Turkish Q, Spanish (Latin America) and Portuguese (Brazil), for the on-screen board and USB keyboards; 18 layouts in all (Settings → Keyboard & input → Layout, two pages).
 - **Shift + AltGr** types the capital of an AltGr letter (Polish Ą Ę Ł Ó Ś Ź Ż Ć Ń).

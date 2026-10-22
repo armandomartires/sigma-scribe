@@ -1,0 +1,71 @@
+# v1.6.1 (S16.1, decision 59): Russian, Ukrainian and Greek layouts; AltGr = US layer.
+copy-notes tests/test-notes/_test
+usb plug
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+shot v1.6.1-layout-choices-page2
+tap-on Russian
+expect-setting layout=ru
+esc
+esc
+usb-type Съешь же ещё этих мягких булок, № 5
+expect Съешь же ещё этих мягких булок, № 5
+usb-type  # [[Note]]
+expect # [[Note]]
+type привет
+expect привет
+shot v1.6.1-full-russian
+key Alt
+shot v1.6.1-full-russian-altgr
+key Alt
+key Compact
+shot v1.6.1-compact-russian
+key Shift
+shot v1.6.1-compact-russian-shift
+key Shift
+key Full
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+tap-on Ukrainian
+expect-setting layout=ua
+esc
+esc
+usb-type Ґанок, їжак, єнот, Іван: ₴ 10
+expect Ґанок, їжак, єнот, Іван: ₴ 10
+shot v1.6.1-full-ukrainian
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+tap-on Greek
+expect-setting layout=gr
+esc
+esc
+usb-type Καλημέρα, ψυχή! Ϊ ϋ ά
+expect Καλημέρα, ψυχή! Ϊ ϋ ά
+shot v1.6.1-full-greek
+key Compact
+shot v1.6.1-compact-greek
+key Full
+tap-on Options
+tap-on Display
+tap-on Orientation
+tap-on Landscape
+tap-on Back
+tap-on Keyboard & input
+tap-on Layout
+page next
+page next
+shot v1.6.1-landscape-layout-choices-page3
+tap-on Ukrainian
+expect-setting layout=ua
+esc
+esc
+shot v1.6.1-landscape-full-ukrainian
+key Compact
+shot v1.6.1-landscape-compact-ukrainian
+key Full

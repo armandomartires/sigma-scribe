@@ -221,7 +221,7 @@ mod layout_glyphs {
             '\u{300}', '\u{301}', '\u{302}', '\u{303}', '\u{308}', '\u{30A}', '\u{30C}',
         ] {
             want.extend(
-                "aeiouycnszdtrlAEIOUYCNSZDTRL"
+                "aeiouycnszdtrlAEIOUYCNSZDTRLαεηιουωΑΕΗΙΟΥΩ"
                     .chars()
                     .filter_map(|c| compose(d, c)),
             );
