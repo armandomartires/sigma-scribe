@@ -2,6 +2,12 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.5.5 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
+- **Settings → Language → Override system language** (sprint S15.5, decision 57; user report: with the Kobo in Portuguese the language could not be changed). A checkbox, **off by default**: off, the app follows the Kobo's language (`CurrentLocale`, read-only, never written) and Interface language is greyed out showing it; on, Interface language opens a list (English, Français, Português) and the choice is saved. Turning it on starts from the language in use.
+- New settings keys `ui_lang_override=` (default `off`) and `ui_lang=` (default `en`); older files load with the override off, older binaries ignore the keys.
+- Emulator: `tests/emu/v1.5.5-lang-override.script`. Screenshots `docs/screenshots/v1.5.5/`. Device checks: `docs/device-checklist-prerelease.md`.
+- Device binary sha256 (CI build) `BIN_SHA`; tarball `TAR_SHA`; binary BIN_SIZE.
+
 ## 1.5.4 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
 - **Gestures in the Write panel** (sprint S15.4, decision 56):
   - **Scratch out** ink you have not finished to erase it; scratch out on an empty area to delete the word just typed (or the word before the caret); in Draw a scratch-out erases the strokes it crosses.

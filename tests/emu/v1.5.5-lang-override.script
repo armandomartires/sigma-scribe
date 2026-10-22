@@ -1,0 +1,45 @@
+# v1.5.5 (S15.5, decision 57): Settings -> Language -> Override system language.
+# "language pt" stands for a Kobo whose CurrentLocale is Portuguese.
+copy-notes tests/test-notes/_test
+language pt
+expect-language pt
+tap-on Options
+tap-on Language
+shot v1.5.5-pt-system-override-off
+# (greyed: Interface language is not a control while the override is off)
+expect-language pt
+tap-on Override system language/On
+expect-setting ui_lang_override=on
+expect-language pt
+expect-setting ui_lang=pt
+shot v1.5.5-pt-override-on
+tap-on Interface language
+shot v1.5.5-language-choices
+tap-on English
+expect-language en
+expect-setting ui_lang=en
+shot v1.5.5-en-chosen
+tap-on Interface language
+tap-on Français
+expect-language fr
+expect-setting ui_lang=fr
+shot v1.5.5-fr-chosen
+tap-on Back
+tap-on Display
+tap-on Paper/Night
+tap-on Back
+tap-on Language
+shot v1.5.5-fr-chosen-night
+tap-on Back
+tap-on Display
+tap-on Paper/Day
+tap-on Orientation
+tap-on Landscape
+tap-on Back
+tap-on Language
+shot v1.5.5-fr-chosen-landscape
+tap-on Override system language/Off
+expect-language pt
+expect-setting ui_lang_override=off
+expect-setting ui_lang=fr
+shot v1.5.5-back-to-system-landscape

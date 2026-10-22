@@ -685,6 +685,16 @@ impl App {
         }
         self.settings.apply(c);
         self.screen.ink_words = self.settings.ink_words;
+        if c == Change::LangOverride(true) {
+            // Start from the language in use, so turning it on changes nothing.
+            use sigma_core::settings::UiLang;
+            use sigma_render::i18n::Lang;
+            self.settings.ui_lang = match self.system_lang {
+                Lang::Fr => UiLang::Fr,
+                Lang::Pt => UiLang::Pt,
+                _ => UiLang::En,
+            };
+        }
         if matches!(c, Change::LangOverride(_) | Change::UiLang(_)) {
             sigma_render::i18n::set_lang(resolve_lang(&self.settings, self.system_lang));
             self.orientation_label = self.orientation_status();
@@ -1098,7 +1108,7 @@ impl App {
         self.settings_focus = None;
     }
 
-    fn options_model(&self) -> OptionsModel<'_> {
+    pub fn options_model(&self) -> OptionsModel<'_> {
         OptionsModel {
             settings: &self.settings,
             theme: self.theme(),
