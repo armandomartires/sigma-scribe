@@ -189,3 +189,9 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.4.5 | [v1.4.5-auto-off-focus-paper.png](v1.4.5/v1.4.5-auto-off-focus-paper.png) | After: focus = bigger thumb, Paper | [eink](v1.4.5/eink/v1.4.5-auto-off-focus-paper.png) |
 | v1.4.5 | [v1.4.5-auto-on-night.png](v1.4.5/v1.4.5-auto-on-night.png) | After: Auto on, grey, Night | [eink](v1.4.5/eink/v1.4.5-auto-on-night.png) |
 | v1.4.5 | [v1.4.5-auto-off-night.png](v1.4.5/v1.4.5-auto-off-night.png) | After: Auto off, solid ink, Night | [eink](v1.4.5/eink/v1.4.5-auto-off-night.png) |
+| v1.4.6 | [v1.4.6-before-files-up-to-files.png](v1.4.6/v1.4.6-before-files-up-to-files.png) | Before (1.4.5): empty box before "Up to Files" | [eink](v1.4.6/eink/v1.4.6-before-files-up-to-files.png) |
+| v1.4.6 | [v1.4.6-files-up-to-files.png](v1.4.6/v1.4.6-files-up-to-files.png) | After: arrow-left icon before "Up to Files" | [eink](v1.4.6/eink/v1.4.6-files-up-to-files.png) |
+| v1.4.6 | [v1.4.6-before-help-back-to-help.png](v1.4.6/v1.4.6-before-help-back-to-help.png) | Before (1.4.5): "Back to Help" crumb | [eink](v1.4.6/eink/v1.4.6-before-help-back-to-help.png) |
+| v1.4.6 | [v1.4.6-help-back-to-help.png](v1.4.6/v1.4.6-help-back-to-help.png) | After: "Back to Help" with the icon | [eink](v1.4.6/eink/v1.4.6-help-back-to-help.png) |
+| v1.4.6 | [v1.4.6-before-graph-list-arrows.png](v1.4.6/v1.4.6-before-graph-list-arrows.png) | Before (1.4.5): Graph list link arrows | [eink](v1.4.6/eink/v1.4.6-before-graph-list-arrows.png) |
+| v1.4.6 | [v1.4.6-graph-list-arrows.png](v1.4.6/v1.4.6-graph-list-arrows.png) | After: Graph list arrows via the font fallback | [eink](v1.4.6/eink/v1.4.6-graph-list-arrows.png) |

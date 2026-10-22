@@ -220,13 +220,20 @@ impl EditorScreen {
             |r: Rect, face| r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(face, ui) / 2.6;
         if let Some(crumb) = &m.crumb {
             if m.moving.is_none() {
+                let tx = crate::icons::draw_back_arrow(
+                    c,
+                    s.px(20.0),
+                    l.crumb.y + l.crumb.h / 2,
+                    ui,
+                    t.ink,
+                );
                 self.fonts.draw(
                     c,
                     Face::Atkinson,
                     ui,
-                    s.px(20.0) as f32,
+                    tx,
                     base(l.crumb, Face::Atkinson),
-                    &format!("\u{2190} {}", tr(crumb)),
+                    &tr(crumb),
                     t.ink,
                 );
                 c.fill(

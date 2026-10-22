@@ -352,15 +352,9 @@ impl EditorScreen {
         }
         let by =
             l.crumb.y as f32 + l.crumb.h as f32 / 2.0 + self.fonts.ascent(Face::Atkinson, ui) / 2.6;
-        self.fonts.draw(
-            c,
-            Face::Atkinson,
-            ui,
-            tx,
-            by,
-            &format!("\u{2190} {}", tr("Back to Help")),
-            t.ink,
-        );
+        let tx = crate::icons::draw_back_arrow(c, tx as i32, l.crumb.y + l.crumb.h / 2, ui, t.ink);
+        self.fonts
+            .draw(c, Face::Atkinson, ui, tx, by, &tr("Back to Help"), t.ink);
         c.fill(
             Rect::new(0, l.crumb.y + l.crumb.h - 1, l.crumb.w, 1),
             t.rule,
