@@ -204,6 +204,30 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
                 .collect(),
         },
         OptRow {
+            label: "Ink pen",
+            hint: "Stroke width in the Write panel",
+            cells: vec![
+                choice(
+                    "Finger",
+                    Change::InkPen(sigma_core::ink::Pen::Finger),
+                    s.ink_pen == sigma_core::ink::Pen::Finger,
+                ),
+                choice(
+                    "Stylus",
+                    Change::InkPen(sigma_core::ink::Pen::Stylus),
+                    s.ink_pen == sigma_core::ink::Pen::Stylus,
+                ),
+            ],
+        },
+        OptRow {
+            label: "Fast ink (A2)",
+            hint: "Experimental 1-bit waveform for live ink",
+            cells: vec![
+                choice("Off", Change::InkA2(false), !s.ink_a2),
+                choice("On", Change::InkA2(true), s.ink_a2),
+            ],
+        },
+        OptRow {
             label: "Keyboard tone",
             hint: "The keyboard can differ from the page",
             cells: vec![
@@ -326,6 +350,7 @@ pub const CATEGORIES: [(&str, &[Section]); 6] = [
                 &["Keyboard", "Layout", "Keyboard tone"],
             ),
             ("Keyboard size", &["Auto keyboard size", "Keyboard size"]),
+            ("Handwriting", &["Ink pen", "Fast ink (A2)"]),
         ],
     ),
     ("Language", &[("Interface", &["Interface language"])]),

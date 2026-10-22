@@ -59,7 +59,12 @@ pub fn write_png(c: &Canvas, path: &Path) -> io::Result<()> {
 pub fn eink_pixel(old: u8, new: u8, refresh: Refresh) -> u8 {
     let v = if refresh == Refresh::Full {
         u16::from(new)
-    } else if matches!(refresh, Refresh::Fast | Refresh::Pointer) && new > 32 && new < 224 {
+    } else if matches!(
+        refresh,
+        Refresh::Fast | Refresh::Pointer | Refresh::Ink | Refresh::InkA2
+    ) && new > 32
+        && new < 224
+    {
         // DU-like (v1.0.1 model): small Fast updates cannot reach a grey
         // exactly, so some of the old pixel stays (the pointer trails).
         (u16::from(new) * 70 + u16::from(old) * 30) / 100

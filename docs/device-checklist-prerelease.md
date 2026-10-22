@@ -45,6 +45,14 @@ Installed on the Forma today: **1.4.0** (2026-10-22). Built and waiting: 1.4.1 �
 ## Glyphs (v1.4.6, S14.6)
 - [ ] Files "Up to Files" and Help "Back to Help" arrows look right at 200 %; Graph list arrows legible.
 
+## Write panel (v1.5.0, S15.0)
+- [ ] Write opens the panel; ink follows a finger and a capacitive stylus with little lag; strokes are smooth enough (report rate while moving: note it).
+- [ ] Live ink is crisp black (DU); ~0.6 s after lifting, one GL16 pass leaves no residue; no flashing.
+- [ ] Fast ink (A2) on: faster? any residue? Decide whether A2 stays an option (plan §12.9 decision 6).
+- [ ] Finger / Stylus widths look right; palm or second finger does not ink.
+- [ ] Undo, Clear, Cancel, Insert; the note gets the `![ink](…)` line; the SVG and strokes files are on the Kobo next to the note and open on a computer.
+- [ ] Landscape and UI 200 %: buttons easy to hit; closing the panel leaves no ink ghost.
+
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).
 

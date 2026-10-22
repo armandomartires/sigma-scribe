@@ -651,3 +651,37 @@ Français
 
 Português
 = Português
+
+# v1.5.0 ink panel
+Write
+= Escrever
+
+Undo
+= Desfazer
+
+Clear
+= Limpar
+
+Finger
+= Dedo
+
+Stylus
+= Caneta
+
+Insert
+= Inserir
+
+Handwriting
+= Escrita à mão
+
+Ink pen
+= Traço
+
+Stroke width in the Write panel
+= Espessura do traço no painel Escrever
+
+Fast ink (A2)
+= Tinta rápida (A2)
+
+Experimental 1-bit waveform for live ink
+= Forma de onda de 1 bit experimental para a tinta

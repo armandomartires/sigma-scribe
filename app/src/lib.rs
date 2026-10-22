@@ -140,11 +140,34 @@ fn copy_rect(dst: &mut Canvas, src: &Canvas, r: Rect) {
 fn rank(r: Refresh) -> u8 {
     match r {
         Refresh::Fast => 0,
-        Refresh::Pointer | Refresh::PointerCleanup => 1,
+        Refresh::Pointer | Refresh::PointerCleanup | Refresh::Ink | Refresh::InkA2 => 1,
         Refresh::Partial => 2,
         Refresh::Full => 3,
     }
 }
+
+/// The writing panel while open (v1.5.0, plan §12.3).
+#[derive(Clone, Debug, Default)]
+pub struct InkState {
+    pub ink: sigma_core::ink::Ink,
+    /// Segments drawn into the canvas since the last ink frame.
+    pending: Option<Rect>,
+    /// Everything inked since the last GL16 cleanup.
+    dirty: Option<Rect>,
+    /// When the last stroke lifted (ms).
+    last_up: Option<u64>,
+    /// The next render is an ink-only frame.
+    fast: bool,
+    /// The next `PointerCleanup` render is the ink cleanup pass.
+    cleanup: bool,
+    /// A button pressed on Down, acted on at Up over the same button.
+    press: Option<sigma_render::ink::InkButton>,
+    /// Write errors are shown in the status line.
+    pub error: Option<String>,
+}
+
+/// Idle time after a stroke before the GL16 cleanup (plan §12.4).
+pub const INK_CLEANUP_MS: u64 = 600;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum RenameTarget {
@@ -339,6 +362,8 @@ pub struct App {
     pub usb_host: bool,
     /// USB mouse / touchpad (v0.8.1).
     pub pointer: PointerState,
+    /// The ink panel (v1.5.0); `Some` while open.
+    pub ink: Option<InkState>,
     /// Back stack (v1.0.2), this session only, newest last.
     pub history: Vec<HistEntry>,
     pub perf: Perf,
@@ -429,6 +454,7 @@ impl App {
             usb_live: false,
             usb_host: false,
             pointer: PointerState::default(),
+            ink: None,
             history: Vec::new(),
             perf: Perf::default(),
             running: true,
@@ -1672,6 +1698,23 @@ impl App {
         {
             return self.render_pointer_only(dev);
         }
+        if let Some(ink) = &mut self.ink {
+            if matches!(refresh, Refresh::Ink | Refresh::InkA2) && std::mem::take(&mut ink.fast) {
+                if let Some(r) = ink.pending.take() {
+                    let r = min16(r, self.canvas.bounds());
+                    self.present(dev, r, refresh)?;
+                    copy_rect(&mut self.shown, &self.canvas, r);
+                }
+                return Ok(());
+            }
+            if refresh == Refresh::PointerCleanup && std::mem::take(&mut ink.cleanup) {
+                if let Some(r) = ink.dirty.take() {
+                    let r = min16(r, self.canvas.bounds());
+                    self.present(dev, r, Refresh::PointerCleanup)?;
+                }
+                return Ok(());
+            }
+        }
         self.pointer_fast = false;
         self.screen.back_on = !self.history.is_empty();
         let mut c = std::mem::replace(&mut self.canvas, Canvas::new(1, 1, 0));
@@ -1753,6 +1796,13 @@ impl App {
                 self.screen
                     .draw_drawer(&mut c, &l, &self.drawer_model(&hs, &todos));
             }
+        }
+        if let Some(ink) = &mut self.ink {
+            let l = self.screen.ink_layout();
+            self.screen
+                .draw_ink(&mut c, &l, &ink.ink, self.settings.ink_pen);
+            ink.pending = None;
+            ink.fast = false;
         }
         if self.pointer.live {
             self.base.clone_from(&c);
@@ -1846,6 +1896,159 @@ impl App {
             }
         }
         Ok(())
+    }
+
+    /// Opens the writing panel (v1.5.0).
+    pub fn open_ink(&mut self) {
+        self.sel_ui = None;
+        self.ink = Some(InkState::default());
+    }
+
+    /// The live-ink refresh: DU, or A2 when Settings → Fast ink is on.
+    #[must_use]
+    pub fn ink_refresh(&self) -> Refresh {
+        if self.settings.ink_a2 {
+            Refresh::InkA2
+        } else {
+            Refresh::Ink
+        }
+    }
+
+    /// Touches while the panel is open: the panel owns every touch
+    /// (`Some`); outside it they do nothing.
+    fn ink_touch(&mut self, phase: Phase, x: i32, y: i32, t: u64) -> Option<Option<Refresh>> {
+        use sigma_core::ink::Point;
+        use sigma_render::ink::{draw_segment, pen_px};
+        self.ink.as_ref()?;
+        let l = self.screen.ink_layout();
+        let width = pen_px(self.settings.ink_pen);
+        let refresh = self.ink_refresh();
+        let p = Point { x, y, t };
+        let ink = self.ink.as_mut()?;
+        let add = |r: Option<Rect>, n: Rect| Some(r.map_or(n, |o| o.union(&n)));
+        match phase {
+            Phase::Down => {
+                if l.area.contains(x, y) {
+                    ink.ink.down(p);
+                    let r = draw_segment(&mut self.canvas, p, p, width, l.area);
+                    ink.pending = add(ink.pending, r);
+                    ink.dirty = add(ink.dirty, r);
+                    ink.fast = true;
+                    ink.last_up = None;
+                    return Some(Some(refresh));
+                }
+                ink.press = self.screen.ink_hit(&l, x, y);
+                Some(None)
+            }
+            Phase::Move => {
+                if ink.ink.live.is_none() {
+                    return Some(None);
+                }
+                // Clamp to the area: a stroke that leaves it keeps going
+                // along the edge instead of ending.
+                let q = Point {
+                    x: x.clamp(l.area.x, l.area.x + l.area.w - 1),
+                    y: y.clamp(l.area.y, l.area.y + l.area.h - 1),
+                    t,
+                };
+                let Some((a, b)) = ink.ink.moved(q) else {
+                    return Some(None);
+                };
+                let r = draw_segment(&mut self.canvas, a, b, width, l.area);
+                ink.pending = add(ink.pending, r);
+                ink.dirty = add(ink.dirty, r);
+                ink.fast = true;
+                Some(Some(refresh))
+            }
+            Phase::Up => {
+                if ink.ink.live.is_some() {
+                    ink.ink.up();
+                    ink.last_up = Some(t);
+                    return Some(None);
+                }
+                let pressed = ink.press.take();
+                let b = self.screen.ink_hit(&l, x, y);
+                if pressed.is_none() || pressed != b {
+                    return Some(None);
+                }
+                Some(self.ink_button(b?))
+            }
+        }
+    }
+
+    /// A panel button (touch Up over it, or a Tap).
+    fn ink_button(&mut self, b: sigma_render::ink::InkButton) -> Option<Refresh> {
+        use sigma_render::ink::InkButton;
+        let ink = self.ink.as_mut()?;
+        match b {
+            InkButton::Undo => ink.ink.undo().then_some(Refresh::Partial),
+            InkButton::Clear => ink.ink.clear().then_some(Refresh::Partial),
+            InkButton::Pen => {
+                let next = match self.settings.ink_pen {
+                    sigma_core::ink::Pen::Finger => sigma_core::ink::Pen::Stylus,
+                    sigma_core::ink::Pen::Stylus => sigma_core::ink::Pen::Finger,
+                };
+                Some(self.change(Change::InkPen(next)))
+            }
+            InkButton::Cancel => {
+                self.ink = None;
+                Some(Refresh::Partial)
+            }
+            InkButton::Insert => Some(self.insert_ink()),
+        }
+    }
+
+    /// After a stroke and `INK_CLEANUP_MS` idle: one GL16 pass over what
+    /// was inked (plan §12.4).
+    fn ink_tick(&mut self, t: u64) -> Option<Refresh> {
+        let ink = self.ink.as_mut()?;
+        let up = ink.last_up?;
+        if ink.ink.live.is_some() || ink.dirty.is_none() || t < up + INK_CLEANUP_MS {
+            return None;
+        }
+        ink.last_up = None;
+        ink.cleanup = true;
+        Some(Refresh::PointerCleanup)
+    }
+
+    /// Insert: writes the SVG and strokes file next to the note and puts
+    /// the image line at the caret, on its own line.
+    fn insert_ink(&mut self) -> Refresh {
+        let Some(st) = self.ink.take() else {
+            return Refresh::Partial;
+        };
+        if st.ink.strokes.is_empty() {
+            return Refresh::Partial;
+        }
+        let note = self.library.root().join(self.current.as_str());
+        match sigma_core::ink::save(&st.ink, self.settings.ink_pen, &note) {
+            Ok(Some(md)) => {
+                let text = self.buffer.text();
+                let at = self.buffer.caret();
+                let before = if at == 0 || text[..at].ends_with('\n') {
+                    ""
+                } else {
+                    "\n"
+                };
+                let after = if text[at..].starts_with('\n') {
+                    ""
+                } else {
+                    "\n"
+                };
+                self.buffer.insert(&format!("{before}{md}{after}"));
+                self.save();
+                Refresh::Partial
+            }
+            Ok(None) => Refresh::Partial,
+            Err(e) => {
+                eprintln!("sigma-scribe: ink save failed: {e}");
+                self.ink = Some(InkState {
+                    error: Some(e.to_string()),
+                    ..st
+                });
+                Refresh::Partial
+            }
+        }
     }
 
     fn start_rename(&mut self, target: RenameTarget) {
@@ -2361,7 +2564,15 @@ impl App {
         let page = self.screen.layout(self.keys_visible(), &self.keyboard).page;
         match e {
             Event::Tilt { .. } => None,
+            Event::Tap { x, y } if self.ink.is_some() => {
+                let l = self.screen.ink_layout();
+                let b = self.screen.ink_hit(&l, x, y)?;
+                self.ink_button(b)
+            }
             Event::Touch { phase, x, y, t } => {
+                if let Some(r) = self.ink_touch(phase, x, y, t) {
+                    return r;
+                }
                 if self.options {
                     if let Some(r) = self.options_touch(phase, x, y) {
                         return r;
@@ -2375,6 +2586,9 @@ impl App {
                 self.apply(g)
             }
             Event::Tick { t } => {
+                if let Some(r) = self.ink_tick(t) {
+                    return Some(r);
+                }
                 if let Some(items) = self.indexer.poll() {
                     let changed = items != self.disk_todos;
                     self.disk_todos = items;
@@ -2589,6 +2803,10 @@ impl App {
                         self.keys_on = !self.keys_on;
                         Some(Refresh::Partial)
                     }
+                    Hit::Ink => {
+                        self.open_ink();
+                        Some(Refresh::Partial)
+                    }
                     Hit::Caret(at) => {
                         self.scratch_focus = false;
                         if let Some(f) = &mut self.find {
@@ -2700,6 +2918,24 @@ impl App {
     /// `Move`, `Delete`, `More:<row name>`, or a row name.
     #[must_use]
     pub fn control_centre(&self, label: &str) -> Option<(i32, i32)> {
+        if self.ink.is_some() {
+            use sigma_render::ink::InkButton;
+            let l = self.screen.ink_layout();
+            let want = match label {
+                "Undo" => InkButton::Undo,
+                "Clear" => InkButton::Clear,
+                "Pen" => InkButton::Pen,
+                "Cancel" => InkButton::Cancel,
+                "Insert" => InkButton::Insert,
+                "InkArea" => return Some(centre(l.area)),
+                _ => return None,
+            };
+            return l
+                .buttons
+                .iter()
+                .find(|(_, b)| *b == want)
+                .map(|(r, _)| centre(*r));
+        }
         if self.options {
             return self.screen.options_control(&self.options_model(), label);
         }
@@ -2774,6 +3010,7 @@ impl App {
             "OK" => Some(centre(l.ok_rect)),
             "Cancel" => Some(centre(l.cancel_rect)),
             "Keys" => Some(centre(l.keys_button)),
+            "Write" => Some(centre(l.ink_button)),
             "Options" => Some(centre(l.options_button)),
             "Contents" => Some(centre(l.contents_button)),
             "To-dos" => Some(centre(l.todos_button)),

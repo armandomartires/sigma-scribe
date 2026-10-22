@@ -177,6 +177,12 @@ pub struct Settings {
     /// Keyboard & input → Keyboard size (v1.4.3): 0 = Auto (the UI scale,
     /// at most 150 %), or 100 / 125 / 150. Saved as `keyboard_size=`.
     pub kb_size: u16,
+    /// Keyboard & input → Ink pen (v1.5.0): stroke width. `ink_pen=`.
+    pub ink_pen: crate::ink::Pen,
+    /// Keyboard & input → Fast ink (A2) (v1.5.0): live ink with the 1-bit
+    /// A2 waveform instead of DU. Off by default; decided in the device
+    /// pass (plan §12.9 decision 6). `ink_a2=`.
+    pub ink_a2: bool,
 }
 
 /// Keyboard size choices (v1.4.3); 0 is Auto.
@@ -213,6 +219,8 @@ impl Default for Settings {
             ui_scale: 200,
             kb_layout: crate::layouts::KeyLayout::Us,
             kb_size: 0,
+            ink_pen: crate::ink::Pen::Finger,
+            ink_a2: false,
         }
     }
 }
@@ -252,6 +260,10 @@ pub enum Change {
     /// Keyboard size Auto on / off (v1.4.4). Off keeps the size Auto was
     /// giving; on goes back to following the UI scale.
     KbAuto(bool),
+    /// Ink pen width (v1.5.0).
+    InkPen(crate::ink::Pen),
+    /// Fast ink A2 waveform on / off (v1.5.0).
+    InkA2(bool),
 }
 
 impl Change {
@@ -338,6 +350,8 @@ impl Settings {
             Change::Drawer(s) => self.drawer = s,
             Change::Usb(on) => self.usb = on,
             Change::NaturalScroll(on) => self.natural_scroll = on,
+            Change::InkPen(p) => self.ink_pen = p,
+            Change::InkA2(on) => self.ink_a2 = on,
             Change::Orientation(o) => {
                 self.orientation = o;
                 self.sync_rotation();
@@ -520,6 +534,14 @@ impl Settings {
                     }
                 }
                 "pad_side" => s.pad_side = parse_side(v).unwrap_or(s.pad_side),
+                "ink_pen" => {
+                    s.ink_pen = match v {
+                        "finger" => crate::ink::Pen::Finger,
+                        "stylus" => crate::ink::Pen::Stylus,
+                        _ => s.ink_pen,
+                    }
+                }
+                "ink_a2" => s.ink_a2 = b().unwrap_or(s.ink_a2),
                 _ => {}
             }
         }
@@ -557,7 +579,7 @@ impl Settings {
         format!(
             "keyboard={}\npaper={}\ntype={}\nline={}\nline_words={}\nsize={}\nleading={}\nmargin={}\n\
              tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\nusb={}\nscroll={}\norientation={}\n\
-             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\n",
+             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\n",
             self.keyboard.name(),
             match self.paper {
                 Paper::Day => "day",
@@ -606,6 +628,11 @@ impl Settings {
             } else {
                 self.kb_size.to_string()
             },
+            match self.ink_pen {
+                crate::ink::Pen::Finger => "finger",
+                crate::ink::Pen::Stylus => "stylus",
+            },
+            on(self.ink_a2),
         )
     }
 }

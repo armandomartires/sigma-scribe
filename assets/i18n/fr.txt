@@ -651,3 +651,37 @@ Français
 
 Português
 = Português
+
+# v1.5.0 ink panel
+Write
+= Écrire
+
+Undo
+= Annuler
+
+Clear
+= Effacer
+
+Finger
+= Doigt
+
+Stylus
+= Stylet
+
+Insert
+= Insérer
+
+Handwriting
+= Écriture manuscrite
+
+Ink pen
+= Trait d'encre
+
+Stroke width in the Write panel
+= Épaisseur du trait dans le panneau Écrire
+
+Fast ink (A2)
+= Encre rapide (A2)
+
+Experimental 1-bit waveform for live ink
+= Forme d'onde 1 bit expérimentale pour l'encre

@@ -13,6 +13,7 @@ pub mod graphmap;
 pub mod help;
 pub mod i18n;
 pub mod icons;
+pub mod ink;
 pub mod options;
 pub mod pointer;
 pub mod preview;

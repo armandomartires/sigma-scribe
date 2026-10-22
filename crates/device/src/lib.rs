@@ -26,6 +26,13 @@ pub enum Refresh {
     /// clearing the DU trails (v1.0.3). Also the Graph selection pill
     /// (v1.0.4): one merged, non-flashing GL16 region.
     PointerCleanup,
+    /// Live ink in the writing panel (v1.5.0): the new segments, pure
+    /// black, DU, never waited for. The pause after a stroke sends one
+    /// `PointerCleanup` (GL16) pass over the panel.
+    Ink,
+    /// Live ink with the 1-bit A2 waveform (Settings → Fast ink (A2), off
+    /// by default; plan §12.9 decision 6).
+    InkA2,
     /// Larger partial changes (keyboard toggled, scrolled page).
     Partial,
     /// Theme, orientation, opening a sheet, first paint: flashing full refresh.
@@ -34,7 +41,8 @@ pub enum Refresh {
 
 impl Refresh {
     /// The `sg_refresh` mode code: 0 fast (AUTO), 1 partial (GC16_FAST),
-    /// 2 full (flashing GC16), 3 pointer (DU), 4 pointer cleanup (GL16).
+    /// 2 full (flashing GC16), 3 pointer / ink (DU), 4 pointer cleanup
+    /// (GL16), 5 ink A2.
     #[must_use]
     pub fn fbink_mode(self) -> i32 {
         match self {
@@ -43,6 +51,8 @@ impl Refresh {
             Self::Full => 2,
             Self::Pointer => 3,
             Self::PointerCleanup => 4,
+            Self::Ink => 3,
+            Self::InkA2 => 5,
         }
     }
 
@@ -62,6 +72,8 @@ impl Refresh {
             Self::Full => "full",
             Self::Pointer => "du",
             Self::PointerCleanup => "gl16-cleanup",
+            Self::Ink => "ink-du",
+            Self::InkA2 => "ink-a2",
         }
     }
 }
@@ -74,10 +86,14 @@ mod refresh_tests {
     fn pointer_is_du_cleanup_is_gl16_and_nothing_waits() {
         assert_eq!(Refresh::Pointer.fbink_mode(), 3);
         assert_eq!(Refresh::PointerCleanup.fbink_mode(), 4);
+        assert_eq!(Refresh::Ink.fbink_mode(), 3);
+        assert_eq!(Refresh::InkA2.fbink_mode(), 5);
         for r in [
             Refresh::Fast,
             Refresh::Pointer,
             Refresh::PointerCleanup,
+            Refresh::Ink,
+            Refresh::InkA2,
             Refresh::Partial,
             Refresh::Full,
         ] {
