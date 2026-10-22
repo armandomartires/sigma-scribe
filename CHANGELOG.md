@@ -2,6 +2,13 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.4.2 — 2026-10-22 (built, not installed, not tagged)
+- Settings redesign (sprint S14.2, decision 43; proposal PR #16, approved): the Aa icon opens a Kobo-style **Settings** page with six categories: Writing, Display, Keyboard & input, Language, USB & devices, Help & about. Each category shows a summary and opens its own page. Each page has a back arrow, a small centred "Settings", a large serif page title, grey section bands with small capitals, and serif rows (label on the left, value on the right) with thin separators. Long pages turn with the page buttons or by tapping "Page i of n".
+- Controls: on/off settings are **checkboxes** ("☐ On"), two-way choices stay **inline buttons**, numbers keep − / + steppers, and longer lists (Orientation, Layout, Keyboard tone, Tab width) open a choice page that goes back when you pick. The back arrow or Esc goes up one level; X closes from any page. Help pages are under Help & about (the ? icon still opens Help).
+- **Settings carry over:** the `.sigma-settings` keys are unchanged, so 1.4.0 / 1.4.1 settings load as they were (tested).
+- **Scroll position bar:** a thin bar on the editor page's right edge (Kobo Settings style) shows where you are in the note and how much of it is on screen. It is pure black and white, so it is DU-safe; it inverts on Night pages and is only sent to the panel when the note scrolls. It is display-only and hidden when the note fits.
+- Emulator: `tests/emu/v1.4.2-settings.script`; old scripts' `Row/Cell` names (`Paper/Night`, `Layout/+`, `Orientation/Landscape`) are reached through the pages automatically. Screenshots `docs/screenshots/v1.4.2/`.
+
 ## 1.4.1 — 2026-10-22 (built, not installed, not tagged)
 - Pointer always black (sprint S14.1, decision 42): the mouse arrow is now pure black (0x00) with a 2 px pure white (0xFF) outline in Paper and Night, with no grey pixels. 1.4.0 drew it in the theme's ink and paper: in Night that is a near-white arrow (233), and in Paper the greys 28 / 240 are values the 2-level DU waveform used for pointer moves does not define, so the panel could show the arrow white.
 - Packaging: `THIRD-PARTY.txt` (Lucide ISC notice) is part of the next device update, next to the binary (`docs/install-plan-forma.md`).

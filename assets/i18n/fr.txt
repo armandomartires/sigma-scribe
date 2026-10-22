@@ -588,3 +588,54 @@ Language
 
 could not read the note
 = impossible de lire la note
+
+Settings
+= Paramètres
+
+Writing
+= Écriture
+
+Display
+= Affichage
+
+Keyboard & input
+= Clavier et saisie
+
+USB & devices
+= USB et appareils
+
+Help & about
+= Aide et à propos
+
+Text
+= Texte
+
+Line length
+= Longueur de ligne
+
+Words per line
+= Mots par ligne
+
+Page
+= Page
+
+On-screen keyboard
+= Clavier à l'écran
+
+Interface
+= Interface
+
+Interface language
+= Langue de l'interface
+
+Page {n} of {m}
+= Page {n} sur {m}
+
+English
+= English
+
+Français
+= Français
+
+Português
+= Português

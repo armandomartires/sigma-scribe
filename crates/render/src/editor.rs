@@ -644,6 +644,54 @@ impl EditorScreen {
         }
     }
 
+    /// Scroll position bar (v1.4.2): a thin strip on the page's right
+    /// edge, Kobo Settings style, a dashed track and a solid thumb sized
+    /// and placed by the visible share of the note. Pure 0x00 / 0xFF only,
+    /// so the fast DU waveform renders it cleanly; it only changes (and is
+    /// only sent to the panel, by the frame diff) when the note scrolls.
+    /// Not shown when the whole note fits. Display only.
+    #[must_use]
+    pub fn scroll_bar(&self, page: Rect, total: usize, visible: usize) -> Option<(Rect, Rect)> {
+        if total <= visible || page.h <= 0 {
+            return None;
+        }
+        let p = self.page_s;
+        let w = p.px(6.0).max(4);
+        let strip = Rect::new(
+            page.x + page.w - w - p.px(2.0),
+            page.y + p.px(8.0),
+            w,
+            page.h - p.px(16.0),
+        );
+        let th = ((strip.h as f32 * visible as f32 / total as f32) as i32)
+            .max(p.px(24.0))
+            .min(strip.h);
+        let span = (total - visible).max(1) as f32;
+        let at = (self.scroll.min(total - visible) as f32 / span * (strip.h - th) as f32) as i32;
+        Some((strip, Rect::new(strip.x, strip.y + at, strip.w, th)))
+    }
+
+    fn draw_scroll_bar(&self, c: &mut Canvas, page: Rect, total: usize, visible: usize, t: Theme) {
+        let Some((strip, thumb)) = self.scroll_bar(page, total, visible) else {
+            return;
+        };
+        // Night pages are dark: the bar inverts, still only black and white.
+        let (bg, fg) = if t.paper < 128 {
+            (0x00, 0xFF)
+        } else {
+            (0xFF, 0x00)
+        };
+        c.fill(strip, bg);
+        let mid = strip.x + strip.w / 2;
+        let dash = self.page_s.px(4.0).max(2);
+        let mut y = strip.y;
+        while y < strip.y + strip.h {
+            c.fill(Rect::new(mid, y, 1, dash.min(strip.y + strip.h - y)), fg);
+            y += dash * 2;
+        }
+        c.fill(thumb, fg);
+    }
+
     fn text_area(&self, page: Rect) -> Rect {
         let page = if self.landscape() && self.cfg.line_on {
             let cw = (self.width.min(self.height) as i32).min(page.w);
@@ -956,6 +1004,7 @@ impl EditorScreen {
         // Page.
         let area = self.text_area(l.page);
         let rows = self.rows(model.buffer, l.page);
+        self.draw_scroll_bar(c, l.page, rows.len(), self.visible_rows(l.page), t);
         let text = model.buffer.text();
         let lh = self.line_h();
         let asc = self.fonts.ascent(self.face, self.body());
@@ -2207,5 +2256,36 @@ mod tests {
         assert!(e.status_right(Theme::NIGHT, &s).starts_with("no USB"));
         e.usb_live = true;
         assert!(e.status_right(Theme::NIGHT, &s).starts_with("USB"));
+    }
+}
+
+#[cfg(test)]
+mod scroll_bar_tests {
+    use super::*;
+
+    #[test]
+    fn thumb_tracks_the_note_and_is_pure_black_and_white() {
+        let mut e = EditorScreen::new(1440, 1920);
+        let page = Rect::new(0, 100, 1440, 1000);
+        assert!(e.scroll_bar(page, 10, 20).is_none(), "fits: no bar");
+        let (strip, top) = e.scroll_bar(page, 400, 40).unwrap();
+        assert_eq!(top.y, strip.y, "at the top");
+        assert!((top.h - strip.h / 10).abs() <= 1, "a tenth of the note");
+        e.scroll = 360;
+        let (_, end) = e.scroll_bar(page, 400, 40).unwrap();
+        assert_eq!(end.y + end.h, strip.y + strip.h, "at the end");
+        e.scroll = 180;
+        let (_, mid) = e.scroll_bar(page, 400, 40).unwrap();
+        assert!(mid.y > top.y && mid.y < end.y);
+        for t in [Theme::DAY, Theme::NIGHT] {
+            let mut c = Canvas::new(1440, 1920, 128);
+            e.draw_scroll_bar(&mut c, page, 400, 40, t);
+            for y in strip.y..strip.y + strip.h {
+                for x in strip.x..strip.x + strip.w {
+                    let v = c.pixels[(y * 1440 + x) as usize];
+                    assert!(v == 0 || v == 255, "{v} at {x},{y}");
+                }
+            }
+        }
     }
 }
