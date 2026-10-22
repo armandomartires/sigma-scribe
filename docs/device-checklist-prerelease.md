@@ -2,7 +2,7 @@
 
 > **Standing order (user, 2026-10-22):** development past v1.4 uses only the emulator and CI. **All device testing waits for one pass on the Kobo Forma before the final stable release.** Every version adds its device checks here instead of asking for an install. Nothing on this list has been run unless it is ticked with a date. Install for the pass follows `docs/install-plan-forma.md` (needs approval): serial check (<FORMA-SERIAL>), never sdb, checksum-verified backup, binary-only replace.
 
-Installed on the Forma today: **1.6.2** (2026-10-22, binary only; see the install plan run log). Earlier line, kept for the record: 1.4.0. Built and waiting: 1.4.1 … 1.4.6 (and the diagnostic 1.4.6-probe, draft PR #22).
+Installed on the Forma today: **1.6.2 + main dfad9b8** (2026-10-22, binary only; see the install plan run log). Earlier line, kept for the record: 1.4.0. Built and waiting: 1.4.1 … 1.4.6 (and the diagnostic 1.4.6-probe, draft PR #22).
 
 ## Logs to collect during the pass
 - [ ] `/mnt/onboard/.adds/sigma-scribe/sigma-scribe.log` (perf lines: typing `perf:` p50/p95, `perf pointer:` p50/p95, count of `gl16-cleanup`).
@@ -106,6 +106,12 @@ Installed on the Forma today: **1.6.2** (2026-10-22, binary only; see the instal
 - [ ] ä ö ü ß å æ ø ñ à ç are drawn correctly on the panel in the UI font; About says the translation is machine-drafted.
 - [ ] Landscape: the language list and Settings fit in every language.
 - [ ] Switch the Kobo's own language to German, Spanish, Italian, Dutch, Catalan, Danish or Swedish and relaunch: the app follows (override off).
+
+## Stray lines and Size slider (main after 1.6.2)
+- [ ] Write → Letters / Train: write many small ticks and apostrophes; no long lines from the box's top corners appear.
+- [ ] Afterwards read `.adds/sigma-scribe/sigma-scribe.log` over USB: any `touch:` lines (second contact, slot or tracking-id change, jump, dropped move) show where stray reports came from; copy them into the install plan.
+- [ ] Settings → Writing: Size is a slider with nine dots and no number; tapping and dragging change the note's text size at once; the default is the third dot.
+- [ ] The Writing line on the Settings page shows only the typeface.
 
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).
