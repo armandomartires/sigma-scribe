@@ -136,6 +136,16 @@ Package: CI artifact `sigma-scribe-1.4.6-probe-kobo` from release.yml run 397641
 
 **Afterwards:** either keep 1.4.6-probe (behaves like 1.4.6) or put the 1.4.6 binary back (same procedure, 1.4.6 hash). The log decides the 0x19 / 0x1a mapping; turning `ENABLED` on is a separate change and approval.
 
+## Upgrade 1.5.4 → 1.5.5 (also valid from 1.4.0; not run; needs approval)
+The Forma runs 1.5.4 since 2026-10-22 (run log below), so `THIRD-PARTY.txt` is already there; from 1.4.0 add it as in the 1.5.4 plan.
+1. Verify the serial (<FORMA-SERIAL>) and touch no other disk (never sdb).
+2. Read the log and copy it into the backup.
+3. Make a checksum-verified backup into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v1.5.5` (`.adds/sigma-scribe`, `.adds/nm`, `sigma-scribe/notes`, log).
+4. From the CI 1.5.5 package, replace `.adds/sigma-scribe/sigma-scribe` (via `.new` + sync + hash check + rename), binary sha256 `bcf02bdd55892e1cdf3416c687e7cdf30c8169573af2759cde62bb92320b8909`, tarball `ab5930a75a35af670e0b4304bf1d7c012d0b9f048bbd953e7721ef4245e83bfa` (CI release.yml run 39812591834); `THIRD-PARTY.txt` sha256 `f61a648623ee545238601212f3d29eb056bddca7ed738f1427a2ca1bfc712ee4` (add only if absent).
+5. Verify the sha256 on the device, then sync, unmount and power off.
+
+Nothing else changes. `.sigma-settings` is kept; 1.5.5 adds `ui_lang_override=off` and `ui_lang=en` on the next save. `Kobo eReader.conf` is still only read. Rollback: the 1.5.4 binary from the backup (it ignores the new keys). Checks: `docs/device-checklist-prerelease.md` → "Language override (v1.5.5)".
+
 ## Upgrade 1.4.0 → 1.5.4 (run 2026-10-22, user-approved; replaces the 1.5.3, 1.5.2, 1.5.1, 1.5.0 and 1.4.6 plans below)
 Same procedure as 1.4.0:
 1. Verify the serial (<FORMA-SERIAL>) and touch no other disk (never sdb).

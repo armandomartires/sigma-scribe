@@ -84,6 +84,11 @@ Installed on the Forma today: **1.4.0** (2026-10-22). Built and waiting: 1.4.1 �
 - [ ] Tap a word in the note above the panel: the caret moves there, the panel stays, the next word is typed there.
 - [ ] Draw: a scratch-out erases only the strokes it crosses.
 
+## Language override (v1.5.5, S15.5)
+- [ ] With the Kobo in Portuguese: Settings → Language shows Override system language unticked and Interface language greyed "Português".
+- [ ] Tick it: still Portuguese; Interface language → English switches the app to English at once; the Kobo's own language is unchanged.
+- [ ] Restart the app (and the Kobo): the app stays English. Untick: back to Portuguese.
+
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).
 

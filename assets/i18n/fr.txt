@@ -727,3 +727,12 @@ Word mode (experimental)
 
 Read every word against a word list; off is more accurate
 = Lit chaque mot avec une liste de mots ; désactivé, c'est plus précis
+
+Override system language
+= Remplacer la langue du système
+
+Choose the app's language instead of the Kobo's
+= Choisir la langue de l'app au lieu de celle du Kobo
+
+Used while Override system language is on
+= Utilisée quand « Remplacer la langue du système » est activé
