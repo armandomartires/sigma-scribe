@@ -205,8 +205,8 @@ User decisions (2026-10-21 21:24): v1.0.1 = pointer trails + reverse scroll + "U
 | S17 | Japanese kana + kanji | **v1.7** 📝 | PLANNED — post-stable extra |
 | S18 | Simplified Chinese pinyin | **v1.8** 📝 | PLANNED — post-stable extra |
 
-## 12. PROPOSAL (DRAFT, not approved): v1.5 handwriting, language coverage, Korean and Hindi
-> Drafted 2026-10-22 for the user's approval (draft PR). **No code until approved.** Built and tested with the emulator and CI only; device checks go to `docs/device-checklist-prerelease.md` (decision 48). Sizes and efforts below are estimates.
+## 12. ACCEPTED 2026-10-22: v1.5 handwriting, language coverage, Korean and Hindi
+> **Accepted 2026-10-22 (decision 49): all 13 open decisions in §12.9 accepted at the recommendations.** Built and tested with the emulator and CI only; device checks go to `docs/device-checklist-prerelease.md` (decision 48). Sizes and efforts below are estimates.
 
 ### 12.1 What "handwriting" can mean on the Forma
 - **Input hardware:** the Forma has **no pen digitizer** (no Wacom/EMR layer): only the capacitive `cyttsp5_mt` touch panel. A finger or a **passive capacitive stylus** (rubber/mesh tip ~5–6 mm) gives the same contacts. The driver reports `ABS_MT_POSITION_X/Y`, `ABS_MT_PRESSURE` and `ABS_MT_TOUCH_MAJOR/MINOR` (0–255, contact *area*, not force) with tracking IDs (Cypress TrueTouch Gen5 driver); the report rate while moving is estimated at a few tens of Hz and goes on the pre-release device checklist. So: coarse, sparse, jittery points; no hover; no pressure.
@@ -289,7 +289,7 @@ Risks: finger precision and sparse reports (mitigate: big boxes, smoothing); DU 
 - **Font:** Noto Sans Devanagari (OFL) ≈ 0.2–0.4 MB per weight; optional pack.
 - **Effort/risk:** 2–3 wk on top of v1.8's shaping core (3–4 wk inside v1.8); high (editor layout moves from per-char advances to shaped runs; one rewrite shared with RTL).
 
-### 12.9 Open decisions (with recommendations)
+### 12.9 Decisions (accepted 2026-10-22 at the recommendations)
 1. **v1.5.0 scope:** ink blocks + panel first, recognition later — *recommend yes.*
 2. **Recognition route:** character boxes ($P + enrolment) in v1.5.1; word mode only as a gated spike — *recommend yes.*
 3. **Training data:** synthetic + your own enrolled ink only; no IAM-OnDB/BRUSH/OnHW (non-commercial terms) — *recommend yes.*
