@@ -1,0 +1,19 @@
+# v1.4.1 (S14.1): the pointer is always a pure black arrow with a white outline.
+copy-notes tests/test-notes/_test
+pointer plug
+pointer-to 600 800
+pointer-move 200 120
+expect-pointer visible
+shot v1.4.1-pointer-paper
+pointer-to 500 1700
+shot v1.4.1-pointer-over-keys
+tap-on Options
+tap-on Paper/Night
+tap-on Close
+pointer-to 600 800
+pointer-move 150 90
+expect-pointer visible
+shot v1.4.1-pointer-night
+tap-on Options
+tap-on Paper/Day
+tap-on Close

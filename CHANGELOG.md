@@ -2,6 +2,11 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.4.1 — 2026-10-22 (built, not installed, not tagged)
+- Pointer always black (sprint S14.1, decision 42): the mouse arrow is now pure black (0x00) with a 2 px pure white (0xFF) outline in Paper and Night, with no grey pixels. 1.4.0 drew it in the theme's ink and paper: in Night that is a near-white arrow (233), and in Paper the greys 28 / 240 are values the 2-level DU waveform used for pointer moves does not define, so the panel could show the arrow white.
+- Packaging: `THIRD-PARTY.txt` (Lucide ISC notice) is part of the next device update, next to the binary (`docs/install-plan-forma.md`).
+- Emulator: `tests/emu/v1.4.1-pointer-black.script`; screenshots `docs/screenshots/v1.4.1/`.
+
 ## 1.4.0 — 2026-10-22 (built, not installed, not tagged) — first stable release
 - Interface languages (sprint S14, decision 41): **English, Français, Português (PT-PT)**. The language follows the Kobo: at start the app reads `CurrentLocale` from `[ApplicationPreferences]` in `/mnt/onboard/.kobo/Kobo/Kobo eReader.conf` (read-only, never written); `fr*` → French, `pt*` → Portuguese, anything else, missing or unreadable → English. Help → App info shows the language.
 - Every sheet, button, key label, status text, Help page and the Markdown reference are translated. The French and Portuguese catalogs (`assets/i18n/fr.txt`, `pt.txt`) are **machine-drafted, best effort, and need a native review**; English is the source and the fallback for anything missing. Note names, paths and note text are never translated.

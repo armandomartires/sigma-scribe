@@ -152,3 +152,6 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.4 | [v1.4-pt-editor.png](v1.4/v1.4-pt-editor.png) | Portuguese: status, keys | [eink](v1.4/eink/v1.4-pt-editor.png) |
 | v1.4 | [v1.4-pt-options.png](v1.4/v1.4-pt-options.png) | Options in Portuguese | [eink](v1.4/eink/v1.4-pt-options.png) |
 | v1.4 | [v1.4-pt-help-landscape.png](v1.4/v1.4-pt-help-landscape.png) | Help in Portuguese, landscape | [eink](v1.4/eink/v1.4-pt-help-landscape.png) |
+| v1.4.1 | [v1.4.1-pointer-paper.png](v1.4.1/v1.4.1-pointer-paper.png) | Pointer on Paper: black arrow, white outline | [eink](v1.4.1/eink/v1.4.1-pointer-paper.png) |
+| v1.4.1 | [v1.4.1-pointer-over-keys.png](v1.4.1/v1.4.1-pointer-over-keys.png) | Pointer over the keyboard | [eink](v1.4.1/eink/v1.4.1-pointer-over-keys.png) |
+| v1.4.1 | [v1.4.1-pointer-night.png](v1.4.1/v1.4.1-pointer-night.png) | Pointer in Night: still black, white outline | [eink](v1.4.1/eink/v1.4.1-pointer-night.png) |

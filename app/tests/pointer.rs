@@ -371,3 +371,44 @@ fn v104_backlogged_moves_do_not_hide_the_pointer() {
     r.send(Event::Tick { t });
     assert!(r.app.pointer.visible, "a backlog is not idle time");
 }
+
+/// v1.4.1: the arrow's fill pixels on the panel are pure black after
+/// moves (fast path), a restore, a full render and the hide cleanup, in
+/// Paper and Night; the sprite never has greys.
+#[test]
+fn v141_arrow_is_pure_black_on_every_path() {
+    use sigma_core::settings::{Change, Paper};
+    use sigma_render::pointer::{pointer_cell, sprite, FILL, OUTLINE};
+    for paper in [Paper::Day, Paper::Night] {
+        let mut r = Rig::new(&format!("black-{paper:?}"));
+        r.app.change(Change::Paper(paper));
+        r.app.render(&mut r.dev, Refresh::Full).unwrap();
+        let cell = pointer_cell(r.app.screen.scale().px(1.0) as f32);
+        let check = |r: &Rig, what: &str| {
+            let (x, y) = (r.app.pointer.x, r.app.pointer.y);
+            let w = r.dev.panel.width as i32;
+            for (i, v) in sprite().iter().enumerate() {
+                let Some(v) = v else { continue };
+                let (cx, cy) = (x + (i as i32 % 12) * cell, y + (i as i32 / 12) * cell);
+                let got = r.dev.panel.pixels[(cy * w + cx) as usize];
+                assert_eq!(got, *v, "{paper:?} {what}: ({cx},{cy})");
+                assert!(*v == FILL || *v == OUTLINE);
+            }
+        };
+        r.to(400, 400);
+        check(&r, "first move");
+        for i in 0..8 {
+            r.to(400 + i * 41, 400 + i * 29);
+            check(&r, "fast-path move");
+        }
+        // Over the keyboard and text (restore of grey under-areas).
+        r.to(300, 1700);
+        check(&r, "over keyboard");
+        r.app.render(&mut r.dev, Refresh::Full).unwrap();
+        check(&r, "full render");
+        r.tick(POINTER_HIDE_MS + 100);
+        assert!(!r.app.pointer.visible, "hidden");
+        r.to(500, 600);
+        check(&r, "after cleanup");
+    }
+}
