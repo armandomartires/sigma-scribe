@@ -65,10 +65,7 @@ impl Rig {
         let mut out = Vec::new();
         for s in strokes {
             for (k, &(x, y)) in s.iter().enumerate() {
-                let (px, py) = (
-                    b.x + (x * b.w as f32) as i32,
-                    b.y + (y * b.h as f32) as i32,
-                );
+                let (px, py) = (b.x + (x * b.w as f32) as i32, b.y + (y * b.h as f32) as i32);
                 let ph = if k == 0 { Phase::Down } else { Phase::Move };
                 out.extend(self.touch(ph, px, py));
             }
