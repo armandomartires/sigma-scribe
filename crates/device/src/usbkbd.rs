@@ -9,6 +9,25 @@
 
 use crate::evdev::{RawEvent, EV_KEY, EV_REL};
 use crate::{Event, HwKey, Mods};
+use sigma_core::layouts::{self, KeyLayout};
+use std::sync::atomic::{AtomicU8, Ordering};
+
+/// The layout USB keyboards use (v1.3, Options → Layout), shared with the
+/// reader threads. Set by the app with [`set_layout`].
+static LAYOUT: AtomicU8 = AtomicU8::new(0);
+
+/// Options → Layout changed (or at start).
+pub fn set_layout(l: KeyLayout) {
+    let i = layouts::ALL.iter().position(|&x| x == l).unwrap_or(0);
+    LAYOUT.store(i as u8, Ordering::Relaxed);
+}
+
+fn current_layout() -> KeyLayout {
+    layouts::ALL
+        .get(LAYOUT.load(Ordering::Relaxed) as usize)
+        .copied()
+        .unwrap_or_default()
+}
 
 /// One `/proc/bus/input/devices` entry.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -185,16 +204,36 @@ pub struct KeyMapper {
     lalt: bool,
     ralt: bool,
     caps: bool,
+    /// Fixed layout (emulator, tests); `None` follows [`set_layout`].
+    pub layout: Option<KeyLayout>,
 }
 
 impl KeyMapper {
+    /// A mapper fixed to one layout (emulator, tests).
+    #[must_use]
+    pub fn with_layout(l: KeyLayout) -> Self {
+        Self {
+            layout: Some(l),
+            ..Self::default()
+        }
+    }
+
+    fn lang(&self) -> KeyLayout {
+        self.layout.unwrap_or_else(current_layout)
+    }
+
     #[must_use]
     pub fn mods(&self) -> Mods {
         Mods {
             ctrl: self.lctrl || self.rctrl,
             shift: self.lshift || self.rshift,
-            alt: self.lalt || self.ralt,
+            // Right Alt is AltGr on every layout but US (v1.3).
+            alt: self.lalt || (self.ralt && self.lang() == KeyLayout::Us),
         }
+    }
+
+    fn altgr(&self) -> bool {
+        self.ralt && self.lang() != KeyLayout::Us
     }
 
     /// Feeds one raw event. Press (1) and auto-repeat (2) produce keys;
@@ -222,6 +261,18 @@ impl KeyMapper {
 
     fn key(&self, code: u16) -> Option<Event> {
         let m = self.mods();
+        let lang = self.lang();
+        if layouts::CODES.contains(&code) {
+            if m.ctrl || m.alt {
+                // Shortcuts keep their letter: Ctrl+Z is Z wherever it sits.
+                return Some(Event::Chord {
+                    key: HwKey::Char(lang.shortcut_char(code)?),
+                    mods: m,
+                });
+            }
+            let c = lang.char_for_code(code, m.shift, self.altgr(), self.caps)?;
+            return Some(Event::Key(HwKey::Char(c)));
+        }
         if let Some(&(_, plain, shifted)) = CHARS.iter().find(|c| c.0 == code) {
             let upper = m.shift != (self.caps && plain.is_ascii_alphabetic());
             let c = if upper { shifted } else { plain };
@@ -247,27 +298,46 @@ impl KeyMapper {
 /// of the mapper for printable ASCII.
 #[must_use]
 pub fn raw_for_char(c: char) -> Vec<RawEvent> {
+    raw_for_char_in(KeyLayout::Us, c)
+}
+
+/// [`raw_for_char`] on a layout (v1.3): Shift / AltGr as needed, and an
+/// accented letter the layout has no key for goes dead key + letter.
+#[must_use]
+pub fn raw_for_char_in(l: KeyLayout, c: char) -> Vec<RawEvent> {
     let ev = |code, value| RawEvent {
         kind: EV_KEY,
         code,
         value,
     };
-    if c == '\n' {
-        return vec![ev(28, 1), ev(28, 0)];
+    if c == '\n' || c == ' ' {
+        let code = if c == ' ' { 57 } else { 28 };
+        return vec![ev(code, 1), ev(code, 0)];
     }
-    let Some(&(code, plain, _)) = CHARS.iter().find(|x| x.1 == c || x.2 == c) else {
-        return Vec::new();
-    };
-    if c == plain {
-        vec![ev(code, 1), ev(code, 0)]
-    } else {
-        vec![
-            ev(KEY_LEFTSHIFT, 1),
-            ev(code, 1),
-            ev(code, 0),
-            ev(KEY_LEFTSHIFT, 0),
-        ]
+    if let Some((i, shift, altgr)) = l.position_of(c) {
+        let code = layouts::CODES[i];
+        let m = if altgr {
+            Some(KEY_RIGHTALT)
+        } else if shift {
+            Some(KEY_LEFTSHIFT)
+        } else {
+            None
+        };
+        return match m {
+            None => vec![ev(code, 1), ev(code, 0)],
+            Some(m) => vec![ev(m, 1), ev(code, 1), ev(code, 0), ev(m, 0)],
+        };
     }
+    for d in ['\u{300}', '\u{301}', '\u{302}', '\u{303}', '\u{308}'] {
+        for base in "aeiouycnAEIOUYCN".chars() {
+            if layouts::compose(d, base) == Some(c) && l.position_of(d).is_some() {
+                let mut out = raw_for_char_in(l, d);
+                out.extend(raw_for_char_in(l, base));
+                return out;
+            }
+        }
+    }
+    Vec::new()
 }
 
 /// Key name → evdev code, for the emulator (`usb-key ctrl+f`).

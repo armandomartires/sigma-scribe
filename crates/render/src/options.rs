@@ -169,6 +169,15 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
             ],
         },
         OptRow {
+            label: "Layout",
+            hint: "On-screen Full board and USB keyboards",
+            cells: stepper(
+                s.kb_layout.label().to_owned(),
+                Change::KbLayout(-1),
+                Change::KbLayout(1),
+            ),
+        },
+        OptRow {
             label: "Keyboard tone",
             hint: "The keyboard can differ from the page",
             cells: vec![
@@ -480,6 +489,7 @@ mod tests {
                 "Tab key",
                 "Tab width",
                 "Keyboard",
+                "Layout",
                 "Keyboard tone",
                 "Drawer",
                 "USB keyboard & mouse",

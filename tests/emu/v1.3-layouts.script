@@ -1,0 +1,41 @@
+# v1.3 (S13): Latin layouts for the on-screen board and USB, dead keys.
+copy-notes tests/test-notes/_test
+tap-on Options
+tap-on Layout/+
+tap-on Layout/+
+expect-setting layout=fr
+shot v1.3-options-layout-fr
+tap-on Close
+shot v1.3-full-azerty
+key ^
+key e
+key é
+key Space
+expect ê
+expect-not ^e
+usb plug
+usb-type Où êtes-vous ? 5 € !
+expect Où êtes-vous ? 5 € !
+key Shift
+shot v1.3-full-azerty-shift
+key Shift
+key Shift
+key Compact
+shot v1.3-compact-azerty
+key Full
+tap-on Options
+tap-on Layout/+
+expect-setting layout=de
+tap-on Close
+usb-type Grüße: ß @ {ä}
+expect Grüße: ß @ {ä}
+shot v1.3-full-qwertz
+tap-on Options
+tap-on Layout/+
+tap-on Layout/+
+expect-setting layout=pt
+tap-on Orientation/Landscape
+tap-on Close
+usb-type Coração, você
+expect Coração, você
+shot v1.3-landscape-portuguese

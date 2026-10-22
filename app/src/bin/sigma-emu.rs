@@ -34,7 +34,7 @@
 use sigma_device::desktop::DesktopDevice;
 use sigma_device::evdev::{RawEvent, EV_KEY};
 use sigma_device::pointer::{raw_button, raw_move, raw_wheel, PointerDecoder, BTN_LEFT, BTN_RIGHT};
-use sigma_device::usbkbd::{code_for_name, raw_for_char, KeyMapper};
+use sigma_device::usbkbd::{code_for_name, raw_for_char_in, KeyMapper};
 use sigma_device::Phase;
 use sigma_device::{Device, Event, HwKey};
 use sigma_scribe::App;
@@ -408,11 +408,17 @@ fn main() -> ExitCode {
                 }
                 _ => return fail("usb plug|unplug".into()),
             },
-            "usb-type" => events.extend(
-                arg.chars()
-                    .flat_map(raw_for_char)
-                    .filter_map(|e| usb.feed(e)),
-            ),
+            // v1.3: typed on the layout chosen in Options (usb-key names
+            // US key positions).
+            "usb-type" => {
+                let l = app.settings.kb_layout;
+                usb.layout = Some(l);
+                events.extend(
+                    arg.chars()
+                        .flat_map(|c| raw_for_char_in(l, c))
+                        .filter_map(|e| usb.feed(e)),
+                );
+            }
             "usb-key" => {
                 let mut codes = Vec::new();
                 for name in arg.split('+') {
@@ -431,6 +437,7 @@ fn main() -> ExitCode {
                     .map(|&c| ev(c, 1))
                     .chain(codes.iter().rev().map(|&c| ev(c, 0)))
                     .collect();
+                usb.layout = Some(app.settings.kb_layout);
                 events.extend(raws.into_iter().filter_map(|e| usb.feed(e)));
             }
             "expect-usb" => {

@@ -1,6 +1,6 @@
-# S13 — v1.3: Keyboard layouts (Latin) for on-screen and USB (draft)
+# S13 — v1.3: Keyboard layouts (Latin) for on-screen and USB
 
-> **DRAFT — planning only (updated 2026-10-21 21:24 with the user's answers). No development until the user approves.**
+> **Status:** BUILT 2026-10-22 (v1.3.0, decision 40, not installed, not tagged). As built: US, UK, FR AZERTY, DE QWERTZ, ES, PT, IT; tables hand-written from xkb basic variants (S13-D1); one composer for both keyboards (S13-D2); Options → Layout applies to both (no USB override yet). **Deferred (S13-D3):** Compact long-press accent popup + candidate bar slot, Nordic / NL / ABNT2. Tests `app/tests/layouts.rs`, `crates/core/src/layouts.rs`, glyph coverage in `crates/render/src/fonts.rs`; script `tests/emu/v1.3-layouts.script`; shots `docs/screenshots/v1.3/`. Device check: AltGr on the K400 / a 60 % board; dead keys from a real USB keyboard.
 
 **Scope v1.3:** US (today), **FR AZERTY**, **PT** (Portugal; Brazil ABNT2 easy to add), **DE QWERTZ**, **ES**; easy extras from the same tables: UK, IT, Nordic (SE/NO/DK/FI), NL (US-intl). Options → Layout (applies to both keyboards; USB can override if wanted).
 

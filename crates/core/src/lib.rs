@@ -9,6 +9,7 @@ pub mod find;
 pub mod gesture;
 pub mod graphmap;
 pub mod keyboard;
+pub mod layouts;
 pub mod library;
 pub mod linefit;
 pub mod links;

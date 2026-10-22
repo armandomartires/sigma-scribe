@@ -138,3 +138,9 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.2 | [v1.2-auto-portrait-inverted.png](v1.2/v1.2-auto-portrait-inverted.png) | Auto: portrait inverted (shown turned back) | [eink](v1.2/eink/v1.2-auto-portrait-inverted.png) |
 | v1.2 | [v1.2-auto-landscape-inverted.png](v1.2/v1.2-auto-landscape-inverted.png) | Auto: landscape inverted | [eink](v1.2/eink/v1.2-auto-landscape-inverted.png) |
 | v1.2 | [v1.2-options-auto-landscape-inverted.png](v1.2/v1.2-options-auto-landscape-inverted.png) | Options in landscape inverted: "Auto — Landscape inverted" | [eink](v1.2/eink/v1.2-options-auto-landscape-inverted.png) |
+| v1.3 | [v1.3-options-layout-fr.png](v1.3/v1.3-options-layout-fr.png) | Options → Layout: French AZERTY | [eink](v1.3/eink/v1.3-options-layout-fr.png) |
+| v1.3 | [v1.3-full-azerty.png](v1.3/v1.3-full-azerty.png) | Full board, AZERTY: é è ç à, dead ^, ISO key | [eink](v1.3/eink/v1.3-full-azerty.png) |
+| v1.3 | [v1.3-full-azerty-shift.png](v1.3/v1.3-full-azerty-shift.png) | AZERTY with Shift: digits on the top row | [eink](v1.3/eink/v1.3-full-azerty-shift.png) |
+| v1.3 | [v1.3-compact-azerty.png](v1.3/v1.3-compact-azerty.png) | Compact with AZERTY letters | [eink](v1.3/eink/v1.3-compact-azerty.png) |
+| v1.3 | [v1.3-full-qwertz.png](v1.3/v1.3-full-qwertz.png) | Full board, German QWERTZ: ß ü ö ä | [eink](v1.3/eink/v1.3-full-qwertz.png) |
+| v1.3 | [v1.3-landscape-portuguese.png](v1.3/v1.3-landscape-portuguese.png) | Portuguese in landscape: ç º, dead ´ ~ | [eink](v1.3/eink/v1.3-landscape-portuguese.png) |

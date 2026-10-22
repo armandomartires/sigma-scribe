@@ -370,7 +370,10 @@ impl App {
             library,
             current,
             buffer,
-            keyboard: Keyboard::with_layout(settings.keyboard),
+            keyboard: Keyboard {
+                lang: settings.kb_layout,
+                ..Keyboard::with_layout(settings.keyboard)
+            },
             keys_on: true,
             screen,
             store,
@@ -513,6 +516,8 @@ impl App {
                 ..Keyboard::default()
             };
         }
+        self.keyboard.lang = self.settings.kb_layout;
+        sigma_device::usbkbd::set_layout(self.settings.kb_layout);
         let anchor = match c.refit() {
             Some(Some(true)) => Some(Anchor::Size),
             Some(Some(false)) => Some(Anchor::Margin),
@@ -871,7 +876,12 @@ impl App {
     fn scratch_hw(&mut self, k: HwKey) -> Option<Refresh> {
         let b = &mut self.scratch;
         match k {
-            HwKey::Char(c) => b.insert(&c.to_string()),
+            HwKey::Char(c) => {
+                let t = self.keyboard.composer.feed(c);
+                if !t.is_empty() {
+                    self.scratch.insert(&t);
+                }
+            }
             HwKey::Backspace => b.backspace(),
             HwKey::Delete => b.delete_forward(),
             HwKey::Return => b.newline(),
@@ -1721,6 +1731,7 @@ impl App {
         let k = &self.keyboard;
         self.keyboard = Keyboard {
             layout: k.layout,
+            lang: k.lang,
             clipboard: k.clipboard.clone(),
             ..Keyboard::default()
         };
@@ -1788,7 +1799,12 @@ impl App {
     fn hw_into_field(&mut self, k: HwKey) -> Option<Refresh> {
         let (_, field) = self.rename.as_mut()?;
         match k {
-            HwKey::Char(c) => field.insert(&c.to_string()),
+            HwKey::Char(c) => {
+                let t = self.keyboard.composer.feed(c);
+                if !t.is_empty() {
+                    field.insert(&t);
+                }
+            }
             HwKey::Backspace => field.backspace(),
             HwKey::Delete => field.delete_forward(),
             HwKey::Left => field.left(),
@@ -2330,8 +2346,19 @@ impl App {
             Event::Tap { x, y } if self.in_find_bar(x, y) => self.find_tap(x, y),
             Event::Tap { x, y } if self.in_drawer(x, y) => self.drawer_tap(x, y),
             Event::Key(k) => {
+                if !matches!(k, HwKey::Char(_)) {
+                    let t = self.keyboard.composer.flush();
+                    if !t.is_empty() {
+                        self.buffer.insert(&t);
+                    }
+                }
                 match k {
-                    HwKey::Char(c) => self.buffer.insert(&c.to_string()),
+                    HwKey::Char(c) => {
+                        let t = self.keyboard.composer.feed(c);
+                        if !t.is_empty() {
+                            self.buffer.insert(&t);
+                        }
+                    }
                     HwKey::Backspace => self.buffer.backspace(),
                     HwKey::Delete => self.buffer.delete_forward(),
                     HwKey::Return => self.buffer.newline(),
@@ -2466,6 +2493,7 @@ impl App {
     /// The device failed to present a frame.
     pub fn run(&mut self, dev: &mut dyn Device) -> std::io::Result<()> {
         self.set_gsensor(dev.has_gsensor());
+        sigma_device::usbkbd::set_layout(self.settings.kb_layout);
         self.render(dev, Refresh::Full)?;
         while self.running {
             self.sync_usb_host(dev);
