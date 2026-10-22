@@ -110,6 +110,17 @@ pub fn log_anomaly(msg: std::fmt::Arguments) {
     }
 }
 
+/// Dropped corner reports, logged apart from the other anomalies so they
+/// cannot use up their cap (and the other way round).
+fn log_ghost(msg: std::fmt::Arguments) {
+    static N: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+    match N.fetch_add(1, std::sync::atomic::Ordering::Relaxed) {
+        0..=99 => eprintln!("touch: {msg}"),
+        100 => eprintln!("touch: more corner reports ignored (not logged)"),
+        _ => {}
+    }
+}
+
 /// A single report this far (px) from the last one is not a finger.
 const JUMP_LOG_PX: i32 = 300;
 
@@ -128,6 +139,10 @@ pub struct Decoder {
     down: bool,
     was_down: bool,
     slot: i32,
+    /// Raw position of the last frame that was not a corner ghost.
+    acc: (i32, i32),
+    /// Tracking id of the primary contact (the panel repeats it each frame).
+    track: i32,
     sent: (i32, i32),
     /// Last `ABS_MT_TOUCH_MAJOR` of the primary contact this touch.
     major: Option<i32>,
@@ -145,10 +160,19 @@ impl Decoder {
             down: false,
             was_down: false,
             slot: 0,
+            acc: (0, 0),
+            track: -1,
             sent: (i32::MIN, i32::MIN),
             major: None,
             sent_major: -1,
         }
+    }
+
+    /// A report on one of the four corner pixels (screen coordinates).
+    fn is_corner(&self, x: i32, y: i32) -> bool {
+        let (w, h) = self.transform.screen;
+        let edge = |v: i32, max: i32| v <= 1 || v >= max - 2;
+        edge(x, w) && edge(y, h)
     }
 
     /// The contact size this decoder published with its last touch event.
@@ -179,9 +203,13 @@ impl Decoder {
                 None
             }
             (EV_ABS, ABS_MT_TRACKING_ID) if primary => {
-                if self.was_down && e.value >= 0 {
-                    log_anomaly(format_args!("new tracking id {} while down", e.value));
+                if self.was_down && e.value >= 0 && e.value != self.track {
+                    log_anomaly(format_args!(
+                        "tracking id {} -> {} while down",
+                        self.track, e.value
+                    ));
                 }
+                self.track = e.value;
                 self.down = e.value >= 0;
                 None
             }
@@ -220,7 +248,24 @@ impl Decoder {
                 None
             }
             (EV_SYN, 0) => {
-                let (x, y) = self.transform.apply(self.x, self.y);
+                let (mut x, mut y) = self.transform.apply(self.x, self.y);
+                if self.is_corner(x, y) {
+                    // The Forma's panel sends phantom reports at the four
+                    // corners (seen in the device log: only corner to
+                    // corner jumps). No finger is there: forget this frame's
+                    // position, and never start a touch from it.
+                    log_ghost(format_args!(
+                        "corner report ({x},{y}) ignored, touch {}",
+                        if self.was_down { "down" } else { "up" }
+                    ));
+                    (self.x, self.y) = self.acc;
+                    if !self.was_down {
+                        self.down = false;
+                    }
+                    (x, y) = self.transform.apply(self.x, self.y);
+                } else {
+                    self.acc = (self.x, self.y);
+                }
                 let phase = match (self.was_down, self.down) {
                     (false, true) => Some(Phase::Down),
                     (true, false) => Some(Phase::Up),
@@ -300,6 +345,82 @@ mod tests {
         // A panel that never reports it.
         f(&mut d, &[ev(EV_ABS, ABS_MT_POSITION_X, 10)]);
         assert_eq!(d.contact(), None);
+    }
+
+    /// A decoder on the Forma's 1440x1920 screen, identity transform.
+    fn forma() -> Decoder {
+        Decoder::new(Transform::from_spec("none", (1439, 1919), (1440, 1920)))
+    }
+
+    fn syn_frame(d: &mut Decoder, evs: &[RawEvent]) -> Option<Event> {
+        for &e in evs {
+            d.feed(e, 0);
+        }
+        d.feed(ev(EV_SYN, 0, 0), 0)
+    }
+
+    fn pos(x: i32, y: i32) -> [RawEvent; 2] {
+        [
+            ev(EV_ABS, ABS_MT_POSITION_X, x),
+            ev(EV_ABS, ABS_MT_POSITION_Y, y),
+        ]
+    }
+
+    #[test]
+    fn corner_reports_never_start_a_touch() {
+        let mut d = forma();
+        for (x, y) in [(0, 0), (1439, 0), (0, 1919), (1439, 1919)] {
+            assert_eq!(syn_frame(&mut d, &pos(x, y)), None, "ghost at {x},{y}");
+        }
+        // The next real touch is a normal Down.
+        let e = syn_frame(&mut d, &pos(700, 900));
+        assert!(matches!(
+            e,
+            Some(Event::Touch {
+                phase: Phase::Down,
+                x: 700,
+                y: 900,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn corner_reports_inside_a_stroke_are_ignored_and_do_not_pollute_it() {
+        let mut d = forma();
+        let down = syn_frame(&mut d, &pos(700, 900));
+        assert!(matches!(
+            down,
+            Some(Event::Touch {
+                phase: Phase::Down,
+                ..
+            })
+        ));
+        // Ghost frames between real ones.
+        assert_eq!(syn_frame(&mut d, &pos(0, 0)), None);
+        assert_eq!(syn_frame(&mut d, &pos(1439, 0)), None);
+        // The finger moves in x only: y must be the finger's, not the ghost's.
+        let e = syn_frame(&mut d, &[ev(EV_ABS, ABS_MT_POSITION_X, 760)]);
+        assert!(matches!(
+            e,
+            Some(Event::Touch {
+                phase: Phase::Move,
+                x: 760,
+                y: 900,
+                ..
+            })
+        ));
+        // And it lifts where it was.
+        let up = syn_frame(&mut d, &[ev(EV_ABS, ABS_MT_TRACKING_ID, -1)]);
+        assert!(matches!(
+            up,
+            Some(Event::Touch {
+                phase: Phase::Up,
+                x: 760,
+                y: 900,
+                ..
+            })
+        ));
     }
 
     #[test]
