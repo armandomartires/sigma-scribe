@@ -2,6 +2,14 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.4.5 — 2026-10-22 (built, not installed, not tagged)
+- **Keyboard size slider look** (sprint S14.5, decision 46, user feedback on 1.4.4): the slider sits straight on the Settings page: no white (Night: black) panel and no focus frame.
+- While **Auto is on** the whole slider (dotted track, hollow dots, hollow thumb, labels) is drawn in a static **grey**; it appears with the page's greyscale refresh (opening the page, toggling Auto). When **Auto is off** it is **solid ink** (black on Paper, white on Night), so moving it is DU-safe: only the thumb and the bold label change. Toggling Auto redraws the row in greyscale, so no grey or black is left behind (tested).
+- **Focus** (after a tap, for Left / Right on a USB keyboard): a bigger thumb with a thicker ring instead of a frame.
+- Settings key, behaviour and tap targets (≥ 44 px) unchanged.
+- Emulator: `tests/emu/v1.4.5-slider-grey.script`. Screenshots `docs/screenshots/v1.4.5/`.
+- Device binary sha256 (CI build) `BIN_HASH`; tarball `TAR_HASH`.
+
 ## 1.4.4 — 2026-10-22 (built, not installed, not tagged)
 - **Keyboard size control** (sprint S14.4, decision 45, user request): the 1.4.3 choice page is replaced, inline on Settings → Keyboard & input (section "Keyboard size"), by an **Auto keyboard size** checkbox (on by default) and a horizontal **slider** with three dots, 100% / 125% / 150%.
 - Slider: a tap or a drag snaps to the nearest dot; once tapped it has focus, and Left / Right (USB keyboard) move it. While Auto is on the slider is disabled and drawn muted (dotted track, hollow dots and thumb) with the thumb on the size Auto gives. Turning Auto off keeps that size; moving the slider then sets it.

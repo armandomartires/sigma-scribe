@@ -182,3 +182,10 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.4.4 | [v1.4.4-keyboard-input-night.png](v1.4.4/v1.4.4-keyboard-input-night.png) | After: Night page | [eink](v1.4.4/eink/v1.4.4-keyboard-input-night.png) |
 | v1.4.4 | [v1.4.4-keyboard-input-landscape.png](v1.4.4/v1.4.4-keyboard-input-landscape.png) | After: landscape | [eink](v1.4.4/eink/v1.4.4-keyboard-input-landscape.png) |
 | v1.4.4 | [v1.4.4-keyboard-input-fr.png](v1.4.4/v1.4.4-keyboard-input-fr.png) | After: French | [eink](v1.4.4/eink/v1.4.4-keyboard-input-fr.png) |
+| v1.4.5 | [v1.4.5-before-auto-on.png](v1.4.5/v1.4.5-before-auto-on.png) | Before (1.4.4): Auto on, white panel | [eink](v1.4.5/eink/v1.4.5-before-auto-on.png) |
+| v1.4.5 | [v1.4.5-before-auto-off-focus.png](v1.4.5/v1.4.5-before-auto-off-focus.png) | Before (1.4.4): focus frame | [eink](v1.4.5/eink/v1.4.5-before-auto-off-focus.png) |
+| v1.4.5 | [v1.4.5-auto-on-paper.png](v1.4.5/v1.4.5-auto-on-paper.png) | After: Auto on, grey, Paper | [eink](v1.4.5/eink/v1.4.5-auto-on-paper.png) |
+| v1.4.5 | [v1.4.5-auto-off-paper.png](v1.4.5/v1.4.5-auto-off-paper.png) | After: Auto off, black, Paper | [eink](v1.4.5/eink/v1.4.5-auto-off-paper.png) |
+| v1.4.5 | [v1.4.5-auto-off-focus-paper.png](v1.4.5/v1.4.5-auto-off-focus-paper.png) | After: focus = bigger thumb, Paper | [eink](v1.4.5/eink/v1.4.5-auto-off-focus-paper.png) |
+| v1.4.5 | [v1.4.5-auto-on-night.png](v1.4.5/v1.4.5-auto-on-night.png) | After: Auto on, grey, Night | [eink](v1.4.5/eink/v1.4.5-auto-on-night.png) |
+| v1.4.5 | [v1.4.5-auto-off-night.png](v1.4.5/v1.4.5-auto-off-night.png) | After: Auto off, solid ink, Night | [eink](v1.4.5/eink/v1.4.5-auto-off-night.png) |

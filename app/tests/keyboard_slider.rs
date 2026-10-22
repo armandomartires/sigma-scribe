@@ -5,6 +5,7 @@ use sigma_device::desktop::DesktopDevice;
 use sigma_device::{Event, HwKey, Phase, Refresh};
 use sigma_render::i18n::{self, Lang};
 use sigma_render::options::CATEGORIES;
+use sigma_render::slider::MUTED;
 use sigma_render::SettingsPage;
 use sigma_scribe::App;
 
@@ -44,6 +45,51 @@ fn set_ui(app: &mut App, want: u16) {
     }
     while app.settings.ui_scale < want {
         app.change(Change::UiScale(1));
+    }
+}
+
+fn check_band(app: &App, area: sigma_render::canvas::Rect, enabled: bool, tag: &str) {
+    let sc = app.screen.scale();
+    let ty = area.y + area.h * 2 / 5;
+    let half = sc.px(18.0);
+    let cw = app.canvas.width as usize;
+    let paper = app.canvas.pixels[(area.y as usize + 1) * cw + area.x as usize + 1];
+    let ink = if paper < 128 { 0xFF } else { 0x00 };
+    let mut seen = false;
+    for y in ty - half..ty + half {
+        for x in area.x..area.x + area.w {
+            let p = app.canvas.pixels[y as usize * cw + x as usize];
+            if enabled {
+                assert!(p == ink || p == paper, "{tag}: {p:#x} in enabled slider");
+            } else {
+                assert!(p == MUTED || p == paper, "{tag}: {p:#x} in muted slider");
+            }
+            seen |= p != paper;
+        }
+    }
+    assert!(seen, "{tag}: slider not drawn");
+}
+
+#[test]
+fn switching_auto_leaves_no_grey_and_no_ink_behind() {
+    for night in [false, true] {
+        let mut dev = DesktopDevice::new(1440, 1920);
+        let mut app = App::new(1440, 1920, fresh(&format!("switch{night}")));
+        if night {
+            app.change(Change::Paper(sigma_core::settings::Paper::Night));
+        }
+        kb_page(&mut app);
+        for auto in [true, false, true, false] {
+            app.change(Change::KbAuto(auto));
+            app.render(&mut dev, Refresh::Partial).unwrap();
+            let r = app
+                .touch_targets()
+                .into_iter()
+                .find(|(n, _)| n == "Keyboard size")
+                .unwrap()
+                .1;
+            check_band(&app, r, !auto, &format!("night={night} auto={auto}"));
+        }
     }
 }
 
@@ -143,16 +189,9 @@ fn keyboard_page_fits_every_language_orientation_and_ui_scale() {
                             .find(|(n, _)| n == "Keyboard size")
                         {
                             seen = true;
-                            // Pure black and white inside the slider.
-                            let cw = app.canvas.width as usize;
-                            let px =
-                                |x: i32, y: i32| app.canvas.pixels[y as usize * cw + x as usize];
-                            for y in r.1.y..r.1.y + r.1.h {
-                                for x in r.1.x..r.1.x + r.1.w {
-                                    let p = px(x, y);
-                                    assert!(p == 0 || p == 0xFF, "{tag}: grey {p}");
-                                }
-                            }
+                            // Track and thumb: solid ink when Auto is off,
+                            // only the static grey while Auto is on.
+                            check_band(&app, r.1, !auto, &tag);
                             for s in ["100%", "125%", "150%"] {
                                 assert!(
                                     app.control_centre(&format!("Keyboard size/{s}")).is_some(),

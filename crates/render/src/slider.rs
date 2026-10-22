@@ -1,8 +1,9 @@
 //! A reusable stepped slider (v1.4.4, S14.4): a horizontal track with a dot
 //! per stop and a thumb. Taps and drags snap to the nearest stop; Left /
-//! Right move it when it has focus. Drawn in pure black and white (0x00 /
-//! 0xFF only, text thresholded), so it is safe for DU updates. While
-//! disabled it is drawn muted: dotted track, hollow dots and a hollow thumb.
+//! Right move it when it has focus. Drawn straight on the page (v1.4.5):
+//! enabled in solid ink, so moves are DU-safe (only the thumb changes);
+//! disabled in a static grey (dotted track, hollow dots and thumb), shown
+//! with a greyscale refresh.
 //!
 //! First user: Settings → Keyboard & input → Keyboard size. Other numeric
 //! settings (Size, Leading, Margin, UI scale …) could adopt it later.
@@ -100,22 +101,36 @@ fn ring(c: &mut Canvas, cx: i32, cy: i32, r: i32, t: i32, ink: u8, paper: u8) {
     disc(c, cx, cy, (r - t).max(0), paper);
 }
 
-/// Draws the slider. `dark` = Night page (white on black).
-pub fn draw(c: &mut Canvas, g: &Geom, sl: &Slider, fonts: &Fonts, ui: f32, s: Scale, dark: bool) {
-    let (ink, paper) = if dark { (0xFF, 0x00) } else { (0x00, 0xFF) };
-    c.fill(g.area, paper);
+/// The grey of a disabled slider (v1.4.5): static, drawn with a
+/// greyscale refresh; never shown while the slider moves.
+pub const MUTED: u8 = 0x88;
+
+/// Draws the slider straight on the page (v1.4.5: no plate, no frame).
+/// Enabled: solid `ink` only (track, dots, thumb; labels in ink). Disabled:
+/// everything in [`MUTED`] grey, hollow dots, hollow thumb. Focus: a
+/// bigger thumb with a thicker ring. `paper` is the page colour behind it.
+pub fn draw(
+    c: &mut Canvas,
+    g: &Geom,
+    sl: &Slider,
+    fonts: &Fonts,
+    ui: f32,
+    s: Scale,
+    (ink, paper): (u8, u8),
+) {
+    let fg = if sl.enabled { ink } else { MUTED };
     let (Some(&first), Some(&last)) = (g.xs.first(), g.xs.last()) else {
         return;
     };
     let th = s.px(3.0).max(2);
     let ty = g.track_y - th / 2;
     if sl.enabled {
-        c.fill(Rect::new(first, ty, last - first, th), ink);
+        c.fill(Rect::new(first, ty, last - first, th), fg);
     } else {
         let dash = s.px(4.0).max(2);
         let mut x = first;
         while x < last {
-            c.fill(Rect::new(x, ty, dash.min(last - x), th), ink);
+            c.fill(Rect::new(x, ty, dash.min(last - x), th), fg);
             x += 2 * dash;
         }
     }
@@ -123,18 +138,24 @@ pub fn draw(c: &mut Canvas, g: &Geom, sl: &Slider, fonts: &Fonts, ui: f32, s: Sc
     let line = s.px(1.5).max(1);
     for &x in &g.xs {
         if sl.enabled {
-            disc(c, x, g.track_y, dot, ink);
+            disc(c, x, g.track_y, dot, fg);
         } else {
-            ring(c, x, g.track_y, dot, line, ink, paper);
+            ring(c, x, g.track_y, dot, line, fg, paper);
         }
     }
     if let Some(&tx) = g.xs.get(sl.value) {
-        let r = s.px(11.0).max(MIN_TARGET / 4);
+        let mut r = s.px(11.0).max(MIN_TARGET / 4);
+        let mut t = line;
+        if sl.focused && sl.enabled {
+            // Focus without a frame: a bigger thumb with a thicker ring.
+            r += s.px(3.0).max(2);
+            t = line * 2;
+        }
         if sl.enabled {
-            ring(c, tx, g.track_y, r + line, line, ink, paper);
-            disc(c, tx, g.track_y, r - line, ink);
+            ring(c, tx, g.track_y, r + t, t, fg, paper);
+            disc(c, tx, g.track_y, r - line, fg);
         } else {
-            ring(c, tx, g.track_y, r, line * 2, ink, paper);
+            ring(c, tx, g.track_y, r, line * 2, fg, paper);
         }
     }
     let size = ui * 0.85;
@@ -151,24 +172,15 @@ pub fn draw(c: &mut Canvas, g: &Geom, sl: &Slider, fonts: &Fonts, ui: f32, s: Sc
             face
         };
         let w = fonts.width(f, size, lab);
-        fonts.draw(c, f, size, x as f32 - w / 2.0, base, lab, ink);
+        fonts.draw(c, f, size, x as f32 - w / 2.0, base, lab, fg);
     }
-    if sl.focused {
-        c.stroke(g.area, line.max(2), ink);
-    }
-    // Pure black and white only: threshold the anti-aliased text.
-    threshold(c, g.area);
 }
 
-fn threshold(c: &mut Canvas, r: Rect) {
-    let r = r.intersect(&c.bounds());
-    let w = c.width as usize;
-    for y in r.y..r.y + r.h {
-        for x in r.x..r.x + r.w {
-            let p = &mut c.pixels[y as usize * w + x as usize];
-            *p = if *p >= 128 { 0xFF } else { 0x00 };
-        }
-    }
+/// The track-and-thumb band (labels excluded), for tests and audits.
+#[must_use]
+pub fn track_band(g: &Geom, s: Scale) -> Rect {
+    let r = s.px(18.0);
+    Rect::new(g.area.x, g.track_y - r, g.area.w, 2 * r)
 }
 
 #[cfg(test)]
@@ -192,28 +204,62 @@ mod tests {
     }
 
     #[test]
-    fn pure_black_and_white_in_both_states() {
+    fn enabled_is_solid_ink_and_muted_is_grey() {
         let fonts = Fonts::new();
-        for enabled in [true, false] {
-            for dark in [false, true] {
-                let mut c = Canvas::new(400, 120, 0xF0);
-                let g = geom(Rect::new(10, 10, 380, 100), 3, Scale(1.0));
-                let sl = Slider {
-                    stops: vec!["100%".into(), "125%".into(), "150%".into()],
-                    value: 2,
-                    enabled,
-                    focused: true,
-                };
-                draw(&mut c, &g, &sl, &fonts, 17.0, Scale(1.0), dark);
-                let w = c.width as usize;
-                for y in 10..110 {
-                    for x in 10..390 {
-                        let p = c.pixels[y * w + x];
-                        assert!(p == 0 || p == 0xFF, "grey {p} at {x},{y}");
+        for (ink, paper) in [(0x00, 0xF0), (0xFF, 0x12)] {
+            for enabled in [true, false] {
+                for focused in [false, true] {
+                    let mut c = Canvas::new(400, 120, paper);
+                    let g = geom(Rect::new(10, 10, 380, 100), 3, Scale(1.0));
+                    let sl = Slider {
+                        stops: vec!["100%".into(), "125%".into(), "150%".into()],
+                        value: 2,
+                        enabled,
+                        focused,
+                    };
+                    draw(&mut c, &g, &sl, &fonts, 17.0, Scale(1.0), (ink, paper));
+                    let b = track_band(&g, Scale(1.0));
+                    let w = c.width as usize;
+                    let mut seen = false;
+                    for y in b.y..b.y + b.h {
+                        for x in b.x..b.x + b.w {
+                            let p = c.pixels[y as usize * w + x as usize];
+                            if enabled {
+                                assert!(p == ink || p == paper, "enabled {p:#x}");
+                            } else {
+                                assert!(p == MUTED || p == paper, "muted {p:#x}");
+                            }
+                            seen |= p != paper;
+                        }
                     }
+                    assert!(seen);
+                    // No plate: the page colour shows at the corners.
+                    assert_eq!(c.pixels[11 * w + 11], paper);
                 }
             }
         }
+    }
+
+    #[test]
+    fn focus_is_a_bigger_thumb_not_a_frame() {
+        let fonts = Fonts::new();
+        let g = geom(Rect::new(0, 0, 300, 100), 3, Scale(1.0));
+        let mut sl = Slider {
+            stops: vec!["a".into(), "b".into(), "c".into()],
+            value: 1,
+            enabled: true,
+            focused: false,
+        };
+        let mut a = Canvas::new(300, 100, 0xFF);
+        draw(&mut a, &g, &sl, &fonts, 17.0, Scale(1.0), (0, 0xFF));
+        sl.focused = true;
+        let mut b = Canvas::new(300, 100, 0xFF);
+        draw(&mut b, &g, &sl, &fonts, 17.0, Scale(1.0), (0, 0xFF));
+        let ink = |c: &Canvas| c.pixels.iter().filter(|&&p| p == 0).count();
+        assert!(ink(&b) > ink(&a));
+        // Edges untouched: no frame.
+        assert!(b.pixels[..300].iter().all(|&p| p == 0xFF));
+        assert!((0..100).all(|y| b.pixels[y * 300] == 0xFF));
     }
 
     #[test]
@@ -227,10 +273,10 @@ mod tests {
             focused: false,
         };
         let mut a = Canvas::new(300, 100, 0xFF);
-        draw(&mut a, &g, &sl, &fonts, 17.0, Scale(1.0), false);
+        draw(&mut a, &g, &sl, &fonts, 17.0, Scale(1.0), (0, 0xFF));
         sl.enabled = false;
         let mut b = Canvas::new(300, 100, 0xFF);
-        draw(&mut b, &g, &sl, &fonts, 17.0, Scale(1.0), false);
+        draw(&mut b, &g, &sl, &fonts, 17.0, Scale(1.0), (0, 0xFF));
         assert_ne!(a.pixels, b.pixels);
     }
 }
