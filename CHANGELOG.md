@@ -9,7 +9,7 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
 - **Wiki links follow rename and move** (sprint S15.2a, decision 52, PR #28): renaming or moving a note rewrites `[[links]]` to it in every other note and the scratch pad, keeping aliases (`[[note|label]]`), headings (`[[note#part]]`), path or bare-name form and the extension; code is left alone.
 - The Write panel's Draw view gains the Letters button (left of Undo).
 - Emulator: `tests/emu/v1.5.2-letters.script`, `tests/emu/v1.5.2-relink.script`. Screenshots `docs/screenshots/v1.5.2/`. Device checks: `docs/device-checklist-prerelease.md`.
-- HASHES
+- Device binary sha256 (CI build) `8fe47dda4f9caec2c04420c5f34f7ec5944f9443ec4c5266ecf6891cd3e98040`; tarball `b215d8394923232d3176390b860ac4dc2b5cfabb3aab42518065729f5c2d1423`; binary 4,217,704 bytes (1.5.1: 4,053,608; **+164,096 bytes, +4.0 %**: the model is 104,876 bytes, the rest recogniser and panel code).
 
 ## 1.5.1 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
 - **Ink in preview** (sprint S15.1, decision 51): inserted ink blocks are drawn in preview instead of `[image: ink]`, rasterised with resvg to **1-bit** (pure black on Paper, pure white on Night), so they never leave grey for DU. Only `.ink/` images are read; a missing file keeps the placeholder. Insert now puts the image in its own paragraph.

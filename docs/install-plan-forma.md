@@ -142,7 +142,7 @@ Same procedure as 1.4.0:
 2. Read the log and copy it into the backup.
 3. Make a checksum-verified backup into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v1.5.2` (`.adds/sigma-scribe`, `.adds/nm`, `sigma-scribe/notes`, log).
 4. From the CI 1.5.2 package:
-   - INSTALLHASHES
+   - replace `.adds/sigma-scribe/sigma-scribe` (via `.new` + sync + hash check + rename), binary sha256 `8fe47dda4f9caec2c04420c5f34f7ec5944f9443ec4c5266ecf6891cd3e98040`, tarball `b215d8394923232d3176390b860ac4dc2b5cfabb3aab42518065729f5c2d1423` (CI release.yml run 39785500768);
    - add `.adds/sigma-scribe/THIRD-PARTY.txt` if it is not there yet, sha256 `f61a648623ee545238601212f3d29eb056bddca7ed738f1427a2ca1bfc712ee4`.
 5. Verify the sha256 on the device, then sync, unmount and power off.
 
