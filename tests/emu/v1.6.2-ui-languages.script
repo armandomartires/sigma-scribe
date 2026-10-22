@@ -1,0 +1,35 @@
+# v1.6.2 (S16.2, decision 60): UI catalogs de es it nl ca da sv.
+# "language de" stands for a Kobo whose CurrentLocale is German.
+copy-notes tests/test-notes/_test
+language de
+expect-language de
+shot v1.6.2-de-editor
+tap-on Options
+shot v1.6.2-de-settings
+tap-on Language
+shot v1.6.2-de-language-system
+tap-on Override system language/On
+expect-setting ui_lang=de
+tap-on Interface language
+shot v1.6.2-language-choices
+tap-on Español
+expect-language es
+expect-setting ui_lang=es
+shot v1.6.2-es-language
+tap-on Interface language
+tap-on Svenska
+expect-language sv
+expect-setting ui_lang=sv
+tap-on Back
+shot v1.6.2-sv-settings
+tap-on Display
+tap-on Orientation
+tap-on Landscape
+tap-on Back
+tap-on Language
+tap-on Interface language
+shot v1.6.2-landscape-language-choices
+tap-on Italiano
+expect-language it
+tap-on Back
+shot v1.6.2-it-settings-landscape

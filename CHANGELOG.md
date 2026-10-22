@@ -2,6 +2,12 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.6.2 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
+- **UI languages: German, Spanish, Italian, Dutch, Catalan, Danish, Swedish** (sprint S16.2, decision 60; v1.6 wave W1, third part): the interface follows the Kobo `CurrentLocale` for `de es it nl ca da sv`, or Settings → Language → Interface language; 10 languages in all with English, French and Portuguese. Fi, nb, tr, pl, cs, ro move to v1.6.3.
+- Catalogs are machine-drafted, best effort (About says so); `assets/i18n/*.txt`, each checked against French for identical keys. German "Move" shortened to fit.
+- Internal: language table (`REAL`) drives locale lookup, catalogs and the picker; unused statics removed.
+- Emulator: `tests/emu/v1.6.2-ui-languages.script`. Screenshots `docs/screenshots/v1.6.2/`. Device checks: `docs/device-checklist-prerelease.md`.
+
 ## 1.6.1 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
 - **Russian, Ukrainian and Greek keyboard layouts** (sprint S16.1, decision 59; v1.6 wave W1, second part): ЙЦУКЕН (xkb ru), Ukrainian (xkb ua, ґ on the key above Enter, ₴ on Shift+\`) and Greek (xkb gr, tonos ´ and dialytika ¨ dead keys: ά έ ή ί ό ύ ώ, ϊ ϋ); 21 layouts in all.
 - On these three, **AltGr is the US layout** (Shift+AltGr its Shift layer): Latin letters, `#`, `[[`, `]]` and other Markdown marks without switching layouts; Ctrl shortcuts keep the US letter (Ctrl+Я = Ctrl+Z).

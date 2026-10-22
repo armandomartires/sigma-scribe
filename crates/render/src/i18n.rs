@@ -46,10 +46,6 @@ impl Lang {
     pub fn from_locale(v: &str) -> Self {
         let p = v.trim().to_ascii_lowercase();
         let prefix = p.split(['_', '-', '.']).next().unwrap_or("");
-        match prefix {
-            "" => return Self::En,
-            _ => {}
-        }
         REAL.iter()
             .find(|(_, c, _)| *c == prefix)
             .map_or(Self::En, |r| r.0)
@@ -112,8 +108,6 @@ pub static REAL: &[(Lang, &str, &str)] = &[
     (Lang::Da, "da", include_str!("../../../assets/i18n/da.txt")),
     (Lang::Sv, "sv", include_str!("../../../assets/i18n/sv.txt")),
 ];
-static FR: &str = REAL[0].2;
-static PT: &str = REAL[1].2;
 
 type Catalog = HashMap<String, String>;
 
@@ -316,14 +310,13 @@ mod tests {
             }
         }
         // Every language translates the same English texts as French.
-        let f = parse(FR);
+        let f = parse(REAL[0].2);
         for &(_, name, text) in REAL {
             let p = parse(text);
             let mut missing: Vec<_> = f.keys().filter(|k| !p.contains_key(*k)).collect();
             missing.extend(p.keys().filter(|k| !f.contains_key(*k)));
             assert!(missing.is_empty(), "{name} differs from fr: {missing:?}");
         }
-        let _ = PT;
     }
 }
 
