@@ -6,6 +6,7 @@ pub mod evdev;
 #[cfg(target_arch = "arm")]
 pub mod fbink;
 pub mod gsensor;
+pub mod gsensor_probe;
 pub mod otg;
 pub mod pointer;
 pub mod usbkbd;

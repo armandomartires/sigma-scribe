@@ -99,6 +99,10 @@ impl KoboDevice {
             });
         }
         spawn_usb_watcher(tx, epoch);
+        // 1.4.6-probe: log-only g-sensor reader (no events to the app).
+        if crate::gsensor_probe::PROBE {
+            crate::gsensor_probe::spawn(env!("CARGO_PKG_VERSION"), epoch);
+        }
         Ok(Self {
             otg: OtgSwitch::new(CHIPIDEA_ROLE),
             width: w,

@@ -2,6 +2,10 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.4.6-probe — 2026-10-22 (diagnostic build on branch `v1.4.6-probe`; not merged, not a release)
+- 1.4.6 plus a **log-only g-sensor probe** (plan decision 39, `sprints/S12-orientation.md` device check list item 1). At start it writes the `/proc/bus/input/devices` blocks that have MSC bits and the chosen node to `.adds/sigma-scribe/gsensor-probe.log`, then appends every event from the `MSC_RAW` node (opened read-only, no grab) with a timestamp and the current decoder's guess. Capped at 2 MB.
+- **No behaviour change:** no event reaches the app, `gsensor::ENABLED` stays `false`, Auto orientation still says "no sensor".
+
 ## 1.4.6 — 2026-10-22 (built, not installed, not tagged)
 - **Fix: empty box before "Up to Files"** (sprint S14.6, decision 47). Atkinson Hyperlegible has no "←" (U+2190), so the Files crumb drew a box. The crumb, and Help's "Back to Help", now draw the Lucide **arrow-left** icon (resvg-baked, like the title-bar icons) instead of a text glyph.
 - **Glyph audit:** every UI string in EN, FR, PT and the pseudo-long test locale, plus every non-ASCII character in the UI code's string literals, was checked against the five bundled faces. Also missing from Atkinson: → ↑ ↓ (Graph list "→ / ← links", USB hint "Help → …", keyboard labels). Text drawing now falls back per character to the first bundled face that has the glyph (Literata has the arrows), so nothing draws as a box. New test `app/tests/glyphs.rs` fails on any character no bundled face can draw.
