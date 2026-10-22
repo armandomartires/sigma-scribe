@@ -1,6 +1,7 @@
 # S15 — v1.5: Handwriting input panel (Latin) (draft)
 
 > **DRAFT — planning only (updated 2026-10-21 21:24 with the user's answers). No development until the user approves.**
+> **2026-10-22:** superseded by the proposal in `plan.md` §12 (v1.5.0–v1.5.3, ink first, character boxes, gated word mode); pending approval.
 
 **Scope change (user, 2026-10-21 21:24):** no sketching/drawing. Pen mode becomes a **handwriting-to-text input panel** like the Windows one (user's photo: a dark bar "Write here" with a baseline, an Enter key and a dropdown).
 

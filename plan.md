@@ -204,3 +204,102 @@ User decisions (2026-10-21 21:24): v1.0.1 = pointer trails + reverse scroll + "U
 | S16 | Farsi + Arabic (RTL) | **v1.6** 📝 | PLANNED — post-stable extra |
 | S17 | Japanese kana + kanji | **v1.7** 📝 | PLANNED — post-stable extra |
 | S18 | Simplified Chinese pinyin | **v1.8** 📝 | PLANNED — post-stable extra |
+
+## 12. PROPOSAL (DRAFT, not approved): v1.5 handwriting, language coverage, Korean and Hindi
+> Drafted 2026-10-22 for the user's approval (draft PR). **No code until approved.** Built and tested with the emulator and CI only; device checks go to `docs/device-checklist-prerelease.md` (decision 48). Sizes and efforts below are estimates.
+
+### 12.1 What "handwriting" can mean on the Forma
+- **Input hardware:** the Forma has **no pen digitizer** (no Wacom/EMR layer): only the capacitive `cyttsp5_mt` touch panel. A finger or a **passive capacitive stylus** (rubber/mesh tip ~5–6 mm) gives the same contacts. The driver reports `ABS_MT_POSITION_X/Y`, `ABS_MT_PRESSURE` and `ABS_MT_TOUCH_MAJOR/MINOR` (0–255, contact *area*, not force) with tracking IDs (Cypress TrueTouch Gen5 driver); the report rate while moving is estimated at a few tens of Hz and goes on the pre-release device checklist. So: coarse, sparse, jittery points; no hover; no pressure.
+- **Consequences:** strokes need resampling + smoothing (Catmull-Rom between reports, light low-pass); writing must be large (a writing bar ≥ 25 mm tall); fine cursive is unrealistic, **print-style letters and short words** are realistic.
+
+### 12.2 Recognition options (offline, ARMv7 A9, AGPL-compatible)
+| Option | Licence | Fit on the Forma | Verdict |
+|---|---|---|---|
+| **$P / $Q point-cloud** template matcher (published algorithms, own code) | ours (AGPL) | single characters / gestures, < 1 ms, KB of templates; user-trainable | **v1.5.1 baseline** (character boxes) |
+| **Zinnia** online SVM recogniser | BSD; Tomoe models LGPL | per-character, ms latency; CJK models exist, Latin needs training | reference; reuse for CJK later |
+| **Lipi Toolkit** | MIT | dated, isolated characters | not planned |
+| **Own small LSTM/GRU-CTC** (Carbune et al. 2020 style), run with **tract** (MIT/Apache, pure Rust) | ours | 1–2 M params, ~0.3–0.8 s/word est. on the A9 | **v1.5.2 gated spike** |
+| ML Kit Digital Ink, MyScript, Apple/Windows HWR | proprietary | — | not usable |
+| Tesseract (offline OCR) | Apache-2.0 | images, ignores stroke order; poor on handwriting | not suitable |
+
+**Training data is the hard limit:** IAM-OnDB ("non-commercial research purpose only", fki.tic.heia-fr.ch), BRUSH (non-commercial research, Brown), DeepWriting (CC BY-NC-SA), OnHW (CC BY-NC) are **not usable** for a model we distribute in an AGPL app. Licence-clean sources: synthetic ink from single-stroke fonts (Hershey-style) with augmentation, and the **user's own ink** (opt-in, local only; decision 31). CC BY 4.0 online sets exist only for other scripts (e.g. OUHD-L, Urdu). → Recommendation: no third-party ink datasets.
+
+### 12.3 Proposed scope, UX and storage
+- **v1.5.0 — Ink panel + ink in notes (no recognition).** "Write" toggle on the keyboard bar (Keys ⇄ Write) swaps the keyboard area for a **writing panel** (white, baseline, Space / Backspace / Enter / Done). Two uses: **Insert ink** (the panel's drawing becomes an ink block in the note) and the input panel for later recognition. Finger / Stylus width (1.2 / 0.6 mm), first-contact-wins, second finger ignored, contacts outside the panel never ink. Undo last stroke.
+- **v1.5.1 — Character boxes.** A row of 6–8 boxes; each box is recognised on lift + 500 ms with $P templates (a–z, A–Z, 0–9, punctuation, FR/PT accents via a second stroke); a 3–5 candidate row; **enrolment** screen to add your own templates (stored locally, decision 31). Inserted at the caret through the v1.3 composer.
+- **v1.5.2 — Word mode spike + gate.** Small LSTM-CTC trained on synthetic + enrolled ink, tract on armv7 (QEMU timing in CI), lexicon EN/FR/PT. **Go** only if character error ≤ ~15 % on held-out enrolled ink and ≤ 1 s per word on the A9 estimate; else stay with boxes.
+- **v1.5.3 — Gestures** (scratch-out delete, caret tap, line join) on the $P engine.
+- **Storage format:** each ink block is a small **SVG** (polyline paths, mm units, black only) at `<note dir>/.ink/<note stem>/<id>.svg`, referenced from Markdown as `![ink](.ink/<stem>/<id>.svg)` so any Markdown viewer shows it; raw strokes (x, y, t ms, contact major) beside it as `<id>.strokes.json` for re-recognition. Preview renders our own SVG subset with a small polyline renderer (no runtime resvg). Export/Files treat `.ink/` like attachments (moved/renamed with the note). Enrolment templates under `notes/.handwriting/` (opt-in, deletable from Settings).
+
+### 12.4 Refresh strategy (fast DU ink)
+- Ink is **pure black on pure white** (no grey AA in the live stroke) so every update is DU-exact. Each input frame draws the new segment(s) and sends **one DU region** = segment bbox + stroke width, merged across a frame, **never waited for** (decision S10.3-D2). Optional **A2** waveform (FBInk `WFM_A2`) as an experiment flag for the device pass (faster, 1-bit).
+- On pen-up + 600 ms idle: one **GL16** pass over the panel bbox to clear DU residue; recognition runs on a worker thread; candidates update with a Partial refresh. Ink blocks in the note/preview are drawn anti-aliased (GL16/partial) since they are static.
+- Emulator: replay recorded stroke files (`tests/ink/*.json`), e-ink DU residue model already exists; metric = app-side ms per ink frame (target p95 < 8 ms).
+
+### 12.5 Milestones, effort, risks
+| Release | Content | Effort | Risk |
+|---|---|---|---|
+| v1.5.0 | ink panel, ink blocks (SVG + strokes), preview renderer, Files/export | 1.5–2 wk | medium (ink latency, panel UX) |
+| v1.5.1 | character boxes, $P, enrolment, candidates | 1.5 wk | medium (finger accuracy) |
+| v1.5.2 | word-mode spike + gate (tract, synthetic data) | 2–3 wk (spike) | **high** (data, accuracy, A9 time) |
+| v1.5.3 | gestures | 0.5–1 wk | low |
+Risks: finger precision and sparse reports (mitigate: big boxes, smoothing); DU queue lag (merge regions, never wait); no licence-clean Latin ink data (synthetic + enrolment); model size/time (int8, tract, gate); all real-device behaviour unverified until the single pre-release pass.
+
+### 12.6 Language-coverage roadmap
+**Kobo's languages (cited):** UI and books in Catalan, Czech, Danish, Dutch (BE & NL), English, Finnish, French (CA & FR), German, Italian, Japanese, Norwegian, Polish, Portuguese (BR & PT), Romanian, Spanish (MX & ES), Swedish, Traditional Chinese, Turkish — Rakuten Kobo, "eReader Accessibility Features" (ereader.kobo.com/en-us/pages/accessibility-features); the Kobo FAQ (ereader.kobo.com/en-us/pages/faq) lists the same core set. Books (not UI) also in Arabic, Armenian, Bengali, Greek, Hebrew, Korean, Tamil and Devanagari languages (Hindi, Marathi, Nepali, Sanskrit). Our backups only hold `CurrentLocale=en` and dictionaries de/es/fr/it/nl/pt-en (read from the backup, not the device). **Added Asian languages:** Japanese, Chinese (Simplified, Traditional), Korean, Hindi, Thai, Vietnamese, Indonesian, Malay; also judged sizeable: **Bengali, Urdu, Tamil, Marathi, Filipino**, and Russian/Ukrainian/Greek for the Cyrillic/Greek wave.
+
+| Language | Script / layout | Input complexity | Font (licence) & size | UI review |
+|---|---|---|---|---|
+| DE, ES(-MX), IT, CA, NL, DA, SV, FI, NO, TR, PL, CS, RO, PT-BR, FR-CA | Latin; national layouts (QWERTZ, Nordic, Turkish Q, Polish programmer, Czech QWERTZ, Romanian standard, ABNT2, CA-FR) | plain + dead keys (v1.3 composer) | Literata/Atkinson (OFL), 0 KB | machine draft OK; native review recommended for Kobo UI languages |
+| Indonesian, Malay, Filipino | Latin; US layout | plain | none | machine draft OK |
+| Russian, Ukrainian | Cyrillic ЙЦУКЕН / Ukrainian | plain | Literata covers Cyrillic; Atkinson does not → per-char fallback (v1.4.6) or Atkinson Hyperlegible Next (OFL, check coverage), ~0.2 MB | review recommended |
+| Greek | Greek layout | plain + dead tonos | Literata covers; same as Cyrillic | review recommended |
+| Vietnamese | Latin + stacked diacritics; Telex / VNI | **composition** (tone + vowel marks, state machine) | Literata covers; Atkinson check; ~0 KB | **native review** |
+| Korean | Hangul, Dubeolsik (KS X 5002) | **composition** (jamo → syllable state machine) | Noto Sans KR subset 2,350 syllables ≈ 1.5–2 MB/weight; all 11,172 ≈ 3–4 MB (OFL) | **native review** |
+| Arabic, Farsi, Urdu | Arabic script; national layouts | **shaping + RTL bidi** | Noto Naskh/Sans Arabic ≈ 0.2–0.5 MB (OFL) | **native review** |
+| Hebrew | Hebrew layout | RTL bidi (light shaping) | Noto Sans Hebrew ≈ 50 KB | **native review** |
+| Hindi, Marathi, Nepali | Devanagari, InScript | **shaping** (conjuncts, matras, reph) + grapheme caret | Noto Sans Devanagari ≈ 0.2–0.4 MB | **native review** |
+| Bengali, Tamil | Bengali / Tamil InScript | shaping | Noto Sans Bengali/Tamil ≈ 0.2–0.3 MB each | **native review** |
+| Thai | Thai Kedmanee | mark positioning (shaping) + **word breaking without spaces** (dictionary segmenter, e.g. ICU4X data ~0.3 MB, Unicode/Apache licence) | Noto Sans Thai ≈ 50–100 KB | **native review** |
+| Japanese | kana/kanji; romaji→kana | **dictionary IME** (SKK-style, then Mozc data; decision 30/31) | Noto Sans JP subset (JIS L1+L2) ≈ 4–6 MB/weight; dictionary 2–20 MB | **native review** (Kobo UI language) |
+| Chinese Simplified | Hanzi; pinyin | dictionary IME (librime-style / own) | Noto Sans SC GB2312 subset ≈ 4–5 MB; dictionary 5–20 MB | **native review** |
+| Chinese Traditional | Hanzi; Zhuyin (Bopomofo), pinyin, Cangjie | dictionary IME | Noto Sans TC Big5-common subset ≈ 4–5 MB | **native review** (Kobo UI language) |
+
+**Waves by shared infrastructure** (proposed slots; renumbers the existing v1.6–v1.8 plan, see decisions):
+| Wave | Release | Languages | Shared work | Effort | Risk |
+|---|---|---|---|---|---|
+| W1 Latin/Cyrillic/Greek | **v1.6** | all Kobo UI Latin languages + ID, MS, FIL, RU, UK, EL | more layout tables, UI catalogs, font fallback | 2–3 wk + reviews | low |
+| W2 Composition | **v1.7** | **Korean**, Vietnamese | composer state machines, font packs (KR) | 2–3 wk | low–medium |
+| W3a Shaping + RTL | **v1.8** | Arabic, Farsi, Urdu, Hebrew | rustybuzz (MIT) glyph runs, unicode-bidi, RTL UI mirroring | 4–6 wk | high |
+| W3b Indic + Thai | **v1.9** | **Hindi**, Marathi, Nepali, Bengali, Tamil, Thai | same shaping engine; grapheme clusters (unicode-segmentation); Thai segmenter | 3–4 wk | high |
+| W4 Dictionary IMEs | **v1.10 / v1.11** | Japanese; Chinese SC + TC | candidate window, dictionaries, CJK font packs | 4–6 wk + 3–4 wk | high |
+
+**Font-size strategy:** the base package keeps Literata + Atkinson (Latin/Greek/Cyrillic, ≈ 1.5 MB). Every other script ships as an **optional font pack** (`sigma-scribe-fonts-<script>.tar.gz` → `.adds/sigma-scribe/fonts/<script>.ttf`, OFL text beside it), loaded at runtime when present and used by the per-character fallback; CJK packs are subsetted (pyftsubset) to the national standard sets with a "full" pack optional. Missing pack → the language is hidden from layouts and a Help note explains the pack. Dictionaries for IMEs ship the same way.
+
+### 12.7 Korean (proposed v1.7, with Vietnamese)
+- **Layout:** Dubeolsik (2-set, KS X 5002) on-screen board (Shift for ㅃㅉㄸㄲㅆ, ㅒㅖ) and USB mapping of the physical US keys to Dubeolsik when layout = Korean; Han/Eng toggle on right Alt or `KEY_HANGEUL` (122), plus an on-screen 한/A key.
+- **Composition:** a pure state machine in `sigma-core` (initial → medial → final, compound vowels ㅘㅙㅚㅝㅞㅟㅢ, compound finals ㄳㄵㄶㄺ…, final consonant moves to the next syllable on a following vowel), output as precomposed syllables (U+AC00 + (L×21+V)×28+T), **no candidate window**; Backspace decomposes the syllable jamo by jamo; the composing syllable is drawn underlined at the caret.
+- **Font:** Noto Sans KR (OFL) subset to KS X 1001's 2,350 syllables + compatibility jamo ≈ 1.5–2 MB per weight (one weight for UI + text; Literata has no Hangul), or Nanum Gothic (OFL) ≈ 2–4 MB; full 11,172 syllables ≈ 3–4 MB as an optional "full" pack.
+- **Effort/risk:** 1.5–2 wk; low–medium (composition edge cases, mixing with Markdown markers, font size). No shaping needed.
+
+### 12.8 Hindi / Devanagari (proposed v1.9, after the shaping work)
+- **Layout:** **InScript** (Government of India standard; on Windows/Linux) for on-screen and USB; a phonetic (ITRANS-like) layout as a later option.
+- **Shaping:** conjuncts (virama + consonant), pre-base matra ि reordering, reph (र् + consonant → superscript), nukta — needs a real shaping engine: **rustybuzz** (MIT, pure Rust HarfBuzz port), the **same engine as the Arabic/Farsi/Urdu wave**, so v1.8 builds the glyph-run layout (shaped runs, cluster maps for hit-testing, wrapping by clusters) and v1.9 reuses it.
+- **Caret / editing:** caret, selection and Delete move by **extended grapheme clusters** (unicode-segmentation, MIT/Apache); Backspace removes the last code point of the cluster (the common Indic expectation) — decision below.
+- **Font:** Noto Sans Devanagari (OFL) ≈ 0.2–0.4 MB per weight; optional pack.
+- **Effort/risk:** 2–3 wk on top of v1.8's shaping core (3–4 wk inside v1.8); high (editor layout moves from per-char advances to shaped runs; one rewrite shared with RTL).
+
+### 12.9 Open decisions (with recommendations)
+1. **v1.5.0 scope:** ink blocks + panel first, recognition later — *recommend yes.*
+2. **Recognition route:** character boxes ($P + enrolment) in v1.5.1; word mode only as a gated spike — *recommend yes.*
+3. **Training data:** synthetic + your own enrolled ink only; no IAM-OnDB/BRUSH/OnHW (non-commercial terms) — *recommend yes.*
+4. **Panel look:** white panel, black ink (DU-exact, matches the page) instead of the earlier dark "Write here" bar — *recommend white.*
+5. **Ink storage:** SVG + strokes JSON sidecar under `.ink/`, linked with Markdown image syntax — *recommend yes.*
+6. **A2 waveform experiment** for live ink, decided in the device pass — *recommend include behind a flag.*
+7. **Renumbering the roadmap** to W1 Latin/Cyrillic/Greek v1.6 → W2 Korean+Vietnamese v1.7 → W3a Arabic/Farsi/Urdu/Hebrew v1.8 → W3b Hindi/Indic/Thai v1.9 → W4 Japanese v1.10, Chinese SC+TC v1.11 — *recommend yes* (cheap, wide reach first; Kobo UI languages first). Alternative: keep Japanese earlier because Kobo ships a Japanese UI.
+8. **Korean slot:** v1.7 with Vietnamese (independent of shaping, could even go right after v1.5) — *recommend v1.7.*
+9. **Hindi slot:** v1.9, after the shared rustybuzz work of v1.8 (or merged into one "complex scripts" release) — *recommend separate v1.9.*
+10. **Indic Backspace:** delete the last code point of a cluster (caret/Delete by cluster) — *recommend yes.*
+11. **Font packs:** optional per-script packs, base install Latin/Greek/Cyrillic only; CJK subset to national standard sets with an optional full pack — *recommend yes.*
+12. **Translations:** machine drafts stay (decision 31), but **native review before release** for Vietnamese, Korean, Japanese, Chinese, Arabic, Farsi, Urdu, Hebrew, Hindi/Indic and Thai — *recommend review for these* (a change to decision 31).
+13. **Chinese Traditional** with Zhuyin first (Taiwan, Kobo UI language) alongside pinyin — *recommend Zhuyin + pinyin.*
