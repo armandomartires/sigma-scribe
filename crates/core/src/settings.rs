@@ -203,10 +203,40 @@ pub enum UiLang {
     En,
     Fr,
     Pt,
+    De,
+    Es,
+    It,
+    Nl,
+    Ca,
+    Da,
+    Sv,
+    Fi,
+    Nb,
+    Tr,
+    Pl,
+    Cs,
+    Ro,
 }
 
 impl UiLang {
-    pub const ALL: [UiLang; 3] = [UiLang::En, UiLang::Fr, UiLang::Pt];
+    pub const ALL: [UiLang; 16] = [
+        UiLang::En,
+        UiLang::Fr,
+        UiLang::Pt,
+        UiLang::De,
+        UiLang::Es,
+        UiLang::It,
+        UiLang::Nl,
+        UiLang::Ca,
+        UiLang::Da,
+        UiLang::Sv,
+        UiLang::Fi,
+        UiLang::Nb,
+        UiLang::Tr,
+        UiLang::Pl,
+        UiLang::Cs,
+        UiLang::Ro,
+    ];
 
     #[must_use]
     pub fn code(self) -> &'static str {
@@ -214,6 +244,19 @@ impl UiLang {
             Self::En => "en",
             Self::Fr => "fr",
             Self::Pt => "pt",
+            Self::De => "de",
+            Self::Es => "es",
+            Self::It => "it",
+            Self::Nl => "nl",
+            Self::Ca => "ca",
+            Self::Da => "da",
+            Self::Sv => "sv",
+            Self::Fi => "fi",
+            Self::Nb => "nb",
+            Self::Tr => "tr",
+            Self::Pl => "pl",
+            Self::Cs => "cs",
+            Self::Ro => "ro",
         }
     }
 
@@ -229,6 +272,19 @@ impl UiLang {
             Self::En => "English",
             Self::Fr => "Français",
             Self::Pt => "Português",
+            Self::De => "Deutsch",
+            Self::Es => "Español",
+            Self::It => "Italiano",
+            Self::Nl => "Nederlands",
+            Self::Ca => "Català",
+            Self::Da => "Dansk",
+            Self::Sv => "Svenska",
+            Self::Fi => "Suomi",
+            Self::Nb => "Norsk",
+            Self::Tr => "Türkçe",
+            Self::Pl => "Polski",
+            Self::Cs => "Čeština",
+            Self::Ro => "Română",
         }
     }
 }

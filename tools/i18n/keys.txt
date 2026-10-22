@@ -1,0 +1,260 @@
+Files
+Graph
+Options
+Help
+Help / App info
+Help / Markdown reference
+Help / USB keyboard, mouse & export
+Back to Help
+Up to Files
+Move {name} to
+Cancel
+OK
+{n} words
+{n} word
+line {n}
+preview
+page {n} of {m}
+page buttons turn
+Paper
+Night
+saved
+saving
+not saved
+USB
+no USB
+Keys
+Cut
+Copy
+Paste
+Select all
+Shift
+Back
+Del
+Space
+Enter
+Return
+Caps
+Home
+End
+Compact
+Full
+Split
+Centre
+Pad left
+Pad right
+Arrows
+Contents
+To-dos
+Scratch
+All
+Open
+Done
+{n} more…
+No headings in this note. Start a line with #.
+No to-dos. Start a line with - [ ].
+Find
+Replace
+Prev
+Next
+None
+{n} of {m}
+– of {n}
+Folder
+More
+Rename
+Move
+Delete
+Tap again to delete
+New note
+New folder
+No folders.
+No notes here yet. Tap New note.
+{n} notes
+{n} note
+{n} links
+{n} link
+No links
+tap again to open
+write [[a note name]] to join two notes
+UI scale
+Buttons, menus and keys; the note keeps its Size
+Night is the same page, inverted
+Day
+Type
+Serif for reading, sans for the bus
+Literata
+Atkinson
+Line
+Words per line, {n} to {m}
+Off
+On
+Size
+Type size
+Tied to Margin while Line is on
+Leading
+Space between lines
+Margin
+Room for a thumb
+Tab key
+Markdown default is spaces
+Tab
+Spaces
+Tab width
+Spaces inserted, or columns a tab stands for
+Keyboard
+On-screen layout
+Layout
+On-screen Full board and USB keyboards
+US
+UK
+French AZERTY
+German QWERTZ
+Spanish
+Portuguese
+Italian
+Keyboard tone
+Keyboard size
+Auto keyboard size
+Follow UI scale, up to 150%
+Auto follows UI scale, up to 150%
+The keyboard can differ from the page
+Theme
+Light
+Dark
+Drawer
+Contents, to-dos and scratch open here (v{n})
+Left
+Right
+USB keyboard & mouse
+Needs a powered hub: the reader does not power the port
+Scroll
+Wheel and two-finger direction; Natural moves the page like a touch screen
+Traditional
+Natural
+Orientation
+Auto follows how you hold it
+Auto
+Auto (no sensor)
+Portrait
+Landscape
+Portrait inverted
+Landscape inverted
+Upside down
+Turns Portrait or Landscape {n}°
+App info
+Version, license, and author
+Markdown reference
+The syntax this page can render
+USB keyboard, mouse & export
+Hub, shortcuts, getting files off
+Powered hub
+The Forma does not power its USB port. Plug the keyboard into a powered USB hub, or a Y-cable with its own power supply, and the hub into the reader with a micro-USB OTG adapter.
+Connecting
+Turn on Options → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
+Shortcuts
+The same as the on-screen Ctrl key.
+Mouse and touchpad
+A USB mouse or touchpad (also the touchpad of a keyboard such as the Logitech K{n} Plus) shows a small arrow. Click = tap; drag on the note selects; double-click selects a word; the wheel or two-finger scroll moves the note and turns pages in preview and lists. The arrow hides after {m} seconds still and when you type. Right click does nothing.
+Options → Layout sets the keyboard: US, UK, French, German, Spanish, Portuguese or Italian. Esc closes Find, sheets and selections.
+Export
+Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
+If nothing happens
+Check the hub's power, try another keyboard (simple wired ones work best), then leave and reopen the app. The device log .adds/sigma-scribe/sigma-scribe.log notes each keyboard found.
+Heading
+These are the rows in Contents.
+Bold and italic
+Two stars for bold, one for italic.
+List
+A hyphen, or a number and a dot. Brackets make a checkbox.
+Quote
+A greater-than sign at the start.
+Rule
+Three hyphens on their own line.
+Code
+Backticks. Three of them fence a block.
+Picture
+An exclamation mark, words for the picture, then the address. Shown as [image: …] on the Kobo.
+Web link
+Shown underlined; the Kobo has no browser to open it. A note still uses double brackets.
+Table
+A header, a row of dashes, then the cells. Shown as plain text for now.
+Strike
+Two tildes on each side.
+Link to a note
+The note name, or a name and the words to show. A dashed link creates the note. Links are what the graph draws.
+Sigma Scribe
+Version {n} A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.
+License
+AGPL-{n}-only. The source is on GitHub: armandomartires/sigma-scribe.
+Author
+Sigma Recon.
+Your notes
+Plain .md and .txt files in {name}. Connect the Kobo over USB to copy them. The scratch pad is the hidden file .scratchpad.md.
+Buttons
+The page buttons scroll the page. The power button saves and goes back to the reader. Every change is saved as you type.
+Needs a powered hub or a Y-cable: the reader does not power the port. See Help → USB keyboard, mouse & export.
+Credits
+Literata and Atkinson Hyperlegible fonts (SIL Open Font License {n}). Letter recognition: own model, trained only on synthetic ink from OFL fonts. FBInk by NiLuJe (GPL-{m}-or-later). NickelMenu by pgaskin. Icons: Lucide (ISC licence), lucide.dev.
+Language
+could not read the note
+Settings
+Writing
+Display
+Keyboard & input
+USB & devices
+Help & about
+Text
+Line length
+Words per line
+Page
+On-screen keyboard
+Interface
+Interface language
+Page {n} of {m}
+English
+Français
+Português
+Write
+Undo
+Clear
+Finger
+Stylus
+Insert
+Handwriting
+Ink pen
+Stroke width in the Write panel
+Fast ink (A2)
+Experimental 1-bit waveform for live ink
+Letters
+Draw
+Erase
+Train
+Skip
+Save
+Write:
+Samples
+My handwriting
+Handwriting samples for letter recognition
+Letter boxes
+One character per box instead of free writing
+Word mode (experimental)
+Read every word against a word list; off is more accurate
+Override system language
+Choose the app's language instead of the Kobo's
+Used while Override system language is on
+US International
+Belgian AZERTY
+Danish
+Norwegian
+Swedish / Finnish
+Polish (programmer)
+Czech QWERTZ
+Romanian
+Turkish Q
+Spanish (Latin America)
+Portuguese (Brazil)
+Russian
+Ukrainian
+Greek
+Machine-drafted translation, best effort; a native review is needed. Follows the Kobo's language.

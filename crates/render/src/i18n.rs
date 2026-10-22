@@ -1,4 +1,5 @@
-//! Interface languages (v1.4, S14): English (source), Français, Português.
+//! Interface languages (v1.4, S14): English (source), Français, Português;
+//! v1.6.2 (S16.2) adds the Kobo's other European UI languages.
 //!
 //! Catalog: English-source (gettext-style) — the English text is the key,
 //! so control names in the emulator and tests stay English and a missing
@@ -25,6 +26,19 @@ pub enum Lang {
     En,
     Fr,
     Pt,
+    De,
+    Es,
+    It,
+    Nl,
+    Ca,
+    Da,
+    Sv,
+    Fi,
+    Nb,
+    Tr,
+    Pl,
+    Cs,
+    Ro,
     /// Test only: +40 % length and accents, to catch overflow.
     PseudoLong,
     /// Test only: English words, right-to-left chrome (v1.6 groundwork).
@@ -39,10 +53,13 @@ impl Lang {
         let p = v.trim().to_ascii_lowercase();
         let prefix = p.split(['_', '-', '.']).next().unwrap_or("");
         match prefix {
-            "fr" => Self::Fr,
-            "pt" => Self::Pt,
-            _ => Self::En,
+            "no" | "nn" => return Self::Nb,
+            "" => return Self::En,
+            _ => {}
         }
+        REAL.iter()
+            .find(|(_, c, _)| *c == prefix)
+            .map_or(Self::En, |r| r.0)
     }
 
     #[must_use]
@@ -51,6 +68,19 @@ impl Lang {
             Self::En => "en",
             Self::Fr => "fr",
             Self::Pt => "pt",
+            Self::De => "de",
+            Self::Es => "es",
+            Self::It => "it",
+            Self::Nl => "nl",
+            Self::Ca => "ca",
+            Self::Da => "da",
+            Self::Sv => "sv",
+            Self::Fi => "fi",
+            Self::Nb => "nb",
+            Self::Tr => "tr",
+            Self::Pl => "pl",
+            Self::Cs => "cs",
+            Self::Ro => "ro",
             Self::PseudoLong => "en-XA",
             Self::PseudoRtl => "en-XB",
         }
@@ -66,7 +96,7 @@ impl Lang {
     /// Translations are machine-drafted (About says so).
     #[must_use]
     pub fn machine_drafted(self) -> bool {
-        matches!(self, Self::Fr | Self::Pt)
+        !matches!(self, Self::En | Self::PseudoLong | Self::PseudoRtl)
     }
 }
 
@@ -83,8 +113,26 @@ pub fn lang() -> Lang {
     LANG.with(Cell::get)
 }
 
-static FR: &str = include_str!("../../../assets/i18n/fr.txt");
-static PT: &str = include_str!("../../../assets/i18n/pt.txt");
+/// Every translated language: variant, code, embedded catalog.
+pub static REAL: &[(Lang, &str, &str)] = &[
+    (Lang::Fr, "fr", include_str!("../../../assets/i18n/fr.txt")),
+    (Lang::Pt, "pt", include_str!("../../../assets/i18n/pt.txt")),
+    (Lang::De, "de", include_str!("../../../assets/i18n/de.txt")),
+    (Lang::Es, "es", include_str!("../../../assets/i18n/es.txt")),
+    (Lang::It, "it", include_str!("../../../assets/i18n/it.txt")),
+    (Lang::Nl, "nl", include_str!("../../../assets/i18n/nl.txt")),
+    (Lang::Ca, "ca", include_str!("../../../assets/i18n/ca.txt")),
+    (Lang::Da, "da", include_str!("../../../assets/i18n/da.txt")),
+    (Lang::Sv, "sv", include_str!("../../../assets/i18n/sv.txt")),
+    (Lang::Fi, "fi", include_str!("../../../assets/i18n/fi.txt")),
+    (Lang::Nb, "nb", include_str!("../../../assets/i18n/nb.txt")),
+    (Lang::Tr, "tr", include_str!("../../../assets/i18n/tr.txt")),
+    (Lang::Pl, "pl", include_str!("../../../assets/i18n/pl.txt")),
+    (Lang::Cs, "cs", include_str!("../../../assets/i18n/cs.txt")),
+    (Lang::Ro, "ro", include_str!("../../../assets/i18n/ro.txt")),
+];
+static FR: &str = REAL[0].2;
+static PT: &str = REAL[1].2;
 
 type Catalog = HashMap<String, String>;
 
@@ -113,13 +161,9 @@ pub fn parse(text: &str) -> Catalog {
 }
 
 fn catalog(l: Lang) -> Option<&'static Catalog> {
-    static C: OnceLock<[Catalog; 2]> = OnceLock::new();
-    let c = C.get_or_init(|| [parse(FR), parse(PT)]);
-    match l {
-        Lang::Fr => Some(&c[0]),
-        Lang::Pt => Some(&c[1]),
-        _ => None,
-    }
+    static C: OnceLock<Vec<Catalog>> = OnceLock::new();
+    let c = C.get_or_init(|| REAL.iter().map(|r| parse(r.2)).collect());
+    REAL.iter().position(|r| r.0 == l).map(|i| &c[i])
 }
 
 /// Numbers in `s` (digit runs, with thin/normal-space thousands) replaced
@@ -255,7 +299,11 @@ mod tests {
         assert_eq!(Lang::from_locale("fr_CA"), Lang::Fr);
         assert_eq!(Lang::from_locale("pt_BR"), Lang::Pt);
         assert_eq!(Lang::from_locale("PT-pt"), Lang::Pt);
-        assert_eq!(Lang::from_locale("de"), Lang::En, "unknown → English");
+        assert_eq!(Lang::from_locale("de_DE"), Lang::De);
+        assert_eq!(Lang::from_locale("nb_NO"), Lang::Nb);
+        assert_eq!(Lang::from_locale("no"), Lang::Nb);
+        assert_eq!(Lang::from_locale("es_MX"), Lang::Es);
+        assert_eq!(Lang::from_locale("ja"), Lang::En, "unknown → English");
         assert_eq!(Lang::from_locale(""), Lang::En);
     }
 
@@ -274,7 +322,7 @@ mod tests {
 
     #[test]
     fn catalogs_parse_and_keep_placeholders() {
-        for (name, text) in [("fr", FR), ("pt", PT)] {
+        for &(_, name, text) in REAL {
             assert!(
                 text.contains("machine-drafted, best effort"),
                 "{name} header"
@@ -288,11 +336,15 @@ mod tests {
                 assert!(!v.trim().is_empty(), "{name}: empty {k:?}");
             }
         }
-        // Both languages translate the same English texts.
-        let (f, p) = (parse(FR), parse(PT));
-        let mut missing: Vec<_> = f.keys().filter(|k| !p.contains_key(*k)).collect();
-        missing.extend(p.keys().filter(|k| !f.contains_key(*k)));
-        assert!(missing.is_empty(), "only in one catalog: {missing:?}");
+        // Every language translates the same English texts as French.
+        let f = parse(FR);
+        for &(_, name, text) in REAL {
+            let p = parse(text);
+            let mut missing: Vec<_> = f.keys().filter(|k| !p.contains_key(*k)).collect();
+            missing.extend(p.keys().filter(|k| !f.contains_key(*k)));
+            assert!(missing.is_empty(), "{name} differs from fr: {missing:?}");
+        }
+        let _ = PT;
     }
 }
 
@@ -308,7 +360,7 @@ mod fit_tests {
             "Enter", "Return", "Caps", "Home", "End", "Prev", "Next", "Find", "Replace", "Folder",
             "More", "Rename", "Move", "Delete", "Paper", "Night", "On", "Off",
         ];
-        for l in [Lang::Fr, Lang::Pt] {
+        for &(l, _, _) in REAL {
             let c = catalog(l).unwrap();
             for k in short {
                 let v = c.get(k).unwrap_or_else(|| panic!("{l:?} lacks {k}"));
