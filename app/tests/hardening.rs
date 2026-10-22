@@ -11,6 +11,20 @@ fn fresh(tag: &str) -> std::path::PathBuf {
 }
 
 fn tap_on(app: &mut App, label: &str) {
+    // v1.4.2: Settings controls may sit on another page.
+    for _ in 0..8 {
+        if app.control_centre(label).is_some() {
+            break;
+        }
+        let Some(hop) = app.settings_step(label) else {
+            break;
+        };
+        let Some((x, y)) = app.control_centre(&hop) else {
+            break;
+        };
+        app.handle(Event::Tap { x, y });
+        app.settle();
+    }
     let (x, y) = app
         .control_centre(label)
         .unwrap_or_else(|| panic!("no control {label}"));

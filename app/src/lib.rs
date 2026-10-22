@@ -301,6 +301,9 @@ pub struct App {
     pub settings: Settings,
     /// The Options sheet is open.
     pub options: bool,
+    /// Settings page shown while `options` (v1.4.2) and its sub-page.
+    pub settings_page: sigma_render::SettingsPage,
+    pub settings_sub: usize,
     /// Panel size as the device reports it (portrait on the Forma).
     phys: (u32, u32),
     /// Rotated copy of the canvas sent to the panel in landscape.
@@ -401,6 +404,8 @@ impl App {
             last_typed: None,
             settings,
             options: false,
+            settings_page: sigma_render::SettingsPage::Root,
+            settings_sub: 0,
             phys: (width, height),
             phys_canvas: Canvas::new(width, height, 255),
             drawer: [false; 3],
@@ -922,6 +927,8 @@ impl App {
         self.sel_ui = None;
         self.drag = None;
         self.options = true;
+        self.settings_page = sigma_render::SettingsPage::Root;
+        self.settings_sub = 0;
     }
 
     fn options_model(&self) -> OptionsModel<'_> {
@@ -930,7 +937,36 @@ impl App {
             theme: self.theme(),
             keyboard: &self.keyboard,
             orientation_status: &self.orientation_label,
+            page: self.settings_page,
+            sub: self.settings_sub,
+            language: match sigma_render::i18n::lang() {
+                sigma_render::i18n::Lang::Fr => "Français",
+                sigma_render::i18n::Lang::Pt => "Português",
+                _ => "English",
+            },
+            version: env!("CARGO_PKG_VERSION"),
         }
+    }
+
+    /// Settings: one level up, or closed from the top (Esc, back arrow).
+    fn settings_back(&mut self) -> Refresh {
+        match sigma_render::options::parent(self.settings_page) {
+            Some(p) => {
+                self.settings_page = p;
+                self.settings_sub = 0;
+            }
+            None => self.options = false,
+        }
+        Refresh::Full
+    }
+
+    /// Next step towards a Settings control that is not on this page.
+    #[must_use]
+    pub fn settings_step(&self, name: &str) -> Option<String> {
+        if !self.options {
+            return None;
+        }
+        self.screen.options_step(&self.options_model(), name)
     }
 
     fn options_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
@@ -940,6 +976,29 @@ impl App {
                 Some(Refresh::Full)
             }
             OptionsHit::Change(c) => Some(self.change(c)),
+            OptionsHit::Back => Some(self.settings_back()),
+            OptionsHit::Page => {
+                let n = self.screen.options_layout(&self.options_model()).pages;
+                self.settings_sub = (self.settings_sub + 1) % n.max(1);
+                Some(Refresh::Full)
+            }
+            OptionsHit::Open(p) => {
+                self.settings_page = p;
+                self.settings_sub = 0;
+                Some(Refresh::Full)
+            }
+            OptionsHit::Pick(c) => {
+                self.change(c);
+                Some(self.settings_back())
+            }
+            OptionsHit::Help(i) => {
+                self.options = false;
+                self.open_help();
+                if let Some(h) = self.help.as_mut() {
+                    h.page = sigma_render::help::MENU[i].2;
+                }
+                Some(Refresh::Full)
+            }
             OptionsHit::Nothing => None,
         }
     }
@@ -2303,8 +2362,18 @@ impl App {
                 None
             }
             Event::Tap { x, y } if self.options => self.options_tap(x, y),
-            Event::Key(HwKey::Escape) if self.options => {
-                self.options = false;
+            Event::Key(HwKey::Escape) if self.options => Some(self.settings_back()),
+            Event::PageTurn { forward } if self.options => {
+                let n = self
+                    .screen
+                    .options_layout(&self.options_model())
+                    .pages
+                    .max(1);
+                self.settings_sub = if forward {
+                    (self.settings_sub + 1).min(n - 1)
+                } else {
+                    self.settings_sub.saturating_sub(1)
+                };
                 Some(Refresh::Full)
             }
             Event::Key(_) | Event::PageTurn { .. } if self.options => None,
@@ -3536,12 +3605,8 @@ impl App {
         let mut out: Vec<(String, Rect)> = Vec::new();
         let mut add = |n: &str, r: Rect| out.push((n.to_owned(), r));
         if self.options {
-            let l = self.screen.options_layout(&self.options_model());
-            add("Close", l.close);
-            for (i, (_, cells)) in l.rows.iter().enumerate() {
-                for (j, c) in cells.iter().enumerate() {
-                    add(&format!("option {i}/{j}"), *c);
-                }
+            for (n, r) in self.screen.options_controls(&self.options_model()) {
+                add(&n, r);
             }
             return out;
         }

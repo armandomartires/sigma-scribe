@@ -1,0 +1,57 @@
+# v1.4.2 (S14.2): Kobo-style Settings pages and the editor scroll bar.
+copy-notes tests/test-notes/_test
+tap-on Options
+shot v1.4.2-settings-root
+tap-on Writing
+shot v1.4.2-writing
+tap-on Tab width
+tap-on 8
+expect-setting tab_width=8
+tap-on Tab width/4
+expect-setting tab_width=4
+tap-on Back
+tap-on Display
+shot v1.4.2-display
+tap-on Orientation
+shot v1.4.2-orientation-choice
+tap-on Landscape
+expect-setting orientation=landscape
+shot v1.4.2-display-landscape
+tap-on Orientation/Portrait
+tap-on Back
+tap-on Keyboard & input
+tap-on Layout
+shot v1.4.2-layout-choice
+tap-on Back
+tap-on Back
+tap-on USB & devices
+shot v1.4.2-usb-devices
+tap-on Back
+tap-on Help & about
+shot v1.4.2-help-about
+tap-on Back
+tap-on Language
+shot v1.4.2-language
+esc
+esc
+tap-on Options
+tap-on Paper/Night
+shot v1.4.2-display-night
+tap-on Paper/Day
+tap-on Close
+locale-conf tests/fixtures/kobo-ereader-fr.conf
+tap-on Options
+tap-on Writing
+shot v1.4.2-writing-fr
+tap-on Close
+language en
+tap-on Files
+tap-on test-long-note.md
+expect-open _test/test-long-note.md
+shot v1.4.2-scrollbar-end
+page back
+page back
+page back
+page back
+page back
+shot v1.4.2-scrollbar-middle

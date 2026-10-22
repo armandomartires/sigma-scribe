@@ -155,3 +155,16 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.4.1 | [v1.4.1-pointer-paper.png](v1.4.1/v1.4.1-pointer-paper.png) | Pointer on Paper: black arrow, white outline | [eink](v1.4.1/eink/v1.4.1-pointer-paper.png) |
 | v1.4.1 | [v1.4.1-pointer-over-keys.png](v1.4.1/v1.4.1-pointer-over-keys.png) | Pointer over the keyboard | [eink](v1.4.1/eink/v1.4.1-pointer-over-keys.png) |
 | v1.4.1 | [v1.4.1-pointer-night.png](v1.4.1/v1.4.1-pointer-night.png) | Pointer in Night: still black, white outline | [eink](v1.4.1/eink/v1.4.1-pointer-night.png) |
+| v1.4.2 | [v1.4.2-settings-root.png](v1.4.2/v1.4.2-settings-root.png) | Settings root: six categories with summaries | [eink](v1.4.2/eink/v1.4.2-settings-root.png) |
+| v1.4.2 | [v1.4.2-writing.png](v1.4.2/v1.4.2-writing.png) | Writing: bands, steppers, Line checkbox | [eink](v1.4.2/eink/v1.4.2-writing.png) |
+| v1.4.2 | [v1.4.2-display.png](v1.4.2/v1.4.2-display.png) | Display | [eink](v1.4.2/eink/v1.4.2-display.png) |
+| v1.4.2 | [v1.4.2-orientation-choice.png](v1.4.2/v1.4.2-orientation-choice.png) | Orientation choice list | [eink](v1.4.2/eink/v1.4.2-orientation-choice.png) |
+| v1.4.2 | [v1.4.2-display-landscape.png](v1.4.2/v1.4.2-display-landscape.png) | Display in landscape | [eink](v1.4.2/eink/v1.4.2-display-landscape.png) |
+| v1.4.2 | [v1.4.2-layout-choice.png](v1.4.2/v1.4.2-layout-choice.png) | Layout choice list | [eink](v1.4.2/eink/v1.4.2-layout-choice.png) |
+| v1.4.2 | [v1.4.2-usb-devices.png](v1.4.2/v1.4.2-usb-devices.png) | USB & devices: checkbox | [eink](v1.4.2/eink/v1.4.2-usb-devices.png) |
+| v1.4.2 | [v1.4.2-help-about.png](v1.4.2/v1.4.2-help-about.png) | Help & about | [eink](v1.4.2/eink/v1.4.2-help-about.png) |
+| v1.4.2 | [v1.4.2-language.png](v1.4.2/v1.4.2-language.png) | Language (follows the Kobo) | [eink](v1.4.2/eink/v1.4.2-language.png) |
+| v1.4.2 | [v1.4.2-display-night.png](v1.4.2/v1.4.2-display-night.png) | Display in Night | [eink](v1.4.2/eink/v1.4.2-display-night.png) |
+| v1.4.2 | [v1.4.2-writing-fr.png](v1.4.2/v1.4.2-writing-fr.png) | Writing in French | [eink](v1.4.2/eink/v1.4.2-writing-fr.png) |
+| v1.4.2 | [v1.4.2-scrollbar-end.png](v1.4.2/v1.4.2-scrollbar-end.png) | Scroll bar at the end of a long note | [eink](v1.4.2/eink/v1.4.2-scrollbar-end.png) |
+| v1.4.2 | [v1.4.2-scrollbar-middle.png](v1.4.2/v1.4.2-scrollbar-middle.png) | Scroll bar mid-note | [eink](v1.4.2/eink/v1.4.2-scrollbar-middle.png) |

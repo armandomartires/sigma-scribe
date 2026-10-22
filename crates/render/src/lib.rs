@@ -27,6 +27,6 @@ pub use fonts::{Face, Fonts};
 pub use graph::{GraphHit, GraphModel, GraphRow};
 pub use graphmap::{MapView, ZOOMS};
 pub use help::{HelpHit, HelpModel, HelpPage};
-pub use options::{OptionsHit, OptionsModel};
+pub use options::{OptionsHit, OptionsModel, SettingsPage};
 pub use preview::Doc;
 pub use theme::Theme;

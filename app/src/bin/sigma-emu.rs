@@ -116,10 +116,15 @@ fn main() -> ExitCode {
                 }
                 events.push(Event::Tap { x: v[0], y: v[1] });
             }
-            "tap-on" => match app.control_centre(arg) {
-                Some((x, y)) => events.push(Event::Tap { x, y }),
-                None => return fail(format!("no control {arg:?} on this screen")),
-            },
+            "tap-on" => {
+                // v1.4.2: Settings controls on another page are reached
+                // through the pages (Display -> Orientation -> Landscape).
+                reach(&mut app, &mut dev, arg);
+                match app.control_centre(arg) {
+                    Some((x, y)) => events.push(Event::Tap { x, y }),
+                    None => return fail(format!("no control {arg:?} on this screen")),
+                }
+            }
             "expect-file" => {
                 if !app.library.root().join(arg).exists() {
                     return fail("file missing".into());
@@ -345,6 +350,9 @@ fn main() -> ExitCode {
             },
             "pointer-to" | "pointer-to-word" | "pointer-to-control" | "pointer-move"
             | "pointer-before" | "pointer-after" => {
+                if cmd == "pointer-to-control" {
+                    reach(&mut app, &mut dev, arg);
+                }
                 let v: Vec<i32> = arg
                     .split_whitespace()
                     .filter_map(|x| x.parse().ok())
@@ -783,6 +791,22 @@ fn main() -> ExitCode {
         dev.refreshes.len()
     );
     ExitCode::SUCCESS
+}
+
+/// v1.4.2: taps through Settings pages until `name` is on screen.
+fn reach(app: &mut App, dev: &mut DesktopDevice, name: &str) {
+    for _ in 0..8 {
+        if app.control_centre(name).is_some() {
+            return;
+        }
+        let Some(hop) = app.settings_step(name) else {
+            return;
+        };
+        let Some((x, y)) = app.control_centre(&hop) else {
+            return;
+        };
+        step(app, dev, Event::Tap { x, y });
+    }
 }
 
 fn step(app: &mut App, dev: &mut DesktopDevice, e: Event) {
