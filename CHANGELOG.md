@@ -9,7 +9,7 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
 - Fonts: Literata already covers Cyrillic and Greek; Atkinson (key labels, UI) does not, so those labels fall back to Literata per character (decision 47). No new font, no size cost.
 - Settings key `layout=` gains `ru`, `ua`, `gr`; older binaries fall back to US.
 - Emulator: `tests/emu/v1.6.1-cyrillic-greek.script`. Screenshots `docs/screenshots/v1.6.1/`. Device checks: `docs/device-checklist-prerelease.md`.
-- Device binary sha256 (CI build) `BIN_SHA`; tarball `TAR_SHA`; binary BIN_SIZE.
+- Device binary sha256 (CI build) `7e9d8cbf4a299bab91a81e0abae6735392fca9307098db489caf2b858635d59e`; tarball `02f12be1b47731577ddfd0ea2b768c1eb6fc28e333c093253946a359fbf3a5a4`; binary 4,417,072 bytes (1.6.0: 4,414,072; **+3,000 bytes**).
 
 ## 1.6.0 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
 - **Eleven more keyboard layouts** (sprint S16.0, decision 58; v1.6 wave W1, first part): US International, Belgian AZERTY, Danish, Norwegian, Swedish / Finnish, Polish (programmer), Czech QWERTZ, Romanian, Turkish Q, Spanish (Latin America) and Portuguese (Brazil), for the on-screen board and USB keyboards; 18 layouts in all (Settings → Keyboard & input → Layout, two pages).
