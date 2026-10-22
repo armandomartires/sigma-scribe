@@ -69,10 +69,47 @@ impl Fonts {
                 if c == '\t' {
                     4.0 * f.metrics(' ', size).advance_width
                 } else {
-                    f.metrics(c, size).advance_width
+                    self.font(self.face_for(face, c))
+                        .metrics(c, size)
+                        .advance_width
                 }
             })
             .sum()
+    }
+
+    /// Whether `face` has a real glyph for `c` (v1.4.6): fontdue maps a
+    /// missing character to glyph 0, which draws as an empty box.
+    #[must_use]
+    pub fn has_glyph(&self, face: Face, c: char) -> bool {
+        c.is_whitespace() || self.font(face).lookup_glyph_index(c) != 0
+    }
+
+    /// The face that draws `c` (v1.4.6): `face` when it has the glyph,
+    /// else the first bundled face that does (Atkinson has no arrows, for
+    /// one), so no character ever draws as an empty box.
+    #[must_use]
+    pub fn face_for(&self, face: Face, c: char) -> Face {
+        if self.has_glyph(face, c) {
+            return face;
+        }
+        [
+            Face::Literata,
+            Face::Atkinson,
+            Face::LiterataSemi,
+            Face::LiterataItalic,
+            Face::AtkinsonBold,
+        ]
+        .into_iter()
+        .find(|&f| self.has_glyph(f, c))
+        .unwrap_or(face)
+    }
+
+    /// Characters of `text` that no bundled face can draw (v1.4.6 audit).
+    #[must_use]
+    pub fn missing(&self, face: Face, text: &str) -> Vec<char> {
+        text.chars()
+            .filter(|&c| c != '\t' && !self.has_glyph(self.face_for(face, c), c))
+            .collect()
     }
 
     /// Ascent in px for baseline placement.
@@ -102,10 +139,11 @@ impl Fonts {
                 pen += self.width(face, size, "\t");
                 continue;
             }
+            let fc = self.face_for(face, ch);
             let mut cache = self.cache.borrow_mut();
             let (m, bitmap) = cache
-                .entry((face, ch, key_size))
-                .or_insert_with(|| self.font(face).rasterize(ch, size));
+                .entry((fc, ch, key_size))
+                .or_insert_with(|| self.font(fc).rasterize(ch, size));
             let gx = (pen + m.xmin as f32).round() as i32;
             let gy = (baseline - m.height as f32 - m.ymin as f32).round() as i32;
             for row in 0..m.height {

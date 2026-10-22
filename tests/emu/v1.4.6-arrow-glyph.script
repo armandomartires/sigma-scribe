@@ -1,0 +1,13 @@
+# v1.4.6 (S14.6): back arrows are drawn as icons; no empty glyph boxes.
+tap-on Files
+tap-on drafts
+shot v1.4.6-files-up-to-files
+tap-on Close
+tap-on Help
+tap-on App info
+shot v1.4.6-help-back-to-help
+tap-on Back
+esc
+tap-on Graph
+tap-on List
+shot v1.4.6-graph-list-arrows

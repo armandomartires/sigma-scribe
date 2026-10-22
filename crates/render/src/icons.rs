@@ -77,6 +77,17 @@ pub fn draw_icon(c: &mut Canvas, icon: Icon, target: Rect, ink: u8) {
     }
 }
 
+/// A back crumb's arrow (v1.4.6): the Lucide arrow-left, about one text
+/// height tall, with its left edge at `x` and centred on `mid_y`. Returns
+/// where the label starts. Replaces the "←" text glyph, which Atkinson
+/// does not have (it drew as an empty box before "Up to Files").
+pub fn draw_back_arrow(c: &mut Canvas, x: i32, mid_y: i32, text_px: f32, ink: u8) -> f32 {
+    let side = (text_px * 2.0).round() as i32;
+    let r = Rect::new(x - side / 4, mid_y - side / 2, side, side);
+    draw_icon(c, Icon::Back, r, ink);
+    x as f32 + text_px * 1.35
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

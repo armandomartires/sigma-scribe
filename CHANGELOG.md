@@ -2,6 +2,12 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.4.6 — 2026-10-22 (built, not installed, not tagged)
+- **Fix: empty box before "Up to Files"** (sprint S14.6, decision 47). Atkinson Hyperlegible has no "←" (U+2190), so the Files crumb drew a box. The crumb, and Help's "Back to Help", now draw the Lucide **arrow-left** icon (resvg-baked, like the title-bar icons) instead of a text glyph.
+- **Glyph audit:** every UI string in EN, FR, PT and the pseudo-long test locale, plus every non-ASCII character in the UI code's string literals, was checked against the five bundled faces. Also missing from Atkinson: → ↑ ↓ (Graph list "→ / ← links", USB hint "Help → …", keyboard labels). Text drawing now falls back per character to the first bundled face that has the glyph (Literata has the arrows), so nothing draws as a box. New test `app/tests/glyphs.rs` fails on any character no bundled face can draw.
+- Emulator: `tests/emu/v1.4.6-arrow-glyph.script`. Screenshots `docs/screenshots/v1.4.6/` (before / after).
+- Device binary sha256 (CI build) `BIN_HASH`; tarball `TAR_HASH`.
+
 ## 1.4.5 — 2026-10-22 (built, not installed, not tagged)
 - **Keyboard size slider look** (sprint S14.5, decision 46, user feedback on 1.4.4): the slider sits straight on the Settings page: no white (Night: black) panel and no focus frame.
 - While **Auto is on** the whole slider (dotted track, hollow dots, hollow thumb, labels) is drawn in a static **grey**; it appears with the page's greyscale refresh (opening the page, toggling Auto). When **Auto is off** it is **solid ink** (black on Paper, white on Night), so moving it is DU-safe: only the thumb and the bold label change. Toggling Auto redraws the row in greyscale, so no grey or black is left behind (tested).
