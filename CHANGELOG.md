@@ -8,7 +8,7 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
 - Settings → Keyboard & input → **Handwriting**: Ink pen Finger (1.2 mm) / Stylus (0.6 mm); **Fast ink (A2)**, an experimental 1-bit waveform, **off by default**. New keys `ink_pen=`, `ink_a2=`; older settings load unchanged.
 - Not yet: ink drawn in preview (shows `[image: ink]`), `.ink/` following a renamed note, recognition (v1.5.1).
 - Emulator: `tests/emu/v1.5.0-ink-panel.script`. Screenshots `docs/screenshots/v1.5.0/`. Device checks: `docs/device-checklist-prerelease.md` (decision 48).
-- Device binary sha256 (CI build) `TBD`; tarball `TBD`.
+- Device binary sha256 (CI build) `b4c9957410bdb7fe093aaa95dcf2def73167f57f720e69fe9954c6def78108fa`; tarball `f23eeccf6024e369772d97b57c76a204511b71deb883177edf15532bb06cbaae`.
 
 ## 1.4.6 — 2026-10-22 (built, not installed, not tagged)
 - **Fix: empty box before "Up to Files"** (sprint S14.6, decision 47). Atkinson Hyperlegible has no "←" (U+2190), so the Files crumb drew a box. The crumb, and Help's "Back to Help", now draw the Lucide **arrow-left** icon (resvg-baked, like the title-bar icons) instead of a text glyph.
