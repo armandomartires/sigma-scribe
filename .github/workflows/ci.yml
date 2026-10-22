@@ -21,7 +21,7 @@ jobs:
       - name: Handwriting figures (held-out accuracy, word-mode gate, latency)
         run: cargo test -q -p hwr-train --tests -- --nocapture
       - name: Emulator scripts
-        run: rm -rf target/ci-notes target/ci-shots; for s in tests/emu/*.script; do cargo run -q --release --bin sigma-emu -- --script "$s" --shots target/ci-shots --notes "target/ci-notes/$(basename "$s")"; done
+        run: rm -rf target/ci-notes target/ci-shots; for s in tests/emu/*.script; do cargo run -q --release --bin sigma-emu -- --script "$s" --shots target/ci-shots --notes "target/ci-notes/$(basename "$s")" || exit 1; done
   armv7:
     runs-on: ubuntu-latest
     needs: test

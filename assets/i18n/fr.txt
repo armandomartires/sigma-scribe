@@ -736,3 +736,36 @@ Choose the app's language instead of the Kobo's
 
 Used while Override system language is on
 = Utilisée quand « Remplacer la langue du système » est activé
+
+US International
+= US international
+
+Belgian AZERTY
+= AZERTY belge
+
+Danish
+= Danois
+
+Norwegian
+= Norvégien
+
+Swedish / Finnish
+= Suédois / finnois
+
+Polish (programmer)
+= Polonais (programmeur)
+
+Czech QWERTZ
+= QWERTZ tchèque
+
+Romanian
+= Roumain
+
+Turkish Q
+= Turc Q
+
+Spanish (Latin America)
+= Espagnol (Amérique latine)
+
+Portuguese (Brazil)
+= Portugais (Brésil)

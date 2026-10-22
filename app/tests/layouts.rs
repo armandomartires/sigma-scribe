@@ -35,7 +35,7 @@ fn setting_steps_wraps_and_round_trips() {
     let mut s = Settings::default();
     assert_eq!(s.kb_layout, KeyLayout::Us);
     s.apply(Change::KbLayout(-1));
-    assert_eq!(s.kb_layout, KeyLayout::It, "wraps");
+    assert_eq!(s.kb_layout, ALL[ALL.len() - 1], "wraps");
     for l in ALL {
         s.kb_layout = l;
         assert_eq!(Settings::parse(&s.serialize()).kb_layout, l);
@@ -151,6 +151,17 @@ fn usb_types_every_layout_including_dead_keys() {
         (KeyLayout::Es, "¿Qué tal? ¡Señor Muñoz! ü"),
         (KeyLayout::Pt, "Coração, ação, à, você, ü"),
         (KeyLayout::It, "Perché è già più così? @#"),
+        (KeyLayout::UsIntl, "Café, naïve, São Paulo, ñ ß"),
+        (KeyLayout::Be, "Où êtes-vous ? @ 5 € ç"),
+        (KeyLayout::Dk, "Rødgrød med fløde, Århus @ é"),
+        (KeyLayout::No, "Blåbærsyltetøy, Ærø @ é"),
+        (KeyLayout::Se, "Hyvää yötä, Åsa! @ é"),
+        (KeyLayout::Pl, "Zażółć gęślą jaźń, ŁÓDŹ Ąę"),
+        (KeyLayout::Cz, "Příliš žluťoučký kůň úpěl ódy"),
+        (KeyLayout::Ro, "Știință, țară, mâine, în ăsta"),
+        (KeyLayout::Tr, "Iğdır, İstanbul, şöyle çok güzel"),
+        (KeyLayout::Latam, "¿Qué tal? ¡Señor! @ ü"),
+        (KeyLayout::Br, "Coração, ação, você, à, ü / ?"),
     ] {
         let (mut app, dir) = app_with(&format!("usb{l:?}"), l);
         usb_type(&mut app, l, text);

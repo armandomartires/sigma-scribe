@@ -1051,6 +1051,15 @@ impl EditorScreen {
                     let at = |d: i32| ch[(cur as i32 + d).rem_euclid(n) as usize].0;
                     out.push((format!("{row}/+"), at(1)));
                     out.push((format!("{row}/-"), at(-1)));
+                } else {
+                    // A list over several pages (18 layouts since 1.6.0):
+                    // only a neighbour on this page, no wrap.
+                    for (d, cell) in [(1, "+"), (-1, "-")] {
+                        let i = cur as i32 + d;
+                        if (0..n).contains(&i) {
+                            out.push((format!("{row}/{cell}"), ch[i as usize].0));
+                        }
+                    }
                 }
             }
         }

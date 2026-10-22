@@ -217,16 +217,30 @@ mod layout_glyphs {
                 want.extend([b, s, a].into_iter().flatten().map(spacing));
             }
         }
-        for d in ['\u{300}', '\u{301}', '\u{302}', '\u{303}', '\u{308}'] {
-            want.extend("aeiouycnAEIOUYCN".chars().filter_map(|c| compose(d, c)));
+        for d in [
+            '\u{300}', '\u{301}', '\u{302}', '\u{303}', '\u{308}', '\u{30A}', '\u{30C}',
+        ] {
+            want.extend(
+                "aeiouycnszdtrlAEIOUYCNSZDTRL"
+                    .chars()
+                    .filter_map(|c| compose(d, c)),
+            );
         }
+        // Drawing falls back per character (decision 47), so a glyph
+        // missing from Atkinson is fine when Literata has it; Literata
+        // itself must cover everything.
+        let lit =
+            fontdue::Font::from_bytes(super::LITERATA, fontdue::FontSettings::default()).unwrap();
         for (name, bytes) in faces {
             let f = fontdue::Font::from_bytes(bytes, fontdue::FontSettings::default()).unwrap();
             let missing: String = want
                 .iter()
-                .filter(|&&c| f.lookup_glyph_index(c) == 0)
+                .filter(|&&c| f.lookup_glyph_index(c) == 0 && lit.lookup_glyph_index(c) == 0)
                 .collect();
-            assert!(missing.is_empty(), "{name} lacks {missing:?}");
+            assert!(
+                missing.is_empty(),
+                "{name} (with fallback) lacks {missing:?}"
+            );
         }
     }
 }
