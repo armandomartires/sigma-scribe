@@ -9,6 +9,7 @@ authors.workspace = true
 publish = false
 
 [dependencies]
+sigma-hwr = { path = "../hwr" }
 sigma-core = { path = "../core" }
 fontdue.workspace = true
 # v1.5.1: ink SVGs drawn in preview (same version as the icon bake).

@@ -264,6 +264,9 @@ pub enum Change {
     InkPen(crate::ink::Pen),
     /// Fast ink A2 waveform on / off (v1.5.0).
     InkA2(bool),
+    /// Delete the enrolled handwriting samples (v1.5.2). Not a setting:
+    /// the app acts on it; `apply` ignores it.
+    DeleteSamples,
 }
 
 impl Change {
@@ -352,6 +355,7 @@ impl Settings {
             Change::NaturalScroll(on) => self.natural_scroll = on,
             Change::InkPen(p) => self.ink_pen = p,
             Change::InkA2(on) => self.ink_a2 = on,
+            Change::DeleteSamples => {}
             Change::Orientation(o) => {
                 self.orientation = o;
                 self.sync_rotation();

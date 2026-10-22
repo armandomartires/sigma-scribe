@@ -153,6 +153,50 @@ fn main() -> ExitCode {
                     }
                 }
             }
+            // v1.5.2: `ink-box <i> x,y x,y;x,y …`: strokes in box units
+            // into letter box i (20 ms between points).
+            "ink-box" => {
+                let (i, rest) = arg.split_once(' ').unwrap_or((arg, ""));
+                let Some(b) = i.parse().ok().and_then(|i| app.letter_box(i)) else {
+                    return fail(format!("no letter box {i}"));
+                };
+                for st in rest.split(';') {
+                    let pts: Vec<(i32, i32)> = st
+                        .split_whitespace()
+                        .filter_map(|p| {
+                            let (x, y) = p.split_once(',')?;
+                            let (x, y): (f32, f32) = (x.parse().ok()?, y.parse().ok()?);
+                            Some((b.x + (x * b.w as f32) as i32, b.y + (y * b.h as f32) as i32))
+                        })
+                        .collect();
+                    for (k, &(x, y)) in pts.iter().enumerate() {
+                        clock += 20;
+                        let phase = if k == 0 { Phase::Down } else { Phase::Move };
+                        step(
+                            &mut app,
+                            &mut dev,
+                            Event::Touch {
+                                phase,
+                                x,
+                                y,
+                                t: clock,
+                            },
+                        );
+                        finger = (x, y);
+                    }
+                    clock += 20;
+                    step(
+                        &mut app,
+                        &mut dev,
+                        Event::Touch {
+                            phase: Phase::Up,
+                            x: finger.0,
+                            y: finger.1,
+                            t: clock,
+                        },
+                    );
+                }
+            }
             // Touch gestures (v0.2.2): press / move / release / wait, with
             // helpers that aim at words and selection handles.
             "press" | "move" | "press-on" | "move-on" | "press-word" | "move-word"

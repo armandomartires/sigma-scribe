@@ -256,6 +256,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "hwr-train"
+version = "1.5.2"
+dependencies = [
+ "fontdue",
+ "sigma-hwr",
+]
+
+[[package]]
 name = "imagesize"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -563,11 +571,11 @@ checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
 
 [[package]]
 name = "sigma-core"
-version = "1.5.1"
+version = "1.5.2"
 
 [[package]]
 name = "sigma-device"
-version = "1.5.1"
+version = "1.5.2"
 dependencies = [
  "cc",
  "png",
@@ -576,21 +584,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "sigma-hwr"
+version = "1.5.2"
+
+[[package]]
 name = "sigma-render"
-version = "1.5.1"
+version = "1.5.2"
 dependencies = [
  "fontdue",
  "resvg",
  "sigma-core",
+ "sigma-hwr",
 ]
 
 [[package]]
 name = "sigma-scribe"
-version = "1.5.1"
+version = "1.5.2"
 dependencies = [
  "minifb",
  "sigma-core",
  "sigma-device",
+ "sigma-hwr",
  "sigma-render",
 ]
 

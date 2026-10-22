@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
-members = ["crates/core", "crates/render", "crates/device", "app"]
+members = ["crates/core", "crates/render", "crates/device", "crates/hwr", "app", "tools/hwr-train"]
 
 [workspace.package]
-version = "1.5.1"
+version = "1.5.2"
 edition = "2021"
 rust-version = "1.85.1"
 license = "AGPL-3.0-only"
@@ -24,3 +24,14 @@ opt-level = 3
 lto = true
 codegen-units = 1
 strip = true
+
+# The recogniser and its trainer are maths-heavy; keep `cargo test`
+# (debug) fast enough for the held-out check in CI.
+[profile.dev.package.sigma-hwr]
+opt-level = 3
+
+[profile.dev.package.hwr-train]
+opt-level = 3
+
+[profile.dev.package.fontdue]
+opt-level = 3
