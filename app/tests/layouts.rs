@@ -162,6 +162,12 @@ fn usb_types_every_layout_including_dead_keys() {
         (KeyLayout::Tr, "Iğdır, İstanbul, şöyle çok güzel"),
         (KeyLayout::Latam, "¿Qué tal? ¡Señor! @ ü"),
         (KeyLayout::Br, "Coração, ação, você, à, ü / ?"),
+        (
+            KeyLayout::Ru,
+            "Съешь же ещё этих мягких булок, № 5 [[Note]]",
+        ),
+        (KeyLayout::Ua, "Ґанок, їжак, єнот, Іван: ₴ 10 #tag"),
+        (KeyLayout::Gr, "Καλημέρα, ψυχή! Ϊ ϋ ά"),
     ] {
         let (mut app, dir) = app_with(&format!("usb{l:?}"), l);
         usb_type(&mut app, l, text);
