@@ -6,7 +6,7 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
 - **Fix: empty box before "Up to Files"** (sprint S14.6, decision 47). Atkinson Hyperlegible has no "←" (U+2190), so the Files crumb drew a box. The crumb, and Help's "Back to Help", now draw the Lucide **arrow-left** icon (resvg-baked, like the title-bar icons) instead of a text glyph.
 - **Glyph audit:** every UI string in EN, FR, PT and the pseudo-long test locale, plus every non-ASCII character in the UI code's string literals, was checked against the five bundled faces. Also missing from Atkinson: → ↑ ↓ (Graph list "→ / ← links", USB hint "Help → …", keyboard labels). Text drawing now falls back per character to the first bundled face that has the glyph (Literata has the arrows), so nothing draws as a box. New test `app/tests/glyphs.rs` fails on any character no bundled face can draw.
 - Emulator: `tests/emu/v1.4.6-arrow-glyph.script`. Screenshots `docs/screenshots/v1.4.6/` (before / after).
-- Device binary sha256 (CI build) `BIN_HASH`; tarball `TAR_HASH`.
+- Device binary sha256 (CI build) `e884f1e71ab1661184171b76270665c19b839ce115f9673e34592b2d8daedacd`; tarball `acf2551db89ecf20d02dd5361e3dab79c87d8ac5e0ab5937d3e9e095cd39e48a`.
 
 ## 1.4.5 — 2026-10-22 (built, not installed, not tagged)
 - **Keyboard size slider look** (sprint S14.5, decision 46, user feedback on 1.4.4): the slider sits straight on the Settings page: no white (Night: black) panel and no focus frame.
