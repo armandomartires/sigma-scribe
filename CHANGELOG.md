@@ -8,7 +8,7 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
   - A long flat **flick left** is Backspace, and at the start of a line it **joins** it to the line above; a **flick right** types a space.
   - **Tap the note** above the panel to move the caret there; the panel stays open.
 - Emulator: `tests/emu/v1.5.4-gestures.script`. Screenshots `docs/screenshots/v1.5.4/`. Device checks: `docs/device-checklist-prerelease.md`.
-- Device binary sha256 (CI build) `BIN_SHA`; tarball `TAR_SHA`; binary BIN_SIZE.
+- Device binary sha256 (CI build) `2d609ca1c95e81feea8a86c215ad6b21c10fea51c594de4e13edfc674b2db420`; tarball `184f5cdfc1139a2532879d5a8dad3ea2e62ea7b8393c86f5e8b475709c8f9da2`; binary 4,406,432 bytes (1.5.3: 4,402,160; **+4,272 bytes, +0.1 %**).
 
 ## 1.5.3 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
 - **New Write panel** (sprint S15.3, decision 55), in the style of Boox's handwriting keyboard: a candidate bar across the top (‹ › for more, × to close), a 3 × 4 block of keys on the left (⇄ Draw, ⌫, ↵, `,` `.` `?`, 123, `!`, `@`, globe, space) and a **large blank area** to write in freely. Pure black and white, every key ≥ 44 px, portrait and landscape.
