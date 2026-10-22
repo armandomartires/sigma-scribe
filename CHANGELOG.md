@@ -2,6 +2,15 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.4.4 — 2026-10-22 (built, not installed, not tagged)
+- **Keyboard size control** (sprint S14.4, decision 45, user request): the 1.4.3 choice page is replaced, inline on Settings → Keyboard & input (section "Keyboard size"), by an **Auto keyboard size** checkbox (on by default) and a horizontal **slider** with three dots, 100% / 125% / 150%.
+- Slider: a tap or a drag snaps to the nearest dot; once tapped it has focus, and Left / Right (USB keyboard) move it. While Auto is on the slider is disabled and drawn muted (dotted track, hollow dots and thumb) with the thumb on the size Auto gives. Turning Auto off keeps that size; moving the slider then sets it.
+- Pure black and white (0x00 / 0xFF, text thresholded), so it is DU-safe, inverted on Night pages; every stop is a tap target of at least 44 px. Tested in EN / FR / PT / pseudo-long, portrait and landscape, at UI scales 100–200 % (`app/tests/keyboard_slider.rs`).
+- The slider is a reusable widget (`crates/render/src/slider.rs`); other numeric settings are not converted yet.
+- **Settings carry over:** `keyboard_size=` is unchanged (Auto = `auto`).
+- Emulator: `tests/emu/v1.4.4-keyboard-slider.script` (new `press-on` / `move-on` commands aim at named controls); `v1.4.3-keyboard-size.script` updated. Screenshots `docs/screenshots/v1.4.4/`.
+- Device binary sha256 (CI build) `BIN_HASH`; tarball `TAR_HASH`.
+
 ## 1.4.3 — 2026-10-22 (built, not installed, not tagged)
 - **Keyboard size** (sprint S14.3, decision 44, user report: the on-screen keyboard is too big above 150 % UI scale; 125–150 % is fine). The keyboard has its own scale, separate from the UI scale. New setting under Settings → Keyboard & input: **Keyboard size** Auto / 100% / 125% / 150%, a choice page. **Auto (default)** follows the UI scale up to 150 %, so at the default 200 % UI the keyboard is the 150 % size while the rest of the interface stays at 200 %.
 - The keys, gaps, key labels, arrows and the landscape Split / Full / Centre bar use the keyboard scale; key targets stay at least 44 px. Tested: every size fits in portrait and landscape at UI scales 100–200 % in EN, FR, PT and the pseudo-long locale (`app/tests/keyboard_size.rs`).

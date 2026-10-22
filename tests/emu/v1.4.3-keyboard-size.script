@@ -5,13 +5,11 @@ tap-on test-long-note.md
 shot v1.4.3-keyboard-200-auto-portrait
 tap-on Options
 tap-on Keyboard & input
-shot v1.4.3-keyboard-input
-tap-on Keyboard size
-shot v1.4.3-keyboard-size-choice
-tap-on 100%
+tap-on Auto keyboard size/Off
+expect-setting keyboard_size=150
+tap-on Keyboard size/100%
 expect-setting keyboard_size=100
-tap-on Keyboard size
-tap-on Auto
+tap-on Auto keyboard size/On
 expect-setting keyboard_size=auto
 esc
 esc

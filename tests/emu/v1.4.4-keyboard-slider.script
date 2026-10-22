@@ -1,0 +1,51 @@
+# v1.4.4 (S14.4): Keyboard size = Auto checkbox + stepped slider.
+copy-notes tests/test-notes/_test
+tap-on Options
+tap-on Keyboard & input
+shot v1.4.4-keyboard-input-auto
+tap-on Keyboard size/100%
+tap-on Auto keyboard size/Off
+expect-setting keyboard_size=150
+tap-on Keyboard size/125%
+expect-setting keyboard_size=125
+shot v1.4.4-keyboard-input-manual
+press-on Keyboard size/100%
+expect-setting keyboard_size=100
+move-on Keyboard size/150%
+expect-setting keyboard_size=150
+release
+usb plug
+usb-key left
+expect-setting keyboard_size=125
+usb-key right
+expect-setting keyboard_size=150
+usb unplug
+shot v1.4.4-keyboard-input-focus
+tap-on Auto keyboard size/On
+expect-setting keyboard_size=auto
+tap-on Back
+tap-on Display
+tap-on Paper/Night
+tap-on Back
+tap-on Keyboard & input
+shot v1.4.4-keyboard-input-night
+tap-on Back
+tap-on Display
+tap-on Paper/Day
+tap-on Orientation
+tap-on Landscape
+tap-on Back
+tap-on Keyboard & input
+shot v1.4.4-keyboard-input-landscape
+tap-on Close
+tap-on Options
+tap-on Display
+tap-on Orientation
+tap-on Portrait
+tap-on Close
+locale-conf tests/fixtures/kobo-ereader-fr.conf
+tap-on Options
+tap-on Keyboard & input
+shot v1.4.4-keyboard-input-fr
+tap-on Close
+language en

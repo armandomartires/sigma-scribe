@@ -249,6 +249,9 @@ pub enum Change {
     KbLayout(i8),
     /// Keyboard size (v1.4.3): 0 = Auto, or a percentage from `KB_SIZES`.
     KbSize(u16),
+    /// Keyboard size Auto on / off (v1.4.4). Off keeps the size Auto was
+    /// giving; on goes back to following the UI scale.
+    KbAuto(bool),
 }
 
 impl Change {
@@ -356,6 +359,9 @@ impl Settings {
                 let i = ALL.iter().position(|&l| l == self.kb_layout).unwrap_or(0) as i32;
                 let n = ALL.len() as i32;
                 self.kb_layout = ALL[(i + i32::from(d)).rem_euclid(n) as usize];
+            }
+            Change::KbAuto(on) => {
+                self.kb_size = if on { 0 } else { self.keyboard_scale() };
             }
             Change::KbSize(v) => {
                 if KB_SIZES.contains(&v) {

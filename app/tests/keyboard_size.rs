@@ -115,13 +115,20 @@ fn every_size_fits_at_every_ui_scale_language_and_orientation() {
 }
 
 #[test]
-fn keyboard_size_is_a_choice_page_in_keyboard_and_input() {
+fn keyboard_size_is_auto_plus_slider_in_keyboard_and_input() {
     let s = Settings::default();
-    let c = choices(&s, "Keyboard size");
-    let labels: Vec<_> = c.iter().map(|x| x.0.as_str()).collect();
+    // `choices` still lists the values (Auto first) for the slider's stops.
+    let labels: Vec<_> = choices(&s, "Keyboard size")
+        .into_iter()
+        .map(|x| x.0)
+        .collect();
     assert_eq!(labels, ["Auto", "100%", "125%", "150%"]);
-    assert!(c[0].2, "Auto is active by default");
-    assert!(CATEGORIES
+    let kb = CATEGORIES
         .iter()
-        .any(|(_, secs)| secs.iter().any(|(_, rows)| rows.contains(&"Keyboard size"))));
+        .find(|c| c.0 == "Keyboard & input")
+        .unwrap();
+    assert!(kb
+        .1
+        .iter()
+        .any(|(_, rows)| rows == &["Auto keyboard size", "Keyboard size"]));
 }
