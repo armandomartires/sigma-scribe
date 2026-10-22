@@ -115,6 +115,27 @@ Procedure (same as 0.4.0): confirm it is the same Forma (serial <FORMA-SERIAL>) 
 
 Rollback: copy the 0.4.0 binary back (sha256 `689b84c4e763119cbdfa19eb07ade52d5709cdf034bf971fc2e5116e97c02043`, also in the pre-v1.0.0 backup). `.scratchpad.md` is hidden and ignored by 0.4.0; notes created from links are ordinary `.md` files and stay. `launch.sh` reboots on exit, which also returns the USB port to normal (gadget) mode.
 
+## 1.4.6-probe g-sensor log (not run; needs approval; diagnostic only)
+Purpose: S12 device check item 1 (plan decision 39) — which input node reports `MSC_RAW` and which code each way of holding the Forma gives. The build is **1.4.6 plus a log-only probe** (branch `v1.4.6-probe`, draft PR #22, never merged or released): it changes no behaviour and keeps `gsensor::ENABLED = false`, so Auto orientation still says "no sensor". Sprint doc: `sprints/S12.1-gsensor-probe.md` (on that branch).
+
+Package: CI artifact `sigma-scribe-1.4.6-probe-kobo` from release.yml run 39764138168 (commit 0e57a36). Binary sha256 `06f070af2efd06a97623dbeec2bbadf06ca59904795e0411e4c6ea386f0c716f`; tarball `beba257847feca73aa87d648990970d355013e06c3c762c2b26403cf211b6701`.
+
+**Install** (same safety steps as 1.4.0; can follow the 1.4.6 upgrade or replace it for one session):
+1. Verify the serial (<FORMA-SERIAL>) and touch no other disk (never sdb).
+2. Read the log and copy it into the backup; make a checksum-verified backup into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v1.4.6-probe` (`.adds/sigma-scribe`, `.adds/nm`, `sigma-scribe/notes`, log).
+3. Copy **only** `.adds/sigma-scribe/sigma-scribe` from the probe package (via `.new` + sync + hash check + rename) and check the binary sha256 above on the device. Nothing else changes (add `THIRD-PARTY.txt` as in the 1.4.6 plan if it is not there yet). Sync, unmount, eject.
+
+**Collect** (the user, on the Forma):
+1. Open Sigma Scribe from NickelMenu as usual; the probe starts with it.
+2. Hold the Forma upright (page buttons on the right) for ~5 s.
+3. Turn it a quarter **clockwise** and hold ~5 s; then **upside down** ~5 s; then a quarter **counter-clockwise** from upright ~5 s; then back upright ~5 s.
+4. Lay it **face up** on a table ~5 s, then hold it up again.
+5. Note the order and anything odd (e.g. one turn that produced no change), then leave the app with the power button as usual.
+
+**Fetch back** (PC, Kobo connected, read-only): copy `/mnt/onboard/.adds/sigma-scribe/gsensor-probe.log` (the probe log; capped at 2 MB) and `sigma-scribe.log` into the backup folder, then sync and eject. Nothing on the device is changed by fetching.
+
+**Afterwards:** either keep 1.4.6-probe (behaves like 1.4.6) or put the 1.4.6 binary back (same procedure, 1.4.6 hash). The log decides the 0x19 / 0x1a mapping; turning `ENABLED` on is a separate change and approval.
+
 ## Upgrade 1.4.0 → 1.4.6 (not run; needs approval; replaces the 1.4.5, 1.4.4, 1.4.3, 1.4.2 and 1.4.1 plans below)
 Same procedure as 1.4.0:
 1. Verify the serial (<FORMA-SERIAL>) and touch no other disk (never sdb).
