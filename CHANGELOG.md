@@ -9,7 +9,7 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
 - The slider is a reusable widget (`crates/render/src/slider.rs`); other numeric settings are not converted yet.
 - **Settings carry over:** `keyboard_size=` is unchanged (Auto = `auto`).
 - Emulator: `tests/emu/v1.4.4-keyboard-slider.script` (new `press-on` / `move-on` commands aim at named controls); `v1.4.3-keyboard-size.script` updated. Screenshots `docs/screenshots/v1.4.4/`.
-- Device binary sha256 (CI build) `BIN_HASH`; tarball `TAR_HASH`.
+- Device binary sha256 (CI build) `085e9b1b6128379a8d0032e860edd2c4d6baa85f8cc66dc38b7e282593448548`; tarball `f024c73f07d64591eded70f544e10868e348f01a73679d6675ca463143163181`.
 
 ## 1.4.3 — 2026-10-22 (built, not installed, not tagged)
 - **Keyboard size** (sprint S14.3, decision 44, user report: the on-screen keyboard is too big above 150 % UI scale; 125–150 % is fine). The keyboard has its own scale, separate from the UI scale. New setting under Settings → Keyboard & input: **Keyboard size** Auto / 100% / 125% / 150%, a choice page. **Auto (default)** follows the UI scale up to 150 %, so at the default 200 % UI the keyboard is the 150 % size while the rest of the interface stays at 200 %.
