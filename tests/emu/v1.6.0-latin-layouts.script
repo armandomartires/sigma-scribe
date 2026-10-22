@@ -1,0 +1,125 @@
+# v1.6.0 (S16.0, decision 58): eleven more Latin layouts, Shift+AltGr capitals, caron and ring dead keys.
+copy-notes tests/test-notes/_test
+usb plug
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+tap-on US International
+expect-setting layout=us-intl
+esc
+esc
+usb-type Café naïve São ñ ß
+expect Café naïve São ñ ß
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+tap-on Belgian AZERTY
+expect-setting layout=be
+esc
+esc
+usb-type Où êtes-vous ? @ €
+expect Où êtes-vous ? @ €
+shot v1.6.0-full-belgian
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+tap-on Danish
+expect-setting layout=dk
+esc
+esc
+usb-type Rødgrød med fløde, Århus
+expect Rødgrød med fløde, Århus
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+tap-on Norwegian
+expect-setting layout=no
+esc
+esc
+usb-type Blåbærsyltetøy, Ærø
+expect Blåbærsyltetøy, Ærø
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+tap-on Swedish / Finnish
+expect-setting layout=se
+esc
+esc
+usb-type Hyvää yötä, Åsa!
+expect Hyvää yötä, Åsa!
+shot v1.6.0-full-swedish
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+shot v1.6.0-layout-choices
+tap-on Polish (programmer)
+expect-setting layout=pl
+esc
+esc
+usb-type Zażółć gęślą jaźń ŁÓDŹ
+expect Zażółć gęślą jaźń ŁÓDŹ
+key Alt
+shot v1.6.0-full-polish-altgr
+key Alt
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+shot v1.6.0-layout-choices-page2
+tap-on Czech QWERTZ
+expect-setting layout=cz
+esc
+esc
+usb-type Příliš žluťoučký kůň úpěl
+expect Příliš žluťoučký kůň úpěl
+key Shift
+key ˇ
+key s
+expect š
+shot v1.6.0-full-czech
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+tap-on Romanian
+expect-setting layout=ro
+esc
+esc
+usb-type Știință, țară, mâine
+expect Știință, țară, mâine
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+tap-on Turkish Q
+expect-setting layout=tr
+esc
+esc
+usb-type Iğdır, İstanbul, şöyle
+expect Iğdır, İstanbul, şöyle
+shot v1.6.0-full-turkish
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+tap-on Spanish (Latin America)
+expect-setting layout=latam
+esc
+esc
+usb-type ¿Qué tal? ¡Señor!
+expect ¿Qué tal? ¡Señor!
+tap-on Options
+tap-on Display
+tap-on Orientation
+tap-on Landscape
+tap-on Back
+tap-on Keyboard & input
+tap-on Layout
+page next
+tap-on Portuguese (Brazil)
+expect-setting layout=br
+esc
+esc
+usb-type Coração, você / ?
+expect Coração, você / ?
+shot v1.6.0-landscape-brazil

@@ -2,6 +2,14 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.6.0 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
+- **Eleven more keyboard layouts** (sprint S16.0, decision 58; v1.6 wave W1, first part): US International, Belgian AZERTY, Danish, Norwegian, Swedish / Finnish, Polish (programmer), Czech QWERTZ, Romanian, Turkish Q, Spanish (Latin America) and Portuguese (Brazil), for the on-screen board and USB keyboards; 18 layouts in all (Settings → Keyboard & input → Layout, two pages).
+- **Shift + AltGr** types the capital of an AltGr letter (Polish Ą Ę Ł Ó Ś Ź Ż Ć Ń).
+- New dead keys **caron** (ˇ: č ď ě ň ř š ť ž) and **ring** (°: å ů); the acute now also composes ń ś ź ĺ ŕ.
+- Settings key `layout=` gains `us-intl`, `be`, `dk`, `no`, `se`, `pl`, `cz`, `ro`, `tr`, `latam`, `br`; older binaries fall back to US for these.
+- Emulator: `tests/emu/v1.6.0-latin-layouts.script`. Screenshots `docs/screenshots/v1.6.0/`. Device checks: `docs/device-checklist-prerelease.md`.
+- Device binary sha256 (CI build) `BIN_SHA`; tarball `TAR_SHA`; binary BIN_SIZE bytes (1.5.5: 4,408,864).
+
 ## 1.5.5 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
 - **Settings → Language → Override system language** (sprint S15.5, decision 57; user report: with the Kobo in Portuguese the language could not be changed). A checkbox, **off by default**: off, the app follows the Kobo's language (`CurrentLocale`, read-only, never written) and Interface language is greyed out showing it; on, Interface language opens a list (English, Français, Português) and the choice is saved. Turning it on starts from the language in use.
 - New settings keys `ui_lang_override=` (default `off`) and `ui_lang=` (default `en`); older files load with the override off, older binaries ignore the keys.

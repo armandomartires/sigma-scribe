@@ -25,9 +25,20 @@ pub enum KeyLayout {
     Es,
     Pt,
     It,
+    UsIntl,
+    Be,
+    Dk,
+    No,
+    Se,
+    Pl,
+    Cz,
+    Ro,
+    Tr,
+    Latam,
+    Br,
 }
 
-pub const ALL: [KeyLayout; 7] = [
+pub const ALL: [KeyLayout; 18] = [
     KeyLayout::Us,
     KeyLayout::Uk,
     KeyLayout::Fr,
@@ -35,6 +46,17 @@ pub const ALL: [KeyLayout; 7] = [
     KeyLayout::Es,
     KeyLayout::Pt,
     KeyLayout::It,
+    KeyLayout::UsIntl,
+    KeyLayout::Be,
+    KeyLayout::Dk,
+    KeyLayout::No,
+    KeyLayout::Se,
+    KeyLayout::Pl,
+    KeyLayout::Cz,
+    KeyLayout::Ro,
+    KeyLayout::Tr,
+    KeyLayout::Latam,
+    KeyLayout::Br,
 ];
 
 /// evdev codes of the 48 positions, in table order.
@@ -203,6 +225,237 @@ const IT: Table = Table {
     ],
 };
 
+const USINTL: Table = Table {
+    base: [
+        "\u{300}1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;\u{301} ",
+        "zxcvbnm,./",
+    ],
+    shift: [
+        "\u{303}!@#$%\u{302}&*()_+",
+        "QWERTYUIOP{}|",
+        "ASDFGHJKL:\u{308} ",
+        "ZXCVBNM<>?",
+    ],
+    altgr: [
+        " ¡²³¤€¼½¾‘’¥×",
+        "äåé®þüúíóö«»¬",
+        "áßð     ø¶´ ",
+        "æ ©  ñµç ¿",
+    ],
+};
+
+const BE: Table = Table {
+    base: [
+        "²&é\"'(§è!çà)-",
+        "azertyuiop\u{302}$µ",
+        "qsdfghjklmù<",
+        "wxcvbn,;:=",
+    ],
+    shift: [
+        "³1234567890°_",
+        "AZERTYUIOP\u{308}*£",
+        "QSDFGHJKLM%>",
+        "WXCVBN?./+",
+    ],
+    altgr: [
+        " |@#  ^  {}  ",
+        "  €       []`",
+        "          ´\\",
+        "         ~",
+    ],
+};
+
+const DK: Table = Table {
+    base: [
+        "½1234567890+\u{301}",
+        "qwertyuiopå\u{308}'",
+        "asdfghjklæø<",
+        "zxcvbnm,.-",
+    ],
+    shift: [
+        "§!\"#¤%&/()=?\u{300}",
+        "QWERTYUIOPÅ\u{302}*",
+        "ASDFGHJKLÆØ>",
+        "ZXCVBNM;:_",
+    ],
+    altgr: [
+        "  @£$€ {[]} |",
+        "  €        ~ ",
+        "           \\",
+        "      µ   ",
+    ],
+};
+
+const NO: Table = Table {
+    base: [
+        "|1234567890+\\",
+        "qwertyuiopå\u{308}'",
+        "asdfghjkløæ<",
+        "zxcvbnm,.-",
+    ],
+    shift: [
+        "§!\"#¤%&/()=?\u{300}",
+        "QWERTYUIOPÅ\u{302}*",
+        "ASDFGHJKLØÆ>",
+        "ZXCVBNM;:_",
+    ],
+    altgr: [
+        "  @£$€ {[]} \u{301}",
+        "  €        ~ ",
+        "           \\",
+        "      µ   ",
+    ],
+};
+
+const SE: Table = Table {
+    base: [
+        "§1234567890+\u{301}",
+        "qwertyuiopå\u{308}'",
+        "asdfghjklöä<",
+        "zxcvbnm,.-",
+    ],
+    shift: [
+        "½!\"#¤%&/()=?\u{300}",
+        "QWERTYUIOPÅ\u{302}*",
+        "ASDFGHJKLÖÄ>",
+        "ZXCVBNM;:_",
+    ],
+    altgr: [
+        "  @£$€ {[]}\\ ",
+        "  €        ~ ",
+        "           |",
+        "      µ   ",
+    ],
+};
+
+const PL: Table = Table {
+    base: [
+        "`1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+    shift: [
+        "~!@#$%^&*()_+",
+        "QWERTYUIOP{}|",
+        "ASDFGHJKL:\" ",
+        "ZXCVBNM<>?",
+    ],
+    altgr: [
+        "             ",
+        "  ę   € ó    ",
+        "ąś      ł   ",
+        "żźć  ń    ",
+    ],
+};
+
+const CZ: Table = Table {
+    base: [
+        ";+ěščřžýáíé=\u{301}",
+        "qwertzuiopú)\u{308}",
+        "asdfghjklů§\\",
+        "yxcvbnm,.-",
+    ],
+    shift: [
+        "°1234567890%\u{30c}",
+        "QWERTZUIOP/('",
+        "ASDFGHJKL\"!|",
+        "YXCVBNM?:_",
+    ],
+    altgr: [
+        "`!@#$%^&*{}\\ ",
+        "\\|€       [] ",
+        "            ",
+        "       <> ",
+    ],
+};
+
+const RO: Table = Table {
+    base: [
+        "„1234567890-=",
+        "qwertyuiopăîâ",
+        "asdfghjklșț\\",
+        "zxcvbnm,./",
+    ],
+    shift: [
+        "”!@#$%^&*()_+",
+        "QWERTYUIOPĂÎÂ",
+        "ASDFGHJKLȘȚ|",
+        "ZXCVBNM;:?",
+    ],
+    altgr: [
+        "             ",
+        "  €       []\\",
+        "         ;' ",
+        "       <> ",
+    ],
+};
+
+const TR: Table = Table {
+    base: [
+        "\"1234567890*-",
+        "qwertyuıopğü,",
+        "asdfghjklşi<",
+        "zxcvbnmöç.",
+    ],
+    shift: [
+        "é!'^+%&/()=?_",
+        "QWERTYUIOPĞÜ;",
+        "ASDFGHJKLŞİ>",
+        "ZXCVBNMÖÇ:",
+    ],
+    altgr: [
+        "  £#$½ {[]}\\|",
+        "@ €    i   ~`",
+        "æß         |",
+        "          ",
+    ],
+};
+
+const LATAM: Table = Table {
+    base: [
+        "|1234567890'¿",
+        "qwertyuiop\u{301}+}",
+        "asdfghjklñ{<",
+        "zxcvbnm,.-",
+    ],
+    shift: [
+        "°!\"#$%&/()=?¡",
+        "QWERTYUIOP\u{308}*]",
+        "ASDFGHJKLÑ[>",
+        "ZXCVBNM;:_",
+    ],
+    altgr: [
+        "¬            ",
+        "@          ~`",
+        "          ^ ",
+        "          ",
+    ],
+};
+
+const BR: Table = Table {
+    base: [
+        "'1234567890-=",
+        "qwertyuiop\u{301}[]",
+        "asdfghjklç\u{303}\\",
+        "zxcvbnm,.;",
+    ],
+    shift: [
+        "\"!@#$%\u{308}&*()_+",
+        "QWERTYUIOP\u{300}{}",
+        "ASDFGHJKLÇ\u{302}|",
+        "ZXCVBNM<>:",
+    ],
+    altgr: [
+        " ¹²³£¢¬     §",
+        "/?°        ªº",
+        "            ",
+        "          ",
+    ],
+};
+
 fn table(l: KeyLayout) -> &'static Table {
     match l {
         KeyLayout::Us => &US,
@@ -212,6 +465,17 @@ fn table(l: KeyLayout) -> &'static Table {
         KeyLayout::Es => &ES,
         KeyLayout::Pt => &PT,
         KeyLayout::It => &IT,
+        KeyLayout::UsIntl => &USINTL,
+        KeyLayout::Be => &BE,
+        KeyLayout::Dk => &DK,
+        KeyLayout::No => &NO,
+        KeyLayout::Se => &SE,
+        KeyLayout::Pl => &PL,
+        KeyLayout::Cz => &CZ,
+        KeyLayout::Ro => &RO,
+        KeyLayout::Tr => &TR,
+        KeyLayout::Latam => &LATAM,
+        KeyLayout::Br => &BR,
     }
 }
 
@@ -236,6 +500,17 @@ impl KeyLayout {
             Self::Es => "es",
             Self::Pt => "pt",
             Self::It => "it",
+            Self::UsIntl => "us-intl",
+            Self::Be => "be",
+            Self::Dk => "dk",
+            Self::No => "no",
+            Self::Se => "se",
+            Self::Pl => "pl",
+            Self::Cz => "cz",
+            Self::Ro => "ro",
+            Self::Tr => "tr",
+            Self::Latam => "latam",
+            Self::Br => "br",
         }
     }
 
@@ -250,6 +525,17 @@ impl KeyLayout {
             Self::Es => "Spanish",
             Self::Pt => "Portuguese",
             Self::It => "Italian",
+            Self::UsIntl => "US International",
+            Self::Be => "Belgian AZERTY",
+            Self::Dk => "Danish",
+            Self::No => "Norwegian",
+            Self::Se => "Swedish / Finnish",
+            Self::Pl => "Polish (programmer)",
+            Self::Cz => "Czech QWERTZ",
+            Self::Ro => "Romanian",
+            Self::Tr => "Turkish Q",
+            Self::Latam => "Spanish (Latin America)",
+            Self::Br => "Portuguese (Brazil)",
         }
     }
 
@@ -278,7 +564,14 @@ impl KeyLayout {
         let i = CODES.iter().position(|&c| c == code)?;
         let (b, s, a) = self.chars(i);
         if altgr {
-            return a;
+            // Shift+AltGr capitalises an AltGr letter (Polish ą → Ą).
+            return a.map(|c| {
+                if shift && c.is_lowercase() {
+                    c.to_uppercase().next().unwrap_or(c)
+                } else {
+                    c
+                }
+            });
         }
         let b = b?;
         let upper = shift != (caps && b.is_alphabetic());
@@ -312,6 +605,9 @@ impl KeyLayout {
                 Some((i, true, false))
             } else if a == Some(c) {
                 Some((i, false, true))
+            } else if a.is_some_and(|a| a.is_lowercase() && a.to_uppercase().eq([c])) {
+                // Shift+AltGr capital (Polish Ą).
+                Some((i, true, true))
             } else {
                 None
             }
@@ -322,8 +618,8 @@ impl KeyLayout {
     #[must_use]
     pub fn compact_letters(self) -> [&'static str; 3] {
         match self {
-            Self::Fr => ["azertyuiop", "qsdfghjklm", "wxcvbn"],
-            Self::De => ["qwertzuiop", "asdfghjkl", "yxcvbnm"],
+            Self::Fr | Self::Be => ["azertyuiop", "qsdfghjklm", "wxcvbn"],
+            Self::De | Self::Cz => ["qwertzuiop", "asdfghjkl", "yxcvbnm"],
             _ => ["qwertyuiop", "asdfghjkl", "zxcvbnm"],
         }
     }
@@ -332,7 +628,10 @@ impl KeyLayout {
 /// Is `c` a dead key (a combining accent)?
 #[must_use]
 pub fn is_dead(c: char) -> bool {
-    matches!(c, '\u{300}' | '\u{301}' | '\u{302}' | '\u{303}' | '\u{308}')
+    matches!(
+        c,
+        '\u{300}' | '\u{301}' | '\u{302}' | '\u{303}' | '\u{308}' | '\u{30A}' | '\u{30C}'
+    )
 }
 
 /// The spacing form of a dead key, for labels and the fallback.
@@ -344,16 +643,24 @@ pub fn spacing(c: char) -> char {
         '\u{302}' => '^',
         '\u{303}' => '~',
         '\u{308}' => '¨',
+        '\u{30A}' => '°',
+        '\u{30C}' => 'ˇ',
         c => c,
     }
 }
 
 const COMPOSE: &[(char, &str, &str)] = &[
     ('\u{300}', "aeiouAEIOU", "àèìòùÀÈÌÒÙ"),
-    ('\u{301}', "aeiouyAEIOUYcC", "áéíóúýÁÉÍÓÚÝćĆ"),
+    (
+        '\u{301}',
+        "aeiouyAEIOUYcCnNsSzZlLrR",
+        "áéíóúýÁÉÍÓÚÝćĆńŃśŚźŹĺĹŕŔ",
+    ),
     ('\u{302}', "aeiouAEIOU", "âêîôûÂÊÎÔÛ"),
     ('\u{303}', "anoANO", "ãñõÃÑÕ"),
     ('\u{308}', "aeiouyAEIOUY", "äëïöüÿÄËÏÖÜŸ"),
+    ('\u{30A}', "auAU", "åůÅŮ"),
+    ('\u{30C}', "cdenrstzCDENRSTZ", "čďěňřšťžČĎĚŇŘŠŤŽ"),
 ];
 
 /// Dead key + letter → the accented letter, if it exists.
