@@ -136,7 +136,7 @@ Package: CI artifact `sigma-scribe-1.4.6-probe-kobo` from release.yml run 397641
 
 **Afterwards:** either keep 1.4.6-probe (behaves like 1.4.6) or put the 1.4.6 binary back (same procedure, 1.4.6 hash). The log decides the 0x19 / 0x1a mapping; turning `ENABLED` on is a separate change and approval.
 
-## Upgrade 1.4.0 → 1.5.4 (not run; needs approval; under decision 48 this waits for the single pre-release device pass; replaces the 1.5.3, 1.5.2, 1.5.1, 1.5.0 and 1.4.6 plans below)
+## Upgrade 1.4.0 → 1.5.4 (run 2026-10-22, user-approved; replaces the 1.5.3, 1.5.2, 1.5.1, 1.5.0 and 1.4.6 plans below)
 Same procedure as 1.4.0:
 1. Verify the serial (<FORMA-SERIAL>) and touch no other disk (never sdb).
 2. Read the log and copy it into the backup.
@@ -147,6 +147,8 @@ Same procedure as 1.4.0:
 5. Verify the sha256 on the device, then sync, unmount and power off.
 
 Nothing else changes: the letter model is inside the binary (no new files to copy). `.sigma-settings` is kept; 1.5.4 adds `keyboard_size=auto`, `ink_pen=finger` and `ink_a2=off`, `ink_boxes=off` and `ink_words=off` on the next save. New data written by the app: `sigma-scribe/notes/**/.ink/` (drawings) and, only if the user uses Train, `sigma-scribe/notes/.handwriting/samples.txt`; both are inside `notes`, so the backup covers them. Note that renaming a note now also edits `[[links]]` in other notes (decision 52). Rollback: the 1.4.0 binary from the backup (it ignores the new keys and files; `![ink](…)` lines stay as text). Checks: `docs/device-checklist-prerelease.md` (all sections up to "Gestures").
+
+Run log (2026-10-22 ~17:45 CEST): Forma found as `/dev/sdc` (USB "File-Stor Gadget", serial <FORMA-SERIAL> matching `.kobo/version`, label KOBOeReader, fw 4.38.23697) and mounted alone with udisksctl at `/media/amartires/KOBOeReader`; sdb (DataTraveler 64 GB) and every other disk untouched. Current binary confirmed 1.4.0 (`2f89c5fd…dd1d`). Device log read read-only and copied into the backup (`sigma-scribe.log.copy`; last session 08:44 CEST exit 0, no error/panic lines). Backup `~/backups/kobo-forma-<FORMA-SERIAL>/2026-10-22-pre-v1.5.4` (`.adds/sigma-scribe`, `.adds/nm`, `sigma-scribe/notes` — 329 files) verified against the device checksums (`SHA256SUMS`). CI package from main release run 39804507625 (same bytes as run 39797533111): tarball `184f5cdf…9da2` ✅, binary `2d609ca1…b2db420` ✅. Binary copied as `.new`, synced, hash-checked, renamed; `THIRD-PARTY.txt` added (was absent). **Device sha256: binary `2d609ca1c95e81feea8a86c215ad6b21c10fea51c594de4e13edfc674b2db420` ✅, `THIRD-PARTY.txt` `f61a648623ee545238601212f3d29eb056bddca7ed738f1427a2ca1bfc712ee4` ✅.** `.adds/nm/sigma-scribe`, `launch.sh`, `touch.conf`, settings and notes unchanged. Synced, unmounted, powered off with udisksctl; `/dev/sdc` gone from lsblk. Device checklist pass pending (user).
 
 ## Upgrade 1.4.0 → 1.5.3 (not run; superseded by 1.5.4)
 Same procedure as 1.4.0:
