@@ -155,7 +155,8 @@ fn shifted(c: char) -> char {
         '!' => '\'',
         '~' => '=',
         '>' => '+',
-        c => c.to_ascii_uppercase(),
+        // Unicode capitals (Cyrillic, Greek; v1.6.1).
+        c => c.to_uppercase().next().unwrap_or(c),
     }
 }
 
@@ -253,6 +254,18 @@ impl Keyboard {
                 Key::Space => 3.5,
                 Key::Return => 1.5,
                 Key::SwapLayer | Key::SwitchLayout | Key::Tab | Key::Del => 1.25,
+                // Rows with more letters than fit (Cyrillic) share the row.
+                Key::Char(_) => {
+                    let n = self.rows().get(row).map_or(0, |r| {
+                        r.iter().filter(|k| matches!(k, Key::Char(_))).count()
+                    }) as f32;
+                    let room = if row == 2 { 7.0 } else { 10.0 };
+                    if n > room {
+                        room / n
+                    } else {
+                        1.0
+                    }
+                }
                 _ => 1.0,
             },
             Layout::Full => match (key, row) {
@@ -348,6 +361,17 @@ impl Keyboard {
                     return c;
                 };
                 let (b, sh, a) = self.lang.chars(i);
+                if self.alt && self.lang.latin_altgr() {
+                    // US layer with Shift (S16.1-D1).
+                    if let Some(u) = layouts::KeyLayout::Us.char_for_code(
+                        layouts::CODES[i],
+                        self.shift_on(),
+                        false,
+                        self.caps,
+                    ) {
+                        return u;
+                    }
+                }
                 if self.alt {
                     if let Some(a) = a {
                         return a;
@@ -668,14 +692,20 @@ mod tests {
                 .sum();
             assert!((sum - k.grid_units()).abs() < 1e-3, "row {r} = {sum}");
         }
-        let c = Keyboard::with_layout(Layout::Compact);
-        for (r, row) in c.rows().iter().enumerate() {
-            let sum: f32 = row
-                .iter()
-                .enumerate()
-                .map(|(i, &key)| c.units(key, r, i))
-                .sum();
-            assert!(sum <= c.grid_units() + 1e-3, "compact row {r} = {sum}");
+        for lang in crate::layouts::ALL {
+            let mut c = Keyboard::with_layout(Layout::Compact);
+            c.lang = lang;
+            for (r, row) in c.rows().iter().enumerate() {
+                let sum: f32 = row
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &key)| c.units(key, r, i))
+                    .sum();
+                assert!(
+                    sum <= c.grid_units() + 1e-3,
+                    "{lang:?} compact row {r} = {sum}"
+                );
+            }
         }
     }
 

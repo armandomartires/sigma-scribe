@@ -338,15 +338,11 @@ pub fn raw_for_char_in(l: KeyLayout, c: char) -> Vec<RawEvent> {
             Some(m) => vec![ev(m, 1), ev(code, 1), ev(code, 0), ev(m, 0)],
         };
     }
-    for d in [
-        '\u{300}', '\u{301}', '\u{302}', '\u{303}', '\u{308}', '\u{30A}', '\u{30C}',
-    ] {
-        for base in "aeiouycnsztdrlAEIOUYCNSZTDRL".chars() {
-            if layouts::compose(d, base) == Some(c) && l.position_of(d).is_some() {
-                let mut out = raw_for_char_in(l, d);
-                out.extend(raw_for_char_in(l, base));
-                return out;
-            }
+    if let Some((d, base)) = layouts::decompose(c) {
+        if l.position_of(d).is_some() {
+            let mut out = raw_for_char_in(l, d);
+            out.extend(raw_for_char_in(l, base));
+            return out;
         }
     }
     Vec::new()

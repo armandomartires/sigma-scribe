@@ -769,3 +769,12 @@ Spanish (Latin America)
 
 Portuguese (Brazil)
 = Português (Brasil)
+
+Russian
+= Russo
+
+Ukrainian
+= Ucraniano
+
+Greek
+= Grego

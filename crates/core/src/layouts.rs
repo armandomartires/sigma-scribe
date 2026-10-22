@@ -36,9 +36,12 @@ pub enum KeyLayout {
     Tr,
     Latam,
     Br,
+    Ru,
+    Ua,
+    Gr,
 }
 
-pub const ALL: [KeyLayout; 18] = [
+pub const ALL: [KeyLayout; 21] = [
     KeyLayout::Us,
     KeyLayout::Uk,
     KeyLayout::Fr,
@@ -57,6 +60,9 @@ pub const ALL: [KeyLayout; 18] = [
     KeyLayout::Tr,
     KeyLayout::Latam,
     KeyLayout::Br,
+    KeyLayout::Ru,
+    KeyLayout::Ua,
+    KeyLayout::Gr,
 ];
 
 /// evdev codes of the 48 positions, in table order.
@@ -456,6 +462,75 @@ const BR: Table = Table {
     ],
 };
 
+const RU: Table = Table {
+    base: [
+        "ё1234567890-=",
+        "йцукенгшщзхъ\\",
+        "фывапролджэ ",
+        "ячсмитьбю.",
+    ],
+    shift: [
+        "Ё!\"№;%:?*()_+",
+        "ЙЦУКЕНГШЩЗХЪ/",
+        "ФЫВАПРОЛДЖЭ ",
+        "ЯЧСМИТЬБЮ,",
+    ],
+    // AltGr = the US base keys (S16.1-D1): Latin for Markdown, links and
+    // shortcuts without leaving the layout; Shift+AltGr gives capitals.
+    altgr: [
+        "`1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+};
+
+const UA: Table = Table {
+    base: [
+        "'1234567890-=",
+        "йцукенгшщзхїґ",
+        "фівапролджє ",
+        "ячсмитьбю.",
+    ],
+    shift: [
+        "₴!\"№;%:?*()_+",
+        "ЙЦУКЕНГШЩЗХЇҐ",
+        "ФІВАПРОЛДЖЄ ",
+        "ЯЧСМИТЬБЮ,",
+    ],
+    // AltGr = the US base keys (S16.1-D1): Latin for Markdown, links and
+    // shortcuts without leaving the layout; Shift+AltGr gives capitals.
+    altgr: [
+        "`1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+};
+
+const GR: Table = Table {
+    base: [
+        "`1234567890-=",
+        ";ςερτυθιοπ[]\\",
+        "ασδφγηξκλ\u{301}' ",
+        "ζχψωβνμ,./",
+    ],
+    shift: [
+        "~!@#$%^&*()_+",
+        ":ΣΕΡΤΥΘΙΟΠ{}|",
+        "ΑΣΔΦΓΗΞΚΛ\u{308}\" ",
+        "ΖΧΨΩΒΝΜ<>?",
+    ],
+    // AltGr = the US base keys (S16.1-D1): Latin for Markdown, links and
+    // shortcuts without leaving the layout; Shift+AltGr gives capitals.
+    altgr: [
+        "`1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+};
+
 fn table(l: KeyLayout) -> &'static Table {
     match l {
         KeyLayout::Us => &US,
@@ -476,6 +551,9 @@ fn table(l: KeyLayout) -> &'static Table {
         KeyLayout::Tr => &TR,
         KeyLayout::Latam => &LATAM,
         KeyLayout::Br => &BR,
+        KeyLayout::Ru => &RU,
+        KeyLayout::Ua => &UA,
+        KeyLayout::Gr => &GR,
     }
 }
 
@@ -511,6 +589,9 @@ impl KeyLayout {
             Self::Tr => "tr",
             Self::Latam => "latam",
             Self::Br => "br",
+            Self::Ru => "ru",
+            Self::Ua => "ua",
+            Self::Gr => "gr",
         }
     }
 
@@ -536,6 +617,9 @@ impl KeyLayout {
             Self::Tr => "Turkish Q",
             Self::Latam => "Spanish (Latin America)",
             Self::Br => "Portuguese (Brazil)",
+            Self::Ru => "Russian",
+            Self::Ua => "Ukrainian",
+            Self::Gr => "Greek",
         }
     }
 
@@ -563,6 +647,10 @@ impl KeyLayout {
     pub fn char_for_code(self, code: u16, shift: bool, altgr: bool, caps: bool) -> Option<char> {
         let i = CODES.iter().position(|&c| c == code)?;
         let (b, s, a) = self.chars(i);
+        if altgr && self.latin_altgr() {
+            // AltGr is the whole US layer, Shift included (S16.1-D1).
+            return KeyLayout::Us.char_for_code(code, shift, false, caps);
+        }
         if altgr {
             // Shift+AltGr capitalises an AltGr letter (Polish ą → Ą).
             return a.map(|c| {
@@ -593,10 +681,26 @@ impl KeyLayout {
         }
     }
 
+    /// Non-Latin layouts whose AltGr layer is the US layout (v1.6.1).
+    #[must_use]
+    pub fn latin_altgr(self) -> bool {
+        matches!(self, Self::Ru | Self::Ua | Self::Gr)
+    }
+
     /// The position of a character (base, Shift or AltGr) — emulator and
     /// tests type through this.
     #[must_use]
     pub fn position_of(self, c: char) -> Option<(usize, bool, bool)> {
+        let own = self.position_own(c);
+        if own.is_none() && self.latin_altgr() {
+            return KeyLayout::Us
+                .position_own(c)
+                .map(|(i, shift, _)| (i, shift, true));
+        }
+        own
+    }
+
+    fn position_own(self, c: char) -> Option<(usize, bool, bool)> {
         (0..CODES.len()).find_map(|i| {
             let (b, s, a) = self.chars(i);
             if b == Some(c) {
@@ -620,6 +724,11 @@ impl KeyLayout {
         match self {
             Self::Fr | Self::Be => ["azertyuiop", "qsdfghjklm", "wxcvbn"],
             Self::De | Self::Cz => ["qwertzuiop", "asdfghjkl", "yxcvbnm"],
+            // 12 / 11 / 9 letters: the compact board narrows these keys.
+            Self::Ru => ["йцукенгшщзхъ", "фывапролджэ", "ячсмитьбюё"],
+            Self::Ua => ["йцукенгшщзхї", "фівапролджє", "ячсмитьбюґ"],
+            // No tonos key on the compact board (S16.1-D3): Full and USB.
+            Self::Gr => ["ςερτυθιοπ", "ασδφγηξκλ", "ζχψωβνμ"],
             _ => ["qwertyuiop", "asdfghjkl", "zxcvbnm"],
         }
     }
@@ -653,12 +762,12 @@ const COMPOSE: &[(char, &str, &str)] = &[
     ('\u{300}', "aeiouAEIOU", "àèìòùÀÈÌÒÙ"),
     (
         '\u{301}',
-        "aeiouyAEIOUYcCnNsSzZlLrR",
-        "áéíóúýÁÉÍÓÚÝćĆńŃśŚźŹĺĹŕŔ",
+        "aeiouyAEIOUYcCnNsSzZlLrRαεηιουωΑΕΗΙΟΥΩ",
+        "áéíóúýÁÉÍÓÚÝćĆńŃśŚźŹĺĹŕŔάέήίόύώΆΈΉΊΌΎΏ",
     ),
     ('\u{302}', "aeiouAEIOU", "âêîôûÂÊÎÔÛ"),
     ('\u{303}', "anoANO", "ãñõÃÑÕ"),
-    ('\u{308}', "aeiouyAEIOUY", "äëïöüÿÄËÏÖÜŸ"),
+    ('\u{308}', "aeiouyAEIOUYιυΙΥ", "äëïöüÿÄËÏÖÜŸϊϋΪΫ"),
     ('\u{30A}', "auAU", "åůÅŮ"),
     ('\u{30C}', "cdenrstzCDENRSTZ", "čďěňřšťžČĎĚŇŘŠŤŽ"),
 ];
@@ -669,6 +778,15 @@ pub fn compose(dead: char, c: char) -> Option<char> {
     let (_, from, to) = COMPOSE.iter().find(|x| x.0 == dead)?;
     let i = from.chars().position(|x| x == c)?;
     to.chars().nth(i)
+}
+
+/// Accented letter → (dead key, letter), the inverse of [`compose`].
+#[must_use]
+pub fn decompose(c: char) -> Option<(char, char)> {
+    COMPOSE.iter().find_map(|(d, from, to)| {
+        let i = to.chars().position(|x| x == c)?;
+        Some((*d, from.chars().nth(i)?))
+    })
 }
 
 /// Dead-key state between keys (the input pipeline's composer, S13).
@@ -805,6 +923,44 @@ mod tests {
         assert_eq!(c.flush(), "~");
         assert_eq!(c.flush(), "");
         assert_eq!(c.feed('n'), "n");
+    }
+
+    #[test]
+    fn cyrillic_and_greek_keep_latin_on_altgr() {
+        // S16.1-D1: AltGr types the US key, Shift+AltGr its capital;
+        // Ctrl+Я is Ctrl+Z.
+        assert_eq!(
+            KeyLayout::Ru.char_for_code(16, false, false, false),
+            Some('й')
+        );
+        assert_eq!(
+            KeyLayout::Ru.char_for_code(16, false, true, false),
+            Some('q')
+        );
+        assert_eq!(
+            KeyLayout::Ru.char_for_code(16, true, true, false),
+            Some('Q')
+        );
+        assert_eq!(
+            KeyLayout::Ru.char_for_code(44, false, false, true),
+            Some('Я')
+        );
+        assert_eq!(KeyLayout::Ru.shortcut_char(44), Some('z'));
+        assert_eq!(KeyLayout::Ru.char_for_code(4, true, true, false), Some('#'));
+        assert_eq!(KeyLayout::Ru.position_of('#'), Some((3, true, true)));
+        assert_eq!(
+            KeyLayout::Ua.char_for_code(43, false, false, false),
+            Some('ґ')
+        );
+        assert_eq!(
+            KeyLayout::Gr.char_for_code(30, false, false, false),
+            Some('α')
+        );
+        let mut c = Composer::default();
+        assert_eq!(c.feed('\u{301}'), "");
+        assert_eq!(c.feed('ε'), "έ");
+        assert_eq!(c.feed('\u{308}'), "");
+        assert_eq!(c.feed('Ι'), "Ϊ");
     }
 
     #[test]
