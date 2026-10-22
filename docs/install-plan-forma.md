@@ -136,6 +136,13 @@ Package: CI artifact `sigma-scribe-1.4.6-probe-kobo` from release.yml run 397641
 
 **Afterwards:** either keep 1.4.6-probe (behaves like 1.4.6) or put the 1.4.6 binary back (same procedure, 1.4.6 hash). The log decides the 0x19 / 0x1a mapping; turning `ENABLED` on is a separate change and approval.
 
+## Upgrade main ecd61c3 → main ea32b50 (run 2026-10-23, user-approved)
+CI package from main (release run 39869431757, head ea32b50; `ci` run 39869431746 passed): binary sha256 `19a0f722591658da3aec31eb70b27ec8ae28604d0ff32dbfff0b1fc869fe6939` (4,522,960 bytes), tarball `85635e2733db778b6051c5922db412946d1bfe6a3e279e9a5c2b2d56635abe7f`. Adds the decoder's corner-report filter and the quieter touch log (PR #41). Rollback: the ecd61c3 binary (`b73e9b24…7ea37`) from the backup.
+
+Run log (2026-10-23 ~01:15 CEST): Forma found as `/dev/sdc` (serial N7828B0052845 matching `.kobo/version` and udev), mounted alone with udisksctl; sdb untouched. Device binary was main ecd61c3 (`b73e9b24…`). Tarball and per-file sha256 ✅; `launch.sh`, `touch.conf`, `THIRD-PARTY.txt`, NickelMenu entry identical. Backup `~/backups/kobo-forma-N7828B0052845/2026-10-23-pre-main-ea32b50` (334 files) compared with the device (`diff -r`), `SHA256SUMS` written; it includes the log below. Binary copied as `.new`, synced, hash-checked, renamed. **Device sha256: binary `19a0f722591658da3aec31eb70b27ec8ae28604d0ff32dbfff0b1fc869fe6939` ✅.** Synced, unmounted (first try), powered off. App not yet started on this build; checklist pending (user).
+
+**Touch log from the ecd61c3 test session (01:02–01:07 CEST):** 400 `touch:` lines (the cap): 270 × `new tracking id 0 while down` (noise) and 130 jumps, all between the four exact panel corners (no real finger position among them): (0,0)↔(1439,0) 74, (0,0)↔(0,1919) 44, other corner pairs 12. Same pattern as the dfad9b8 session, so the phantom corner reports are repeatable. The ea32b50 build ignores them in the decoder; expect `corner report (…) ignored` lines in the next log, and no repeated `tracking id` lines.
+
 ## Upgrade main dfad9b8 → main ecd61c3 (run 2026-10-23, user-approved)
 CI package from main (release run 39865341990, head ecd61c3; `ci` run 39865341946 passed): binary sha256 `b73e9b2449e85a87892b7a8b569a6ba5f0b2046c45d16dc6f5a4ec26c8b7ea37` (4,522,544 bytes), tarball `46fb9e2a7aad7150064400d207e845ab4a18c9b18f0d0e25a3d2a97ed2c02412`. Adds the Orientation buttons (Display), on top of the stray-line fix and Size slider. Rollback: the dfad9b8 binary (`9a653aab…82b6`) from the backup.
 
