@@ -160,7 +160,14 @@ fn main() -> ExitCode {
             "ink-box" | "ink-line" => {
                 let line = cmd == "ink-line";
                 let (i, rest) = arg.split_once(' ').unwrap_or((arg, ""));
-                let Some(b) = i.parse().ok().and_then(|i| app.letter_box(i)) else {
+                let Some(b) = i.parse().ok().and_then(|i| {
+                    // Draw has no boxes: index 0 is its whole area (v1.5.4).
+                    app.letter_box(i).or_else(|| {
+                        (i == 0)
+                            .then(|| app.panel_layout().map(|l| l.area))
+                            .flatten()
+                    })
+                }) else {
                     return fail(format!("no letter box {i}"));
                 };
                 for st in rest.split(';') {

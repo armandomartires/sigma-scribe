@@ -2,6 +2,14 @@
 
 All notable changes to Sigma Scribe. Versions are tagged after they pass on the Kobo Forma.
 
+## 1.5.4 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
+- **Gestures in the Write panel** (sprint S15.4, decision 56):
+  - **Scratch out** ink you have not finished to erase it; scratch out on an empty area to delete the word just typed (or the word before the caret); in Draw a scratch-out erases the strokes it crosses.
+  - A long flat **flick left** is Backspace, and at the start of a line it **joins** it to the line above; a **flick right** types a space.
+  - **Tap the note** above the panel to move the caret there; the panel stays open.
+- Emulator: `tests/emu/v1.5.4-gestures.script`. Screenshots `docs/screenshots/v1.5.4/`. Device checks: `docs/device-checklist-prerelease.md`.
+- Device binary sha256 (CI build) `BIN_SHA`; tarball `TAR_SHA`; binary BIN_SIZE.
+
 ## 1.5.3 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
 - **New Write panel** (sprint S15.3, decision 55), in the style of Boox's handwriting keyboard: a candidate bar across the top (‹ › for more, × to close), a 3 × 4 block of keys on the left (⇄ Draw, ⌫, ↵, `,` `.` `?`, 123, `!`, `@`, globe, space) and a **large blank area** to write in freely. Pure black and white, every key ≥ 44 px, portrait and landscape.
 - **Free writing:** write letters or words anywhere in the area; 1.2 s after you stop, the ink is cut into characters automatically and typed at the caret, followed by a space. Tap a word in the candidate bar to replace the last reading. **123** reads digits only; the **globe** limits letters to English, French or Portuguese.
