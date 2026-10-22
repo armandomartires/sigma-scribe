@@ -104,8 +104,8 @@ fn bar() -> Vec<Vec<(f32, f32)>> {
 #[test]
 fn boxes_read_after_a_pause_or_the_next_box_and_ink_is_du() {
     let mut r = Rig::new("read");
+    r.app.change(Change::InkBoxes(true));
     r.tap("Write");
-    r.tap("Letters");
     assert_eq!(r.app.ink.as_ref().unwrap().mode, InkMode::Letters);
     let sent = r.write(0, &circle());
     assert!(
@@ -125,7 +125,7 @@ fn boxes_read_after_a_pause_or_the_next_box_and_ink_is_du() {
     assert_eq!(r.app.buffer.text(), "olo");
     let cands = r.app.ink.as_ref().unwrap().cands.clone();
     assert_eq!(cands.len(), 5);
-    assert_eq!(cands[0], 'o');
+    assert_eq!(cands[0], "o");
     // A candidate replaces the last letter; Space, Erase, Return type.
     r.tap("Cand1");
     assert_eq!(r.app.buffer.text(), format!("ol{}", cands[1]));
@@ -141,8 +141,8 @@ fn boxes_read_after_a_pause_or_the_next_box_and_ink_is_du() {
 fn train_saves_samples_locally_and_settings_deletes_them() {
     let mut r = Rig::new("train");
     let root = r.app.library.root().to_path_buf();
+    r.app.change(Change::InkBoxes(true));
     r.tap("Write");
-    r.tap("Letters");
     r.tap("Train");
     assert_eq!(r.app.ink.as_ref().unwrap().mode, InkMode::Train(0));
     // Save with an empty box does nothing.
@@ -170,4 +170,56 @@ fn train_saves_samples_locally_and_settings_deletes_them() {
     r.app.change(Change::DeleteSamples);
     assert!(!samples_path(&root).exists());
     assert!(!root.join(".handwriting").exists());
+}
+
+/// Box-unit strokes placed at `x` (area heights) in the free area, 0.4 high.
+fn at(x: f32, s: Vec<Vec<(f32, f32)>>) -> Vec<Vec<(f32, f32)>> {
+    s.into_iter()
+        .map(|st| {
+            st.into_iter()
+                .map(|(a, b)| (x + a * 0.4, 0.2 + b * 0.4))
+                .collect()
+        })
+        .collect()
+}
+
+#[test]
+fn free_area_is_the_default_and_reads_printed_letters() {
+    let mut r = Rig::new("free");
+    r.tap("Write");
+    assert_eq!(r.app.ink.as_ref().unwrap().mode, InkMode::Free);
+    let a = r.app.letter_box(0).expect("area");
+    // Free strokes: x in area heights (like the emulator's ink-line).
+    let mut sent = Vec::new();
+    for (i, s) in [circle(), bar(), circle()].into_iter().enumerate() {
+        for st in at(0.1 + 0.16 * i as f32, s) {
+            for (k, &(x, y)) in st.iter().enumerate() {
+                let (px, py) = (a.x + (x * a.h as f32) as i32, a.y + (y * a.h as f32) as i32);
+                let ph = if k == 0 { Phase::Down } else { Phase::Move };
+                sent.extend(r.touch(ph, px, py));
+            }
+            let &(x, y) = st.last().unwrap();
+            let (px, py) = (a.x + (x * a.h as f32) as i32, a.y + (y * a.h as f32) as i32);
+            sent.extend(r.touch(Phase::Up, px, py));
+        }
+    }
+    assert!(
+        sent.iter().all(|&s| s == Refresh::Ink),
+        "free ink is DU: {sent:?}"
+    );
+    assert_eq!(r.app.buffer.text(), "");
+    r.tick(1300);
+    let got = r.app.buffer.text();
+    assert_eq!(got.chars().count(), 4, "three letters and a space: {got:?}");
+    assert!(got.ends_with(' '));
+    assert!(!r.app.ink.as_ref().unwrap().cands.is_empty());
+    // The keys type directly; 123 and Draw switch.
+    r.tap(",");
+    assert!(r.app.buffer.text().ends_with(','));
+    r.tap("123");
+    assert!(r.app.ink.as_ref().unwrap().digits);
+    r.tap("Draw");
+    assert_eq!(r.app.ink.as_ref().unwrap().mode, InkMode::Draw);
+    r.tap("Letters");
+    assert_eq!(r.app.ink.as_ref().unwrap().mode, InkMode::Free);
 }

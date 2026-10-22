@@ -715,3 +715,15 @@ My handwriting
 
 Handwriting samples for letter recognition
 = Amostras para o reconhecimento de letras
+
+Letter boxes
+= Caixas de letras
+
+One character per box instead of free writing
+= Um carácter por caixa em vez da escrita livre
+
+Word mode (experimental)
+= Modo palavras (experimental)
+
+Read every word against a word list; off is more accurate
+= Lê cada palavra com uma lista de palavras; desligado é mais preciso

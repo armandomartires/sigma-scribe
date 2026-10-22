@@ -183,6 +183,11 @@ pub struct Settings {
     /// A2 waveform instead of DU. Off by default; decided in the device
     /// pass (plan §12.9 decision 6). `ink_a2=`.
     pub ink_a2: bool,
+    /// Word mode in the Write panel (v1.5.3, experimental, failed its
+    /// gate: off by default). `ink_words=`.
+    pub ink_words: bool,
+    /// Letter boxes instead of the free area (v1.5.3 fallback). `ink_boxes=`.
+    pub ink_boxes: bool,
 }
 
 /// Keyboard size choices (v1.4.3); 0 is Auto.
@@ -221,6 +226,8 @@ impl Default for Settings {
             kb_size: 0,
             ink_pen: crate::ink::Pen::Finger,
             ink_a2: false,
+            ink_words: false,
+            ink_boxes: false,
         }
     }
 }
@@ -264,6 +271,12 @@ pub enum Change {
     InkPen(crate::ink::Pen),
     /// Fast ink A2 waveform on / off (v1.5.0).
     InkA2(bool),
+    /// Word mode on / off (v1.5.3).
+    InkWords(bool),
+    /// Letter boxes on / off (v1.5.3).
+    InkBoxes(bool),
+    /// Open Train from Settings (v1.5.3; not a setting).
+    TrainSamples,
     /// Delete the enrolled handwriting samples (v1.5.2). Not a setting:
     /// the app acts on it; `apply` ignores it.
     DeleteSamples,
@@ -355,6 +368,9 @@ impl Settings {
             Change::NaturalScroll(on) => self.natural_scroll = on,
             Change::InkPen(p) => self.ink_pen = p,
             Change::InkA2(on) => self.ink_a2 = on,
+            Change::InkWords(on) => self.ink_words = on,
+            Change::InkBoxes(on) => self.ink_boxes = on,
+            Change::TrainSamples => {}
             Change::DeleteSamples => {}
             Change::Orientation(o) => {
                 self.orientation = o;
@@ -546,6 +562,8 @@ impl Settings {
                     }
                 }
                 "ink_a2" => s.ink_a2 = b().unwrap_or(s.ink_a2),
+                "ink_words" => s.ink_words = b().unwrap_or(s.ink_words),
+                "ink_boxes" => s.ink_boxes = b().unwrap_or(s.ink_boxes),
                 _ => {}
             }
         }
@@ -583,7 +601,7 @@ impl Settings {
         format!(
             "keyboard={}\npaper={}\ntype={}\nline={}\nline_words={}\nsize={}\nleading={}\nmargin={}\n\
              tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\nusb={}\nscroll={}\norientation={}\n\
-             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\n",
+             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\nink_words={}\nink_boxes={}\n",
             self.keyboard.name(),
             match self.paper {
                 Paper::Day => "day",
@@ -637,6 +655,8 @@ impl Settings {
                 crate::ink::Pen::Stylus => "stylus",
             },
             on(self.ink_a2),
+            on(self.ink_words),
+            on(self.ink_boxes),
         )
     }
 }

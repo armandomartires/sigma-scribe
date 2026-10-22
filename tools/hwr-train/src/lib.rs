@@ -421,3 +421,247 @@ pub fn enrol_samples(font: &str, per: usize, seed: u64) -> Vec<sigma_hwr::Sample
     }
     out
 }
+
+/// A synthetic written word (v1.5.3): each letter's skeleton, given a
+/// small jitter of its own, placed after the previous one with a random
+/// gap (sometimes touching or overlapping), then one jitter for the
+/// whole word. Line units (height 1, baseline at `BASELINE`). `None` if
+/// the font lacks a letter.
+#[must_use]
+pub fn synth_word(font: &fontdue::Font, word: &str, rng: &mut Rng) -> Option<Vec<Seg>> {
+    let mut out = Vec::new();
+    let mut pen = 0.0f32;
+    let gap_base = rng.range(-0.01, 0.08);
+    for ch in word.chars() {
+        let sk = skeleton(font, ch)?;
+        let mut r2 = Rng::new(rng.next_u64());
+        let sk = mild(&sk, &mut r2);
+        let x0 = sk
+            .iter()
+            .flat_map(|(a, b)| [a.0, b.0])
+            .fold(f32::MAX, f32::min);
+        let x1 = sk
+            .iter()
+            .flat_map(|(a, b)| [a.0, b.0])
+            .fold(f32::MIN, f32::max);
+        let dx = pen - x0;
+        out.extend(sk.iter().map(|&(a, b)| ((a.0 + dx, a.1), (b.0 + dx, b.1))));
+        pen += (x1 - x0) + gap_base + rng.range(-0.03, 0.05);
+    }
+    // Whole-word jitter around the word's middle.
+    let mid = pen / 2.0;
+    let centred: Vec<Seg> = out
+        .iter()
+        .map(|&(a, b)| ((a.0 - mid + 0.5, a.1), (b.0 - mid + 0.5, b.1)))
+        .collect();
+    let j = jitter(&centred, rng);
+    Some(j)
+}
+
+/// Small per-letter jitter (size ±8 %, slant ±0.08, shift ±0.03).
+fn mild(segs: &[Seg], rng: &mut Rng) -> Vec<Seg> {
+    let s = rng.range(0.92, 1.08);
+    let sh = rng.range(-0.08, 0.08);
+    let ty = rng.range(-0.03, 0.03);
+    let map = |(x, y): (f32, f32)| {
+        let v = y - BASELINE;
+        (0.5 + (x - 0.5) * s - sh * v, BASELINE + v * s + ty)
+    };
+    segs.iter().map(|&(a, b)| (map(a), map(b))).collect()
+}
+
+/// Word-mode figures for one font set.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct WordScore {
+    pub words: usize,
+    /// Character error rate of the top-1 reading, with the lexicon.
+    pub cer: f32,
+    /// Word accuracy, top-1 and top-5.
+    pub acc1: f32,
+    pub acc5: f32,
+    /// Character error rate with no lexicon (open vocabulary).
+    pub cer_open: f32,
+    /// Time per word, mean and p95 (µs, this machine).
+    pub mean_us: f64,
+    pub p95_us: f64,
+}
+
+/// Writes `per` random lexicon words in each font and reads them back.
+#[must_use]
+pub fn word_score(
+    rec: &sigma_hwr::Recogniser,
+    fonts: &[&str],
+    words: &[String],
+    per: usize,
+    seed: u64,
+) -> WordScore {
+    word_score_with(rec, fonts, words, per, seed, sigma_hwr::word::LETTER_BONUS)
+}
+
+/// [`word_score`] with a given letter bonus (tuning).
+#[must_use]
+pub fn word_score_with(
+    rec: &sigma_hwr::Recogniser,
+    fonts: &[&str],
+    words: &[String],
+    per: usize,
+    seed: u64,
+    bonus: f32,
+) -> WordScore {
+    use sigma_hwr::word::{edit_distance, recognise_with, Lexicon};
+    let lex = Lexicon::new(rec, words);
+    let empty = Lexicon::default();
+    let mut rng = Rng::new(seed);
+    let (mut n, mut chars, mut err, mut err_o, mut ok1, mut ok5) = (0, 0, 0, 0, 0, 0);
+    let mut times = Vec::new();
+    for name in fonts {
+        let f = load_font(name);
+        let mut done = 0;
+        while done < per {
+            let (w, _) = &lex.words[rng.below(lex.words.len())];
+            let Some(segs) = synth_word(&f, w, &mut rng) else {
+                continue;
+            };
+            done += 1;
+            let t = std::time::Instant::now();
+            let top = recognise_with(rec, &segs, &lex, 5, bonus);
+            times.push(t.elapsed().as_secs_f64() * 1e6);
+            let open = recognise_with(rec, &segs, &empty, 1, bonus);
+            let got = top.first().map_or(String::new(), |x| x.0.to_lowercase());
+            let got_o = open.first().map_or(String::new(), |x| x.0.to_lowercase());
+            n += 1;
+            chars += w.chars().count();
+            err += edit_distance(&got, w);
+            err_o += edit_distance(&got_o, w);
+            ok1 += usize::from(got == *w);
+            ok5 += usize::from(top.iter().any(|x| x.0.to_lowercase() == *w));
+        }
+    }
+    times.sort_by(f64::total_cmp);
+    WordScore {
+        words: n,
+        cer: err as f32 / chars.max(1) as f32,
+        acc1: ok1 as f32 / n.max(1) as f32,
+        acc5: ok5 as f32 / n.max(1) as f32,
+        cer_open: err_o as f32 / chars.max(1) as f32,
+        mean_us: times.iter().sum::<f64>() / times.len().max(1) as f64,
+        p95_us: times.get(times.len() * 95 / 100).copied().unwrap_or(0.0),
+    }
+}
+
+/// Synthetic free writing (v1.5.3): 1–3 words, letters printed apart
+/// (`letter_gap` range, line units) or touching, a word gap of 0.5–0.9,
+/// then a random size (×0.6–1.6, the panel has no guide) and offset.
+/// Returns segments in "pixels" (×100).
+#[must_use]
+pub fn synth_phrase(
+    font: &fontdue::Font,
+    words: &[&str],
+    letter_gap: (f32, f32),
+    rng: &mut Rng,
+) -> Option<Vec<Seg>> {
+    let mut out = Vec::new();
+    let mut pen = 0.0f32;
+    for (wi, w) in words.iter().enumerate() {
+        if wi > 0 {
+            pen += rng.range(0.5, 0.9);
+        }
+        for ch in w.chars() {
+            let sk = skeleton(font, ch)?;
+            let mut r2 = Rng::new(rng.next_u64());
+            let sk = mild(&jitter_small(&sk, &mut r2), &mut r2);
+            let x0 = sk
+                .iter()
+                .flat_map(|(a, b)| [a.0, b.0])
+                .fold(f32::MAX, f32::min);
+            let x1 = sk
+                .iter()
+                .flat_map(|(a, b)| [a.0, b.0])
+                .fold(f32::MIN, f32::max);
+            let dx = pen - x0;
+            out.extend(sk.iter().map(|&(a, b)| ((a.0 + dx, a.1), (b.0 + dx, b.1))));
+            pen += (x1 - x0) + rng.range(letter_gap.0, letter_gap.1);
+        }
+    }
+    let k = 100.0 * rng.range(0.6, 1.6);
+    let (ox, oy) = (rng.range(0.0, 200.0), rng.range(0.0, 150.0));
+    Some(
+        out.iter()
+            .map(|&(a, b)| ((a.0 * k + ox, a.1 * k + oy), (b.0 * k + ox, b.1 * k + oy)))
+            .collect(),
+    )
+}
+
+/// One writer's letters vary less inside a phrase than across writers:
+/// slant ±0.15, aspect ±10 %, a little wobble.
+fn jitter_small(segs: &[Seg], rng: &mut Rng) -> Vec<Seg> {
+    let sh = rng.range(-0.15, 0.1);
+    let sx = rng.range(0.9, 1.1);
+    let map = |(x, y): (f32, f32)| {
+        let v = y - BASELINE;
+        (0.5 + (x - 0.5) * sx - sh * v, y)
+    };
+    segs.iter().map(|&(a, b)| (map(a), map(b))).collect()
+}
+
+/// Free-area figures: CER and exact-phrase accuracy of the reading, and
+/// whether the right text is among reading + alternatives.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct FreeScore {
+    pub phrases: usize,
+    pub cer: f32,
+    pub exact: f32,
+    pub in5: f32,
+    pub mean_us: f64,
+    pub p95_us: f64,
+}
+
+#[must_use]
+pub fn free_score(
+    rec: &sigma_hwr::Recogniser,
+    fonts: &[&str],
+    per: usize,
+    letter_gap: (f32, f32),
+    seed: u64,
+) -> FreeScore {
+    use sigma_hwr::word::{builtin_words, edit_distance};
+    let words = builtin_words();
+    let lex = sigma_hwr::word::Lexicon::new(rec, &words);
+    let mut rng = Rng::new(seed);
+    let (mut n, mut chars, mut err, mut ex, mut in5) = (0, 0, 0, 0, 0);
+    let mut times = Vec::new();
+    for name in fonts {
+        let f = load_font(name);
+        let mut done = 0;
+        while done < per {
+            let k = 1 + rng.below(3);
+            let ws: Vec<&str> = (0..k)
+                .map(|_| words[rng.below(words.len())].as_str())
+                .collect();
+            let Some(segs) = synth_phrase(&f, &ws, letter_gap, &mut rng) else {
+                continue;
+            };
+            done += 1;
+            let want = ws.join(" ");
+            let strokes: Vec<Vec<Seg>> = segs.iter().map(|&s| vec![s]).collect();
+            let t = std::time::Instant::now();
+            let got =
+                sigma_hwr::free::read_lex(rec, &strokes, None, Some(&lex), sigma_hwr::free::WIDE);
+            times.push(t.elapsed().as_secs_f64() * 1e6);
+            n += 1;
+            chars += want.chars().count();
+            err += edit_distance(&got.text, &want);
+            ex += usize::from(got.text == want);
+            in5 += usize::from(got.text == want || got.alts.contains(&want));
+        }
+    }
+    times.sort_by(f64::total_cmp);
+    FreeScore {
+        phrases: n,
+        cer: err as f32 / chars.max(1) as f32,
+        exact: ex as f32 / n.max(1) as f32,
+        in5: in5 as f32 / n.max(1) as f32,
+        mean_us: times.iter().sum::<f64>() / times.len().max(1) as f64,
+        p95_us: times.get(times.len() * 95 / 100).copied().unwrap_or(0.0),
+    }
+}

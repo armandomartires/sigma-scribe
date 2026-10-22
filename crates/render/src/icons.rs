@@ -21,6 +21,14 @@ pub enum Icon {
     Back,
     Folder,
     Close,
+    /// Handwriting panel (v1.5.3).
+    Swap,
+    Backspace,
+    Return,
+    Globe,
+    PrevPage,
+    NextPage,
+    Space,
 }
 
 impl Icon {
@@ -38,6 +46,13 @@ impl Icon {
             Self::Back => "arrow-left",
             Self::Folder => "folder",
             Self::Close => "x",
+            Self::Swap => "arrow-left-right",
+            Self::Backspace => "delete",
+            Self::Return => "corner-down-left",
+            Self::Globe => "globe",
+            Self::PrevPage => "chevron-left",
+            Self::NextPage => "chevron-right",
+            Self::Space => "space",
         }
     }
 }
@@ -77,6 +92,30 @@ pub fn draw_icon(c: &mut Canvas, icon: Icon, target: Rect, ink: u8) {
     }
 }
 
+/// Like [`draw_icon`] but 1-bit (alpha ≥ 50 % is ink, the rest is left
+/// alone), for the DU-safe handwriting panel (v1.5.3).
+pub fn draw_icon_1bit(c: &mut Canvas, icon: Icon, target: Rect, ink: u8) {
+    let sz = baked_size(target.w.min(target.h) / 2);
+    let Some((_, _, mask)) = ICONS
+        .iter()
+        .find(|(n, s, _)| *n == icon.lucide() && *s == sz)
+    else {
+        return;
+    };
+    let s = sz as i32;
+    let x0 = target.x + (target.w - s) / 2;
+    let y0 = target.y + (target.h - s) / 2;
+    let b = c.bounds();
+    for y in 0..s {
+        for x in 0..s {
+            if mask[(y * s + x) as usize] >= 128 && b.contains(x0 + x, y0 + y) {
+                let i = ((y0 + y) * c.width as i32 + x0 + x) as usize;
+                c.pixels[i] = ink;
+            }
+        }
+    }
+}
+
 /// A back crumb's arrow (v1.4.6): the Lucide arrow-left, about one text
 /// height tall, with its left edge at `x` and centred on `mid_y`. Returns
 /// where the label starts. Replaces the "←" text glyph, which Atkinson
@@ -106,6 +145,13 @@ mod tests {
             Icon::Back,
             Icon::Folder,
             Icon::Close,
+            Icon::Swap,
+            Icon::Backspace,
+            Icon::Return,
+            Icon::Globe,
+            Icon::PrevPage,
+            Icon::NextPage,
+            Icon::Space,
         ] {
             for &s in SIZES {
                 let m = ICONS

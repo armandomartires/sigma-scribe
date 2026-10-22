@@ -1,8 +1,11 @@
 # v1.5.2 (S15.2): Letters: per-character boxes, candidates, enrolment, delete samples.
 copy-notes tests/test-notes/_test
+# v1.5.3: boxes are the fallback setting now (decision 55).
+tap-on Options
+tap-on Keyboard & input
+tap-on Letter boxes/On
+tap-on Close
 tap-on Write
-shot v1.5.2-draw-panel
-tap-on Letters
 shot v1.5.2-letters-empty
 ink-box 0 0.680,0.520 0.674,0.564 0.656,0.605 0.627,0.640 0.590,0.667 0.547,0.684 0.500,0.690 0.453,0.684 0.410,0.667 0.373,0.640 0.344,0.605 0.326,0.564 0.320,0.520 0.326,0.476 0.344,0.435 0.373,0.400 0.410,0.373 0.453,0.356 0.500,0.350 0.547,0.356 0.590,0.373 0.627,0.400 0.656,0.435 0.674,0.476 0.680,0.520
 wait 900

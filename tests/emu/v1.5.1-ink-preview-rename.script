@@ -1,6 +1,7 @@
 # v1.5.1 (S15.1): ink drawn in preview (1-bit, Paper and Night); .ink/ follows rename and move.
 copy-notes tests/test-notes/_test
 tap-on Write
+tap-on Draw
 press-on InkArea
 move 500 1500
 move 700 1400

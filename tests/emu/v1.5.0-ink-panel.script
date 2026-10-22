@@ -2,6 +2,7 @@
 copy-notes tests/test-notes/_test
 shot v1.5.0-before-write
 tap-on Write
+tap-on Draw
 shot v1.5.0-panel-empty
 press-on InkArea
 move 500 1500

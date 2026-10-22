@@ -91,6 +91,7 @@ impl Drop for Rig {
 fn live_ink_is_du_pure_black_and_cleaned_with_gl16_after_a_pause() {
     let mut r = Rig::new("du", 1440, 1920);
     r.tap("Write");
+    r.tap("Draw");
     assert!(r.app.ink.is_some());
     // The panel is pure white (buttons aside): DU-exact.
     let l = r.app.screen.ink_layout();
@@ -140,6 +141,7 @@ fn a2_setting_switches_the_live_waveform() {
     assert!(!r.app.settings.ink_a2, "A2 is off by default");
     r.app.change(Change::InkA2(true));
     r.tap("Write");
+    r.tap("Draw");
     let sent = r.stroke(0);
     assert!(sent.iter().all(|&s| s == Refresh::InkA2), "{sent:?}");
     let s = Settings::parse(&r.app.settings.serialize());
@@ -154,6 +156,7 @@ fn a2_setting_switches_the_live_waveform() {
 fn undo_clear_and_touches_outside_the_panel() {
     let mut r = Rig::new("undo", 1440, 1920);
     r.tap("Write");
+    r.tap("Draw");
     let base = r.black_in_area();
     r.stroke(0);
     let one = r.black_in_area();
@@ -191,6 +194,7 @@ fn insert_writes_svg_and_strokes_next_to_the_note() {
         .unwrap()
         .to_path_buf();
     r.tap("Write");
+    r.tap("Draw");
     r.stroke(0);
     r.tap("Pen");
     assert_eq!(r.app.settings.ink_pen, sigma_core::ink::Pen::Stylus);
@@ -212,11 +216,13 @@ fn insert_writes_svg_and_strokes_next_to_the_note() {
     );
     // A second block takes the next name; an empty panel inserts nothing.
     r.tap("Write");
+    r.tap("Draw");
     r.stroke(0);
     r.tap("Insert");
     assert!(note_dir.join(format!(".ink/{stem}/ink-002.svg")).exists());
     let t = r.app.buffer.text().to_owned();
     r.tap("Write");
+    r.tap("Draw");
     r.tap("Insert");
     assert_eq!(r.app.buffer.text(), t);
 }
@@ -235,6 +241,7 @@ fn panel_fits_portrait_and_landscape_at_every_ui_scale() {
             r.app.change(Change::UiScale(1));
         }
         r.tap("Write");
+        r.tap("Draw");
         let l = r.app.screen.ink_layout();
         for (b, _) in &l.buttons {
             assert!(
@@ -266,6 +273,7 @@ fn preview_draws_inserted_ink_pure_black_and_pure_white_at_night() {
                 .change(Change::Paper(sigma_core::settings::Paper::Night));
         }
         r.tap("Write");
+        r.tap("Draw");
         r.stroke(0);
         r.tap("Insert");
         r.app.enter_preview();
@@ -320,6 +328,7 @@ fn preview_keeps_the_placeholder_for_missing_or_foreign_images() {
 fn strokes_record_contact_size_only_when_the_panel_reports_it() {
     let mut r = Rig::new("contact", 1440, 1920);
     r.tap("Write");
+    r.tap("Draw");
     r.stroke(0);
     r.tap("Insert");
     let note = r.dir.join(r.app.current.as_str());
