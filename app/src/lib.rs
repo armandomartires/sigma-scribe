@@ -194,6 +194,21 @@ pub struct InkState {
     pub lang: Option<&'static str>,
     /// Train: samples saved this session.
     pub saved: usize,
+    /// v1.5.4: where a touch above the panel went down (caret tap).
+    tap_at: Option<(i32, i32)>,
+}
+
+/// A stroke's points in panel pixels (v1.5.4 gestures).
+fn stroke_pts(s: &sigma_core::ink::Stroke) -> Vec<(f32, f32)> {
+    s.points.iter().map(|p| (p.x as f32, p.y as f32)).collect()
+}
+
+/// Bounding box `(x0, y0, x1, y1)` of points.
+fn pts_box(p: &[(f32, f32)]) -> (f32, f32, f32, f32) {
+    p.iter()
+        .fold((f32::MAX, f32::MAX, f32::MIN, f32::MIN), |b, &(x, y)| {
+            (b.0.min(x), b.1.min(y), b.2.max(x), b.3.max(y))
+        })
 }
 
 /// Letters: idle time after a stroke before the box is read (ms).
@@ -2078,6 +2093,11 @@ impl App {
         use sigma_render::ink::{draw_segment, pen_px};
         let mode = self.ink.as_ref()?.mode;
         let l = self.panel_layout()?;
+        // v1.5.4 caret tap: a tap on the note above the panel moves the
+        // caret there (pending ink is read first); the panel stays open.
+        if !l.panel.contains(x, y) && self.ink.as_ref()?.ink.live.is_none() {
+            return Some(self.caret_tap(phase, x, y));
+        }
         if mode != sigma_render::ink::InkMode::Draw {
             return Some(self.letters_touch(phase, x, y, t, &l));
         }
@@ -2127,6 +2147,20 @@ impl App {
                 if ink.ink.live.is_some() {
                     ink.ink.up();
                     ink.last_up = Some(t);
+                    // v1.5.4: a scratch-out erases the strokes it crosses.
+                    let size = l.area.h as f32;
+                    let last = ink.ink.strokes.last().map(stroke_pts).unwrap_or_default();
+                    if sigma_hwr::gesture::classify(&last, size)
+                        == Some(sigma_hwr::gesture::Gesture::ScratchOut)
+                    {
+                        ink.ink.strokes.pop();
+                        let bb = pts_box(&last);
+                        ink.ink
+                            .strokes
+                            .retain(|s| !sigma_hwr::gesture::overlaps(pts_box(&stroke_pts(s)), bb));
+                        ink.last_up = None;
+                        return Some(Some(Refresh::Partial));
+                    }
                     return Some(None);
                 }
                 let pressed = ink.press.take();
@@ -2208,6 +2242,9 @@ impl App {
                 if ink.ink.live.is_some() {
                     ink.ink.up();
                     ink.last_up = Some(t);
+                    if ink.mode == sigma_render::ink::InkMode::Free {
+                        return self.free_gesture(l);
+                    }
                     return None;
                 }
                 let pressed = ink.press.take();
@@ -2216,6 +2253,104 @@ impl App {
                     return None;
                 }
                 self.ink_button(b?)
+            }
+        }
+    }
+
+    /// v1.5.4: a tap above the panel places the caret (Down remembers the
+    /// spot; Up within 24 px of it acts).
+    fn caret_tap(&mut self, phase: Phase, x: i32, y: i32) -> Option<Refresh> {
+        match phase {
+            Phase::Down => {
+                self.ink.as_mut()?.tap_at = Some((x, y));
+                None
+            }
+            Phase::Move => None,
+            Phase::Up => {
+                let (dx, dy) = self.ink.as_mut()?.tap_at.take()?;
+                if (dx - x).abs() > 24 || (dy - y).abs() > 24 {
+                    return None;
+                }
+                self.place_caret(x, y)
+            }
+        }
+    }
+
+    /// Caret tap: pending ink is read, then the caret goes to the tapped
+    /// spot of the note.
+    fn place_caret(&mut self, x: i32, y: i32) -> Option<Refresh> {
+        let Hit::Caret(at) = self.editor_hit(x, y) else {
+            return None;
+        };
+        let _ = self.read_letter();
+        self.buffer.set_caret(at);
+        let ink = self.ink.as_mut()?;
+        ink.replace_ok = false;
+        ink.cands.clear();
+        Some(Refresh::Partial)
+    }
+
+    /// v1.5.4 gestures in the free area, on the stroke that just lifted:
+    /// scratch-out over pending ink erases what it crosses, over nothing
+    /// deletes the last reading (or the word before the caret); a long
+    /// flat flick left is Backspace (joins lines at a line start), right
+    /// is Space.
+    fn free_gesture(&mut self, l: &sigma_render::ink::InkLayout) -> Option<Refresh> {
+        use sigma_hwr::gesture::{classify, overlaps, Gesture};
+        let ink = self.ink.as_mut()?;
+        let last = stroke_pts(ink.ink.strokes.last()?);
+        let g = classify(&last, l.area.h as f32)?;
+        ink.ink.strokes.pop();
+        let others = !ink.ink.strokes.is_empty();
+        match g {
+            Gesture::ScratchOut if others => {
+                // The free area holds one line: everything in the scratch's
+                // x-range goes (dots and descenders too).
+                let bb = pts_box(&last);
+                ink.ink.strokes.retain(|s| {
+                    let b = pts_box(&stroke_pts(s));
+                    !overlaps((b.0, 0.0, b.2, 0.0), (bb.0, 0.0, bb.2, 0.0))
+                });
+                if ink.ink.strokes.is_empty() {
+                    ink.last_up = None;
+                    ink.boxi = None;
+                }
+                Some(Refresh::Partial)
+            }
+            Gesture::ScratchOut => {
+                ink.last_up = None;
+                let n = if ink.replace_ok { ink.last_len } else { 0 };
+                ink.replace_ok = false;
+                ink.cands.clear();
+                if n > 0 {
+                    for _ in 0..n {
+                        self.buffer.backspace();
+                    }
+                } else {
+                    let c = self.buffer.caret();
+                    let text = self.buffer.text();
+                    let trimmed = text[..c].trim_end_matches([' ', '\t']).len();
+                    let start = self.buffer.word_left(trimmed);
+                    if start == c {
+                        return Some(Refresh::Partial);
+                    }
+                    self.buffer.select(start, c);
+                    self.buffer.backspace();
+                }
+                self.save();
+                Some(Refresh::Partial)
+            }
+            Gesture::FlickLeft => {
+                if !others {
+                    ink.last_up = None;
+                }
+                self.letters_type("", true)
+            }
+            Gesture::FlickRight => {
+                if !others {
+                    ink.last_up = None;
+                }
+                self.letters_type(" ", false)
             }
         }
     }
@@ -3175,6 +3310,9 @@ impl App {
             Event::Tilt { .. } => None,
             Event::Tap { x, y } if self.ink.is_some() => {
                 let l = self.panel_layout()?;
+                if !l.panel.contains(x, y) {
+                    return self.place_caret(x, y);
+                }
                 let b = self.screen.ink_hit(&l, x, y)?;
                 self.ink_button(b)
             }
@@ -3535,7 +3673,8 @@ impl App {
     }
 
     /// The open panel's layout.
-    fn panel_layout(&self) -> Option<sigma_render::ink::InkLayout> {
+    #[must_use]
+    pub fn panel_layout(&self) -> Option<sigma_render::ink::InkLayout> {
         let v = self.ink_view()?;
         Some(self.screen.ink_layout_for(self.ink.as_ref()?.mode, &v))
     }

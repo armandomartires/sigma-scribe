@@ -77,6 +77,13 @@ Installed on the Forma today: **1.4.0** (2026-10-22). Built and waiting: 1.4.1 �
 - [ ] Timing: a printed word reads at once (estimate ≤ 25 ms), joined words ≤ 0.4 s.
 - [ ] Settings → Letter boxes On brings back the 1.5.2 boxes; Train still works and returns to the free area.
 
+## Gestures (v1.5.4, S15.4)
+- [ ] Scratch out a half-written word: it disappears and nothing is typed. Scratch out an empty area right after a word was typed: the word and its space go.
+- [ ] Write normally for a few minutes: does any letter (z, s, 8, m, w, a dash) get taken as a scratch-out or flick? Note which.
+- [ ] Flick left in the middle of a line deletes one character; at a line start it joins the lines. Flick right types a space.
+- [ ] Tap a word in the note above the panel: the caret moves there, the panel stays, the next word is typed there.
+- [ ] Draw: a scratch-out erases only the strokes it crosses.
+
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).
 

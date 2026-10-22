@@ -136,7 +136,19 @@ Package: CI artifact `sigma-scribe-1.4.6-probe-kobo` from release.yml run 397641
 
 **Afterwards:** either keep 1.4.6-probe (behaves like 1.4.6) or put the 1.4.6 binary back (same procedure, 1.4.6 hash). The log decides the 0x19 / 0x1a mapping; turning `ENABLED` on is a separate change and approval.
 
-## Upgrade 1.4.0 → 1.5.3 (not run; needs approval; under decision 48 this waits for the single pre-release device pass; replaces the 1.5.2, 1.5.1, 1.5.0 and 1.4.6 plans below)
+## Upgrade 1.4.0 → 1.5.4 (not run; needs approval; under decision 48 this waits for the single pre-release device pass; replaces the 1.5.3, 1.5.2, 1.5.1, 1.5.0 and 1.4.6 plans below)
+Same procedure as 1.4.0:
+1. Verify the serial (<FORMA-SERIAL>) and touch no other disk (never sdb).
+2. Read the log and copy it into the backup.
+3. Make a checksum-verified backup into `~/backups/kobo-forma-<FORMA-SERIAL>/<date>-pre-v1.5.4` (`.adds/sigma-scribe`, `.adds/nm`, `sigma-scribe/notes`, log).
+4. From the CI 1.5.4 package:
+   - replace `.adds/sigma-scribe/sigma-scribe` (via `.new` + sync + hash check + rename), binary sha256 `2d609ca1c95e81feea8a86c215ad6b21c10fea51c594de4e13edfc674b2db420`, tarball `184f5cdfc1139a2532879d5a8dad3ea2e62ea7b8393c86f5e8b475709c8f9da2` (CI release.yml run 39797533111);
+   - add `.adds/sigma-scribe/THIRD-PARTY.txt` if it is not there yet, sha256 `f61a648623ee545238601212f3d29eb056bddca7ed738f1427a2ca1bfc712ee4`.
+5. Verify the sha256 on the device, then sync, unmount and power off.
+
+Nothing else changes: the letter model is inside the binary (no new files to copy). `.sigma-settings` is kept; 1.5.4 adds `keyboard_size=auto`, `ink_pen=finger` and `ink_a2=off`, `ink_boxes=off` and `ink_words=off` on the next save. New data written by the app: `sigma-scribe/notes/**/.ink/` (drawings) and, only if the user uses Train, `sigma-scribe/notes/.handwriting/samples.txt`; both are inside `notes`, so the backup covers them. Note that renaming a note now also edits `[[links]]` in other notes (decision 52). Rollback: the 1.4.0 binary from the backup (it ignores the new keys and files; `![ink](…)` lines stay as text). Checks: `docs/device-checklist-prerelease.md` (all sections up to "Gestures").
+
+## Upgrade 1.4.0 → 1.5.3 (not run; superseded by 1.5.4)
 Same procedure as 1.4.0:
 1. Verify the serial (<FORMA-SERIAL>) and touch no other disk (never sdb).
 2. Read the log and copy it into the backup.

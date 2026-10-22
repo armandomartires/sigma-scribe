@@ -15,6 +15,7 @@
 use std::fmt::Write as _;
 
 pub mod free;
+pub mod gesture;
 pub mod word;
 
 /// EN/FR/PT letters (with the accents those languages use), digits and
