@@ -168,3 +168,9 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.4.2 | [v1.4.2-writing-fr.png](v1.4.2/v1.4.2-writing-fr.png) | Writing in French | [eink](v1.4.2/eink/v1.4.2-writing-fr.png) |
 | v1.4.2 | [v1.4.2-scrollbar-end.png](v1.4.2/v1.4.2-scrollbar-end.png) | Scroll bar at the end of a long note | [eink](v1.4.2/eink/v1.4.2-scrollbar-end.png) |
 | v1.4.2 | [v1.4.2-scrollbar-middle.png](v1.4.2/v1.4.2-scrollbar-middle.png) | Scroll bar mid-note | [eink](v1.4.2/eink/v1.4.2-scrollbar-middle.png) |
+| v1.4.3 | [v1.4.3-before-keyboard-200-portrait.png](v1.4.3/v1.4.3-before-keyboard-200-portrait.png) | Before (1.4.2): keyboard at 200 % UI, portrait | [eink](v1.4.3/eink/v1.4.3-before-keyboard-200-portrait.png) |
+| v1.4.3 | [v1.4.3-before-keyboard-200-landscape.png](v1.4.3/v1.4.3-before-keyboard-200-landscape.png) | Before (1.4.2): keyboard at 200 % UI, landscape | [eink](v1.4.3/eink/v1.4.3-before-keyboard-200-landscape.png) |
+| v1.4.3 | [v1.4.3-keyboard-200-auto-portrait.png](v1.4.3/v1.4.3-keyboard-200-auto-portrait.png) | After: keyboard at 200 % UI, Auto (150 %), portrait | [eink](v1.4.3/eink/v1.4.3-keyboard-200-auto-portrait.png) |
+| v1.4.3 | [v1.4.3-keyboard-200-auto-landscape.png](v1.4.3/v1.4.3-keyboard-200-auto-landscape.png) | After: keyboard at 200 % UI, Auto (150 %), landscape | [eink](v1.4.3/eink/v1.4.3-keyboard-200-auto-landscape.png) |
+| v1.4.3 | [v1.4.3-keyboard-input.png](v1.4.3/v1.4.3-keyboard-input.png) | Keyboard & input with Keyboard size | [eink](v1.4.3/eink/v1.4.3-keyboard-input.png) |
+| v1.4.3 | [v1.4.3-keyboard-size-choice.png](v1.4.3/v1.4.3-keyboard-size-choice.png) | Keyboard size choice page | [eink](v1.4.3/eink/v1.4.3-keyboard-size-choice.png) |

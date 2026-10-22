@@ -1,0 +1,25 @@
+# v1.4.3 (S14.3): Keyboard size, decoupled from the UI scale (default 200 %).
+copy-notes tests/test-notes/_test
+tap-on Files
+tap-on test-long-note.md
+shot v1.4.3-keyboard-200-auto-portrait
+tap-on Options
+tap-on Keyboard & input
+shot v1.4.3-keyboard-input
+tap-on Keyboard size
+shot v1.4.3-keyboard-size-choice
+tap-on 100%
+expect-setting keyboard_size=100
+tap-on Keyboard size
+tap-on Auto
+expect-setting keyboard_size=auto
+esc
+esc
+tap-on Options
+tap-on Display
+tap-on Orientation
+tap-on Landscape
+expect-setting orientation=landscape
+esc
+esc
+shot v1.4.3-keyboard-200-auto-landscape

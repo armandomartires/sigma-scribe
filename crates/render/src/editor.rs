@@ -168,6 +168,8 @@ pub struct EditorScreen {
     /// Navigation history is not empty: show the Back arrow (v1.0.2).
     pub back_on: bool,
     s: Scale,
+    /// Keyboard scale (v1.4.3): page scale × `Settings::keyboard_scale`.
+    k: Scale,
     /// The page scale (note text, margins): `s` without the UI scale (v1.1).
     page_s: Scale,
     // Typography defaults from the brief: 20 px, leading 1.5, margin 28 px.
@@ -211,6 +213,7 @@ impl EditorScreen {
             fonts: Fonts::new(),
             scroll: 0,
             s: Scale(Scale::for_width(width.min(height)).0 * 2.0),
+            k: Scale(Scale::for_width(width.min(height)).0 * 1.5),
             page_s: Scale::for_width(width.min(height)),
             body_px: 20.0,
             leading: 1.5,
@@ -242,6 +245,7 @@ impl EditorScreen {
         self.height = height;
         self.page_s = Scale::for_width(width.min(height));
         self.s = Scale(self.page_s.0 * f32::from(self.cfg.ui_scale) / 100.0);
+        self.k = Scale(self.page_s.0 * f32::from(self.cfg.keyboard_scale()) / 100.0);
     }
 
     #[must_use]
@@ -264,6 +268,7 @@ impl EditorScreen {
         };
         self.leading = st.leading;
         self.s = Scale(self.page_s.0 * f32::from(st.ui_scale) / 100.0);
+        self.k = Scale(self.page_s.0 * f32::from(st.keyboard_scale()) / 100.0);
         if st.line_on {
             let k = self.page_s.0;
             let column = self.width.min(self.height) as f32;
@@ -308,6 +313,17 @@ impl EditorScreen {
         self.s.px(v)
     }
 
+    /// Keyboard units (v1.4.3): keys, gaps and the landscape bar.
+    fn kpx(&self, v: f32) -> i32 {
+        self.k.px(v)
+    }
+
+    /// The keyboard scale (v1.4.3).
+    #[must_use]
+    pub fn key_scale(&self) -> Scale {
+        self.k
+    }
+
     fn body(&self) -> f32 {
         self.body_px * self.page_s.0
     }
@@ -329,25 +345,25 @@ impl EditorScreen {
         let (w, h) = (self.width as i32, self.height as i32);
         let (btn, icon_gap) = self.title_icons(w);
         let title = Rect::new(0, 0, w, btn + 2 * self.px(6.0));
-        let gap = self.px(6.0);
-        let pad = self.px(10.0);
+        let gap = self.kpx(6.0);
+        let pad = self.kpx(10.0);
         let rows = keyboard.rows();
         // v1.1: the keyboard takes at most 42 % (portrait) / 45 % (landscape)
         // of the height, so the page keeps room at 200 %.
         let key_h = {
             let n = rows.len().max(1) as i32;
             let bar = if self.landscape() {
-                self.px(44.0) + gap
+                self.kpx(44.0) + gap
             } else {
                 0
             };
             let cap = h * if self.landscape() { 45 } else { 42 } / 100;
             let fit = (cap - pad * 2 - bar - gap * (n - 1)) / n;
-            self.px(58.0).min(fit).max(self.page_s.px(44.0))
+            self.kpx(58.0).min(fit).max(self.page_s.px(44.0))
         };
         // Landscape adds the Split · Full · Centre bar above the keys.
         let bar_h = if self.landscape() {
-            self.px(44.0) + gap
+            self.kpx(44.0) + gap
         } else {
             0
         };
@@ -603,10 +619,10 @@ impl EditorScreen {
         }
         let mut buttons = Vec::new();
         if land {
-            let bh = self.px(44.0);
+            let bh = self.kpx(44.0);
             let by = kb.y + pad;
-            let bw = self.px(110.0);
-            let bg = self.px(8.0);
+            let bw = self.kpx(110.0);
+            let bg = self.kpx(8.0);
             let x = (w - (3 * bw + 2 * bg)) / 2;
             for (i, m) in [LandKeys::Split, LandKeys::Full, LandKeys::Centre]
                 .into_iter()
@@ -1320,8 +1336,8 @@ impl EditorScreen {
         let t = self.key_theme.unwrap_or(t);
         c.fill(l.keyboard, t.paper);
         c.fill(Rect::new(0, l.keyboard.y, l.keyboard.w, 1), t.rule);
-        let ks = 20.0 * self.s.0;
-        let ui = self.ui_px();
+        let ks = 20.0 * self.k.0;
+        let ui = 17.0 * self.k.0;
         for &(r, b) in &l.kb_buttons {
             let active = matches!(b, KbButton::Mode(m) if m == self.cfg.land_keys);
             let (bg, fg) = if active {
@@ -1359,16 +1375,16 @@ impl EditorScreen {
                 c.fill(
                     Rect::new(
                         r.x + r.w / 4,
-                        r.y + r.h - self.px(10.0),
+                        r.y + r.h - self.kpx(10.0),
                         r.w / 2,
-                        self.px(3.0),
+                        self.kpx(3.0),
                     ),
                     fg,
                 );
             }
             if let Key::Arrow(d) = k {
                 // Atkinson has no arrow glyphs: draw a 1.75-stroke arrow.
-                draw_arrow(c, r, d, self.s, fg);
+                draw_arrow(c, r, d, self.k, fg);
                 continue;
             }
             let label = keyboard.label(k);
