@@ -17,6 +17,23 @@ sync
 # Same list KOReader stops (koreader.sh); sickel is Nickel's watchdog.
 killall -q -TERM nickel hindenburg sickel fickel strickel fontickel adobehost foxitpdf iink dhcpcd-dbus dhcpcd fmon >/dev/null 2>&1
 sleep 2
+# Keep Sigma Scribe's files out of the Kobo library (v1.11.1). Nickel indexes
+# hidden folders too (firmware 4.17+) unless ExcludeSyncFolders says not to,
+# and it rewrites its config when it is running, so the line is added here,
+# with Nickel stopped. Done only when the key is not set; the original is
+# kept once as "Kobo eReader.conf.sigma-bak".
+CONF="/mnt/onboard/.kobo/Kobo/Kobo eReader.conf"
+EXCLUDE='ExcludeSyncFolders=(\\.(?!kobo|adobe).+|([^.][^/]*/)+\\..+|sigma-scribe(/.*)?)'
+if [ -f "$CONF" ] && ! grep -q '^ExcludeSyncFolders=' "$CONF"; then
+  [ -f "$CONF.sigma-bak" ] || cp "$CONF" "$CONF.sigma-bak"
+  if grep -q '^\[FeatureSettings\]' "$CONF"; then
+    L="$EXCLUDE" awk '{print} /^\[FeatureSettings\]/{print ENVIRON["L"]}' "$CONF" >"$CONF.new"
+  else
+    { cat "$CONF"; printf '\n[FeatureSettings]\n%s\n' "$EXCLUDE"; } >"$CONF.new"
+  fi
+  mv "$CONF.new" "$CONF"
+  echo "added ExcludeSyncFolders to the Kobo config" >>"$LOG"
+fi
 "$DIR/sigma-scribe" >>"$LOG" 2>&1
 echo "=== $(date) exit $?" >>"$LOG"
 sync
