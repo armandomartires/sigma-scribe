@@ -201,7 +201,7 @@ fn sentence(d: &Dict, input: &str) -> Option<(usize, String, usize)> {
         for (end, key) in runs(d, input, pos) {
             let (w, wt) = &d.words[&key][0];
             let c = c0 + cost(*wt);
-            if best[end].as_ref().map_or(true, |b| c < b.0) {
+            if best[end].as_ref().is_none_or(|b| c < b.0) {
                 best[end] = Some((c, format!("{t0}{w}"), k0 + 1, pos));
             }
         }
@@ -228,7 +228,7 @@ fn candidates_in(d: &Dict, input: &str) -> Vec<Cand> {
         }
     }
     let mut runs = runs(d, input, 0);
-    runs.sort_by(|a, b| b.0.cmp(&a.0));
+    runs.sort_by_key(|a| std::cmp::Reverse(a.0));
     let mut ends: Vec<usize> = runs.iter().map(|r| r.0).collect();
     ends.dedup();
     for end in ends {
@@ -237,7 +237,7 @@ fn candidates_in(d: &Dict, input: &str) -> Vec<Cand> {
             .filter(|r| r.0 == end)
             .flat_map(|r| d.words[&r.1].iter())
             .collect();
-        words.sort_by(|a, b| b.1.cmp(&a.1));
+        words.sort_by_key(|a| std::cmp::Reverse(a.1));
         for (w, _) in words {
             push(w, end, &mut out);
         }
