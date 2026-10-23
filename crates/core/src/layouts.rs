@@ -1268,7 +1268,11 @@ impl JaState {
         if self.converting() {
             self.segs
                 .iter()
-                .map(|s| s.cands.get(s.sel).map_or(s.reading.as_str(), String::as_str))
+                .map(|s| {
+                    s.cands
+                        .get(s.sel)
+                        .map_or(s.reading.as_str(), String::as_str)
+                })
                 .collect()
         } else {
             format!("{}{}", self.kana, self.pend)
@@ -1567,10 +1571,7 @@ impl Composer {
         if self.zh.active() {
             return (!self.zh.texts.is_empty()).then_some((&self.zh.texts[..], self.zh.sel));
         }
-        self.ja
-            .segs
-            .get(self.ja.cur)
-            .map(|s| (&s.cands[..], s.sel))
+        self.ja.segs.get(self.ja.cur).map(|s| (&s.cands[..], s.sel))
     }
 
     /// The byte range of the current phrase inside the preedit, when the
@@ -2121,10 +2122,21 @@ mod tests {
         assert!(!c.composing_ja());
         // A candidate that covers the start leaves the rest typed on.
         type_str(&mut c, &mut b, l, "nihao");
-        let i = c.candidates().unwrap().0.iter().position(|x| x == "你").unwrap();
+        let i = c
+            .candidates()
+            .unwrap()
+            .0
+            .iter()
+            .position(|x| x == "你")
+            .unwrap();
         c.pick(&mut b, i);
         assert_eq!(b.text(), "你好你hao");
-        assert_eq!(c.composing(&b).map(|x| b.text()[x.0..x.1].to_string()).as_deref(), Some("hao"));
+        assert_eq!(
+            c.composing(&b)
+                .map(|x| b.text()[x.0..x.1].to_string())
+                .as_deref(),
+            Some("hao")
+        );
         // A digit picks by number; the rest of the input is written.
         c.type_char(&mut b, l, '1');
         assert_eq!(b.text(), "你好你好");

@@ -3500,11 +3500,9 @@ impl App {
                 let phrase = matches!(k, HwKey::Left | HwKey::Right)
                     && self.keyboard.composer.candidates().is_some();
                 if phrase {
-                    self.keyboard.composer.phrase_arrow(
-                        &mut self.buffer,
-                        k == HwKey::Right,
-                        false,
-                    );
+                    self.keyboard
+                        .composer
+                        .phrase_arrow(&mut self.buffer, k == HwKey::Right, false);
                     return Some(Refresh::Fast);
                 }
                 if !matches!(

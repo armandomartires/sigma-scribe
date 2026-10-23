@@ -648,9 +648,7 @@ fn cuts(d: &Dict, reading: &str) -> Vec<Vec<Piece>> {
                 if len > 1 {
                     let last = r[j + len - 1];
                     let stem: String = r[j..j + len - 1].iter().collect();
-                    if PARTICLES.contains(last)
-                        && c.ends_with(last)
-                        && d.words.contains_key(&stem)
+                    if PARTICLES.contains(last) && c.ends_with(last) && d.words.contains_key(&stem)
                     {
                         continue;
                     }
