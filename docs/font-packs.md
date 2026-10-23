@@ -17,3 +17,6 @@ pyftsubset NotoSansCJKkr-Regular.otf --unicodes="U+3131-318E,U+AC00-D7A3" --layo
 ```
 
 The full Hangul block (`U+AC00-D7A3`, 11,172 syllables) is about 3–4 MB; for the 2,350-syllable set, pass the KS X 1001 syllable list instead. Copy the result to `.adds/sigma-scribe/fonts/korean.ttf`. The build host here has no fontTools, so the pack has not been made; installing the Korean layout on the device waits for it.
+
+## Japanese (v1.10)
+The same file serves Korean and Japanese: `fonts/cjk.ttf` in `.adds/sigma-scribe/` (the app also accepts `korean.ttf`). Subset Noto Sans CJK JP (which includes Hangul) to the kana, the JIS level 1 and 2 kanji (about 6,350) and the Hangul block you want, with the same `pyftsubset` command and the range for the characters needed; expect 4–6 MB. The simulator uses the system Noto Sans CJK JP.

@@ -64,9 +64,11 @@ pub enum KeyLayout {
     Ta,
     /// Thai Kedmanee (v1.9).
     Th,
+    /// Japanese: romaji to kana, kana to kanji (v1.10).
+    Ja,
 }
 
-pub const ALL: [KeyLayout; 32] = [
+pub const ALL: [KeyLayout; 33] = [
     KeyLayout::Us,
     KeyLayout::Uk,
     KeyLayout::Fr,
@@ -99,6 +101,7 @@ pub const ALL: [KeyLayout; 32] = [
     KeyLayout::Bn,
     KeyLayout::Ta,
     KeyLayout::Th,
+    KeyLayout::Ja,
 ];
 
 /// evdev codes of the 48 positions, in table order.
@@ -658,6 +661,29 @@ const THAI: Table = Table {
     ],
 };
 
+// Japanese: the US keys feed the romaji input; the key left of 1 is the
+// あ / A switch (半 / 全 on a Japanese keyboard); AltGr types the US key.
+const JA: Table = Table {
+    base: [
+        "半1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+    shift: [
+        "~!@#$%^&*()_+",
+        "QWERTYUIOP{}|",
+        "ASDFGHJKL:\" ",
+        "ZXCVBNM<>?",
+    ],
+    altgr: [
+        "`1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+};
+
 const RU: Table = Table {
     base: [
         "ё1234567890-=",
@@ -760,6 +786,7 @@ fn table(l: KeyLayout) -> &'static Table {
         KeyLayout::Bn => &BENG,
         KeyLayout::Ta => &TAMIL,
         KeyLayout::Th => &THAI,
+        KeyLayout::Ja => &JA,
     }
 }
 
@@ -809,6 +836,7 @@ impl KeyLayout {
             Self::Bn => "bn",
             Self::Ta => "ta",
             Self::Th => "th",
+            Self::Ja => "ja",
         }
     }
 
@@ -848,6 +876,7 @@ impl KeyLayout {
             Self::Bn => "Bengali (InScript)",
             Self::Ta => "Tamil (InScript)",
             Self::Th => "Thai (Kedmanee)",
+            Self::Ja => "Japanese (romaji)",
         }
     }
 
@@ -936,6 +965,7 @@ impl KeyLayout {
                 | Self::Bn
                 | Self::Ta
                 | Self::Th
+                | Self::Ja
         )
     }
 
@@ -1002,7 +1032,13 @@ impl KeyLayout {
     /// board only.
     #[must_use]
     pub fn has_compact(self) -> bool {
-        !matches!(self, Self::Deva | Self::Bn | Self::Ta | Self::Th)
+        !matches!(self, Self::Deva | Self::Bn | Self::Ta | Self::Th | Self::Ja)
+    }
+
+    /// Japanese typing: romaji to kana, then kanji.
+    #[must_use]
+    pub fn japanese(self) -> bool {
+        self == Self::Ja
     }
 
     /// Korean typing: jamo become syllables.
@@ -1077,6 +1113,38 @@ pub struct Composer {
     shown: String,
     /// Where the caret was left, to notice that it moved.
     at: usize,
+    /// Japanese input in progress (v1.10).
+    ja: JaState,
+    /// What `shown` is: 0 nothing, 1 Vietnamese, 2 Korean, 3 Japanese.
+    kind: u8,
+}
+
+/// The Japanese preedit: the reading so far, the romaji waiting, and the
+/// conversion candidates once Space has been pressed.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct JaState {
+    /// Direct (Latin) input instead of kana.
+    direct: bool,
+    kana: String,
+    pend: String,
+    cands: Vec<String>,
+    sel: usize,
+    converting: bool,
+}
+
+impl JaState {
+    fn active(&self) -> bool {
+        self.converting || !self.kana.is_empty() || !self.pend.is_empty()
+    }
+
+    /// The text the preedit shows now.
+    fn text(&self) -> String {
+        if self.converting {
+            self.cands.get(self.sel).cloned().unwrap_or_default()
+        } else {
+            format!("{}{}", self.kana, self.pend)
+        }
+    }
 }
 
 impl Composer {
@@ -1107,6 +1175,9 @@ impl Composer {
     /// layouts, a re-spelled word for Telex / VNI. True when the text
     /// changed.
     pub fn type_char(&mut self, buffer: &mut Buffer, lang: KeyLayout, c: char) -> bool {
+        if lang.japanese() {
+            return self.type_ja(buffer, c);
+        }
         let vni = lang.viet();
         let hangul = lang.hangul();
         if vni.is_none() && !hangul {
@@ -1133,9 +1204,176 @@ impl Composer {
         true
     }
 
+    /// Japanese: letters make kana, Space converts and cycles, digits and
+    /// the 半 key commit; see `ja.rs`.
+    fn type_ja(&mut self, buffer: &mut Buffer, c: char) -> bool {
+        self.sync(buffer);
+        if c == '半' {
+            self.ja_commit();
+            self.ja.direct = !self.ja.direct;
+            return false;
+        }
+        if self.ja.direct {
+            buffer.insert(&c.to_string());
+            return true;
+        }
+        if c == ' ' {
+            if !self.ja.active() {
+                buffer.insert(" ");
+                return true;
+            }
+            if self.ja.converting {
+                self.ja.sel = (self.ja.sel + 1) % self.ja.cands.len().max(1);
+            } else {
+                crate::ja::finish(&mut self.ja.kana, &mut self.ja.pend);
+                self.ja.cands = crate::ja::convert(&self.ja.kana);
+                self.ja.sel = 0;
+                self.ja.converting = true;
+            }
+            self.put_ja(buffer);
+            return true;
+        }
+        if c.is_ascii_digit() || (!c.is_ascii() && !c.is_alphabetic()) {
+            self.ja_commit();
+            buffer.insert(&c.to_string());
+            return true;
+        }
+        if self.ja.converting {
+            self.ja_commit();
+        }
+        crate::ja::romaji_feed(&mut self.ja.kana, &mut self.ja.pend, c);
+        self.put_ja(buffer);
+        true
+    }
+
+    /// Shows the preedit (or the chosen candidate) in the buffer.
+    fn put_ja(&mut self, buffer: &mut Buffer) {
+        self.kind = 3;
+        let new = self.ja.text();
+        self.put(buffer, new);
+    }
+
+    /// Leaves the shown text in the buffer and starts afresh.
+    fn ja_commit(&mut self) {
+        self.ja.kana.clear();
+        self.ja.pend.clear();
+        self.ja.cands.clear();
+        self.ja.sel = 0;
+        self.ja.converting = false;
+        self.raw.clear();
+        self.shown.clear();
+    }
+
+    /// Japanese direct (Latin) input is on.
+    #[must_use]
+    pub fn japanese_direct(&self) -> bool {
+        self.ja.direct
+    }
+
+    /// Japanese is being composed (reading or candidates on screen).
+    #[must_use]
+    pub fn composing_ja(&self) -> bool {
+        self.ja.active()
+    }
+
+    /// The candidates and the chosen one, while converting.
+    #[must_use]
+    pub fn candidates(&self) -> Option<(&[String], usize)> {
+        self.ja
+            .converting
+            .then_some((&self.ja.cands[..], self.ja.sel))
+    }
+
+    /// Chooses candidate `i` and commits it (a tap on the candidate bar).
+    pub fn pick(&mut self, buffer: &mut Buffer, i: usize) {
+        if self.ja.converting && i < self.ja.cands.len() {
+            self.ja.sel = i;
+            self.put_ja(buffer);
+            self.ja_commit();
+        }
+    }
+
+    /// Return: commits what is being composed (no newline then). Otherwise
+    /// writes a waiting accent and returns false (the caller breaks the line).
+    pub fn enter(&mut self, buffer: &mut Buffer) -> bool {
+        if self.ja.active() {
+            self.sync(buffer);
+            crate::ja::finish(&mut self.ja.kana, &mut self.ja.pend);
+            if !self.ja.converting {
+                self.put_ja(buffer);
+            }
+            self.ja_commit();
+            return true;
+        }
+        let t = self.flush();
+        if !t.is_empty() {
+            buffer.insert(&t);
+        }
+        false
+    }
+
+    /// Esc: from the candidates back to the reading, from the reading to
+    /// nothing. False when nothing was being composed.
+    pub fn escape(&mut self, buffer: &mut Buffer) -> bool {
+        if !self.ja.active() {
+            return false;
+        }
+        self.sync(buffer);
+        if self.ja.converting {
+            self.ja.converting = false;
+            self.ja.cands.clear();
+        } else {
+            self.ja.kana.clear();
+            self.ja.pend.clear();
+        }
+        self.put_ja(buffer);
+        if !self.ja.active() {
+            self.ja_commit();
+        }
+        true
+    }
+
+    /// The byte range of the buffer that is still being composed (drawn
+    /// underlined): the Japanese preedit, or the Korean syllable.
+    #[must_use]
+    pub fn composing(&self, buffer: &Buffer) -> Option<(usize, usize)> {
+        let end = buffer.caret();
+        if self.shown.is_empty() || self.at != end || !buffer.text().is_char_boundary(end) {
+            return None;
+        }
+        let start = end.checked_sub(self.shown.len())?;
+        match self.kind {
+            3 if self.ja.active() => Some((start, end)),
+            2 => {
+                let last = self.shown.chars().next_back()?;
+                Some((end - last.len_utf8(), end))
+            }
+            _ => None,
+        }
+    }
+
     /// Backspace: Korean takes the last jamo back (한 → 하 → ㅎ); anything
     /// else deletes a character as usual.
     pub fn backspace(&mut self, buffer: &mut Buffer, lang: KeyLayout) {
+        if self.pending.take().is_some() {
+            // A waiting accent is dropped, as when it was written first and
+            // then taken back.
+            return;
+        }
+        if lang.japanese() && self.ja.active() {
+            self.sync(buffer);
+            if self.ja.converting {
+                self.ja.converting = false;
+                self.ja.cands.clear();
+            } else if self.ja.pend.pop().is_none() {
+                self.ja.kana.pop();
+            }
+            self.put_ja(buffer);
+            if !self.ja.active() {
+                self.ja_commit();
+            }
+            return;
+        }
         if lang.hangul() {
             self.sync(buffer);
             if self.raw.pop().is_some() {
@@ -1161,11 +1399,18 @@ impl Composer {
     /// Re-spells the word from the keystrokes, rewriting only from the
     /// first letter that changed.
     fn show(&mut self, buffer: &mut Buffer, hangul: bool, vni: bool) {
+        self.kind = if hangul { 2 } else { 1 };
         let new = if hangul {
             crate::hangul::compose(&self.raw)
         } else {
             crate::viet::convert(&self.raw, vni)
         };
+        self.put(buffer, new);
+    }
+
+    /// Makes the buffer show `new` where the word was, from the first
+    /// letter that differs.
+    fn put(&mut self, buffer: &mut Buffer, new: String) {
         let keep = self
             .shown
             .chars()
@@ -1185,6 +1430,7 @@ impl Composer {
     pub fn forget(&mut self) {
         self.raw.clear();
         self.shown.clear();
+        self.ja_commit();
     }
 
     /// A non-character key (Enter, arrows…) flushes a waiting accent.
@@ -1355,6 +1601,73 @@ mod tests {
         c.type_char(&mut b, KeyLayout::Us, 'a');
         c.type_char(&mut b, KeyLayout::Us, 's');
         assert_eq!(b.text(), "as");
+    }
+
+    #[test]
+    fn japanese_reading_conversion_and_commit() {
+        let mut b = Buffer::new("");
+        let mut c = Composer::default();
+        let l = KeyLayout::Ja;
+        for ch in "watashi".chars() {
+            c.type_char(&mut b, l, ch);
+        }
+        assert_eq!(b.text(), "わたし");
+        assert!(c.composing_ja() && c.candidates().is_none());
+        assert_eq!(c.composing(&b), Some((0, b.text().len())));
+        c.type_char(&mut b, l, ' ');
+        assert_eq!(b.text(), "私");
+        assert_eq!(c.candidates().map(|x| x.1), Some(0));
+        c.type_char(&mut b, l, ' ');
+        assert_eq!(b.text(), "わたし");
+        // Enter commits and is not a newline; the next letter starts anew.
+        assert!(c.enter(&mut b));
+        assert!(!c.composing_ja());
+        for ch in "ha".chars() {
+            c.type_char(&mut b, l, ch);
+        }
+        assert_eq!(b.text(), "わたしは");
+        // Backspace takes back a kana, then nothing is composing.
+        c.backspace(&mut b, l);
+        assert_eq!(b.text(), "わたし");
+        assert!(!c.composing_ja());
+        assert!(!c.enter(&mut b));
+    }
+
+    #[test]
+    fn japanese_pick_escape_and_direct_input() {
+        let mut b = Buffer::new("");
+        let mut c = Composer::default();
+        let l = KeyLayout::Ja;
+        for ch in "nihongo ".chars() {
+            c.type_char(&mut b, l, ch);
+        }
+        assert_eq!(b.text(), "日本語");
+        c.pick(&mut b, 1);
+        assert_eq!(b.text(), "にほんご");
+        assert!(!c.composing_ja());
+        for ch in "kyou ".chars() {
+            c.type_char(&mut b, l, ch);
+        }
+        assert!(c.escape(&mut b));
+        assert_eq!(b.text(), "にほんごきょう");
+        assert!(c.escape(&mut b));
+        assert_eq!(b.text(), "にほんご");
+        assert!(!c.escape(&mut b));
+        // The 半 key switches to direct input and back.
+        c.type_char(&mut b, l, '半');
+        assert!(c.japanese_direct());
+        for ch in "ab ".chars() {
+            c.type_char(&mut b, l, ch);
+        }
+        assert_eq!(b.text(), "にほんごab ");
+        c.type_char(&mut b, l, '半');
+        assert!(!c.japanese_direct());
+        // Digits and a moved caret end the composition.
+        c.type_char(&mut b, l, 'k');
+        c.type_char(&mut b, l, 'a');
+        c.type_char(&mut b, l, '1');
+        assert_eq!(b.text(), "にほんごab か1");
+        assert!(!c.composing_ja());
     }
 
     #[test]

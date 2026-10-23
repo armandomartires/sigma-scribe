@@ -142,6 +142,14 @@ Installed on the Forma today: **1.6.2 + main ea32b50** (2026-10-23, binary only;
 - [ ] Wrapping long Hindi and Thai paragraphs; scrolling; no slowdown while typing.
 - [ ] Preview of a Hindi and a Thai paragraph.
 
+## Japanese (v1.10.0)
+- [ ] The CJK font pack is on the Kobo (`fonts/cjk.ttf`); kana and kanji draw, not boxes.
+- [ ] Layout → Japanese (romaji): `watashihagakuseidesu` → わたしはがくせいです underlined; Space → 私は学生です; Space again cycles; Enter commits (no newline); Esc steps back.
+- [ ] The candidate bar: chips legible, a tap picks and commits, the text above is not hidden under it; refresh while typing and converting (no ghosting on the underline).
+- [ ] The あ / A key switches to direct input and back; Backspace takes back a kana; digits end the composition.
+- [ ] Korean: Backspace on a USB keyboard removes one letter at a time; the syllable being composed is underlined.
+- [ ] Han / kana size and line height next to Latin; wrapping a long Japanese paragraph (rows break at any kana).
+
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).
 

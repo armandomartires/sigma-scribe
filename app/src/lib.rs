@@ -1072,7 +1072,11 @@ impl App {
             }
             HwKey::Backspace => self.keyboard.composer.backspace(b, self.settings.kb_layout),
             HwKey::Delete => b.delete_forward(),
-            HwKey::Return => b.newline(),
+            HwKey::Return => {
+                if !self.keyboard.composer.enter(b) {
+                    b.newline();
+                }
+            }
             HwKey::Tab => b.insert_tab(self.settings.tab_kind()),
             HwKey::Left => b.left(),
             HwKey::Right => b.right(),
@@ -3489,7 +3493,11 @@ impl App {
             Event::Tap { x, y } if self.in_find_bar(x, y) => self.find_tap(x, y),
             Event::Tap { x, y } if self.in_drawer(x, y) => self.drawer_tap(x, y),
             Event::Key(k) => {
-                if !matches!(k, HwKey::Char(_)) {
+                // Backspace, Return and Esc act on a composition themselves.
+                if !matches!(
+                    k,
+                    HwKey::Char(_) | HwKey::Backspace | HwKey::Return | HwKey::Escape
+                ) {
                     let t = self.keyboard.composer.flush();
                     if !t.is_empty() {
                         self.buffer.insert(&t);
@@ -3508,7 +3516,11 @@ impl App {
                         .composer
                         .backspace(&mut self.buffer, self.settings.kb_layout),
                     HwKey::Delete => self.buffer.delete_forward(),
-                    HwKey::Return => self.buffer.newline(),
+                    HwKey::Return => {
+                        if !self.keyboard.composer.enter(&mut self.buffer) {
+                            self.buffer.newline();
+                        }
+                    }
                     HwKey::Tab => self.buffer.insert_tab(self.settings.tab_kind()),
                     HwKey::Left | HwKey::Right => {
                         // Flipped in a right-to-left row (v1.8).
@@ -3522,6 +3534,10 @@ impl App {
                     HwKey::Down => self.screen.caret_row(&mut self.buffer, page, true),
                     HwKey::Home | HwKey::End | HwKey::PageUp | HwKey::PageDown => return None,
                     HwKey::Escape => {
+                        if self.keyboard.composer.escape(&mut self.buffer) {
+                            self.save();
+                            return Some(Refresh::Fast);
+                        }
                         let had = self.sel_ui.take().is_some();
                         if !had && !self.history.is_empty() {
                             return self.go_back();
@@ -3580,6 +3596,11 @@ impl App {
                         Some(Refresh::Full)
                     }
                     Hit::Drawer(p) => Some(self.toggle_pane(p)),
+                    Hit::Candidate(i) => {
+                        self.keyboard.composer.pick(&mut self.buffer, i);
+                        self.save();
+                        Some(Refresh::Partial)
+                    }
                     Hit::Key(k) => {
                         let tab = self.settings.tab_kind();
                         self.keyboard.rtl = self.caret_rtl();

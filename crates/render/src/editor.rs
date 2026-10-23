@@ -72,6 +72,8 @@ pub enum Hit {
     Ink,
     /// Byte offset in the buffer where the caret should go.
     Caret(usize),
+    /// A Japanese conversion candidate on the bar (v1.10).
+    Candidate(usize),
     /// Selection handle 0 = start, 1 = end.
     Handle(usize),
     Bar(BarAction),
@@ -193,6 +195,8 @@ pub struct EditorScreen {
     /// The Find bar is open: it sits under the title bar and the page
     /// starts below it; the magnifier draws active.
     pub find_open: bool,
+    /// The candidate bar is up: the text area stops above it (v1.10).
+    cand_reserve: bool,
     /// The drawer rectangle while it is open in preview (v1.0.3): the
     /// preview page is laid out in the space beside it.
     pub preview_drawer: Option<Rect>,
@@ -232,6 +236,7 @@ impl EditorScreen {
             ink_words: false,
             drawer_open: [false; 3],
             find_open: false,
+            cand_reserve: false,
             preview_drawer: None,
         }
     }
@@ -744,7 +749,12 @@ impl EditorScreen {
         };
         let m = self.page_s.px(self.margin_px);
         let v = self.page_s.px(16.0);
-        Rect::new(page.x + m, page.y + v, page.w - 2 * m, page.h - v * 2)
+        let bar = if self.cand_reserve {
+            self.line_h() + self.px(20.0)
+        } else {
+            0
+        };
+        Rect::new(page.x + m, page.y + v, page.w - 2 * m, page.h - v * 2 - bar)
     }
 
     fn visible_rows(&self, page: Rect) -> usize {
@@ -804,6 +814,72 @@ impl EditorScreen {
             buffer.move_to(offset_at(buffer.text(), r, col, &m), extend);
         } else {
             buffer.move_to(if down { buffer.text().len() } else { 0 }, extend);
+        }
+    }
+
+    /// The strip of Japanese conversion candidates, along the bottom of the
+    /// page (v1.10).
+    fn cand_bar(&self, page: Rect) -> Rect {
+        let h = self.line_h() + self.px(20.0);
+        Rect::new(page.x, page.y + page.h - h, page.w, h)
+    }
+
+    /// The candidate chips that fit the bar, the chosen one in view.
+    fn cand_chips(&self, bar: Rect, cands: &[String], sel: usize) -> Vec<(Rect, usize)> {
+        let size = self.body() * 0.95;
+        let pad = self.px(14.0);
+        let gap = self.px(8.0);
+        let w: Vec<i32> = cands
+            .iter()
+            .map(|c| self.fonts.width(Face::Atkinson, size, c).ceil() as i32 + 2 * pad)
+            .collect();
+        let fits = |from: usize| {
+            let mut x = bar.x + gap;
+            let mut out = Vec::new();
+            for (i, &wi) in w.iter().enumerate().skip(from) {
+                if x + wi > bar.x + bar.w - gap && !out.is_empty() {
+                    break;
+                }
+                out.push((
+                    Rect::new(x, bar.y + gap, wi.min(bar.w - 2 * gap), bar.h - 2 * gap),
+                    i,
+                ));
+                x += wi + gap;
+            }
+            out
+        };
+        let mut from = 0;
+        while from < sel && !fits(from).iter().any(|&(_, i)| i == sel) {
+            from += 1;
+        }
+        fits(from)
+    }
+
+    fn draw_cands(&self, c: &mut Canvas, page: Rect, cands: &[String], sel: usize, t: Theme) {
+        let bar = self.cand_bar(page);
+        c.fill(bar, t.paper);
+        c.fill(Rect::new(bar.x, bar.y, bar.w, 1), t.rule);
+        let size = self.body() * 0.95;
+        for (r, i) in self.cand_chips(bar, cands, sel) {
+            let (fg, bg) = if i == sel {
+                (t.paper, t.ink)
+            } else {
+                (t.ink, t.paper)
+            };
+            c.fill(r, bg);
+            c.stroke(r, 2, t.ink);
+            let tw = self.fonts.width(Face::Atkinson, size, &cands[i]);
+            let base =
+                r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(Face::Atkinson, size) / 2.6;
+            self.fonts.draw(
+                c,
+                Face::Atkinson,
+                size,
+                r.x as f32 + (r.w as f32 - tw) / 2.0,
+                base,
+                &cands[i],
+                fg,
+            );
         }
     }
 
@@ -940,6 +1016,16 @@ impl EditorScreen {
                 }
             }
         }
+        if let Some((cands, sel)) = model.keyboard.composer.candidates() {
+            let bar = self.cand_bar(l.page);
+            if bar.contains(x, y) {
+                return self
+                    .cand_chips(bar, cands, sel)
+                    .into_iter()
+                    .find(|(r, _)| r.contains(x, y))
+                    .map_or(Hit::Nothing, |(_, i)| Hit::Candidate(i));
+            }
+        }
         if model.rename.is_some() {
             if l.ok_rect.contains(x, y) {
                 return Hit::RenameOk;
@@ -1027,6 +1113,7 @@ impl EditorScreen {
     pub fn draw(&mut self, c: &mut Canvas, model: &Model<'_>) -> Layout {
         let t = model.theme;
         let l = self.layout(model.keys_on, model.keyboard);
+        self.cand_reserve = model.keyboard.composer.candidates().is_some();
         self.follow_caret(model.buffer, l.page);
         c.fill(c.bounds(), t.paper);
         draw_gutters(c, &l, t);
@@ -1138,6 +1225,39 @@ impl EditorScreen {
                 ),
                 t.ink,
             );
+        }
+
+        // The text still being composed is underlined (v1.10).
+        if let Some((a, b)) = model.keyboard.composer.composing(model.buffer) {
+            let m = self.measure();
+            for (i, r) in rows
+                .iter()
+                .enumerate()
+                .skip(self.scroll)
+                .take(self.visible_rows(l.page))
+            {
+                let (s0, s1) = (a.max(r.start), b.min(r.end));
+                if s0 < s1 || (a == b && s0 == r.start) {
+                    let row_text = &text[r.start..r.end];
+                    let xa = sigma_core::TextMeasure::caret_x(&m, row_text, s0 - r.start);
+                    let xb = sigma_core::TextMeasure::caret_x(&m, row_text, s1 - r.start);
+                    let shift = self.row_shift(text, *r, area.w);
+                    let y = (area.y + (i - self.scroll) as i32 * lh) as f32 + top_pad + asc;
+                    let y = y as i32 + self.px(4.0).max(3);
+                    c.fill(
+                        Rect::new(
+                            area.x + shift + xa.min(xb) as i32,
+                            y,
+                            (xa.max(xb) - xa.min(xb)) as i32,
+                            self.px(2.0).max(2),
+                        ),
+                        t.ink,
+                    );
+                }
+            }
+        }
+        if let Some((cands, sel)) = model.keyboard.composer.candidates() {
+            self.draw_cands(c, l.page, cands, sel, t);
         }
 
         self.draw_selection_ui(c, model, &l);

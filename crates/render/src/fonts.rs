@@ -110,8 +110,9 @@ impl Fonts {
     fn load_pack() -> Option<Font> {
         let env = std::env::var("SIGMA_FONT_PACK").ok();
         let spec = env.as_deref().into_iter().chain([
+            "/mnt/onboard/.adds/sigma-scribe/fonts/cjk.ttf",
             "/mnt/onboard/.adds/sigma-scribe/fonts/korean.ttf",
-            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc#1",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc#0",
         ]);
         for s in spec {
             let (path, index) = s
@@ -428,12 +429,12 @@ mod layout_glyphs {
         for l in ALL {
             for i in 0..CODES.len() {
                 let (b, s, a) = l.chars(i);
-                // Hangul jamo come from the font pack, not the bundled faces.
+                // Hangul jamo and the 半 key come from the font pack, not the bundled faces.
                 want.extend(
                     [b, s, a]
                         .into_iter()
                         .flatten()
-                        .filter(|&c| !sigma_core::hangul::is_jamo(c))
+                        .filter(|&c| !sigma_core::hangul::is_jamo(c) && c != '半')
                         .map(spacing),
                 );
             }

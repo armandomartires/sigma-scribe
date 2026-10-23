@@ -10,6 +10,7 @@ pub mod gesture;
 pub mod graphmap;
 pub mod hangul;
 pub mod ink;
+pub mod ja;
 pub mod keyboard;
 pub mod layouts;
 pub mod library;

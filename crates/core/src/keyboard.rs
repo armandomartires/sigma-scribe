@@ -303,7 +303,17 @@ impl Keyboard {
     pub fn label(&self, key: Key) -> String {
         match key {
             Key::Char(c) if self.layout == Layout::Full => {
-                layouts::spacing(self.char_for(c)).to_string()
+                let ch = self.char_for(c);
+                if ch == '半' {
+                    // The あ / A switch shows the mode it is in (v1.10).
+                    return if self.composer.japanese_direct() {
+                        "A"
+                    } else {
+                        "あ"
+                    }
+                    .into();
+                }
+                layouts::spacing(ch).to_string()
             }
             Key::Char(c) => (if self.shift_on() { shifted(c) } else { c }).to_string(),
             Key::Shift => "Shift".into(),
@@ -415,6 +425,24 @@ impl Keyboard {
                 buffer.insert(&t);
             }
         }
+        // Anything else that is not typing ends the Japanese composition
+        // (Return, Backspace and Esc act on it themselves).
+        if self.composer.composing_ja()
+            && !matches!(
+                key,
+                Key::Char(_)
+                    | Key::Space
+                    | Key::Shift
+                    | Key::Caps
+                    | Key::Alt
+                    | Key::SwapLayer
+                    | Key::Back
+                    | Key::Return
+                    | Key::Esc
+            )
+        {
+            self.composer.forget();
+        }
         let extend = self.shift_on();
         let ctrl = self.ctrl;
         let action = match key {
@@ -464,7 +492,10 @@ impl Keyboard {
                 self.release();
                 return KeyAction::Relayout;
             }
-            Key::Char(c) if ctrl => self.shortcut(c.to_ascii_lowercase(), buffer),
+            Key::Char(c) if ctrl => {
+                self.composer.forget();
+                self.shortcut(c.to_ascii_lowercase(), buffer)
+            }
             Key::Char(c) => {
                 let ch = self.char_for(c);
                 if !self.composer.type_char(buffer, self.lang, ch) {
@@ -496,9 +527,12 @@ impl Keyboard {
                 KeyAction::Edited
             }
             Key::Return => {
-                buffer.newline();
+                if !self.composer.enter(buffer) {
+                    buffer.newline();
+                }
                 KeyAction::Edited
             }
+            Key::Esc if self.composer.escape(buffer) => KeyAction::Edited,
             Key::Esc => KeyAction::Escape,
             Key::Arrow(d @ (Dir::Left | Dir::Right)) => {
                 // In a right-to-left row (v1.8) the left arrow moves to

@@ -811,5 +811,8 @@ Tamil (InScript)
 Thai (Kedmanee)
 = Thai (Kedmanee)
 
+Japanese (romaji)
+= Japanisch (romaji)
+
 Machine-drafted translation, best effort; a native review is needed. Follows the Kobo's language.
 = Maschinell erstellte Übersetzung, nach bestem Bemühen; eine muttersprachliche Prüfung ist nötig. Folgt der Sprache des Kobo.

@@ -1,0 +1,51 @@
+# v1.10.0 (S20.0): Japanese, romaji to kana, Space converts, candidates, Enter commits.
+copy-notes tests/test-notes/_test
+usb plug
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+page next
+page next
+shot v1.10.0-layout-choices-page4
+tap-on Japanese (romaji)
+expect-setting layout=ja
+esc
+esc
+usb-key Enter
+usb-type watashihagakuseidesu
+expect わたしはがくせいです
+shot v1.10.0-kana
+usb-key Space
+expect 私は学生です
+shot v1.10.0-candidates
+usb-key Enter
+usb-type kyouhaiitenkidesune.
+usb-key Space
+expect 今日は良い天気ですね。
+usb-key Space
+expect きょうはいいてんきですね。
+usb-key Space
+usb-key Space
+usb-key Enter
+usb-key Space
+usb-type tabemasu
+usb-key Space
+expect 食べます
+usb-key Enter
+# Backspace takes the reading back, Esc cancels the conversion.
+usb-type nihongo
+usb-key Space
+expect 日本語
+usb-key Esc
+expect にほんご
+usb-key Backspace
+expect にほん
+usb-key Backspace
+usb-key Backspace
+usb-key Backspace
+expect-not にほ
+usb-type 半
+usb-type Latin text
+usb-type 半
+shot v1.10.0-direct
