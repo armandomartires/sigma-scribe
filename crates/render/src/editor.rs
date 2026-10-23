@@ -1228,7 +1228,13 @@ impl EditorScreen {
         }
 
         // The text still being composed is underlined (v1.10).
-        if let Some((a, b)) = model.keyboard.composer.composing(model.buffer) {
+        // The phrase being chosen, in a sentence of several, is underlined heavier.
+        let marks = [
+            (model.keyboard.composer.composing(model.buffer), 2.0),
+            (model.keyboard.composer.current_phrase(model.buffer), 4.0),
+        ];
+        for (range, thick) in marks {
+            let Some((a, b)) = range else { continue };
             let m = self.measure();
             for (i, r) in rows
                 .iter()
@@ -1249,7 +1255,7 @@ impl EditorScreen {
                             area.x + shift + xa.min(xb) as i32,
                             y,
                             (xa.max(xb) - xa.min(xb)) as i32,
-                            self.px(2.0).max(2),
+                            self.px(thick).max(thick as i32),
                         ),
                         t.ink,
                     );

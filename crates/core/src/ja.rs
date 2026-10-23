@@ -569,43 +569,72 @@ const GRAMMAR: &[&str] = &[
 /// How many alternative cuts are kept per position.
 const NBEST: usize = 4;
 
+/// One word of a cut: what was typed, what it became, and whether it is a
+/// particle or ending (which trails a content word in a phrase).
+#[derive(Clone)]
+struct Piece {
+    reading: String,
+    surface: String,
+    func: bool,
+}
+
+fn surface(ps: &[Piece]) -> String {
+    ps.iter().map(|p| p.surface.as_str()).collect()
+}
+
 /// The cheapest cuts of `reading` into words, best first (up to `NBEST`).
 /// Costs: the project's own words, particles and endings are cheap (about
 /// 100), a long-tail dictionary word dearer (about 300), a kana nothing
 /// covers dearest (400); fewer words and longer words win.
-fn cuts(d: &Dict, reading: &str) -> Vec<String> {
+fn cuts(d: &Dict, reading: &str) -> Vec<Vec<Piece>> {
     let r: Vec<char> = reading.chars().collect();
     let n = r.len();
-    // dp[j]: the cheapest ways (cost, text) to cover r[..j].
-    let mut dp: Vec<Vec<(u32, String)>> = vec![Vec::new(); n + 1];
-    dp[0].push((0, String::new()));
+    // dp[j]: the cheapest ways (cost, pieces) to cover r[..j].
+    let mut dp: Vec<Vec<(u32, Vec<Piece>)>> = vec![Vec::new(); n + 1];
+    dp[0].push((0, Vec::new()));
     for j in 0..n {
         let here = dp[j].clone();
-        let mut relax = |to: usize, add: u32, s: &str| {
-            for (cost, text) in &here {
+        let mut relax = |to: usize, add: u32, piece: Piece| {
+            for (cost, ps) in &here {
                 let cell = &mut dp[to];
-                let t = format!("{text}{s}");
+                let mut v = ps.clone();
+                v.push(piece.clone());
                 let c = cost + add;
-                if let Some(e) = cell.iter_mut().find(|(_, x)| *x == t) {
+                let t = surface(&v);
+                if let Some(e) = cell.iter_mut().find(|(_, x)| surface(x) == t) {
                     // The same text by a cheaper way.
                     e.0 = e.0.min(c);
                     cell.sort_by_key(|(c, _)| *c);
                     continue;
                 }
-                cell.push((c, t));
+                cell.push((c, v));
                 cell.sort_by_key(|(c, _)| *c);
                 cell.truncate(NBEST);
             }
         };
+        let one = r[j].to_string();
+        let particle = PARTICLES.contains(r[j]);
         relax(
             j + 1,
-            if PARTICLES.contains(r[j]) { 100 } else { 400 },
-            &r[j].to_string(),
+            if particle { 100 } else { 400 },
+            Piece {
+                reading: one.clone(),
+                surface: one,
+                func: particle,
+            },
         );
         for g in GRAMMAR {
             let len = g.chars().count();
             if j + len <= n && r[j..j + len].iter().copied().eq(g.chars()) {
-                relax(j + len, 90 - len as u32, g);
+                relax(
+                    j + len,
+                    90 - len as u32,
+                    Piece {
+                        reading: (*g).to_string(),
+                        surface: (*g).to_string(),
+                        func: true,
+                    },
+                );
             }
         }
         for len in 1..=d.max_word.min(n - j) {
@@ -615,7 +644,15 @@ fn cuts(d: &Dict, reading: &str) -> Vec<String> {
                     continue;
                 }
                 let base = if d.seed.contains(&key) { 100 } else { 300 };
-                relax(j + len, base - len as u32, c);
+                relax(
+                    j + len,
+                    base - len as u32,
+                    Piece {
+                        reading: key,
+                        surface: c.clone(),
+                        func: false,
+                    },
+                );
             }
         }
         for stem in 1..=d.max_stem.min(n - j - 1) {
@@ -625,7 +662,11 @@ fn cuts(d: &Dict, reading: &str) -> Vec<String> {
                 relax(
                     j + stem + 1,
                     base - stem as u32,
-                    &format!("{c}{}", r[j + stem]),
+                    Piece {
+                        reading: format!("{key}{}", r[j + stem]),
+                        surface: format!("{c}{}", r[j + stem]),
+                        func: false,
+                    },
                 );
             }
         }
@@ -639,7 +680,7 @@ fn best_cut(d: &Dict, reading: &str) -> String {
     cuts(d, reading)
         .into_iter()
         .next()
-        .unwrap_or_else(|| reading.to_string())
+        .map_or_else(|| reading.to_string(), |c| surface(&c))
 }
 
 /// Conversion candidates for a reading, best first: the best cuts into
@@ -649,7 +690,7 @@ pub fn convert(reading: &str) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     if let Ok(d) = dict().read() {
         for cut in cuts(&d, reading) {
-            push_unique(&mut out, &cut);
+            push_unique(&mut out, &surface(&cut));
         }
         if let Some(v) = d.words.get(reading) {
             for c in v {
@@ -660,6 +701,87 @@ pub fn convert(reading: &str) -> Vec<String> {
     push_unique(&mut out, reading);
     push_unique(&mut out, &to_katakana(reading));
     out
+}
+
+/// One phrase of a sentence being converted: its reading and its
+/// candidates, best first.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Phrase {
+    pub reading: String,
+    pub cands: Vec<String>,
+}
+
+/// Choices made by the user (reading → written form), tried first next time.
+fn learned() -> &'static RwLock<HashMap<String, String>> {
+    static L: OnceLock<RwLock<HashMap<String, String>>> = OnceLock::new();
+    L.get_or_init(Default::default)
+}
+
+/// Remembers that `reading` was written as `surface`.
+pub fn learn(reading: &str, surface: &str) {
+    if let Ok(mut l) = learned().write() {
+        l.insert(reading.to_string(), surface.to_string());
+    }
+}
+
+/// Forgets everything learned.
+pub fn forget_learned() {
+    if let Ok(mut l) = learned().write() {
+        l.clear();
+    }
+}
+
+/// The candidates for one phrase reading: what was learned, the best cuts
+/// (`first` leads when given), whole-word readings, hiragana, katakana.
+fn phrase_cands(reading: &str, first: Option<String>) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    if let Some(f) = first {
+        push_unique(&mut out, &f);
+    }
+    if let Some(s) = learned().read().ok().and_then(|l| l.get(reading).cloned()) {
+        out.insert(0, s.clone());
+        out.dedup();
+    }
+    for c in convert(reading) {
+        push_unique(&mut out, &c);
+    }
+    out
+}
+
+/// A sentence as phrases: the best cut, grouped so that each content word
+/// takes the particles and endings after it (私は | 学生です), each with its
+/// own candidates. Nothing for an empty reading.
+#[must_use]
+pub fn phrases(reading: &str) -> Vec<Phrase> {
+    let best = match dict().read() {
+        Ok(d) => cuts(&d, reading).into_iter().next().unwrap_or_default(),
+        Err(_) => Vec::new(),
+    };
+    let mut groups: Vec<Vec<Piece>> = Vec::new();
+    for p in best {
+        // A content word after a particle or ending starts a new phrase.
+        match groups.last_mut() {
+            Some(g) if p.func || g.last().is_some_and(|l| !l.func) => g.push(p),
+            _ => groups.push(vec![p]),
+        }
+    }
+    groups
+        .into_iter()
+        .map(|g| {
+            let reading: String = g.iter().map(|p| p.reading.as_str()).collect();
+            let cands = phrase_cands(&reading, Some(surface(&g)));
+            Phrase { reading, cands }
+        })
+        .collect()
+}
+
+/// A phrase made from `reading` alone (after its boundary was moved).
+#[must_use]
+pub fn phrase(reading: &str) -> Phrase {
+    Phrase {
+        reading: reading.to_string(),
+        cands: phrase_cands(reading, None),
+    }
 }
 
 #[cfg(test)]

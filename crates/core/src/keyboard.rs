@@ -427,7 +427,11 @@ impl Keyboard {
         }
         // Anything else that is not typing ends the Japanese composition
         // (Return, Backspace and Esc act on it themselves).
+        let phrase_arrow = self.composer.candidates().is_some()
+            && matches!(key, Key::Arrow(Dir::Left | Dir::Right))
+            && !self.ctrl;
         if self.composer.composing_ja()
+            && !phrase_arrow
             && !matches!(
                 key,
                 Key::Char(_)
@@ -534,6 +538,11 @@ impl Keyboard {
             }
             Key::Esc if self.composer.escape(buffer) => KeyAction::Edited,
             Key::Esc => KeyAction::Escape,
+            // Converting Japanese: the arrows choose the phrase (Shift: its length).
+            Key::Arrow(d @ (Dir::Left | Dir::Right)) if phrase_arrow => {
+                self.composer.phrase_arrow(buffer, d == Dir::Right, extend);
+                KeyAction::Edited
+            }
             Key::Arrow(d @ (Dir::Left | Dir::Right)) => {
                 // In a right-to-left row (v1.8) the left arrow moves to
                 // the next letter, not the previous one.

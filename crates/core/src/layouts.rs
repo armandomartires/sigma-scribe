@@ -1120,30 +1120,82 @@ pub struct Composer {
 }
 
 /// The Japanese preedit: the reading so far, the romaji waiting, and the
-/// conversion candidates once Space has been pressed.
+/// phrases of the sentence once Space has been pressed.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 struct JaState {
     /// Direct (Latin) input instead of kana.
     direct: bool,
     kana: String,
     pend: String,
+    /// The phrases while converting (empty before), and the one being chosen.
+    segs: Vec<Seg>,
+    cur: usize,
+}
+
+/// A phrase being converted: its reading, candidates and the chosen one.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Seg {
+    reading: String,
     cands: Vec<String>,
     sel: usize,
-    converting: bool,
+}
+
+impl From<crate::ja::Phrase> for Seg {
+    fn from(p: crate::ja::Phrase) -> Self {
+        Self {
+            reading: p.reading,
+            cands: p.cands,
+            sel: 0,
+        }
+    }
 }
 
 impl JaState {
+    fn converting(&self) -> bool {
+        !self.segs.is_empty()
+    }
+
     fn active(&self) -> bool {
-        self.converting || !self.kana.is_empty() || !self.pend.is_empty()
+        self.converting() || !self.kana.is_empty() || !self.pend.is_empty()
     }
 
     /// The text the preedit shows now.
     fn text(&self) -> String {
-        if self.converting {
-            self.cands.get(self.sel).cloned().unwrap_or_default()
+        if self.converting() {
+            self.segs
+                .iter()
+                .map(|s| s.cands.get(s.sel).map_or(s.reading.as_str(), String::as_str))
+                .collect()
         } else {
             format!("{}{}", self.kana, self.pend)
         }
+    }
+
+    /// Back to the reading (Esc, Backspace): the phrases' readings joined.
+    fn unconvert(&mut self) {
+        self.kana = self.segs.iter().map(|s| s.reading.as_str()).collect();
+        self.segs.clear();
+        self.cur = 0;
+    }
+
+    /// Moves the boundary after the current phrase by `by` kana (Shift +
+    /// arrows): the current phrase and what follows are converted again.
+    fn resize(&mut self, by: isize) {
+        let rest: Vec<char> = self.segs[self.cur..]
+            .iter()
+            .flat_map(|s| s.reading.chars())
+            .collect();
+        let len = self.segs[self.cur].reading.chars().count();
+        let new = len.saturating_add_signed(by).clamp(1, rest.len());
+        if new == len {
+            return;
+        }
+        let head: String = rest[..new].iter().collect();
+        let tail: String = rest[new..].iter().collect();
+        self.segs.truncate(self.cur);
+        self.segs.push(crate::ja::phrase(&head).into());
+        self.segs
+            .extend(crate::ja::phrases(&tail).into_iter().map(Seg::from));
     }
 }
 
@@ -1222,13 +1274,17 @@ impl Composer {
                 buffer.insert(" ");
                 return true;
             }
-            if self.ja.converting {
-                self.ja.sel = (self.ja.sel + 1) % self.ja.cands.len().max(1);
+            if self.ja.converting() {
+                let s = &mut self.ja.segs[self.ja.cur];
+                s.sel = (s.sel + 1) % s.cands.len().max(1);
             } else {
                 crate::ja::finish(&mut self.ja.kana, &mut self.ja.pend);
-                self.ja.cands = crate::ja::convert(&self.ja.kana);
-                self.ja.sel = 0;
-                self.ja.converting = true;
+                self.ja.segs = crate::ja::phrases(&self.ja.kana)
+                    .into_iter()
+                    .map(Seg::from)
+                    .collect();
+                self.ja.kana.clear();
+                self.ja.cur = 0;
             }
             self.put_ja(buffer);
             return true;
@@ -1238,7 +1294,7 @@ impl Composer {
             buffer.insert(&c.to_string());
             return true;
         }
-        if self.ja.converting {
+        if self.ja.converting() {
             self.ja_commit();
         }
         crate::ja::romaji_feed(&mut self.ja.kana, &mut self.ja.pend, c);
@@ -1255,11 +1311,18 @@ impl Composer {
 
     /// Leaves the shown text in the buffer and starts afresh.
     fn ja_commit(&mut self) {
+        // A phrase written other than first choice is remembered.
+        for s in &self.ja.segs {
+            if s.sel > 0 {
+                if let Some(c) = s.cands.get(s.sel) {
+                    crate::ja::learn(&s.reading, c);
+                }
+            }
+        }
         self.ja.kana.clear();
         self.ja.pend.clear();
-        self.ja.cands.clear();
-        self.ja.sel = 0;
-        self.ja.converting = false;
+        self.ja.segs.clear();
+        self.ja.cur = 0;
         self.raw.clear();
         self.shown.clear();
     }
@@ -1276,21 +1339,63 @@ impl Composer {
         self.ja.active()
     }
 
-    /// The candidates and the chosen one, while converting.
+    /// The candidates of the current phrase and the chosen one, while
+    /// converting.
     #[must_use]
     pub fn candidates(&self) -> Option<(&[String], usize)> {
         self.ja
-            .converting
-            .then_some((&self.ja.cands[..], self.ja.sel))
+            .segs
+            .get(self.ja.cur)
+            .map(|s| (&s.cands[..], s.sel))
     }
 
-    /// Chooses candidate `i` and commits it (a tap on the candidate bar).
+    /// The byte range of the current phrase inside the preedit, when the
+    /// sentence has more than one phrase (drawn heavier than the rest).
+    #[must_use]
+    pub fn current_phrase(&self, buffer: &Buffer) -> Option<(usize, usize)> {
+        let (start, end) = self.composing(buffer)?;
+        if self.ja.segs.len() < 2 {
+            return None;
+        }
+        let shown = |s: &Seg| s.cands.get(s.sel).map_or(s.reading.len(), String::len);
+        let a = start + self.ja.segs[..self.ja.cur].iter().map(shown).sum::<usize>();
+        let b = a + shown(&self.ja.segs[self.ja.cur]);
+        (b <= end).then_some((a, b))
+    }
+
+    /// Chooses candidate `i` of the current phrase (a tap on the candidate
+    /// bar); the last phrase commits the sentence, an earlier one moves on
+    /// to the next.
     pub fn pick(&mut self, buffer: &mut Buffer, i: usize) {
-        if self.ja.converting && i < self.ja.cands.len() {
-            self.ja.sel = i;
-            self.put_ja(buffer);
+        let cur = self.ja.cur;
+        match self.ja.segs.get_mut(cur) {
+            Some(s) if i < s.cands.len() => s.sel = i,
+            _ => return,
+        }
+        self.put_ja(buffer);
+        if cur + 1 < self.ja.segs.len() {
+            self.ja.cur += 1;
+        } else {
             self.ja_commit();
         }
+    }
+
+    /// While converting: Left / Right choose the phrase, with `extend`
+    /// (Shift) they move the boundary after it. False when not converting.
+    pub fn phrase_arrow(&mut self, buffer: &mut Buffer, right: bool, extend: bool) -> bool {
+        if !self.ja.converting() {
+            return false;
+        }
+        self.sync(buffer);
+        if extend {
+            self.ja.resize(if right { 1 } else { -1 });
+            self.put_ja(buffer);
+        } else if right {
+            self.ja.cur = (self.ja.cur + 1).min(self.ja.segs.len() - 1);
+        } else {
+            self.ja.cur = self.ja.cur.saturating_sub(1);
+        }
+        true
     }
 
     /// Return: commits what is being composed (no newline then). Otherwise
@@ -1299,7 +1404,7 @@ impl Composer {
         if self.ja.active() {
             self.sync(buffer);
             crate::ja::finish(&mut self.ja.kana, &mut self.ja.pend);
-            if !self.ja.converting {
+            if !self.ja.converting() {
                 self.put_ja(buffer);
             }
             self.ja_commit();
@@ -1319,9 +1424,8 @@ impl Composer {
             return false;
         }
         self.sync(buffer);
-        if self.ja.converting {
-            self.ja.converting = false;
-            self.ja.cands.clear();
+        if self.ja.converting() {
+            self.ja.unconvert();
         } else {
             self.ja.kana.clear();
             self.ja.pend.clear();
@@ -1362,9 +1466,8 @@ impl Composer {
         }
         if lang.japanese() && self.ja.active() {
             self.sync(buffer);
-            if self.ja.converting {
-                self.ja.converting = false;
-                self.ja.cands.clear();
+            if self.ja.converting() {
+                self.ja.unconvert();
             } else if self.ja.pend.pop().is_none() {
                 self.ja.kana.pop();
             }
@@ -1673,6 +1776,59 @@ mod tests {
         c.type_char(&mut b, l, '1');
         assert_eq!(b.text(), "にほんごab か1");
         assert!(!c.composing_ja());
+    }
+
+    #[test]
+    fn japanese_sentences_convert_by_phrase() {
+        let mut b = Buffer::new("");
+        let mut c = Composer::default();
+        let l = KeyLayout::Ja;
+        for ch in "watashihagakuseidesu ".chars() {
+            c.type_char(&mut b, l, ch);
+        }
+        assert_eq!(b.text(), "私は学生です");
+        // Two phrases; the first is current and drawn heavier.
+        let first = "私は".len();
+        assert_eq!(c.current_phrase(&b), Some((0, first)));
+        assert!(c.phrase_arrow(&mut b, true, false));
+        assert_eq!(c.current_phrase(&b), Some((first, b.text().len())));
+        // Space cycles the second phrase only.
+        c.type_char(&mut b, l, ' ');
+        assert!(b.text().starts_with("私は") && b.text() != "私は学生です");
+        c.type_char(&mut b, l, ' ');
+        c.type_char(&mut b, l, ' ');
+        c.type_char(&mut b, l, ' ');
+        c.type_char(&mut b, l, ' ');
+        assert!(c.phrase_arrow(&mut b, false, false));
+        assert_eq!(c.current_phrase(&b).map(|x| x.0), Some(0));
+        // Shift + Right takes a kana from the next phrase into this one.
+        assert!(c.phrase_arrow(&mut b, true, true));
+        assert!(b.text().starts_with("私は"), "{}", b.text());
+        // Esc gives back the whole reading; Enter commits.
+        assert!(c.escape(&mut b));
+        assert_eq!(b.text(), "わたしはがくせいです");
+        assert!(!c.phrase_arrow(&mut b, true, false));
+    }
+
+    #[test]
+    fn a_phrase_chosen_by_hand_is_remembered() {
+        let mut b = Buffer::new("");
+        let mut c = Composer::default();
+        let l = KeyLayout::Ja;
+        for ch in "kikaku ".chars() {
+            c.type_char(&mut b, l, ch);
+        }
+        let first = b.text().to_string();
+        c.type_char(&mut b, l, ' ');
+        let second = b.text().to_string();
+        assert_ne!(first, second);
+        assert!(c.enter(&mut b));
+        let mut b = Buffer::new("");
+        for ch in "kikaku ".chars() {
+            c.type_char(&mut b, l, ch);
+        }
+        assert_eq!(b.text(), second);
+        crate::ja::forget_learned();
     }
 
     #[test]

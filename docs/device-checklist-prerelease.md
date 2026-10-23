@@ -148,6 +148,7 @@ Installed on the Forma today: **1.6.2 + main ea32b50** (2026-10-23, binary only;
 - [ ] The candidate bar: chips legible, a tap picks and commits, the text above is not hidden under it; refresh while typing and converting (no ghosting on the underline).
 - [ ] The あ / A key switches to direct input and back; Backspace takes back a kana; digits end the composition.
 - [ ] Korean: Backspace on a USB keyboard removes one letter at a time; the syllable being composed is underlined.
+- [ ] Phrases (v1.10.1): `watashihagakuseidesu` + Space → two phrases; Left / Right change the heavier underline; Shift + Right moves the boundary; a tap on a candidate moves on to the next phrase.
 - [ ] Han / kana size and line height next to Latin; wrapping a long Japanese paragraph (rows break at any kana).
 
 ## Release gates (S9)
