@@ -46,9 +46,11 @@ pub enum KeyLayout {
     ViTelex,
     /// Vietnamese on the US keys, VNI (v1.7).
     ViVni,
+    /// Korean, Dubeolsik (KS X 5002; v1.7.1).
+    Ko,
 }
 
-pub const ALL: [KeyLayout; 23] = [
+pub const ALL: [KeyLayout; 24] = [
     KeyLayout::Us,
     KeyLayout::Uk,
     KeyLayout::Fr,
@@ -72,6 +74,7 @@ pub const ALL: [KeyLayout; 23] = [
     KeyLayout::Gr,
     KeyLayout::ViTelex,
     KeyLayout::ViVni,
+    KeyLayout::Ko,
 ];
 
 /// evdev codes of the 48 positions, in table order.
@@ -471,6 +474,29 @@ const BR: Table = Table {
     ],
 };
 
+const KO: Table = Table {
+    base: [
+        "`1234567890-=",
+        "ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ[]\\",
+        "ㅁㄴㅇㄹㅎㅗㅓㅏㅣ;' ",
+        "ㅋㅌㅊㅍㅠㅜㅡ,./",
+    ],
+    shift: [
+        "~!@#$%^&*()_+",
+        "ㅃㅉㄸㄲㅆㅛㅕㅑㅒㅖ{}|",
+        "ㅁㄴㅇㄹㅎㅗㅓㅏㅣ:\" ",
+        "ㅋㅌㅊㅍㅠㅜㅡ<>?",
+    ],
+    // AltGr = the US keys (as Russian, Ukrainian, Greek), for Latin text,
+    // Markdown and shortcuts; Ctrl shortcuts use the US letter.
+    altgr: [
+        "`1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+};
+
 const RU: Table = Table {
     base: [
         "ё1234567890-=",
@@ -564,6 +590,7 @@ fn table(l: KeyLayout) -> &'static Table {
         KeyLayout::Ua => &UA,
         KeyLayout::Gr => &GR,
         KeyLayout::ViTelex | KeyLayout::ViVni => &US,
+        KeyLayout::Ko => &KO,
     }
 }
 
@@ -604,6 +631,7 @@ impl KeyLayout {
             Self::Gr => "gr",
             Self::ViTelex => "vi",
             Self::ViVni => "vi-vni",
+            Self::Ko => "ko",
         }
     }
 
@@ -634,6 +662,7 @@ impl KeyLayout {
             Self::Gr => "Greek",
             Self::ViTelex => "Vietnamese (Telex)",
             Self::ViVni => "Vietnamese (VNI)",
+            Self::Ko => "Korean (Dubeolsik)",
         }
     }
 
@@ -676,7 +705,7 @@ impl KeyLayout {
             });
         }
         let b = b?;
-        let upper = shift != (caps && b.is_alphabetic());
+        let upper = shift != (caps && b.is_alphabetic() && !crate::hangul::is_jamo(b));
         if upper {
             s
         } else {
@@ -708,7 +737,7 @@ impl KeyLayout {
     /// Non-Latin layouts whose AltGr layer is the US layout (v1.6.1).
     #[must_use]
     pub fn latin_altgr(self) -> bool {
-        matches!(self, Self::Ru | Self::Ua | Self::Gr)
+        matches!(self, Self::Ru | Self::Ua | Self::Gr | Self::Ko)
     }
 
     /// The position of a character (base, Shift or AltGr) — emulator and
@@ -753,8 +782,20 @@ impl KeyLayout {
             Self::Ua => ["йцукенгшщзхї", "фівапролджє", "ячсмитьбюґ"],
             // No tonos key on the compact board (S16.1-D3): Full and USB.
             Self::Gr => ["ςερτυθιοπ", "ασδφγηξκλ", "ζχψωβνμ"],
+            // Dubeolsik: 10 / 9 / 7 jamo; Shift makes the doubled ones.
+            Self::Ko => [
+                "ㅂㅈㄷㄱㅅㅛㅕㅑㅐㅔ",
+                "ㅁㄴㅇㄹㅎㅗㅓㅏㅣ",
+                "ㅋㅌㅊㅍㅠㅜㅡ",
+            ],
             _ => ["qwertyuiop", "asdfghjkl", "zxcvbnm"],
         }
+    }
+
+    /// Korean typing: jamo become syllables.
+    #[must_use]
+    pub fn hangul(self) -> bool {
+        self == Self::Ko
     }
 }
 
@@ -853,20 +894,48 @@ impl Composer {
     /// layouts, a re-spelled word for Telex / VNI. True when the text
     /// changed.
     pub fn type_char(&mut self, buffer: &mut Buffer, lang: KeyLayout, c: char) -> bool {
-        let Some(vni) = lang.viet() else {
+        let vni = lang.viet();
+        let hangul = lang.hangul();
+        if vni.is_none() && !hangul {
             let t = self.feed(c);
             if t.is_empty() {
                 return false;
             }
             buffer.insert(&t);
             return true;
+        }
+        let takes = if hangul {
+            crate::hangul::is_jamo(c)
+        } else {
+            c.is_ascii_alphabetic() || (vni == Some(true) && c.is_ascii_digit())
         };
-        let takes = c.is_ascii_alphabetic() || (vni && c.is_ascii_digit());
         if !takes {
             self.forget();
             buffer.insert(&self.feed(c));
             return true;
         }
+        self.sync(buffer);
+        self.raw.push(c);
+        self.show(buffer, hangul, vni == Some(true));
+        true
+    }
+
+    /// Backspace: Korean takes the last jamo back (한 → 하 → ㅎ); anything
+    /// else deletes a character as usual.
+    pub fn backspace(&mut self, buffer: &mut Buffer, lang: KeyLayout) {
+        if lang.hangul() {
+            self.sync(buffer);
+            if self.raw.pop().is_some() {
+                self.show(buffer, true, false);
+                return;
+            }
+        }
+        self.forget();
+        buffer.backspace();
+    }
+
+    /// Forgets the word in progress unless the buffer still ends with it.
+    fn sync(&mut self, buffer: &Buffer) {
         let caret = buffer.caret();
         if buffer.selection().is_some()
             || caret != self.at
@@ -874,9 +943,16 @@ impl Composer {
         {
             self.forget();
         }
-        self.raw.push(c);
-        let new = crate::viet::convert(&self.raw, vni);
-        // Rewrite only from the first letter that differs.
+    }
+
+    /// Re-spells the word from the keystrokes, rewriting only from the
+    /// first letter that changed.
+    fn show(&mut self, buffer: &mut Buffer, hangul: bool, vni: bool) {
+        let new = if hangul {
+            crate::hangul::compose(&self.raw)
+        } else {
+            crate::viet::convert(&self.raw, vni)
+        };
         let keep = self
             .shown
             .chars()
@@ -890,7 +966,6 @@ impl Composer {
         buffer.insert(&tail);
         self.shown = new;
         self.at = buffer.caret();
-        true
     }
 
     /// Starts a new word (a space, punctuation, a moved caret).

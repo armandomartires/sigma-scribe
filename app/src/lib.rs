@@ -1066,7 +1066,7 @@ impl App {
                     .composer
                     .type_char(&mut self.scratch, self.settings.kb_layout, c);
             }
-            HwKey::Backspace => b.backspace(),
+            HwKey::Backspace => self.keyboard.composer.backspace(b, self.settings.kb_layout),
             HwKey::Delete => b.delete_forward(),
             HwKey::Return => b.newline(),
             HwKey::Tab => b.insert_tab(self.settings.tab_kind()),
@@ -2890,7 +2890,10 @@ impl App {
                     .composer
                     .type_char(field, self.settings.kb_layout, c);
             }
-            HwKey::Backspace => field.backspace(),
+            HwKey::Backspace => self
+                .keyboard
+                .composer
+                .backspace(field, self.settings.kb_layout),
             HwKey::Delete => field.delete_forward(),
             HwKey::Left => field.left(),
             HwKey::Right => field.right(),
@@ -3489,7 +3492,10 @@ impl App {
                             c,
                         );
                     }
-                    HwKey::Backspace => self.buffer.backspace(),
+                    HwKey::Backspace => self
+                        .keyboard
+                        .composer
+                        .backspace(&mut self.buffer, self.settings.kb_layout),
                     HwKey::Delete => self.buffer.delete_forward(),
                     HwKey::Return => self.buffer.newline(),
                     HwKey::Tab => self.buffer.insert_tab(self.settings.tab_kind()),

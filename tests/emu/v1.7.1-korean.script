@@ -1,0 +1,37 @@
+# v1.7.1 (S17.1): Korean, Dubeolsik jamo composed into syllables; AltGr = US keys.
+copy-notes tests/test-notes/_test
+usb plug
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+page next
+shot v1.7.1-layout-choices-page3
+tap-on Korean (Dubeolsik)
+expect-setting layout=ko
+esc
+esc
+usb-type 한글 안녕하세요
+expect 한글 안녕하세요
+usb-type  닭이 값어치 괜찮아요
+expect 한글 안녕하세요 닭이 값어치 괜찮아요
+usb-type  # [[Note]] ㅃㅉㄸㄲㅆ
+expect 한글 안녕하세요 닭이 값어치 괜찮아요 # [[Note]] ㅃㅉㄸㄲㅆ
+shot v1.7.1-korean-usb
+type ㅎㅏㄴ
+expect ㅃㅉㄸㄲㅆ한
+key Back
+expect ㅃㅉㄸㄲㅆ하
+key Back
+expect ㅃㅉㄸㄲㅆㅎ
+key Back
+expect-not ㅃㅉㄸㄲㅆㅎ
+type ㅇㅏㄴㄴㅕㅇ
+expect ㅃㅉㄸㄲㅆ안녕
+shot v1.7.1-korean-full
+key Alt
+shot v1.7.1-korean-full-altgr
+key Alt
+key Compact
+key Shift
+shot v1.7.1-korean-compact-shift

@@ -10,6 +10,18 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
 - Touch log: the panel repeats `tracking id 0` on every frame (323 of the first 400 log lines), so that line is now written only when the id changes; ignored corner reports have their own cap (100 lines per run).
 - Test: `stray_reports_outside_the_box_do_not_draw_lines_to_its_corners` (`app/tests/letters.rs`).
 
+## 1.7.1 — 2026-10-23 (built, emulator only, not installed, not tagged)
+- **Korean typing** (sprint S17.1, v1.7 wave W2, second part): Dubeolsik on the on-screen boards (Full and Compact; Shift makes ㅃ ㅉ ㄸ ㄲ ㅆ ㅒ ㅖ) and on USB keyboards. Jamo compose into syllables as you type (compound vowels, compound finals, a final moving to the next syllable on a vowel); **Backspace takes back one jamo** (한 → 하 → ㅎ). AltGr is the US layer, as for Russian, Ukrainian and Greek, so Latin text and Markdown need no switching.
+- **Font pack:** Hangul is not in Literata or Atkinson. The app now loads an optional script font pack (`SIGMA_FONT_PACK`, else `.adds/sigma-scribe/fonts/korean.ttf`, else the system Noto Sans CJK on a development machine) and uses it for any character the bundled faces lack. No pack on the Kobo means Hangul draws as empty boxes: the pack must be built and installed before the Korean layout is usable on the device (`docs/font-packs.md`).
+- Not yet: the composing syllable is not underlined, the pack is not offered or hidden by the layout list, and there is no 한/A switch (AltGr does that job).
+- Emulator: `tests/emu/v1.7.1-korean.script`, screenshots `docs/screenshots/v1.7.1/`. Tests: `hangul.rs` (composition, spelling round trip), the glyph audit skips jamo.
+
+## 1.7.0 — 2026-10-23 (built, emulator only, not installed, not tagged)
+- **Vietnamese typing, Telex and VNI** (sprint S17.0, v1.7 wave W2, first part): two new layouts on the US keys, "Vietnamese (Telex)" and "Vietnamese (VNI)", for the on-screen boards and USB. The word being typed is re-spelled as keys arrive, so a mark or tone can follow the letter it belongs to (`vieetj` → việt, `nguwowif` → người, VNI `Vie6t5`), and a repeated key takes it back (`aaa` → aa). Tones follow the modern rule (hòa, thủy, quả; gi and qu handled).
+- Moving the caret or typing a space or punctuation starts a new word. No spell check: typing English words under Telex can turn `s f r x j` into tones; switch to the US layout for that.
+- No new font: Literata and Atkinson already carry the Vietnamese letters.
+- Emulator: `tests/emu/v1.7.0-vietnamese.script`, screenshots `docs/screenshots/v1.7.0/`. Interface catalogs gain the three layout names in all ten languages (machine-drafted).
+
 ## 1.6.2 — 2026-10-22 (built, emulator/CI only, not installed, not tagged)
 - **UI languages: German, Spanish, Italian, Dutch, Catalan, Danish, Swedish** (sprint S16.2, decision 60; v1.6 wave W1, third part): the interface follows the Kobo `CurrentLocale` for `de es it nl ca da sv`, or Settings → Language → Interface language; 10 languages in all with English, French and Portuguese. Fi, nb, tr, pl, cs, ro move to v1.6.3.
 - Catalogs are machine-drafted, best effort (About says so); `assets/i18n/*.txt`, each checked against French for identical keys. German "Move" shortened to fit.

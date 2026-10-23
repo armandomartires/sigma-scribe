@@ -785,5 +785,8 @@ Vietnamese (Telex)
 Vietnamese (VNI)
 = Vietnamien (VNI)
 
+Korean (Dubeolsik)
+= Coréen (Dubeolsik)
+
 Machine-drafted translation, best effort; a native review is needed. Follows the Kobo's language.
 = Traduction rédigée par machine, au mieux ; une relecture native est nécessaire. Suit la langue du Kobo.

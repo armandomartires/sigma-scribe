@@ -155,6 +155,14 @@ fn shifted(c: char) -> char {
         '!' => '\'',
         '~' => '=',
         '>' => '+',
+        // Doubled consonants and vowels of Dubeolsik (v1.7.1).
+        'ㅂ' => 'ㅃ',
+        'ㅈ' => 'ㅉ',
+        'ㄷ' => 'ㄸ',
+        'ㄱ' => 'ㄲ',
+        'ㅅ' => 'ㅆ',
+        'ㅐ' => 'ㅒ',
+        'ㅔ' => 'ㅖ',
         // Unicode capitals (Cyrillic, Greek; v1.6.1).
         c => c.to_uppercase().next().unwrap_or(c),
     }
@@ -463,7 +471,7 @@ impl Keyboard {
                 KeyAction::Edited
             }
             Key::Back => {
-                buffer.backspace();
+                self.composer.backspace(buffer, self.lang);
                 KeyAction::Edited
             }
             // Brief: "Del is Delete; with Shift held it is Backspace" (Compact).

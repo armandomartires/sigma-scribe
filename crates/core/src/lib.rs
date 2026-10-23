@@ -8,6 +8,7 @@ pub mod buffer;
 pub mod find;
 pub mod gesture;
 pub mod graphmap;
+pub mod hangul;
 pub mod ink;
 pub mod keyboard;
 pub mod layouts;

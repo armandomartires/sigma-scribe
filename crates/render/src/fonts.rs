@@ -22,12 +22,17 @@ pub enum Face {
     LiterataSemi,
     /// Literata Italic at weight 400 (preview `*em*`).
     LiterataItalic,
+    /// The optional script font pack (Korean, v1.7.1): only ever returned
+    /// by [`Fonts::face_for`], for a character no bundled face has.
+    Pack,
 }
 
 type GlyphKey = (Face, char, u32);
 
 pub struct Fonts {
     faces: [Font; 5],
+    /// The font pack, when one is installed (see [`Fonts::load_pack`]).
+    pack: Option<&'static Font>,
     cache: RefCell<HashMap<GlyphKey, (fontdue::Metrics, Vec<u8>)>>,
 }
 
@@ -52,12 +57,59 @@ impl Fonts {
                 load(LITERATA_SEMI),
                 load(LITERATA_ITALIC),
             ],
+            pack: Self::pack(),
             cache: RefCell::default(),
         }
     }
 
+    /// The script font pack (v1.7.1, plan §12.6): `SIGMA_FONT_PACK` (a
+    /// path, `#N` picks a face of a collection), else `fonts/korean.ttf`
+    /// beside the app on the Kobo, else the system Noto Sans CJK on a
+    /// development machine. None when there is none: the script's
+    /// characters then draw as empty boxes and its layout is not offered.
+    fn pack() -> Option<&'static Font> {
+        // Parsed once per process: a development machine's system font is
+        // 19 MB, and every `Fonts` (the tests make many) would reparse it.
+        static PACK: std::sync::OnceLock<Option<Font>> = std::sync::OnceLock::new();
+        PACK.get_or_init(Self::load_pack).as_ref()
+    }
+
+    fn load_pack() -> Option<Font> {
+        let env = std::env::var("SIGMA_FONT_PACK").ok();
+        let spec = env.as_deref().into_iter().chain([
+            "/mnt/onboard/.adds/sigma-scribe/fonts/korean.ttf",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc#1",
+        ]);
+        for s in spec {
+            let (path, index) = s
+                .split_once('#')
+                .map_or((s, 0), |(p, i)| (p, i.parse().unwrap_or(0)));
+            let Ok(bytes) = std::fs::read(path) else {
+                continue;
+            };
+            let settings = FontSettings {
+                collection_index: index,
+                ..FontSettings::default()
+            };
+            if let Ok(f) = Font::from_bytes(bytes, settings) {
+                return Some(f);
+            }
+        }
+        None
+    }
+
+    /// Whether a script font pack is installed.
+    #[must_use]
+    pub fn has_pack(&self) -> bool {
+        self.pack.is_some()
+    }
+
     fn font(&self, face: Face) -> &Font {
-        &self.faces[face as usize]
+        match (face, &self.pack) {
+            (Face::Pack, Some(p)) => p,
+            (Face::Pack, None) => &self.faces[0],
+            _ => &self.faces[face as usize],
+        }
     }
 
     /// Advance width of `text` in pixels at `size` px. Tabs are 4 spaces.
@@ -81,7 +133,9 @@ impl Fonts {
     /// missing character to glyph 0, which draws as an empty box.
     #[must_use]
     pub fn has_glyph(&self, face: Face, c: char) -> bool {
-        c.is_whitespace() || self.font(face).lookup_glyph_index(c) != 0
+        c.is_whitespace()
+            || (face != Face::Pack || self.pack.is_some())
+                && self.font(face).lookup_glyph_index(c) != 0
     }
 
     /// The face that draws `c` (v1.4.6): `face` when it has the glyph,
@@ -100,6 +154,7 @@ impl Fonts {
             Face::AtkinsonBold,
         ]
         .into_iter()
+        .chain([Face::Pack])
         .find(|&f| self.has_glyph(f, c))
         .unwrap_or(face)
     }
@@ -214,7 +269,14 @@ mod layout_glyphs {
         for l in ALL {
             for i in 0..CODES.len() {
                 let (b, s, a) = l.chars(i);
-                want.extend([b, s, a].into_iter().flatten().map(spacing));
+                // Hangul jamo come from the font pack, not the bundled faces.
+                want.extend(
+                    [b, s, a]
+                        .into_iter()
+                        .flatten()
+                        .filter(|&c| !sigma_core::hangul::is_jamo(c))
+                        .map(spacing),
+                );
             }
         }
         for d in [

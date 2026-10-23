@@ -113,6 +113,15 @@ Installed on the Forma today: **1.6.2 + main ea32b50** (2026-10-23, binary only;
 - [ ] Settings → Writing: Size is a slider with nine dots and no number; tapping and dragging change the note's text size at once; the default is the third dot.
 - [ ] The Writing line on the Settings page shows only the typeface.
 
+## Vietnamese and Korean typing (v1.7.0, v1.7.1)
+- [ ] Layout → Vietnamese (Telex): `vieetj` → việt, `nguwowif` → người on the Full board and a USB keyboard; `aaa` → aa; a tone key after a moved caret starts a new word.
+- [ ] Layout → Vietnamese (VNI): `Vie6t5` → Việt; digits still type digits after a space.
+- [ ] Vietnamese letters and tones crisp at 100–200 % (Literata, no box glyphs).
+- [ ] Korean needs the font pack first (docs/font-packs.md): `fonts/korean.ttf` in `.adds/sigma-scribe/`.
+- [ ] Layout → Korean: jamo make syllables as you type, Backspace takes back one jamo; Shift gives ㅃ ㅉ ㄸ ㄲ ㅆ ㅒ ㅖ; AltGr types Latin and Markdown marks.
+- [ ] Hangul legible at the body size; line wrap and the caret sit right on Hangul text; refresh while a syllable changes (no ghosting).
+- [ ] Without the pack, Hangul draws as boxes (known; the layout is not hidden yet).
+
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).
 
