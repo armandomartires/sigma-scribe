@@ -13,6 +13,14 @@ This binary statically links:
   for Arabic-script and Hebrew shaping and right-to-left order.
 - The Rust standard library and musl libc (MIT / Apache-2.0, MIT).
 
+Dictionary: SKK-JISYO.L, the large SKK dictionary (dict/skk-jisyo.txt, converted from
+EUC-JP to UTF-8, otherwise unchanged; source https://github.com/skk-dev/dict). Copyright
+the SKK Development Team and contributors (see dict/SKK-JISYO.L-NOTICE.txt); GNU General
+Public License version 2 or (at your option) any later version. It is used here under
+version 3 of that licence (https://www.gnu.org/licenses/gpl-3.0.txt), the same family as
+this program's AGPL-3.0; it is data read at run time, in its own file. Japanese input
+(v1.10) also has a small built-in dictionary written for this project (AGPL-3.0-only).
+
 Fonts (SIL Open Font License 1.1, texts in OFL-*.txt):
 - Literata (Regular, SemiBold, Italic)
 - Atkinson Hyperlegible

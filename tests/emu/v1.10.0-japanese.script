@@ -24,8 +24,8 @@ usb-type kyouhaiitenkidesune.
 usb-key Space
 expect 今日は良い天気ですね。
 usb-key Space
+usb-key Esc
 expect きょうはいいてんきですね。
-usb-key Space
 usb-key Space
 usb-key Enter
 usb-key Space

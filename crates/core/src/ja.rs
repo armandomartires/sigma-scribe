@@ -314,6 +314,10 @@ pub struct Dict {
     by_letter: HashMap<(String, char), Vec<String>>,
     max_word: usize,
     max_stem: usize,
+    /// Readings that the project's own seed lists (preferred over the long
+    /// tail of a full dictionary: names, rare words).
+    seed: std::collections::HashSet<String>,
+    loading_seed: bool,
 }
 
 fn push_unique(v: &mut Vec<String>, s: &str) {
@@ -324,6 +328,9 @@ fn push_unique(v: &mut Vec<String>, s: &str) {
 
 impl Dict {
     fn add_word(&mut self, reading: &str, cand: &str) {
+        if self.loading_seed {
+            self.seed.insert(reading.to_string());
+        }
         self.max_word = self.max_word.max(reading.chars().count());
         push_unique(self.words.entry(reading.to_string()).or_default(), cand);
     }
@@ -375,6 +382,13 @@ impl Dict {
         }
     }
 
+    fn load_seed(&mut self) {
+        self.loading_seed = true;
+        self.load_skk(SEED);
+        self.loading_seed = false;
+        self.load_okuri(SEED_OKURI);
+    }
+
     /// The project's own okurigana lines (see assets/ja/seed-okuri.txt).
     fn load_okuri(&mut self, text: &str) {
         let row = |l: &str| -> &'static str {
@@ -424,15 +438,19 @@ impl Dict {
         }
     }
 
-    fn okuri(&self, stem: &str, k: char) -> Option<&String> {
+    /// The word for a stem and the kana that follows, and whether it is
+    /// from the seed (preferred).
+    fn okuri(&self, stem: &str, k: char) -> Option<(&String, bool)> {
         self.by_kana
             .get(&(stem.to_string(), k))
             .and_then(|v| v.first())
+            .map(|c| (c, true))
             .or_else(|| {
                 let l = okuri_letter(k)?;
                 self.by_letter
                     .get(&(stem.to_string(), l))
                     .and_then(|v| v.first())
+                    .map(|c| (c, false))
             })
     }
 }
@@ -441,15 +459,14 @@ fn dict() -> &'static RwLock<Dict> {
     static D: OnceLock<RwLock<Dict>> = OnceLock::new();
     D.get_or_init(|| {
         let mut d = Dict::default();
-        d.load_skk(SEED);
-        d.load_okuri(SEED_OKURI);
+        d.load_seed();
         // A fuller SKK dictionary, when one is installed (docs/japanese.md).
         let extra = std::env::var("SIGMA_SKK_DICT").ok();
-        for path in extra
-            .iter()
-            .map(String::as_str)
-            .chain(["/mnt/onboard/.adds/sigma-scribe/dict/skk-jisyo.txt"])
-        {
+        for path in extra.iter().map(String::as_str).chain([
+            "/mnt/onboard/.adds/sigma-scribe/dict/skk-jisyo.txt",
+            // A development checkout (the emulator runs from its root).
+            "assets/ja/skk-jisyo.txt",
+        ]) {
             if let Ok(text) = std::fs::read_to_string(path) {
                 d.load_skk(&text);
                 break;
@@ -549,28 +566,46 @@ const GRAMMAR: &[&str] = &[
     "といった",
 ];
 
-/// The cheapest cut of `reading` into words.
-fn best_cut(d: &Dict, reading: &str) -> String {
+/// How many alternative cuts are kept per position.
+const NBEST: usize = 4;
+
+/// The cheapest cuts of `reading` into words, best first (up to `NBEST`).
+/// Costs: the project's own words, particles and endings are cheap (about
+/// 100), a long-tail dictionary word dearer (about 300), a kana nothing
+/// covers dearest (400); fewer words and longer words win.
+fn cuts(d: &Dict, reading: &str) -> Vec<String> {
     let r: Vec<char> = reading.chars().collect();
     let n = r.len();
-    // dp[j]: cost and text of the best way to cover r[..j].
-    let mut dp: Vec<Option<(u32, String)>> = vec![None; n + 1];
-    dp[0] = Some((0, String::new()));
+    // dp[j]: the cheapest ways (cost, text) to cover r[..j].
+    let mut dp: Vec<Vec<(u32, String)>> = vec![Vec::new(); n + 1];
+    dp[0].push((0, String::new()));
     for j in 0..n {
-        let Some((cost, text)) = dp[j].clone() else {
-            continue;
-        };
+        let here = dp[j].clone();
         let mut relax = |to: usize, add: u32, s: &str| {
-            let c = cost + add;
-            if dp[to].as_ref().is_none_or(|(b, _)| c < *b) {
-                dp[to] = Some((c, format!("{text}{s}")));
+            for (cost, text) in &here {
+                let cell = &mut dp[to];
+                let t = format!("{text}{s}");
+                let c = cost + add;
+                if let Some(e) = cell.iter_mut().find(|(_, x)| *x == t) {
+                    // The same text by a cheaper way.
+                    e.0 = e.0.min(c);
+                    cell.sort_by_key(|(c, _)| *c);
+                    continue;
+                }
+                cell.push((c, t));
+                cell.sort_by_key(|(c, _)| *c);
+                cell.truncate(NBEST);
             }
         };
-        relax(j + 1, 400, &r[j].to_string());
+        relax(
+            j + 1,
+            if PARTICLES.contains(r[j]) { 100 } else { 400 },
+            &r[j].to_string(),
+        );
         for g in GRAMMAR {
             let len = g.chars().count();
             if j + len <= n && r[j..j + len].iter().copied().eq(g.chars()) {
-                relax(j + len, 296u32.saturating_sub(len as u32), g);
+                relax(j + len, 90 - len as u32, g);
             }
         }
         for len in 1..=d.max_word.min(n - j) {
@@ -579,31 +614,43 @@ fn best_cut(d: &Dict, reading: &str) -> String {
                 if len == 1 && PARTICLES.contains(r[j]) {
                     continue;
                 }
-                relax(j + len, 300 - len as u32, c);
+                let base = if d.seed.contains(&key) { 100 } else { 300 };
+                relax(j + len, base - len as u32, c);
             }
         }
         for stem in 1..=d.max_stem.min(n - j - 1) {
             let key: String = r[j..j + stem].iter().collect();
-            if let Some(c) = d.okuri(&key, r[j + stem]) {
+            if let Some((c, seed)) = d.okuri(&key, r[j + stem]) {
+                let base = if seed { 120 } else { 340 };
                 relax(
                     j + stem + 1,
-                    306 - stem as u32,
+                    base - stem as u32,
                     &format!("{c}{}", r[j + stem]),
                 );
             }
         }
     }
-    dp[n].take().map_or_else(|| reading.to_string(), |(_, t)| t)
+    dp.swap_remove(n).into_iter().map(|(_, t)| t).collect()
 }
 
-/// Conversion candidates for a reading, best first: the best cut into
+/// The cheapest cut of `reading` into words.
+#[cfg(test)]
+fn best_cut(d: &Dict, reading: &str) -> String {
+    cuts(d, reading)
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| reading.to_string())
+}
+
+/// Conversion candidates for a reading, best first: the best cuts into
 /// words, the readings that are one word, the hiragana, the katakana.
 #[must_use]
 pub fn convert(reading: &str) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     if let Ok(d) = dict().read() {
-        let cut = best_cut(&d, reading);
-        push_unique(&mut out, &cut);
+        for cut in cuts(&d, reading) {
+            push_unique(&mut out, &cut);
+        }
         if let Some(v) = d.words.get(reading) {
             for c in v {
                 push_unique(&mut out, c);
@@ -689,6 +736,46 @@ mod tests {
         assert_eq!(convert("ぱそこん")[0], "パソコン");
     }
 
+    /// The seed plus the full SKK-JISYO.L (assets/ja/skk-jisyo.txt).
+    fn full() -> Dict {
+        let mut d = Dict::default();
+        d.load_seed();
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../assets/ja/skk-jisyo.txt");
+        d.load_skk(&std::fs::read_to_string(path).expect("assets/ja/skk-jisyo.txt"));
+        d
+    }
+
+    #[test]
+    fn the_full_dictionary_loads_and_converts_sentences() {
+        let t = std::time::Instant::now();
+        let d = full();
+        eprintln!("loaded in {:?}: {} words", t.elapsed(), d.words.len());
+        assert!(d.words.len() > 100_000);
+        let cases = [
+            ("わたしはがくせいです", "私は学生です"),
+            ("たべます", "食べます"),
+            (
+                "きのうともだちとえいがをみました",
+                "昨日友達と映画を見ました",
+            ),
+            ("にほんごをべんきょうしています", "日本語を勉強しています"),
+            ("あしたはあめがふるでしょう", "明日は雨が降るでしょう"),
+            ("とうきょうにすんでいます", "東京に住んでいます"),
+            ("ほんをよみたいです", "本を読みたいです"),
+            ("おおきいいぬがはしっています", "大きい犬が走っています"),
+            ("きょうはさむいですね", "今日は寒いですね"),
+            ("かいぎはごごさんじからです", "会議は午後三時からです"),
+        ];
+        let bad: Vec<String> = cases
+            .iter()
+            .filter_map(|(r, want)| {
+                let got = best_cut(&d, r);
+                (got != *want).then(|| format!("{r}: {got} (want {want})"))
+            })
+            .collect();
+        assert!(bad.is_empty(), "{bad:#?}");
+    }
+
     #[test]
     fn an_added_skk_dictionary_extends_the_seed() {
         let mut d = Dict::default();
@@ -696,6 +783,6 @@ mod tests {
             ";; okuri-ari entries.\nおくr /送/\n;; okuri-nasi entries.\nきしゃ /記者;press/汽車/\n",
         );
         assert_eq!(d.words["きしゃ"], vec!["記者", "汽車"]);
-        assert_eq!(d.okuri("おく", 'る').map(String::as_str), Some("送"));
+        assert_eq!(d.okuri("おく", 'る').map(|x| x.0.as_str()), Some("送"));
     }
 }

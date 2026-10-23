@@ -1618,6 +1618,9 @@ mod tests {
         assert_eq!(b.text(), "私");
         assert_eq!(c.candidates().map(|x| x.1), Some(0));
         c.type_char(&mut b, l, ' ');
+        assert_ne!(b.text(), "私", "the next candidate");
+        // Esc steps back to the reading.
+        assert!(c.escape(&mut b));
         assert_eq!(b.text(), "わたし");
         // Enter commits and is not a newline; the next letter starts anew.
         assert!(c.enter(&mut b));
@@ -1642,7 +1645,9 @@ mod tests {
             c.type_char(&mut b, l, ch);
         }
         assert_eq!(b.text(), "日本語");
-        c.pick(&mut b, 1);
+        // The hiragana is the second to last candidate.
+        let n = c.candidates().map_or(0, |x| x.0.len());
+        c.pick(&mut b, n - 2);
         assert_eq!(b.text(), "にほんご");
         assert!(!c.composing_ja());
         for ch in "kyou ".chars() {

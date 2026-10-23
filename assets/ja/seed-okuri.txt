@@ -2,6 +2,20 @@
 # (stem|first okurigana kana|kanji), I1 = ichidan whose stem is the kanji alone,
 # A = i-adjective (stem|first okurigana kana|kanji), X = explicit (stem|kana|kanji).
 V|い|k0|行
+V|ふ|r|降
+V|す|m|住
+V|おく|r|送
+V|なく|r|無
+V|あ|k|開
+V|し|m|閉
+V|ひ|k|引
+V|おし|s|押
+V|かえ|r|変
+V|な|r|成
+V|ひら|k|開
+V|きめ|r|決
+V|や|k|焼
+V|き|r|切
 V|か|k|書
 V|き|k|聞
 V|あるき|k|歩

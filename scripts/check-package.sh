@@ -13,7 +13,8 @@ for f in .adds/nm/sigma-scribe .adds/sigma-scribe/sigma-scribe .adds/sigma-scrib
          .adds/sigma-scribe/OFL-Literata.txt .adds/sigma-scribe/OFL-AtkinsonHyperlegible.txt\
          .adds/sigma-scribe/OFL-NotoNaskhArabic.txt .adds/sigma-scribe/OFL-NotoSansHebrew.txt\
          .adds/sigma-scribe/OFL-NotoSansDevanagari.txt .adds/sigma-scribe/OFL-NotoSansBengali.txt\
-         .adds/sigma-scribe/OFL-NotoSansTamil.txt .adds/sigma-scribe/OFL-NotoSansThai.txt; do
+         .adds/sigma-scribe/OFL-NotoSansTamil.txt .adds/sigma-scribe/OFL-NotoSansThai.txt\
+         .adds/sigma-scribe/dict/skk-jisyo.txt .adds/sigma-scribe/dict/SKK-JISYO.L-NOTICE.txt; do
   tar tzf "$OUT.tar.gz" | grep -qx "$f" || fail "missing $f"
 done
 file "$OUT/.adds/sigma-scribe/sigma-scribe" | grep -q 'ARM.*statically linked' || fail "binary is not ARM static"
