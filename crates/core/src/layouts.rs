@@ -48,9 +48,17 @@ pub enum KeyLayout {
     ViVni,
     /// Korean, Dubeolsik (KS X 5002; v1.7.1).
     Ko,
+    /// Arabic 101 (v1.8).
+    Ar,
+    /// Persian, standard (v1.8).
+    Fa,
+    /// Urdu, phonetic (v1.8).
+    Ur,
+    /// Hebrew, standard (v1.8).
+    He,
 }
 
-pub const ALL: [KeyLayout; 24] = [
+pub const ALL: [KeyLayout; 28] = [
     KeyLayout::Us,
     KeyLayout::Uk,
     KeyLayout::Fr,
@@ -75,6 +83,10 @@ pub const ALL: [KeyLayout; 24] = [
     KeyLayout::ViTelex,
     KeyLayout::ViVni,
     KeyLayout::Ko,
+    KeyLayout::Ar,
+    KeyLayout::Fa,
+    KeyLayout::Ur,
+    KeyLayout::He,
 ];
 
 /// evdev codes of the 48 positions, in table order.
@@ -497,6 +509,89 @@ const KO: Table = Table {
     ],
 };
 
+// Right-to-left layouts (v1.8). Digits stay ASCII (Markdown lists need
+// them); AltGr is the US layer. Arabic: xkb `ara` (Arabic 101); Persian:
+// xkb `ir`; Urdu: a phonetic layout (letters by sound, like CRULP);
+// Hebrew: xkb `il` (SI-1452). Basic variants, written as data.
+const AR: Table = Table {
+    base: [
+        "ذ1234567890-=",
+        "ضصثقفغعهخحجد\\",
+        "شسيبلاتنمكط ",
+        "ئءؤرﻻىةوزظ",
+    ],
+    shift: ["ّ!@#$%^&*()_+", "ًٌَُﻹإ‘÷×؛<>|", "ٍِ][ﻷأـ،/:\" ", "~ْ}{ﻵآ’,.؟"],
+    altgr: [
+        "`1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+};
+
+const FA: Table = Table {
+    base: [
+        "\u{200c}1234567890-=",
+        "ضصثقفغعهخحجچپ",
+        "شسیبلاتنمکگ ",
+        "ظطزرذدئو./",
+    ],
+    shift: [
+        "~!@#$%^&*()_+",
+        "ًٌٍقفغعهخح}{|",
+        "ؤئيإأآـة»:\" ",
+        "كٓژٰ\u{200c}ٔء<>؟",
+    ],
+    altgr: [
+        "`1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+};
+
+const UR: Table = Table {
+    base: [
+        "`1234567890-=",
+        "قوعرتےءیوپ[]\\",
+        "اسدفگہجکل؛' ",
+        "زشچطبنم،./",
+    ],
+    shift: [
+        "~!@#$%^&*()_+",
+        "قؤٰڑٹۓئیوّ{}|",
+        "آصڈفغھضخل:\" ",
+        "ذژثظبںم<>؟",
+    ],
+    altgr: [
+        "`1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+};
+
+const HE: Table = Table {
+    base: [
+        ";1234567890-=",
+        "/'קראטוןםפ][\\",
+        "שדגכעיחלךף, ",
+        "זסבהנמצתץ.",
+    ],
+    shift: [
+        "~!@#$%^&*()_+",
+        "/'קראטוןםפ}{|",
+        "שדגכעיחלך:\" ",
+        "זסבהנמצ<>?",
+    ],
+    altgr: [
+        "`1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+};
+
 const RU: Table = Table {
     base: [
         "ё1234567890-=",
@@ -591,6 +686,10 @@ fn table(l: KeyLayout) -> &'static Table {
         KeyLayout::Gr => &GR,
         KeyLayout::ViTelex | KeyLayout::ViVni => &US,
         KeyLayout::Ko => &KO,
+        KeyLayout::Ar => &AR,
+        KeyLayout::Fa => &FA,
+        KeyLayout::Ur => &UR,
+        KeyLayout::He => &HE,
     }
 }
 
@@ -632,6 +731,10 @@ impl KeyLayout {
             Self::ViTelex => "vi",
             Self::ViVni => "vi-vni",
             Self::Ko => "ko",
+            Self::Ar => "ar",
+            Self::Fa => "fa",
+            Self::Ur => "ur",
+            Self::He => "he",
         }
     }
 
@@ -663,6 +766,10 @@ impl KeyLayout {
             Self::ViTelex => "Vietnamese (Telex)",
             Self::ViVni => "Vietnamese (VNI)",
             Self::Ko => "Korean (Dubeolsik)",
+            Self::Ar => "Arabic",
+            Self::Fa => "Persian (Farsi)",
+            Self::Ur => "Urdu (phonetic)",
+            Self::He => "Hebrew",
         }
     }
 
@@ -705,7 +812,7 @@ impl KeyLayout {
             });
         }
         let b = b?;
-        let upper = shift != (caps && b.is_alphabetic() && !crate::hangul::is_jamo(b));
+        let upper = shift != (caps && b.is_lowercase());
         if upper {
             s
         } else {
@@ -737,7 +844,10 @@ impl KeyLayout {
     /// Non-Latin layouts whose AltGr layer is the US layout (v1.6.1).
     #[must_use]
     pub fn latin_altgr(self) -> bool {
-        matches!(self, Self::Ru | Self::Ua | Self::Gr | Self::Ko)
+        matches!(
+            self,
+            Self::Ru | Self::Ua | Self::Gr | Self::Ko | Self::Ar | Self::Fa | Self::Ur | Self::He
+        )
     }
 
     /// The position of a character (base, Shift or AltGr) — emulator and
@@ -788,6 +898,12 @@ impl KeyLayout {
                 "ㅁㄴㅇㄹㅎㅗㅓㅏㅣ",
                 "ㅋㅌㅊㅍㅠㅜㅡ",
             ],
+            // Right-to-left layouts (v1.8): letters only; Full and USB have
+            // the whole layout (diacritics, punctuation).
+            Self::Ar => ["ضصثقفغعهخحجد", "شسيبلاتنمكط", "ئءؤرىةوزظذ"],
+            Self::Fa => ["ضصثقفغعهخحجچ", "شسیبلاتنمکگ", "ظطزرذدئوپژ"],
+            Self::Ur => ["قوعرتےءیوپ", "اسدفگہجکل", "زشچطبنمٹڈڑ"],
+            Self::He => ["קראטוןםפ", "שדגכעיחלךף", "זסבהנמצתץ"],
             _ => ["qwertyuiop", "asdfghjkl", "zxcvbnm"],
         }
     }

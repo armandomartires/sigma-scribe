@@ -787,5 +787,17 @@ Vietnamese (VNI)
 Korean (Dubeolsik)
 = Coreà (Dubeolsik)
 
+Arabic
+= Àrab
+
+Persian (Farsi)
+= Persa (farsi)
+
+Urdu (phonetic)
+= Urdú (fonètic)
+
+Hebrew
+= Hebreu
+
 Machine-drafted translation, best effort; a native review is needed. Follows the Kobo's language.
 = Traducció feta per màquina, com millor s'ha pogut; cal una revisió nativa. Segueix l'idioma del Kobo.

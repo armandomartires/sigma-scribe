@@ -10,7 +10,8 @@ tar tzf "$OUT.tar.gz" | grep -v '^\.adds/' && fail "entries outside .adds/"
 tar tzf "$OUT.tar.gz" | grep -qi 'notes' && fail "notes in the package"
 for f in .adds/nm/sigma-scribe .adds/sigma-scribe/sigma-scribe .adds/sigma-scribe/launch.sh \
          .adds/sigma-scribe/touch.conf .adds/sigma-scribe/LICENSE .adds/sigma-scribe/THIRD-PARTY.txt \
-         .adds/sigma-scribe/OFL-Literata.txt .adds/sigma-scribe/OFL-AtkinsonHyperlegible.txt; do
+         .adds/sigma-scribe/OFL-Literata.txt .adds/sigma-scribe/OFL-AtkinsonHyperlegible.txt\
+         .adds/sigma-scribe/OFL-NotoNaskhArabic.txt .adds/sigma-scribe/OFL-NotoSansHebrew.txt; do
   tar tzf "$OUT.tar.gz" | grep -qx "$f" || fail "missing $f"
 done
 file "$OUT/.adds/sigma-scribe/sigma-scribe" | grep -q 'ARM.*statically linked' || fail "binary is not ARM static"

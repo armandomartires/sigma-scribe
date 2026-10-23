@@ -1524,6 +1524,7 @@ impl App {
             self.scratch_key(k)
         } else {
             let tab = self.settings.tab_kind();
+            self.keyboard.rtl = self.caret_rtl();
             let a = self.keyboard.press(k, &mut self.buffer, tab);
             self.after_key(a)
         };
@@ -2882,6 +2883,12 @@ impl App {
         Some(Refresh::Fast)
     }
 
+    /// The caret is in a right-to-left row of the note.
+    fn caret_rtl(&self) -> bool {
+        let page = self.screen.layout(self.keys_visible(), &self.keyboard).page;
+        self.screen.caret_rtl(&self.buffer, page)
+    }
+
     fn hw_into_field(&mut self, k: HwKey) -> Option<Refresh> {
         let (_, field) = self.rename.as_mut()?;
         match k {
@@ -3499,8 +3506,14 @@ impl App {
                     HwKey::Delete => self.buffer.delete_forward(),
                     HwKey::Return => self.buffer.newline(),
                     HwKey::Tab => self.buffer.insert_tab(self.settings.tab_kind()),
-                    HwKey::Left => self.buffer.left(),
-                    HwKey::Right => self.buffer.right(),
+                    HwKey::Left | HwKey::Right => {
+                        // Flipped in a right-to-left row (v1.8).
+                        if (k == HwKey::Left) != self.caret_rtl() {
+                            self.buffer.left();
+                        } else {
+                            self.buffer.right();
+                        }
+                    }
                     HwKey::Up => self.screen.caret_row(&mut self.buffer, page, false),
                     HwKey::Down => self.screen.caret_row(&mut self.buffer, page, true),
                     HwKey::Home | HwKey::End | HwKey::PageUp | HwKey::PageDown => return None,
@@ -3565,6 +3578,7 @@ impl App {
                     Hit::Drawer(p) => Some(self.toggle_pane(p)),
                     Hit::Key(k) => {
                         let tab = self.settings.tab_kind();
+                        self.keyboard.rtl = self.caret_rtl();
                         let a = self.keyboard.press(k, &mut self.buffer, tab);
                         self.after_key(a)
                     }

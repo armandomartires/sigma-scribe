@@ -122,6 +122,16 @@ Installed on the Forma today: **1.6.2 + main ea32b50** (2026-10-23, binary only;
 - [ ] Hangul legible at the body size; line wrap and the caret sit right on Hangul text; refresh while a syllable changes (no ghosting).
 - [ ] Without the pack, Hangul draws as boxes (known; the layout is not hidden yet).
 
+## Arabic, Persian, Urdu, Hebrew (v1.8.0)
+- [ ] Layout → Arabic: type a few words on the Full board and a USB keyboard; letters join, marks sit right, the row sits flush right.
+- [ ] Mixed with Latin and numbers: order looks right; the caret sits where the next letter appears.
+- [ ] Left / Right move the way the text reads in a right-to-left row; tap places the caret at the letter touched; selection highlight covers the right letters.
+- [ ] Persian (گ چ پ ژ, ZWNJ key), Urdu (ٹ ڈ ڑ ں ے ھ), Hebrew: letters present and legible at 100–200 %.
+- [ ] Arabic size next to Latin (Naskh is drawn 18 % larger): too big or too small?
+- [ ] Wrapping a long Arabic paragraph; scrolling; page turn; no slowdown while typing.
+- [ ] Preview of an Arabic paragraph: flush right, legible.
+- [ ] Refresh behaviour while typing right to left (no ghosting at the caret).
+
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).
 

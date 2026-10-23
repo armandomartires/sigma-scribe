@@ -127,6 +127,9 @@ pub struct Keyboard {
     pub lang: KeyLayout,
     /// Dead-key state, shared with USB typing (v1.3).
     pub composer: Composer,
+    /// The caret is in a right-to-left row: Left / Right swap (v1.8). The
+    /// app sets it before an arrow key.
+    pub rtl: bool,
 }
 
 /// Compact symbol-layer shift map (brief).
@@ -386,7 +389,7 @@ impl Keyboard {
                     }
                 }
                 let b = b.unwrap_or(c);
-                if self.shift_on() != (self.caps && b.is_alphabetic()) {
+                if self.shift_on() != (self.caps && b.is_lowercase()) {
                     sh.unwrap_or(b)
                 } else {
                     b
@@ -496,20 +499,17 @@ impl Keyboard {
                 KeyAction::Edited
             }
             Key::Esc => KeyAction::Escape,
-            Key::Arrow(Dir::Left) => {
-                let at = match (ctrl, extend, buffer.selection()) {
-                    (true, _, _) => buffer.word_left(buffer.caret()),
-                    (false, false, Some((a, _))) => a,
-                    _ => buffer.prev_pos(buffer.caret()),
-                };
-                buffer.move_to(at, extend);
-                KeyAction::Moved
-            }
-            Key::Arrow(Dir::Right) => {
-                let at = match (ctrl, extend, buffer.selection()) {
-                    (true, _, _) => buffer.word_right(buffer.caret()),
-                    (false, false, Some((_, b))) => b,
-                    _ => buffer.next_pos(buffer.caret()),
+            Key::Arrow(d @ (Dir::Left | Dir::Right)) => {
+                // In a right-to-left row (v1.8) the left arrow moves to
+                // the next letter, not the previous one.
+                let back = (d == Dir::Left) != self.rtl;
+                let at = match (ctrl, extend, buffer.selection(), back) {
+                    (true, _, _, true) => buffer.word_left(buffer.caret()),
+                    (true, _, _, false) => buffer.word_right(buffer.caret()),
+                    (false, false, Some((a, _)), true) => a,
+                    (false, false, Some((_, b)), false) => b,
+                    (_, _, _, true) => buffer.prev_pos(buffer.caret()),
+                    (_, _, _, false) => buffer.next_pos(buffer.caret()),
                 };
                 buffer.move_to(at, extend);
                 KeyAction::Moved

@@ -1,0 +1,65 @@
+# v1.8.0 (S18.0): Arabic, Persian, Urdu and Hebrew layouts; bidi order, shaping, flush-right rows.
+copy-notes tests/test-notes/_test
+usb plug
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+page next
+shot v1.8.0-layout-choices-page3
+tap-on Arabic
+expect-setting layout=ar
+esc
+esc
+usb-type  مرحبا بالعالم
+expect مرحبا بالعالم
+shot v1.8.0-arabic
+# Mixed with Latin: the Latin keeps its order inside the right-to-left row.
+usb-type  Sigma Scribe
+shot v1.8.0-arabic-mixed
+usb-key Left
+usb-key Left
+usb-type X
+shot v1.8.0-arrows
+key Return
+usb-type  ﻻ
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+page next
+page next
+tap-on Hebrew
+expect-setting layout=he
+esc
+esc
+usb-type שלום עולם
+shot v1.8.0-hebrew
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+page next
+tap-on Persian (Farsi)
+expect-setting layout=fa
+esc
+esc
+key Return
+usb-type سلام دنیا گچپژ
+shot v1.8.0-persian
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+page next
+tap-on Urdu (phonetic)
+expect-setting layout=ur
+esc
+esc
+key Return
+usb-type اردو زبان
+expect اردو زبان
+shot v1.8.0-urdu
+tap-on Eye
+shot v1.8.0-preview
+tap-on Pencil

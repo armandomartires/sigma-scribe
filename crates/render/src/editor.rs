@@ -339,6 +339,18 @@ impl EditorScreen {
         (self.body() * self.leading).round() as i32
     }
 
+    /// How far a row is pushed right: a right-to-left row is flush right
+    /// (v1.8), every other row starts at the left edge.
+    fn row_shift(&self, text: &str, row: VisualLine, area_w: i32) -> i32 {
+        let t = &text[row.start..row.end];
+        let m = self.measure();
+        if sigma_core::TextMeasure::rtl(&m, t) {
+            (area_w - sigma_core::TextMeasure::width(&m, t.trim_end_matches(' ')) as i32).max(0)
+        } else {
+            0
+        }
+    }
+
     fn measure(&self) -> Measure<'_> {
         Measure {
             fonts: &self.fonts,
@@ -795,15 +807,26 @@ impl EditorScreen {
         }
     }
 
+    /// Is the caret in a right-to-left row (so Left / Right swap)?
+    #[must_use]
+    pub fn caret_rtl(&self, buffer: &Buffer, page: Rect) -> bool {
+        let rows = self.rows(buffer, page);
+        let m = self.measure();
+        let (row, _) = caret_cell(buffer.text(), &rows, buffer.caret(), &m);
+        let r = rows[row];
+        sigma_core::TextMeasure::rtl(&m, &buffer.text()[r.start..r.end])
+    }
+
     /// Screen point (x, top of row) of a text offset, if it is on screen.
     #[must_use]
     pub fn point_of(&self, buffer: &Buffer, page: Rect, at: usize) -> Option<(i32, i32)> {
         let area = self.text_area(page);
         let rows = self.rows(buffer, page);
         let (row, col) = caret_cell(buffer.text(), &rows, at, &self.measure());
+        let shift = self.row_shift(buffer.text(), rows[row], area.w);
         (row >= self.scroll && row < self.scroll + self.visible_rows(page)).then(|| {
             (
-                area.x + col as i32,
+                area.x + shift + col as i32,
                 area.y + (row - self.scroll) as i32 * self.line_h(),
             )
         })
@@ -818,10 +841,11 @@ impl EditorScreen {
         let Some(&row) = rows.get(r).or(rows.last()) else {
             return 0;
         };
+        let shift = self.row_shift(buffer.text(), row, area.w);
         offset_at(
             buffer.text(),
             row,
-            (x - area.x).max(0) as u32,
+            (x - area.x - shift).max(0) as u32,
             &self.measure(),
         )
     }
@@ -993,7 +1017,7 @@ impl EditorScreen {
             let Some(&row) = rows.get(r).or(rows.last()) else {
                 return Hit::Nothing;
             };
-            let col = (x - area.x).max(0) as u32;
+            let col = (x - area.x - self.row_shift(model.buffer.text(), row, area.w)).max(0) as u32;
             return Hit::Caret(offset_at(model.buffer.text(), row, col, &self.measure()));
         }
         Hit::Nothing
@@ -1054,22 +1078,34 @@ impl EditorScreen {
                 let (s0, s1) = (a.max(r.start), b.min(r.end.max(r.start)));
                 let through_newline = b > r.end && a <= r.end;
                 if s0 < s1 || through_newline {
-                    let x0 = self.fonts.width(
-                        self.face,
-                        self.body(),
-                        &text[r.start..s0.min(r.end).max(r.start)],
-                    );
-                    let x1 = self
-                        .fonts
-                        .width(self.face, self.body(), &text[r.start..s1.max(s0)])
-                        + if through_newline {
-                            self.body() * 0.4
-                        } else {
-                            0.0
-                        };
+                    let m = self.measure();
+                    let row_text = &text[r.start..r.end];
+                    let xa = sigma_core::TextMeasure::caret_x(
+                        &m,
+                        row_text,
+                        s0.min(r.end).max(r.start) - r.start,
+                    ) as f32;
+                    let xb = sigma_core::TextMeasure::caret_x(
+                        &m,
+                        row_text,
+                        s1.max(s0).min(r.end) - r.start,
+                    ) as f32;
+                    let nl = if through_newline {
+                        self.body() * 0.4
+                    } else {
+                        0.0
+                    };
+                    let rtl = sigma_core::TextMeasure::rtl(&m, row_text);
+                    let (mut x0, mut x1) = (xa.min(xb), xa.max(xb));
+                    if rtl {
+                        x0 -= nl;
+                    } else {
+                        x1 += nl;
+                    }
+                    let shift = self.row_shift(text, *r, area.w) as f32;
                     c.fill(
                         Rect::new(
-                            area.x + x0 as i32,
+                            area.x + (shift + x0) as i32,
                             area.y + i as i32 * lh,
                             (x1 - x0).ceil() as i32,
                             lh,
@@ -1083,7 +1119,7 @@ impl EditorScreen {
                 c,
                 self.face,
                 self.body(),
-                area.x as f32,
+                (area.x + self.row_shift(text, *r, area.w)) as f32,
                 y,
                 &text[r.start..r.end],
                 t.ink,
@@ -1095,7 +1131,7 @@ impl EditorScreen {
                 area.y + (crow - self.scroll) as i32 * lh + (lh - (self.body() * 1.25) as i32) / 2;
             c.fill(
                 Rect::new(
-                    area.x + ccol as i32,
+                    area.x + self.row_shift(text, rows[crow], area.w) + ccol as i32,
                     cy,
                     self.px(2.0).max(2),
                     (self.body() * 1.25) as i32,

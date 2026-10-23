@@ -7,6 +7,23 @@
 /// Width of a run of text in the front end's unit (pixels or grid cells).
 pub trait TextMeasure {
     fn width(&self, text: &str) -> u32;
+
+    /// x of the caret at byte `at` of a row, from the row's left end. A
+    /// right-to-left row (v1.8) is laid out by its glyphs, not by the
+    /// width of the text before the caret.
+    fn caret_x(&self, row: &str, at: usize) -> u32 {
+        self.width(&row[..at])
+    }
+
+    /// Byte of a right-to-left row nearest to `x`; None: use widths.
+    fn index_at(&self, _row: &str, _x: u32) -> Option<usize> {
+        None
+    }
+
+    /// Does the row read right to left (it is drawn flush right)?
+    fn rtl(&self, _row: &str) -> bool {
+        false
+    }
 }
 
 /// Every char is one cell wide; tabs expand to `tab` cells.
@@ -77,14 +94,18 @@ fn wrap_logical(
             return;
         }
         // Longest prefix that fits.
-        let mut fit = 0;
-        for (i, c) in rest.char_indices() {
-            let next = i + c.len_utf8();
-            if m.width(&rest[..next]) > max {
-                break;
+        // (Binary search: shaped text is costly to measure.)
+        let bounds: Vec<usize> = rest.char_indices().map(|(i, c)| i + c.len_utf8()).collect();
+        let (mut lo, mut hi) = (0, bounds.len());
+        while lo < hi {
+            let mid = (lo + hi) / 2;
+            if m.width(&rest[..bounds[mid]]) > max {
+                hi = mid;
+            } else {
+                lo = mid + 1;
             }
-            fit = next;
         }
+        let mut fit = if lo == 0 { 0 } else { bounds[lo - 1] };
         if fit == 0 {
             fit = rest.chars().next().map_or(rest.len(), char::len_utf8);
         }
@@ -124,13 +145,16 @@ pub fn caret_cell(
         }
     }
     let r = rows[found];
-    (found, m.width(&text[r.start..caret]))
+    (found, m.caret_x(&text[r.start..r.end], caret - r.start))
 }
 
 /// Byte offset nearest to `col` units into `row` (tap or up/down by row).
 #[must_use]
 pub fn offset_at(text: &str, row: VisualLine, col: u32, m: &dyn TextMeasure) -> usize {
     let s = &text[row.start..row.end];
+    if let Some(i) = m.index_at(s, col) {
+        return row.start + i;
+    }
     let mut best = row.start;
     for (i, c) in s.char_indices() {
         let after = i + c.len_utf8();

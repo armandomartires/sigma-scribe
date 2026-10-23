@@ -12,6 +12,10 @@ static LITERATA_SEMI: &[u8] = include_bytes!("../../../assets/fonts/Literata-Sem
 static LITERATA_ITALIC: &[u8] = include_bytes!("../../../assets/fonts/Literata-Italic.ttf");
 static ATKINSON: &[u8] = include_bytes!("../../../assets/fonts/AtkinsonHyperlegible-Regular.ttf");
 static ATKINSON_BOLD: &[u8] = include_bytes!("../../../assets/fonts/AtkinsonHyperlegible-Bold.ttf");
+// v1.8: Arabic script (Arabic, Persian, Urdu) and Hebrew, small enough to
+// ship in the binary (Noto Naskh Arabic 176 KB, Noto Sans Hebrew 27 KB).
+static NASKH: &[u8] = include_bytes!("../../../assets/fonts/NotoNaskhArabic-Regular.ttf");
+static HEBREW: &[u8] = include_bytes!("../../../assets/fonts/NotoSansHebrew-Regular.ttf");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Face {
@@ -22,15 +26,24 @@ pub enum Face {
     LiterataSemi,
     /// Literata Italic at weight 400 (preview `*em*`).
     LiterataItalic,
+    /// Noto Naskh Arabic (Arabic, Persian, Urdu; v1.8).
+    Naskh,
+    /// Noto Sans Hebrew (v1.8).
+    Hebrew,
     /// The optional script font pack (Korean, v1.7.1): only ever returned
     /// by [`Fonts::face_for`], for a character no bundled face has.
     Pack,
 }
 
 type GlyphKey = (Face, char, u32);
+/// A rasterised glyph: metrics and coverage.
+type Glyph = (fontdue::Metrics, Vec<u8>);
 
 pub struct Fonts {
-    faces: [Font; 5],
+    faces: [Font; 7],
+    buzz: RefCell<HashMap<Face, Option<std::rc::Rc<rustybuzz::Face<'static>>>>>,
+    shapes: RefCell<HashMap<(Face, u32, String), std::rc::Rc<crate::shape::Shaped>>>,
+    gcache: RefCell<HashMap<(Face, u16, u32), Glyph>>,
     /// The font pack, when one is installed (see [`Fonts::load_pack`]).
     pack: Option<&'static Font>,
     cache: RefCell<HashMap<GlyphKey, (fontdue::Metrics, Vec<u8>)>>,
@@ -56,7 +69,12 @@ impl Fonts {
                 load(ATKINSON_BOLD),
                 load(LITERATA_SEMI),
                 load(LITERATA_ITALIC),
+                load(NASKH),
+                load(HEBREW),
             ],
+            buzz: RefCell::default(),
+            shapes: RefCell::default(),
+            gcache: RefCell::default(),
             pack: Self::pack(),
             cache: RefCell::default(),
         }
@@ -104,7 +122,26 @@ impl Fonts {
         self.pack.is_some()
     }
 
-    fn font(&self, face: Face) -> &Font {
+    /// The shaping face of a bundled font (None for a font pack).
+    pub(crate) fn buzz(&self, face: Face) -> Option<std::rc::Rc<rustybuzz::Face<'static>>> {
+        let bytes: &'static [u8] = match face {
+            Face::Literata => LITERATA,
+            Face::Atkinson => ATKINSON,
+            Face::AtkinsonBold => ATKINSON_BOLD,
+            Face::LiterataSemi => LITERATA_SEMI,
+            Face::LiterataItalic => LITERATA_ITALIC,
+            Face::Naskh => NASKH,
+            Face::Hebrew => HEBREW,
+            Face::Pack => return None,
+        };
+        self.buzz
+            .borrow_mut()
+            .entry(face)
+            .or_insert_with(|| rustybuzz::Face::from_slice(bytes, 0).map(std::rc::Rc::new))
+            .clone()
+    }
+
+    pub(crate) fn font(&self, face: Face) -> &Font {
         match (face, &self.pack) {
             (Face::Pack, Some(p)) => p,
             (Face::Pack, None) => &self.faces[0],
@@ -115,6 +152,9 @@ impl Fonts {
     /// Advance width of `text` in pixels at `size` px. Tabs are 4 spaces.
     #[must_use]
     pub fn width(&self, face: Face, size: f32, text: &str) -> f32 {
+        if crate::shape::is_rtl_text(text) {
+            return self.shaped(face, size, text).width;
+        }
         let f = self.font(face);
         text.chars()
             .map(|c| {
@@ -127,6 +167,26 @@ impl Fonts {
                 }
             })
             .sum()
+    }
+
+    /// Bidi order and shaping of a row (cached; v1.8).
+    pub(crate) fn shaped(
+        &self,
+        face: Face,
+        size: f32,
+        text: &str,
+    ) -> std::rc::Rc<crate::shape::Shaped> {
+        let key = (face, (size * 4.0) as u32, text.to_string());
+        if let Some(s) = self.shapes.borrow().get(&key) {
+            return s.clone();
+        }
+        let s = std::rc::Rc::new(self.shape(face, size, text));
+        let mut cache = self.shapes.borrow_mut();
+        if cache.len() > 4096 {
+            cache.clear();
+        }
+        cache.insert(key, s.clone());
+        s
     }
 
     /// Whether `face` has a real glyph for `c` (v1.4.6): fontdue maps a
@@ -152,6 +212,8 @@ impl Fonts {
             Face::LiterataSemi,
             Face::LiterataItalic,
             Face::AtkinsonBold,
+            Face::Naskh,
+            Face::Hebrew,
         ]
         .into_iter()
         .chain([Face::Pack])
@@ -187,6 +249,9 @@ impl Fonts {
         text: &str,
         ink: u8,
     ) -> f32 {
+        if crate::shape::is_rtl_text(text) {
+            return self.draw_shaped(c, face, size, x, baseline, text, ink);
+        }
         let mut pen = x;
         let key_size = (size * 4.0) as u32;
         for ch in text.chars() {
@@ -213,6 +278,53 @@ impl Fonts {
     }
 }
 
+impl Fonts {
+    #[allow(clippy::too_many_arguments)]
+    fn draw_shaped(
+        &self,
+        c: &mut Canvas,
+        face: Face,
+        size: f32,
+        x: f32,
+        baseline: f32,
+        text: &str,
+        ink: u8,
+    ) -> f32 {
+        let shaped = self.shaped(face, size, text);
+        let key_size = (size * 4.0) as u32;
+        let mut pen = x;
+        for seg in &shaped.segs {
+            for g in &seg.glyphs {
+                let mut cache = self.gcache.borrow_mut();
+                let (m, bitmap) = cache.entry((seg.face, g.id, key_size)).or_insert_with(|| {
+                    self.font(seg.face)
+                        .rasterize_indexed(g.id, size * crate::shape::face_scale(seg.face))
+                });
+                let gx = (pen + g.dx + m.xmin as f32).round() as i32;
+                let gy = (baseline - g.dy - m.height as f32 - m.ymin as f32).round() as i32;
+                for row in 0..m.height {
+                    for col in 0..m.width {
+                        let a = bitmap[row * m.width + col];
+                        c.blend(gx + col as i32, gy + row as i32, ink, a);
+                    }
+                }
+                pen += g.adv;
+            }
+        }
+        pen
+    }
+
+    /// Whether a row reads right to left (its first strong character).
+    #[must_use]
+    pub fn row_rtl(&self, text: &str) -> bool {
+        crate::shape::is_rtl_text(text)
+            && unicode_bidi::BidiInfo::new(text, None)
+                .paragraphs
+                .first()
+                .is_some_and(|p| p.level.is_rtl())
+    }
+}
+
 /// A `TextMeasure` for one face and size, in whole pixels.
 pub struct Measure<'a> {
     pub fonts: &'a Fonts,
@@ -223,6 +335,30 @@ pub struct Measure<'a> {
 impl sigma_core::TextMeasure for Measure<'_> {
     fn width(&self, text: &str) -> u32 {
         self.fonts.width(self.face, self.size, text).ceil() as u32
+    }
+
+    fn caret_x(&self, row: &str, at: usize) -> u32 {
+        if crate::shape::is_rtl_text(row) {
+            self.fonts
+                .shaped(self.face, self.size, row)
+                .caret_x(at)
+                .round()
+                .max(0.0) as u32
+        } else {
+            self.width(&row[..at])
+        }
+    }
+
+    fn index_at(&self, row: &str, x: u32) -> Option<usize> {
+        crate::shape::is_rtl_text(row).then(|| {
+            self.fonts
+                .shaped(self.face, self.size, row)
+                .index_at(x as f32, row.len())
+        })
+    }
+
+    fn rtl(&self, row: &str) -> bool {
+        self.fonts.row_rtl(row)
     }
 }
 
@@ -293,11 +429,20 @@ mod layout_glyphs {
         // itself must cover everything.
         let lit =
             fontdue::Font::from_bytes(super::LITERATA, fontdue::FontSettings::default()).unwrap();
+        // Arabic script and Hebrew come from their own faces (v1.8).
+        let others: Vec<fontdue::Font> = [super::NASKH, super::HEBREW]
+            .into_iter()
+            .map(|b| fontdue::Font::from_bytes(b, fontdue::FontSettings::default()).unwrap())
+            .collect();
         for (name, bytes) in faces {
             let f = fontdue::Font::from_bytes(bytes, fontdue::FontSettings::default()).unwrap();
             let missing: String = want
                 .iter()
-                .filter(|&&c| f.lookup_glyph_index(c) == 0 && lit.lookup_glyph_index(c) == 0)
+                .filter(|&&c| {
+                    f.lookup_glyph_index(c) == 0
+                        && lit.lookup_glyph_index(c) == 0
+                        && others.iter().all(|o| o.lookup_glyph_index(c) == 0)
+                })
                 .collect();
             assert!(
                 missing.is_empty(),
