@@ -643,6 +643,18 @@ fn cuts(d: &Dict, reading: &str) -> Vec<Vec<Piece>> {
                 if len == 1 && PARTICLES.contains(r[j]) {
                     continue;
                 }
+                // A word that is another word plus a particle (私は) is
+                // cut as two, so that the particle can close a phrase.
+                if len > 1 {
+                    let last = r[j + len - 1];
+                    let stem: String = r[j..j + len - 1].iter().collect();
+                    if PARTICLES.contains(last)
+                        && c.ends_with(last)
+                        && d.words.contains_key(&stem)
+                    {
+                        continue;
+                    }
+                }
                 let base = if d.seed.contains(&key) { 100 } else { 300 };
                 relax(
                     j + len,
@@ -657,6 +669,10 @@ fn cuts(d: &Dict, reading: &str) -> Vec<Vec<Piece>> {
         }
         for stem in 1..=d.max_stem.min(n - j - 1) {
             let key: String = r[j..j + stem].iter().collect();
+            // 私 + は is not a verb-like 私は: the particle closes a phrase.
+            if "はがをもへ".contains(r[j + stem]) && d.words.contains_key(&key) {
+                continue;
+            }
             if let Some((c, seed)) = d.okuri(&key, r[j + stem]) {
                 let base = if seed { 120 } else { 340 };
                 relax(
@@ -748,6 +764,19 @@ fn phrase_cands(reading: &str, first: Option<String>) -> Vec<String> {
     out
 }
 
+/// Groups the pieces of a cut into phrases.
+fn group(best: Vec<Piece>) -> Vec<Vec<Piece>> {
+    let mut groups: Vec<Vec<Piece>> = Vec::new();
+    for p in best {
+        // A content word after a particle or ending starts a new phrase.
+        match groups.last_mut() {
+            Some(g) if p.func || g.last().is_some_and(|l| !l.func) => g.push(p),
+            _ => groups.push(vec![p]),
+        }
+    }
+    groups
+}
+
 /// A sentence as phrases: the best cut, grouped so that each content word
 /// takes the particles and endings after it (私は | 学生です), each with its
 /// own candidates. Nothing for an empty reading.
@@ -757,14 +786,7 @@ pub fn phrases(reading: &str) -> Vec<Phrase> {
         Ok(d) => cuts(&d, reading).into_iter().next().unwrap_or_default(),
         Err(_) => Vec::new(),
     };
-    let mut groups: Vec<Vec<Piece>> = Vec::new();
-    for p in best {
-        // A content word after a particle or ending starts a new phrase.
-        match groups.last_mut() {
-            Some(g) if p.func || g.last().is_some_and(|l| !l.func) => g.push(p),
-            _ => groups.push(vec![p]),
-        }
-    }
+    let groups = group(best);
     groups
         .into_iter()
         .map(|g| {
@@ -906,5 +928,18 @@ mod tests {
         );
         assert_eq!(d.words["きしゃ"], vec!["記者", "汽車"]);
         assert_eq!(d.okuri("おく", 'る').map(|x| x.0.as_str()), Some("送"));
+    }
+
+    #[test]
+    fn sentences_split_into_phrases_with_the_full_dictionary() {
+        let d = full();
+        let ph = |r: &str| -> Vec<String> {
+            group(cuts(&d, r).into_iter().next().unwrap())
+                .iter()
+                .map(|g| surface(g))
+                .collect()
+        };
+        assert_eq!(ph("わたしはがくせいです"), ["私は", "学生です"]);
+        assert_eq!(ph("きょうはいいてんきですね"), ["今日は", "良い天気ですね"]);
     }
 }

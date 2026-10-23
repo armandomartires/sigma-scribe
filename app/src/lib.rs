@@ -3494,6 +3494,17 @@ impl App {
             Event::Tap { x, y } if self.in_drawer(x, y) => self.drawer_tap(x, y),
             Event::Key(k) => {
                 // Backspace, Return and Esc act on a composition themselves.
+                // Left and Right choose the phrase while Japanese is converting.
+                let phrase = matches!(k, HwKey::Left | HwKey::Right)
+                    && self.keyboard.composer.candidates().is_some();
+                if phrase {
+                    self.keyboard.composer.phrase_arrow(
+                        &mut self.buffer,
+                        k == HwKey::Right,
+                        false,
+                    );
+                    return Some(Refresh::Fast);
+                }
                 if !matches!(
                     k,
                     HwKey::Char(_) | HwKey::Backspace | HwKey::Return | HwKey::Escape
