@@ -451,6 +451,7 @@ impl Keyboard {
                 self.shift = false;
                 return KeyAction::Relabelled;
             }
+            Key::SwitchLayout if !self.lang.has_compact() => return KeyAction::Ignored,
             Key::SwitchLayout => {
                 self.layout = match self.layout {
                     Layout::Compact => Layout::Full,

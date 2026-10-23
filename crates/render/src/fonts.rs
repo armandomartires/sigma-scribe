@@ -16,6 +16,12 @@ static ATKINSON_BOLD: &[u8] = include_bytes!("../../../assets/fonts/AtkinsonHype
 // ship in the binary (Noto Naskh Arabic 176 KB, Noto Sans Hebrew 27 KB).
 static NASKH: &[u8] = include_bytes!("../../../assets/fonts/NotoNaskhArabic-Regular.ttf");
 static HEBREW: &[u8] = include_bytes!("../../../assets/fonts/NotoSansHebrew-Regular.ttf");
+// v1.9: Devanagari (Hindi, Marathi, Nepali), Bengali, Tamil, Thai: 229 + 202
+// + 73 + 38 KB.
+static DEVANAGARI: &[u8] = include_bytes!("../../../assets/fonts/NotoSansDevanagari-Regular.ttf");
+static BENGALI: &[u8] = include_bytes!("../../../assets/fonts/NotoSansBengali-Regular.ttf");
+static TAMIL: &[u8] = include_bytes!("../../../assets/fonts/NotoSansTamil-Regular.ttf");
+static THAI: &[u8] = include_bytes!("../../../assets/fonts/NotoSansThai-Regular.ttf");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Face {
@@ -30,6 +36,11 @@ pub enum Face {
     Naskh,
     /// Noto Sans Hebrew (v1.8).
     Hebrew,
+    /// Noto Sans Devanagari, Bengali, Tamil, Thai (v1.9).
+    Devanagari,
+    Bengali,
+    Tamil,
+    Thai,
     /// The optional script font pack (Korean, v1.7.1): only ever returned
     /// by [`Fonts::face_for`], for a character no bundled face has.
     Pack,
@@ -40,7 +51,7 @@ type GlyphKey = (Face, char, u32);
 type Glyph = (fontdue::Metrics, Vec<u8>);
 
 pub struct Fonts {
-    faces: [Font; 7],
+    faces: [Font; 11],
     buzz: RefCell<HashMap<Face, Option<std::rc::Rc<rustybuzz::Face<'static>>>>>,
     shapes: RefCell<HashMap<(Face, u32, String), std::rc::Rc<crate::shape::Shaped>>>,
     gcache: RefCell<HashMap<(Face, u16, u32), Glyph>>,
@@ -71,6 +82,10 @@ impl Fonts {
                 load(LITERATA_ITALIC),
                 load(NASKH),
                 load(HEBREW),
+                load(DEVANAGARI),
+                load(BENGALI),
+                load(TAMIL),
+                load(THAI),
             ],
             buzz: RefCell::default(),
             shapes: RefCell::default(),
@@ -132,6 +147,10 @@ impl Fonts {
             Face::LiterataItalic => LITERATA_ITALIC,
             Face::Naskh => NASKH,
             Face::Hebrew => HEBREW,
+            Face::Devanagari => DEVANAGARI,
+            Face::Bengali => BENGALI,
+            Face::Tamil => TAMIL,
+            Face::Thai => THAI,
             Face::Pack => return None,
         };
         self.buzz
@@ -152,7 +171,7 @@ impl Fonts {
     /// Advance width of `text` in pixels at `size` px. Tabs are 4 spaces.
     #[must_use]
     pub fn width(&self, face: Face, size: f32, text: &str) -> f32 {
-        if crate::shape::is_rtl_text(text) {
+        if crate::shape::is_complex_text(text) {
             return self.shaped(face, size, text).width;
         }
         let f = self.font(face);
@@ -214,6 +233,10 @@ impl Fonts {
             Face::AtkinsonBold,
             Face::Naskh,
             Face::Hebrew,
+            Face::Devanagari,
+            Face::Bengali,
+            Face::Tamil,
+            Face::Thai,
         ]
         .into_iter()
         .chain([Face::Pack])
@@ -249,7 +272,7 @@ impl Fonts {
         text: &str,
         ink: u8,
     ) -> f32 {
-        if crate::shape::is_rtl_text(text) {
+        if crate::shape::is_complex_text(text) {
             return self.draw_shaped(c, face, size, x, baseline, text, ink);
         }
         let mut pen = x;
@@ -338,7 +361,7 @@ impl sigma_core::TextMeasure for Measure<'_> {
     }
 
     fn caret_x(&self, row: &str, at: usize) -> u32 {
-        if crate::shape::is_rtl_text(row) {
+        if crate::shape::is_complex_text(row) {
             self.fonts
                 .shaped(self.face, self.size, row)
                 .caret_x(at)
@@ -350,7 +373,7 @@ impl sigma_core::TextMeasure for Measure<'_> {
     }
 
     fn index_at(&self, row: &str, x: u32) -> Option<usize> {
-        crate::shape::is_rtl_text(row).then(|| {
+        crate::shape::is_complex_text(row).then(|| {
             self.fonts
                 .shaped(self.face, self.size, row)
                 .index_at(x as f32, row.len())
@@ -430,10 +453,17 @@ mod layout_glyphs {
         let lit =
             fontdue::Font::from_bytes(super::LITERATA, fontdue::FontSettings::default()).unwrap();
         // Arabic script and Hebrew come from their own faces (v1.8).
-        let others: Vec<fontdue::Font> = [super::NASKH, super::HEBREW]
-            .into_iter()
-            .map(|b| fontdue::Font::from_bytes(b, fontdue::FontSettings::default()).unwrap())
-            .collect();
+        let others: Vec<fontdue::Font> = [
+            super::NASKH,
+            super::HEBREW,
+            super::DEVANAGARI,
+            super::BENGALI,
+            super::TAMIL,
+            super::THAI,
+        ]
+        .into_iter()
+        .map(|b| fontdue::Font::from_bytes(b, fontdue::FontSettings::default()).unwrap())
+        .collect();
         for (name, bytes) in faces {
             let f = fontdue::Font::from_bytes(bytes, fontdue::FontSettings::default()).unwrap();
             let missing: String = want

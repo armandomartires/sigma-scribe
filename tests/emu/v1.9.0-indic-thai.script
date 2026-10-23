@@ -1,0 +1,64 @@
+# v1.9.0 (S19.0): Devanagari, Bengali, Tamil InScript and Thai Kedmanee; shaping, clusters.
+copy-notes tests/test-notes/_test
+usb plug
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+page next
+page next
+shot v1.9.0-layout-choices-page4
+tap-on Hindi, Marathi, Nepali (InScript)
+expect-setting layout=deva
+esc
+esc
+usb-type  हिन्दी भाषा क्षत्रिय
+expect हिन्दी भाषा क्षत्रिय
+shot v1.9.0-devanagari
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+page next
+page next
+tap-on Bengali (InScript)
+expect-setting layout=bn
+esc
+esc
+usb-key Enter
+usb-type বাংলা ভাষা
+expect বাংলা ভাষা
+shot v1.9.0-bengali
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+page next
+page next
+tap-on Tamil (InScript)
+expect-setting layout=ta
+esc
+esc
+usb-key Enter
+usb-type தமிழ் மொழி
+expect தமிழ் மொழி
+shot v1.9.0-tamil
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+page next
+page next
+tap-on Thai (Kedmanee)
+expect-setting layout=th
+esc
+esc
+usb-key Enter
+usb-type ภาษาไทย สวัสดีครับ
+expect ภาษาไทย สวัสดีครับ
+shot v1.9.0-thai
+# Backspace takes one code point, the arrow and Delete a whole cluster.
+usb-key Enter
+usb-type ก็
+usb-key Backspace
+expect ก

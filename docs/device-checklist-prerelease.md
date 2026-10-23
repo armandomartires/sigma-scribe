@@ -132,6 +132,16 @@ Installed on the Forma today: **1.6.2 + main ea32b50** (2026-10-23, binary only;
 - [ ] Preview of an Arabic paragraph: flush right, legible.
 - [ ] Refresh behaviour while typing right to left (no ghosting at the caret).
 
+## Indic scripts and Thai (v1.9.0)
+- [ ] Layout → Hindi, Marathi, Nepali (InScript): type words on the Full board and a USB keyboard; conjuncts (क्ष, न्द), the short ि sign before its letter, shirorekha joined.
+- [ ] Caret and Left / Right move over a whole letter with its signs; Backspace removes one sign at a time; a tap lands between letters, never inside one.
+- [ ] Bengali, Tamil, Thai: letters and signs present and legible at 100–200 %; Thai tone marks above, not colliding.
+- [ ] Key caps: vowel signs on a dotted circle, legible; the Compact key does nothing on these layouts.
+- [ ] Sizes next to Latin (Devanagari, Bengali 120 %, Tamil 105 %, Thai 115 %): too big or small?
+- [ ] Line height with tall scripts (Devanagari headline and signs below): no clipping between rows.
+- [ ] Wrapping long Hindi and Thai paragraphs; scrolling; no slowdown while typing.
+- [ ] Preview of a Hindi and a Thai paragraph.
+
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).
 

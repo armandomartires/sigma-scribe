@@ -16,6 +16,7 @@ fontdue.workspace = true
 resvg = { version = "0.45", default-features = false }
 rustybuzz = "0.20"
 unicode-bidi = "0.3"
+unicode-properties = "0.1"
 
 [lints]
 workspace = true

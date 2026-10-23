@@ -702,6 +702,10 @@ impl App {
             };
         }
         self.keyboard.lang = self.settings.kb_layout;
+        if !self.keyboard.lang.has_compact() {
+            // Too many keys for the compact board (v1.9).
+            self.keyboard.layout = sigma_core::keyboard::Layout::Full;
+        }
         sigma_device::usbkbd::set_layout(self.settings.kb_layout);
         let anchor = match c.refit() {
             Some(Some(true)) => Some(Anchor::Size),

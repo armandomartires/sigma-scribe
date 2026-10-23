@@ -799,5 +799,17 @@ Urdu (phonetic)
 Hebrew
 = Hebraisk
 
+Hindi, Marathi, Nepali (InScript)
+= Hindi, marathi, nepalesisk (InScript)
+
+Bengali (InScript)
+= Bengali (InScript)
+
+Tamil (InScript)
+= Tamil (InScript)
+
+Thai (Kedmanee)
+= Thai (Kedmanee)
+
 Machine-drafted translation, best effort; a native review is needed. Follows the Kobo's language.
 = Maskinoversat efter bedste evne; en gennemlæsning af en modersmålstaler er nødvendig. Følger Kobo'ens sprog.

@@ -56,9 +56,17 @@ pub enum KeyLayout {
     Ur,
     /// Hebrew, standard (v1.8).
     He,
+    /// Devanagari InScript: Hindi, Marathi, Nepali (v1.9).
+    Deva,
+    /// Bengali InScript (v1.9).
+    Bn,
+    /// Tamil InScript (v1.9).
+    Ta,
+    /// Thai Kedmanee (v1.9).
+    Th,
 }
 
-pub const ALL: [KeyLayout; 28] = [
+pub const ALL: [KeyLayout; 32] = [
     KeyLayout::Us,
     KeyLayout::Uk,
     KeyLayout::Fr,
@@ -87,6 +95,10 @@ pub const ALL: [KeyLayout; 28] = [
     KeyLayout::Fa,
     KeyLayout::Ur,
     KeyLayout::He,
+    KeyLayout::Deva,
+    KeyLayout::Bn,
+    KeyLayout::Ta,
+    KeyLayout::Th,
 ];
 
 /// evdev codes of the 48 positions, in table order.
@@ -592,6 +604,60 @@ const HE: Table = Table {
     ],
 };
 
+// Indic and Thai layouts (v1.9). InScript (Devanagari, Bengali, Tamil) puts
+// vowel signs on the base layer and independent vowels on Shift; consonants
+// are on the right hand; the same key positions serve every script. Digits
+// stay ASCII and AltGr is the US layer (as for the right-to-left layouts);
+// Shift+1..5 carry a few signs. Thai is Kedmanee (xkb `th`). Basic variants.
+const DEVA: Table = Table {
+    base: ["ॊ1234567890-=", "ौैाीूबहगदजड़ॉ", "ोे्िुपरकतचट ", "ॆंमनवलस,.य"],
+    shift: ["ऒऍॅृःऋ^&*()_+", "औऐआईऊभङघधझढञऑ", "ओएअइउफऱखथछठ ", "ऎँणऩऴळशष।ॹ"],
+    altgr: [
+        "`1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+};
+
+const BENG: Table = Table {
+    base: ["`1234567890-=", "ৌৈাীূবহগদজড়ৃ", "োে্িুপরকতচট ", "ৎংমনবলস,.য"],
+    shift: ["~!@ৃঃ%^&*()_+", "ঔঐআঈঊভঙঘধঝঢঞঋ", "ওএঅইউফৰখথছঠ ", "ৎঁণনৱলশষ।য়"],
+    altgr: [
+        "`1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+};
+
+const TAMIL: Table = Table {
+    base: ["ொ1234567890-=", "ௌைாீூபஹகதஜடஞ\\", "ோே்ிுபரகதசட ", "ெஃமநவலஸ,.ய"],
+    shift: [
+        "ஒ!@#ஃ%^&*()_+",
+        "ஔஐஆஈஊபஙகதஜடஞ|",
+        "ஓஏஅஇஉபறகதசட ",
+        "எஃணனழளஶஷ>ய",
+    ],
+    altgr: [
+        "`1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+};
+
+const THAI: Table = Table {
+    base: ["_ๅ/-ภถุึคตจขช", "ๆไำพะัีรนยบลฃ", "ฟหกดเ้่าสวง ", "ผปแอิืทมใฝ"],
+    shift: ["%+๑๒๓๔ู฿๕๖๗๘๙", "๐\"ฎฑธํ๊ณฯญฐ,ฅ", "ฤฆฏโฌ็๋ษศซ. ", "()ฉฮฺ์?ฒฬฦ"],
+    altgr: [
+        "`1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+};
+
 const RU: Table = Table {
     base: [
         "ё1234567890-=",
@@ -690,6 +756,10 @@ fn table(l: KeyLayout) -> &'static Table {
         KeyLayout::Fa => &FA,
         KeyLayout::Ur => &UR,
         KeyLayout::He => &HE,
+        KeyLayout::Deva => &DEVA,
+        KeyLayout::Bn => &BENG,
+        KeyLayout::Ta => &TAMIL,
+        KeyLayout::Th => &THAI,
     }
 }
 
@@ -735,6 +805,10 @@ impl KeyLayout {
             Self::Fa => "fa",
             Self::Ur => "ur",
             Self::He => "he",
+            Self::Deva => "deva",
+            Self::Bn => "bn",
+            Self::Ta => "ta",
+            Self::Th => "th",
         }
     }
 
@@ -770,6 +844,10 @@ impl KeyLayout {
             Self::Fa => "Persian (Farsi)",
             Self::Ur => "Urdu (phonetic)",
             Self::He => "Hebrew",
+            Self::Deva => "Hindi, Marathi, Nepali (InScript)",
+            Self::Bn => "Bengali (InScript)",
+            Self::Ta => "Tamil (InScript)",
+            Self::Th => "Thai (Kedmanee)",
         }
     }
 
@@ -846,7 +924,18 @@ impl KeyLayout {
     pub fn latin_altgr(self) -> bool {
         matches!(
             self,
-            Self::Ru | Self::Ua | Self::Gr | Self::Ko | Self::Ar | Self::Fa | Self::Ur | Self::He
+            Self::Ru
+                | Self::Ua
+                | Self::Gr
+                | Self::Ko
+                | Self::Ar
+                | Self::Fa
+                | Self::Ur
+                | Self::He
+                | Self::Deva
+                | Self::Bn
+                | Self::Ta
+                | Self::Th
         )
     }
 
@@ -906,6 +995,14 @@ impl KeyLayout {
             Self::He => ["קראטוןםפ", "שדגכעיחלךף", "זסבהנמצתץ"],
             _ => ["qwertyuiop", "asdfghjkl", "zxcvbnm"],
         }
+    }
+
+    /// The compact board has room for the letters of this layout (v1.9):
+    /// the Indic and Thai layouts have too many keys, so they use the Full
+    /// board only.
+    #[must_use]
+    pub fn has_compact(self) -> bool {
+        !matches!(self, Self::Deva | Self::Bn | Self::Ta | Self::Th)
     }
 
     /// Korean typing: jamo become syllables.

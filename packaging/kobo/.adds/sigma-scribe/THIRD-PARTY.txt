@@ -8,7 +8,7 @@ This binary statically links:
 - FBInk by NiLuJe — GPL-3.0-or-later — https://github.com/NiLuJe/FBInk
   (commit 886f25f1, built with MINIMAL=true IMAGE=true KOBO=true).
   FBInk's own bundled components keep their licences, listed in its source.
-- rustybuzz (MIT, a Rust port of HarfBuzz) and unicode-bidi (MIT / Apache-2.0), with their
+- rustybuzz (MIT, a Rust port of HarfBuzz) and unicode-bidi (MIT / Apache-2.0) and unicode-segmentation (MIT / Apache-2.0), with their
   dependencies (ttf-parser, unicode-script, unicode-properties, unicode-ccc, bitflags…),
   for Arabic-script and Hebrew shaping and right-to-left order.
 - The Rust standard library and musl libc (MIT / Apache-2.0, MIT).
@@ -17,6 +17,7 @@ Fonts (SIL Open Font License 1.1, texts in OFL-*.txt):
 - Literata (Regular, SemiBold, Italic)
 - Atkinson Hyperlegible
 - Noto Naskh Arabic and Noto Sans Hebrew (Regular; Arabic, Persian, Urdu, Hebrew)
+- Noto Sans Devanagari, Bengali, Tamil and Thai (Regular)
 
 Icons: Lucide (lucide-static 1.61.0), ISC licence, baked into the binary
 (eye, pencil, search, sticky-note, list-todo, table-of-contents, share-2,

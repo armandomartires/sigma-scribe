@@ -1456,7 +1456,16 @@ impl EditorScreen {
             }
             let label = keyboard.label(k);
             let label = if matches!(k, Key::Char(_)) {
-                label
+                // A vowel sign or mark alone sits on a dotted circle (v1.9).
+                use unicode_properties::{GeneralCategory as G, UnicodeGeneralCategory};
+                match label.chars().next() {
+                    Some(c)
+                        if matches!(c.general_category(), G::NonspacingMark | G::SpacingMark) =>
+                    {
+                        format!("\u{25CC}{label}")
+                    }
+                    _ => label,
+                }
             } else {
                 tr(&label).into_owned()
             };

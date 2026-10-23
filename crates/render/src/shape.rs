@@ -52,12 +52,34 @@ pub fn is_rtl_text(text: &str) -> bool {
 pub(crate) fn face_scale(face: Face) -> f32 {
     match face {
         Face::Naskh => 1.18,
+        Face::Devanagari | Face::Bengali => 1.2,
+        Face::Tamil => 1.05,
+        Face::Thai => 1.15,
         _ => 1.0,
     }
 }
 
+/// Scripts that need shaping though they read left to right (v1.9):
+/// Devanagari to Sinhala, Thai, Lao, Tibetan, Myanmar, Khmer.
+#[must_use]
+pub fn is_complex_text(text: &str) -> bool {
+    text.chars().any(|c| {
+        matches!(c as u32,
+            0x0900..=0x0DFF | 0x0E00..=0x0FFF | 0x1000..=0x109F | 0x1780..=0x17FF)
+    }) || is_rtl_text(text)
+}
+
 fn neutral(c: char) -> bool {
-    c.is_whitespace() || c.is_ascii_punctuation() || c.is_ascii_digit()
+    c.is_whitespace()
+        || c.is_ascii_punctuation()
+        || c.is_ascii_digit()
+        || matches!(c, '\u{0964}' | '\u{0965}')
+}
+
+/// Joiners and selectors belong to the letters around them, in whatever
+/// face those are drawn, glyph or no glyph (they must not split a cluster).
+fn joiner(c: char) -> bool {
+    matches!(c as u32, 0x200B..=0x200F | 0x034F | 0xFE00..=0xFE0F)
 }
 
 impl Fonts {
@@ -90,6 +112,7 @@ impl Fonts {
                 let at = range.start + i;
                 let prev = segs.last().map(|s| s.0);
                 let f = match prev {
+                    Some(p) if joiner(c) => p,
                     Some(p) if neutral(c) && self.has_glyph(p, c) => p,
                     _ => self.face_for(face, c),
                 };
@@ -283,6 +306,55 @@ mod tests {
         assert!(rows.len() > 1);
         for r in &rows {
             assert!(m.width(text[r.start..r.end].trim_end()) <= 300);
+        }
+    }
+
+    #[test]
+    fn indic_and_thai_take_the_shaping_path_but_read_left_to_right() {
+        let f = Fonts::new();
+        for t in ["हिन्दी", "বাংলা", "தமிழ்", "ภาษาไทย"]
+        {
+            assert!(is_complex_text(t) && !is_rtl_text(t), "{t}");
+            assert!(!f.row_rtl(t), "{t}");
+        }
+        assert!(!is_complex_text("hello Привет 한글"));
+    }
+
+    #[test]
+    fn a_conjunct_is_narrower_than_its_letters_and_has_one_caret_stop() {
+        let f = Fonts::new();
+        let whole = f.width(Face::Literata, 40.0, "क्ष");
+        let parts = f.width(Face::Literata, 40.0, "क") + f.width(Face::Literata, 40.0, "ष");
+        assert!(whole > 10.0 && whole < parts + 40.0, "{whole} {parts}");
+        let m = crate::fonts::Measure {
+            fonts: &f,
+            face: Face::Literata,
+            size: 40.0,
+        };
+        // क ् ष is one cluster: the caret has no stop inside it.
+        let t = "क्षि";
+        let a = m.caret_x(t, 0);
+        let end = m.caret_x(t, t.len());
+        assert!(end > a);
+        assert_eq!(m.caret_x(t, "क".len()), a);
+        assert_eq!(m.caret_x(t, "क्".len()), a);
+    }
+
+    #[test]
+    fn thai_wraps_within_the_width_at_cluster_boundaries() {
+        let f = Fonts::new();
+        let m = crate::fonts::Measure {
+            fonts: &f,
+            face: Face::Literata,
+            size: 30.0,
+        };
+        let text = "ภาษาไทยเป็นภาษาที่ใช้พูดกันในประเทศไทยและมีผู้พูดหลายล้านคน";
+        let rows = sigma_core::wrap(text, 260, &m);
+        assert!(rows.len() > 1);
+        for r in &rows {
+            let row = &text[r.start..r.end];
+            assert!(m.width(row) <= 260, "{row}");
+            assert!(!row.ends_with(['เ', 'แ', 'โ', 'ไ', 'ใ']), "{row}");
         }
     }
 }

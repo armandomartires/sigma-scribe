@@ -9,6 +9,7 @@ authors.workspace = true
 publish = false
 
 [dependencies]
+unicode-segmentation = "1"
 
 [dev-dependencies]
 
