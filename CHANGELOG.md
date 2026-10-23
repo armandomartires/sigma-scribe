@@ -10,7 +10,7 @@ All notable changes to Sigma Scribe. Versions are tagged after they pass on the 
 - Touch log: the panel repeats `tracking id 0` on every frame (323 of the first 400 log lines), so that line is now written only when the id changes; ignored corner reports have their own cap (100 lines per run).
 - Test: `stray_reports_outside_the_box_do_not_draw_lines_to_its_corners` (`app/tests/letters.rs`).
 
-## 1.10.1 — 2026-10-23 (built, emulator only, not installed, not tagged)
+## 1.10.1 — 2026-10-23 (installed on the Forma with the system Noto Sans CJK as `fonts/cjk.ttf`; user reports all Japanese checks fine; not tagged)
 - **Japanese: conversion by phrase** (sprint S20.1). Space now converts a whole sentence into phrases (私は | 学生です: a content word with the particles and endings after it). **Left / Right** move between phrases (the current one is underlined heavier, and the candidate bar shows its candidates), **Space** cycles the current phrase, **Shift + Left / Right** move the boundary after it by one kana and convert again. A tap on a candidate picks it and moves to the next phrase; the last one commits. Enter commits the sentence, Esc gives back the reading.
 - **Learning:** a phrase written other than by the first candidate is remembered (reading → written form, this run only) and comes first next time.
 - Not yet: learning kept between runs, statistics for the ranking, JIS kana layout, the compact board.
