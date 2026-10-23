@@ -35,6 +35,15 @@ fn catalog() -> (Vec<String>, Vec<String>) {
     (keys, vals)
 }
 
+/// Hangul, kana, Han and full-width punctuation come from the optional script
+/// font pack (docs/font-packs.md), which CI does not have; the bundled faces
+/// are not expected to draw them.
+fn from_font_pack(c: char) -> bool {
+    matches!(c as u32,
+        0x1100..=0x11FF | 0x3000..=0x30FF | 0x3130..=0x318F | 0x3400..=0x9FFF
+        | 0xAC00..=0xD7AF | 0xF900..=0xFAFF | 0xFF00..=0xFFEF)
+}
+
 fn check(f: &Fonts, what: &str, text: &str, bad: &mut Vec<String>) {
     for face in UI_FACES {
         let m = f.missing(face, text);
@@ -114,7 +123,11 @@ fn every_literal_ui_character_has_glyphs() {
                     }
                 }
                 for c in chars {
-                    if c.is_control() || c == '\u{fe0f}' || ('\u{300}'..='\u{36f}').contains(&c) {
+                    if c.is_control()
+                        || from_font_pack(c)
+                        || c == '\u{fe0f}'
+                        || ('\u{300}'..='\u{36f}').contains(&c)
+                    {
                         continue; // not drawn on its own (combining marks compose)
                     }
                     seen += 1;

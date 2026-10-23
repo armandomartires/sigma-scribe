@@ -478,6 +478,11 @@ fn main() -> ExitCode {
             "usb-type" => {
                 let l = app.settings.kb_layout;
                 usb.layout = Some(l);
+                let arg = if l.hangul() {
+                    sigma_core::hangul::spell(arg)
+                } else {
+                    arg.to_string()
+                };
                 events.extend(
                     arg.chars()
                         .flat_map(|c| raw_for_char_in(l, c))

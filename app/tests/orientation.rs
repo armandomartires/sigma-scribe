@@ -157,7 +157,6 @@ fn auto_without_a_sensor_keeps_the_last_rotation() {
     );
     ticks(&mut app, &mut dev, 100, 3000);
     assert_eq!(app.rotation(), Rotation::R90);
-    const { assert!(!sigma_device::gsensor::ENABLED) };
     let _ = std::fs::remove_dir_all(dir);
 }
 
@@ -264,7 +263,7 @@ fn auto_waits_for_the_finger_and_for_typing_to_stop() {
     ticks(&mut app, &mut dev, 3000, 3000 + TILT_TYPING_PAUSE_MS - 100);
     assert_eq!(app.rotation(), Rotation::R0, "just typed");
     ticks(&mut app, &mut dev, 3000 + TILT_TYPING_PAUSE_MS, 5000);
-    assert_eq!(app.rotation(), Rotation::R90);
+    assert_eq!(app.rotation(), Rotation::R270);
     // A manual choice turns Auto off and drops readings.
     app.change(Change::Orientation(Orientation::Portrait));
     run(

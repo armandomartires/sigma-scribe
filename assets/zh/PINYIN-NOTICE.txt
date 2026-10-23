@@ -1,0 +1,27 @@
+Pinyin dictionaries (dict/pinyin-hans.txt, dict/pinyin-hant.txt)
+================================================================
+
+Built by tools/zh-dict.py from the Rime project's data:
+
+  rime-luna-pinyin   luna_pinyin.dict.yaml   (Luna Pinyin, 明月拼音)
+  rime-essay         essay.txt               (word frequencies)
+
+Both are licensed under the GNU Lesser General Public License, version 3
+(assets/zh/LGPL-3.0.txt). Rime Developers: Gong Chen, Kunki Chiu.
+Luna Pinyin is itself refined data from Chewing / 新酷音 (LGPL), OpenCC
+(Apache-2.0), the Android Pinyin IME (Apache-2.0), CC-CEDICT and
+MoeDict / 萌典 (CC0 1.0). Sources:
+  https://github.com/rime/rime-luna-pinyin
+  https://github.com/rime/rime-essay
+
+The Simplified file is the Traditional data converted with OpenCC (t2s,
+Apache-2.0). The files are modified from the originals: only words seen at
+least 500 times in essay.txt, at most 12 words per pinyin key, weights are
+the essay frequencies (times the reading's share for characters with several
+readings).
+
+Sigma Scribe is AGPL-3.0; this data stays under the LGPL-3.0 and may be
+replaced by any file in the same format (docs/chinese.md).
+sha256 of the sources used:
+  luna_pinyin.dict.yaml 75bcf6eb3ff62b129882ed89cc22b2d80a5347aa72bcfa2ccc839bac298e7314
+  essay.txt             3e8512ebaa6657e35961b1f5762060717c647e3bf471d5e3b86e783b4e934ffb

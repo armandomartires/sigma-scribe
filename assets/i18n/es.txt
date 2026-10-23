@@ -778,5 +778,47 @@ Ukrainian
 Greek
 = Griego
 
+Vietnamese (Telex)
+= Vietnamita (Telex)
+
+Vietnamese (VNI)
+= Vietnamita (VNI)
+
+Korean (Dubeolsik)
+= Coreano (Dubeolsik)
+
+Arabic
+= Árabe
+
+Persian (Farsi)
+= Persa (farsi)
+
+Urdu (phonetic)
+= Urdu (fonético)
+
+Hebrew
+= Hebreo
+
+Hindi, Marathi, Nepali (InScript)
+= Hindi, maratí, nepalí (InScript)
+
+Bengali (InScript)
+= Bengalí (InScript)
+
+Tamil (InScript)
+= Tamil (InScript)
+
+Thai (Kedmanee)
+= Tailandés (Kedmanee)
+
+Japanese (romaji)
+= Japonés (romaji)
+
+Chinese Simplified (pinyin)
+= Chino simplificado (pinyin)
+
+Chinese Traditional (pinyin)
+= Chino tradicional (pinyin)
+
 Machine-drafted translation, best effort; a native review is needed. Follows the Kobo's language.
 = Traducción hecha por máquina, lo mejor posible; necesita revisión de un hablante nativo. Sigue el idioma del Kobo.

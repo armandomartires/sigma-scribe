@@ -171,6 +171,18 @@ impl Builder<'_> {
             if *first {
                 deco.extend_from_slice(deco_first);
             }
+            // A right-to-left line sits flush right (v1.8).
+            let text: String = pieces.iter().map(|p| p.text.as_str()).collect();
+            if b.fonts.row_rtl(&text) {
+                if let Some(last) = pieces.last() {
+                    let end =
+                        last.x + b.fonts.width(last.face, last.size, &last.text).ceil() as i32;
+                    let shift = (b.width - end).max(0);
+                    for p in pieces.iter_mut() {
+                        p.x += shift;
+                    }
+                }
+            }
             b.lines.push(Line {
                 h: line_h,
                 base,

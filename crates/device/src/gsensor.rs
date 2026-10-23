@@ -1,19 +1,22 @@
 //! Accelerometer (g-sensor) for Options → Orientation → Auto (v1.2, S12).
 //!
-//! **Stubbed behind a safe default.** On the Forma (fw 4.38) the mma8x5x
-//! reports `EV_MSC / MSC_RAW` events (KOReader `handleMiscEvNTX`):
-//! 0x17 upright, 0x18 upside down, 0x19 / 0x1a the two landscapes;
-//! 0x1b / 0x1c (face up / down) are ignored. Which landscape code is which
-//! rotation, and which input node carries them, has **not been checked on
-//! the device** (no device access during v1.2), so [`ENABLED`] is `false`:
-//! the Kobo build reports no sensor and Auto keeps the last rotation.
-//! Turning it on is a one-line change after a read-only device probe.
+//! Probed on the Forma (fw 4.38, kernel 4.1.15, 2026-10-23): the mma8652 is
+//! the input node named "FreescaleAccelerometer" and reports raw `EV_ABS`
+//! X/Y/Z at about 20 Hz (16384 = 1 g), **not** the `MSC_RAW` codes KOReader
+//! documents for other firmware. Held portrait with the page buttons on the
+//! right, gravity reads about -x; each quarter turn clockwise moves it to
+//! +y, +x and -y.
 
-/// Reading the sensor on the Kobo. `false` until checked on the device.
-pub const ENABLED: bool = false;
+/// Reading the sensor on the Kobo.
+pub const ENABLED: bool = true;
 
-pub const EV_MSC: u16 = 0x04;
-pub const MSC_RAW: u16 = 0x03;
+pub const EV_ABS: u16 = 0x03;
+pub const ABS_X: u16 = 0;
+pub const ABS_Y: u16 = 1;
+pub const ABS_Z: u16 = 2;
+
+/// In-plane gravity below this (0.3 g) is "lying flat": keep the rotation.
+const MIN_IN_PLANE: i32 = 5000;
 
 /// Which way the device is held, as the sensor reports it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -26,31 +29,39 @@ pub enum Tilt {
 }
 
 impl Tilt {
-    /// A raw `MSC_RAW` value; `None` for face up / down and unknown codes.
-    /// The landscape pair is a guess pending the device check.
+    /// A raw accelerometer sample. `None` when the device lies (nearly)
+    /// flat or the in-plane direction is ambiguous (about 45 degrees
+    /// between two holds), so the last rotation stays.
     #[must_use]
-    pub fn from_msc_raw(v: i32) -> Option<Self> {
-        match v {
-            0x17 => Some(Self::Upright),
-            0x18 => Some(Self::UpsideDown),
-            0x19 => Some(Self::Clockwise),
-            0x1a => Some(Self::CounterClockwise),
-            _ => None,
+    pub fn from_accel(x: i32, y: i32) -> Option<Self> {
+        let (ax, ay) = (x.abs(), y.abs());
+        let (major, minor) = (ax.max(ay), ax.min(ay));
+        if major < MIN_IN_PLANE || major < minor * 3 / 2 {
+            return None;
         }
+        Some(if ax >= ay {
+            if x < 0 {
+                Self::Upright
+            } else {
+                Self::UpsideDown
+            }
+        } else if y > 0 {
+            Self::Clockwise
+        } else {
+            Self::CounterClockwise
+        })
     }
 }
 
-/// The `/dev/input/eventN` handler of an input device that reports
-/// `MSC_RAW`, from the text of `/proc/bus/input/devices`.
+/// The `/dev/input/eventN` handler of the accelerometer, from the text of
+/// `/proc/bus/input/devices` (name contains "Accelerometer").
 #[must_use]
 pub fn find_node(devices: &str) -> Option<String> {
     for block in devices.split("\n\n") {
-        let msc_raw = block.lines().any(|l| {
-            l.strip_prefix("B: MSC=")
-                .and_then(|m| u64::from_str_radix(m.trim(), 16).ok())
-                .is_some_and(|bits| bits & (1 << MSC_RAW) != 0)
-        });
-        if !msc_raw {
+        let named = block
+            .lines()
+            .any(|l| l.starts_with("N: Name=") && l.to_ascii_lowercase().contains("accelerometer"));
+        if !named {
             continue;
         }
         let handlers = block.lines().find_map(|l| l.strip_prefix("H: Handlers="))?;
@@ -66,30 +77,30 @@ mod tests {
     use super::*;
 
     #[test]
-    fn codes_map_and_face_up_down_are_ignored() {
-        assert_eq!(Tilt::from_msc_raw(0x17), Some(Tilt::Upright));
-        assert_eq!(Tilt::from_msc_raw(0x18), Some(Tilt::UpsideDown));
-        assert_eq!(Tilt::from_msc_raw(0x19), Some(Tilt::Clockwise));
-        assert_eq!(Tilt::from_msc_raw(0x1a), Some(Tilt::CounterClockwise));
-        assert_eq!(Tilt::from_msc_raw(0x1b), None);
-        assert_eq!(Tilt::from_msc_raw(0x1c), None);
-        assert_eq!(Tilt::from_msc_raw(0), None);
+    fn the_four_holds_seen_on_the_forma() {
+        // Means of the 2026-10-23 probe: portrait buttons right, then three
+        // quarter turns clockwise (x, y only; z is ignored).
+        assert_eq!(Tilt::from_accel(-11800, 0), Some(Tilt::Upright));
+        assert_eq!(Tilt::from_accel(-7000, -3500), Some(Tilt::Upright));
+        assert_eq!(Tilt::from_accel(-200, 14800), Some(Tilt::Clockwise));
+        assert_eq!(Tilt::from_accel(13600, -600), Some(Tilt::UpsideDown));
+        assert_eq!(Tilt::from_accel(-900, -14800), Some(Tilt::CounterClockwise));
     }
 
     #[test]
-    fn finds_the_msc_raw_node_only() {
-        let text = "I: Bus=0018\nN: Name=\"cyttsp5_mt\"\nH: Handlers=event1\nB: EV=b\n\n\
-                    I: Bus=0018\nN: Name=\"mma8x5x\"\nH: Handlers=event2\nB: EV=11\nB: MSC=8\n\n";
+    fn flat_and_diagonal_keep_the_last_rotation() {
+        assert_eq!(Tilt::from_accel(-300, 500), None);
+        assert_eq!(Tilt::from_accel(0, 0), None);
+        assert_eq!(Tilt::from_accel(-9000, 8000), None);
+        assert_eq!(Tilt::from_accel(4000, 100), None);
+    }
+
+    #[test]
+    fn finds_the_accelerometer_node_only() {
+        let text = "I: Bus=0000\nN: Name=\"cyttsp5_mt\"\nH: Handlers=event1\nB: EV=f\n\n\
+                    I: Bus=0018\nN: Name=\"FreescaleAccelerometer\"\nH: Handlers=event2 \nB: EV=9\n\n";
         assert_eq!(find_node(text).as_deref(), Some("/dev/input/event2"));
-        assert_eq!(
-            find_node("N: Name=\"x\"\nH: Handlers=event0\nB: MSC=10\n"),
-            None
-        );
+        assert_eq!(find_node("N: Name=\"x\"\nH: Handlers=event0\n"), None);
         assert_eq!(find_node(""), None);
-    }
-
-    #[test]
-    fn the_kobo_build_ships_with_the_sensor_off() {
-        const { assert!(!ENABLED, "turn on only after the device check (S12)") };
     }
 }

@@ -186,12 +186,12 @@ impl Buffer {
     /// Previous char boundary (for Shift+Left).
     #[must_use]
     pub fn prev_pos(&self, at: usize) -> usize {
-        self.prev_boundary(at)
+        self.prev_grapheme(at)
     }
 
     #[must_use]
     pub fn next_pos(&self, at: usize) -> usize {
-        self.next_boundary(at)
+        self.next_grapheme(at)
     }
 
     fn record(&mut self, kind: Edit) {
@@ -247,6 +247,27 @@ impl Buffer {
             at -= 1;
         }
         at
+    }
+
+    /// Start of the extended grapheme cluster before `at` (v1.9): the caret
+    /// and Delete move over a letter with its marks (क्षि, é, ก็), Backspace
+    /// still takes one code point.
+    fn prev_grapheme(&self, at: usize) -> usize {
+        use unicode_segmentation::GraphemeCursor;
+        GraphemeCursor::new(at, self.text.len(), true)
+            .prev_boundary(&self.text, 0)
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| self.prev_boundary(at))
+    }
+
+    fn next_grapheme(&self, at: usize) -> usize {
+        use unicode_segmentation::GraphemeCursor;
+        GraphemeCursor::new(at, self.text.len(), true)
+            .next_boundary(&self.text, 0)
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| self.next_boundary(at))
     }
 
     fn prev_boundary(&self, at: usize) -> usize {
@@ -352,7 +373,7 @@ impl Buffer {
         if self.delete_selection() {
             return;
         }
-        let end = self.next_boundary(self.caret);
+        let end = self.next_grapheme(self.caret);
         self.text.replace_range(self.caret..end, "");
         self.revision += 1;
     }
@@ -360,7 +381,7 @@ impl Buffer {
     pub fn left(&mut self) {
         self.caret = match self.selection() {
             Some((s, _)) => s,
-            None => self.prev_boundary(self.caret),
+            None => self.prev_grapheme(self.caret),
         };
         self.anchor = None;
         self.last = Edit::Break;
@@ -369,7 +390,7 @@ impl Buffer {
     pub fn right(&mut self) {
         self.caret = match self.selection() {
             Some((_, e)) => e,
-            None => self.next_boundary(self.caret),
+            None => self.next_grapheme(self.caret),
         };
         self.anchor = None;
         self.last = Edit::Break;
@@ -429,6 +450,28 @@ impl Buffer {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_caret_moves_by_cluster_and_backspace_by_code_point() {
+        let mut b = Buffer::new("कीक्षि");
+        b.set_caret(b.text().len());
+        b.left();
+        assert_eq!(&b.text()[b.caret()..], "क्षि");
+        b.left();
+        assert_eq!(b.caret(), 0);
+        b.right();
+        assert_eq!(&b.text()[..b.caret()], "की");
+        b.delete_forward();
+        assert_eq!(b.text(), "की");
+        // Backspace takes the sign only, then the letter.
+        b.set_caret(b.text().len());
+        b.backspace();
+        assert_eq!(b.text(), "क");
+        let mut t = Buffer::new("ก็");
+        t.set_caret(t.text().len());
+        t.left();
+        assert_eq!(t.caret(), 0);
+    }
+
     use super::*;
 
     #[test]

@@ -127,6 +127,9 @@ pub struct Keyboard {
     pub lang: KeyLayout,
     /// Dead-key state, shared with USB typing (v1.3).
     pub composer: Composer,
+    /// The caret is in a right-to-left row: Left / Right swap (v1.8). The
+    /// app sets it before an arrow key.
+    pub rtl: bool,
 }
 
 /// Compact symbol-layer shift map (brief).
@@ -155,6 +158,14 @@ fn shifted(c: char) -> char {
         '!' => '\'',
         '~' => '=',
         '>' => '+',
+        // Doubled consonants and vowels of Dubeolsik (v1.7.1).
+        'ㅂ' => 'ㅃ',
+        'ㅈ' => 'ㅉ',
+        'ㄷ' => 'ㄸ',
+        'ㄱ' => 'ㄲ',
+        'ㅅ' => 'ㅆ',
+        'ㅐ' => 'ㅒ',
+        'ㅔ' => 'ㅖ',
         // Unicode capitals (Cyrillic, Greek; v1.6.1).
         c => c.to_uppercase().next().unwrap_or(c),
     }
@@ -292,7 +303,26 @@ impl Keyboard {
     pub fn label(&self, key: Key) -> String {
         match key {
             Key::Char(c) if self.layout == Layout::Full => {
-                layouts::spacing(self.char_for(c)).to_string()
+                let ch = self.char_for(c);
+                if ch == '半' {
+                    // The あ / A switch shows the mode it is in (v1.10).
+                    return if self.composer.japanese_direct() {
+                        "A"
+                    } else {
+                        "あ"
+                    }
+                    .into();
+                }
+                if ch == '中' {
+                    // The 中 / A switch of the Chinese layouts (v1.11).
+                    return if self.composer.chinese_direct() {
+                        "A"
+                    } else {
+                        "中"
+                    }
+                    .into();
+                }
+                layouts::spacing(ch).to_string()
             }
             Key::Char(c) => (if self.shift_on() { shifted(c) } else { c }).to_string(),
             Key::Shift => "Shift".into(),
@@ -378,7 +408,7 @@ impl Keyboard {
                     }
                 }
                 let b = b.unwrap_or(c);
-                if self.shift_on() != (self.caps && b.is_alphabetic()) {
+                if self.shift_on() != (self.caps && b.is_lowercase()) {
                     sh.unwrap_or(b)
                 } else {
                     b
@@ -403,6 +433,28 @@ impl Keyboard {
             if !t.is_empty() {
                 buffer.insert(&t);
             }
+        }
+        // Anything else that is not typing ends the Japanese composition
+        // (Return, Backspace and Esc act on it themselves).
+        let phrase_arrow = self.composer.candidates().is_some()
+            && matches!(key, Key::Arrow(Dir::Left | Dir::Right))
+            && !self.ctrl;
+        if self.composer.composing_ja()
+            && !phrase_arrow
+            && !matches!(
+                key,
+                Key::Char(_)
+                    | Key::Space
+                    | Key::Shift
+                    | Key::Caps
+                    | Key::Alt
+                    | Key::SwapLayer
+                    | Key::Back
+                    | Key::Return
+                    | Key::Esc
+            )
+        {
+            self.composer.forget();
         }
         let extend = self.shift_on();
         let ctrl = self.ctrl;
@@ -440,6 +492,7 @@ impl Keyboard {
                 self.shift = false;
                 return KeyAction::Relabelled;
             }
+            Key::SwitchLayout if !self.lang.has_compact() => return KeyAction::Ignored,
             Key::SwitchLayout => {
                 self.layout = match self.layout {
                     Layout::Compact => Layout::Full,
@@ -452,19 +505,21 @@ impl Keyboard {
                 self.release();
                 return KeyAction::Relayout;
             }
-            Key::Char(c) if ctrl => self.shortcut(c.to_ascii_lowercase(), buffer),
+            Key::Char(c) if ctrl => {
+                self.composer.forget();
+                self.shortcut(c.to_ascii_lowercase(), buffer)
+            }
             Key::Char(c) => {
-                let t = self.composer.feed(self.char_for(c));
-                if t.is_empty() {
+                let ch = self.char_for(c);
+                if !self.composer.type_char(buffer, self.lang, ch) {
                     // A dead key waits for the next letter.
                     self.release();
                     return KeyAction::Relabelled;
                 }
-                buffer.insert(&t);
                 KeyAction::Edited
             }
             Key::Back => {
-                buffer.backspace();
+                self.composer.backspace(buffer, self.lang);
                 KeyAction::Edited
             }
             // Brief: "Del is Delete; with Shift held it is Backspace" (Compact).
@@ -481,28 +536,33 @@ impl Keyboard {
                 KeyAction::Edited
             }
             Key::Space => {
-                buffer.insert(&self.composer.feed(' '));
+                self.composer.type_char(buffer, self.lang, ' ');
                 KeyAction::Edited
             }
             Key::Return => {
-                buffer.newline();
+                if !self.composer.enter(buffer) {
+                    buffer.newline();
+                }
                 KeyAction::Edited
             }
+            Key::Esc if self.composer.escape(buffer) => KeyAction::Edited,
             Key::Esc => KeyAction::Escape,
-            Key::Arrow(Dir::Left) => {
-                let at = match (ctrl, extend, buffer.selection()) {
-                    (true, _, _) => buffer.word_left(buffer.caret()),
-                    (false, false, Some((a, _))) => a,
-                    _ => buffer.prev_pos(buffer.caret()),
-                };
-                buffer.move_to(at, extend);
-                KeyAction::Moved
+            // Converting Japanese: the arrows choose the phrase (Shift: its length).
+            Key::Arrow(d @ (Dir::Left | Dir::Right)) if phrase_arrow => {
+                self.composer.phrase_arrow(buffer, d == Dir::Right, extend);
+                KeyAction::Edited
             }
-            Key::Arrow(Dir::Right) => {
-                let at = match (ctrl, extend, buffer.selection()) {
-                    (true, _, _) => buffer.word_right(buffer.caret()),
-                    (false, false, Some((_, b))) => b,
-                    _ => buffer.next_pos(buffer.caret()),
+            Key::Arrow(d @ (Dir::Left | Dir::Right)) => {
+                // In a right-to-left row (v1.8) the left arrow moves to
+                // the next letter, not the previous one.
+                let back = (d == Dir::Left) != self.rtl;
+                let at = match (ctrl, extend, buffer.selection(), back) {
+                    (true, _, _, true) => buffer.word_left(buffer.caret()),
+                    (true, _, _, false) => buffer.word_right(buffer.caret()),
+                    (false, false, Some((a, _)), true) => a,
+                    (false, false, Some((_, b)), false) => b,
+                    (_, _, _, true) => buffer.prev_pos(buffer.caret()),
+                    (_, _, _, false) => buffer.next_pos(buffer.caret()),
                 };
                 buffer.move_to(at, extend);
                 KeyAction::Moved

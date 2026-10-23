@@ -2,7 +2,7 @@
 
 > **Standing order (user, 2026-10-22):** development past v1.4 uses only the emulator and CI. **All device testing waits for one pass on the Kobo Forma before the final stable release.** Every version adds its device checks here instead of asking for an install. Nothing on this list has been run unless it is ticked with a date. Install for the pass follows `docs/install-plan-forma.md` (needs approval): serial check (<FORMA-SERIAL>), never sdb, checksum-verified backup, binary-only replace.
 
-Installed on the Forma today: **1.6.2 + main ea32b50** (2026-10-23, binary only; see the install plan run log). Earlier line, kept for the record: 1.4.0. Built and waiting: 1.4.1 … 1.4.6 (and the diagnostic 1.4.6-probe, draft PR #22).
+Installed on the Forma: the install plan run log says **1.6.2 + main ea32b50** (2026-10-23, binary only), the changelog says **1.10.1** with the system CJK font. **Confirm in Help → App info before the pass.** Run order: `docs/device-pass-run-order.md`. Earlier line, kept for the record: 1.4.0. Built and waiting: 1.4.1 … 1.4.6 (and the diagnostic 1.4.6-probe, draft PR #22).
 
 ## Logs to collect during the pass
 - [ ] `/mnt/onboard/.adds/sigma-scribe/sigma-scribe.log` (perf lines: typing `perf:` p50/p95, `perf pointer:` p50/p95, count of `gl16-cleanup`).
@@ -18,8 +18,9 @@ Installed on the Forma today: **1.6.2 + main ea32b50** (2026-10-23, binary only;
 - [ ] Legibility and fit at 200 % on the panel (title bar, sheets, drawer, Find, status bar); Lucide icons crisp.
 
 ## Orientation (v1.2, S12)
-- [ ] Read-only g-sensor probe: node and codes per hold (see the probe procedure); map 0x19 / 0x1a.
-- [ ] After the mapping and an approved `ENABLED = true` build: touch lands under the finger in all four rotations; page buttons right upside down; no turning mid-typing.
+- [x] Read-only g-sensor probe, 2026-10-23: the Forma sends raw EV_ABS, not MSC_RAW; fixed in the Unreleased build (Auto orientation reads the accelerometer).
+- [ ] Auto turns the screen in all four ways on the Forma; touch lands under the finger in each; page buttons right upside down; no turning mid-typing.
+- [ ] Settings → Display → Orientation: the three buttons (Auto, Portrait, Landscape) work and show the choice.
 
 ## Keyboard layouts (v1.3, S13)
 - [ ] AltGr on the K400 and a 60 % board; dead keys from a real USB keyboard (FR, DE, PT).
@@ -112,6 +113,51 @@ Installed on the Forma today: **1.6.2 + main ea32b50** (2026-10-23, binary only;
 - [ ] Afterwards read `.adds/sigma-scribe/sigma-scribe.log` over USB (ea32b50 ignores corner reports in the decoder: look for `corner report (…) ignored` lines and check that no stray lines remain): any `touch:` lines (second contact, slot or tracking-id change, jump, dropped move) show where stray reports came from; copy them into the install plan.
 - [ ] Settings → Writing: Size is a slider with nine dots and no number; tapping and dragging change the note's text size at once; the default is the third dot.
 - [ ] The Writing line on the Settings page shows only the typeface.
+
+## Vietnamese and Korean typing (v1.7.0, v1.7.1)
+- [ ] Layout → Vietnamese (Telex): `vieetj` → việt, `nguwowif` → người on the Full board and a USB keyboard; `aaa` → aa; a tone key after a moved caret starts a new word.
+- [ ] Layout → Vietnamese (VNI): `Vie6t5` → Việt; digits still type digits after a space.
+- [ ] Vietnamese letters and tones crisp at 100–200 % (Literata, no box glyphs).
+- [ ] Korean needs the font pack first (docs/font-packs.md): `fonts/korean.ttf` in `.adds/sigma-scribe/`.
+- [ ] Layout → Korean: jamo make syllables as you type, Backspace takes back one jamo; Shift gives ㅃ ㅉ ㄸ ㄲ ㅆ ㅒ ㅖ; AltGr types Latin and Markdown marks.
+- [ ] Hangul legible at the body size; line wrap and the caret sit right on Hangul text; refresh while a syllable changes (no ghosting).
+- [ ] Without the pack, Hangul draws as boxes (known; the layout is not hidden yet).
+
+## Arabic, Persian, Urdu, Hebrew (v1.8.0)
+- [ ] Layout → Arabic: type a few words on the Full board and a USB keyboard; letters join, marks sit right, the row sits flush right.
+- [ ] Mixed with Latin and numbers: order looks right; the caret sits where the next letter appears.
+- [ ] Left / Right move the way the text reads in a right-to-left row; tap places the caret at the letter touched; selection highlight covers the right letters.
+- [ ] Persian (گ چ پ ژ, ZWNJ key), Urdu (ٹ ڈ ڑ ں ے ھ), Hebrew: letters present and legible at 100–200 %.
+- [ ] Arabic size next to Latin (Naskh is drawn 18 % larger): too big or too small?
+- [ ] Wrapping a long Arabic paragraph; scrolling; page turn; no slowdown while typing.
+- [ ] Preview of an Arabic paragraph: flush right, legible.
+- [ ] Refresh behaviour while typing right to left (no ghosting at the caret).
+
+## Indic scripts and Thai (v1.9.0)
+- [ ] Layout → Hindi, Marathi, Nepali (InScript): type words on the Full board and a USB keyboard; conjuncts (क्ष, न्द), the short ि sign before its letter, shirorekha joined.
+- [ ] Caret and Left / Right move over a whole letter with its signs; Backspace removes one sign at a time; a tap lands between letters, never inside one.
+- [ ] Bengali, Tamil, Thai: letters and signs present and legible at 100–200 %; Thai tone marks above, not colliding.
+- [ ] Key caps: vowel signs on a dotted circle, legible; the Compact key does nothing on these layouts.
+- [ ] Sizes next to Latin (Devanagari, Bengali 120 %, Tamil 105 %, Thai 115 %): too big or small?
+- [ ] Line height with tall scripts (Devanagari headline and signs below): no clipping between rows.
+- [ ] Wrapping long Hindi and Thai paragraphs; scrolling; no slowdown while typing.
+- [ ] Preview of a Hindi and a Thai paragraph.
+
+## Japanese (v1.10.0)
+- [ ] The CJK font pack is on the Kobo (`fonts/cjk.ttf`); kana and kanji draw, not boxes.
+- [ ] Layout → Japanese (romaji): `watashihagakuseidesu` → わたしはがくせいです underlined; Space → 私は学生です; Space again cycles; Enter commits (no newline); Esc steps back.
+- [ ] The candidate bar: chips legible, a tap picks and commits, the text above is not hidden under it; refresh while typing and converting (no ghosting on the underline).
+- [ ] The あ / A key switches to direct input and back; Backspace takes back a kana; digits end the composition.
+- [ ] Korean: Backspace on a USB keyboard removes one letter at a time; the syllable being composed is underlined.
+- [ ] Phrases (v1.10.1): `watashihagakuseidesu` + Space → two phrases; Left / Right change the heavier underline; Shift + Right moves the boundary; a tap on a candidate moves on to the next phrase.
+- [ ] Han / kana size and line height next to Latin; wrapping a long Japanese paragraph (rows break at any kana).
+
+## Chinese (v1.11.0)
+- [ ] The CJK font pack is on the Kobo (`fonts/cjk.ttf`, rebuilt for Chinese) and the dictionaries `dict/pinyin-hans.txt`, `pinyin-hant.txt` are there.
+- [ ] Layout → Chinese Simplified (pinyin): `woaizhongguo` → 我爱中国 on the bar; Space writes it; `nihao` then 1–9 picks; Left / Right move the choice; a candidate that covers the start leaves the rest.
+- [ ] Time from the first letter to the candidates (the dictionary loads once, about 3 MB); typing speed afterwards; no ghosting on the candidate bar.
+- [ ] Punctuation in full width; `3.14` keeps its point; Enter keeps the pinyin; Esc removes it; 中 / A key.
+- [ ] Chinese Traditional (pinyin): `woaizhongguo` → 我愛中國; `tushuguan` → 圖書館.
 
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).

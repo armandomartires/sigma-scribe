@@ -1,0 +1,34 @@
+# v1.10.1 (S20.1): Japanese phrases: Left/Right choose, Space cycles, Shift+arrows move the boundary.
+copy-notes tests/test-notes/_test
+usb plug
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+page next
+page next
+shot v1.10.1-layout-choices-page4
+tap-on Japanese (romaji)
+expect-setting layout=ja
+esc
+esc
+usb-key Enter
+usb-type watashihagakuseidesu
+usb-key Space
+expect 私は学生です
+shot v1.10.1-phrase-first
+usb-key Right
+shot v1.10.1-phrase-second
+usb-key Space
+expect-not 私は学生です
+shot v1.10.1-phrase-cycled
+usb-key Left
+usb-key shift+Right
+shot v1.10.1-phrase-boundary
+usb-key Esc
+expect わたしはがくせいです
+usb-key Esc
+usb-type kyouhaiitenkidesune.
+usb-key Space
+expect 今日は良い天気ですね。
+usb-key Enter

@@ -164,9 +164,9 @@ User decisions (2026-10-21 21:24): v1.0.1 = pointer trails + reverse scroll + "U
 **Answered 2026-10-21 21:31 (decision 31):** translations machine-drafted by Grok Bot for all UI languages (best effort, no reviewer); UI language follows the Kobo (`Kobo eReader.conf` → `[ApplicationPreferences] CurrentLocale`, read-only, EN fallback); opt-in local handwriting collection yes; character boxes OK as v1.5 fallback; SKK-style Japanese first; test notes prefixed `test-`. Defaults kept: CJK subsets + optional full font; Modern Standard Arabic first, Urdu letters later. **No open questions left in the plan.**
 
 ### Before the stable release (v1.4) — admin checklist (decision 36)
-- [ ] Publish the v1.0.0 draft GitHub release — needs the user's approval
-- [ ] Tag v1.0.1 — needs the user's approval
-- [ ] Tag v1.0.2 — needs the user's approval
+- [x] Publish the v1.0.0 draft GitHub release — done 2026-10-23
+- [x] Tag v1.0.1 — done 2026-10-23
+- [x] Tag v1.0.2 — done 2026-10-23
 
 ### Roadmap after v0.2 (confirmed)
 
@@ -207,11 +207,20 @@ User decisions (2026-10-21 21:24): v1.0.1 = pointer trails + reverse scroll + "U
 | S15.5 | Override system language (Settings → Language), decision 57 | **v1.5.5** | BUILT (emulator/CI only, not installed, not tagged) |
 | S16.0 | W1: eleven more Latin layouts, decision 58 | **v1.6.0** | BUILT (emulator/CI only, not installed, not tagged) |
 | S16.1 | W1: Russian, Ukrainian, Greek layouts, decision 59 | **v1.6.1** | BUILT (emulator/CI only, not installed, not tagged) |
+| S16.2 | W1: UI languages DE, ES, IT, NL, CA, DA, SV (machine-drafted), decision 60 | **v1.6.2** | BUILT (emulator/CI only, not installed, not tagged) |
+| S17.0 | W2: Vietnamese typing, Telex and VNI | **v1.7.0** | BUILT (emulator/CI only, not installed, not tagged) |
+| S17.1 | W2: Korean typing (Dubeolsik) + optional script font pack | **v1.7.1** | BUILT (emulator/CI only, not installed, not tagged) |
+| S18.0 | W3a: Arabic, Persian, Urdu, Hebrew layouts + right-to-left text in the editor | **v1.8.0** | BUILT (emulator/CI only, not installed, not tagged) |
+| S19.0 | W3b: Hindi/Marathi/Nepali, Bengali, Tamil, Thai + shaping (rustybuzz) | **v1.9.0** | BUILT (emulator/CI only, not installed, not tagged) |
+| S20.0 | W4: Japanese romaji → kana → kanji (SKK-JISYO.L) | **v1.10.0** | BUILT (emulator/CI only, not installed, not tagged) |
+| S20.1 | W4: Japanese conversion by phrase, learning (this run) | **v1.10.1** | INSTALLED on the Forma with the system CJK font; Japanese checks reported fine; not tagged |
+| S21.0 | W4: Chinese pinyin, Simplified and Traditional (Rime dictionaries) | **v1.11.0** | BUILT (emulator/CI only, not installed, not tagged) |
+| — | Sigma Scribe files kept out of the Kobo library (ExcludeSyncFolders) | **v1.11.1** | BUILT (emulator/CI only, not installed, not tagged) |
 | S15.4 | Gestures: scratch-out, caret tap, line join (flick left), flick right = space | **v1.5.4** | BUILT (emulator/CI only, not installed, not tagged) |
 | S15 | Handwriting input (Latin), v1.5.3 word-mode spike, v1.5.4 gestures | **v1.5** 📝 | PLANNED — §12 |
-| S16 | Farsi + Arabic (RTL) | **v1.6** 📝 | PLANNED — post-stable extra |
-| S17 | Japanese kana + kanji | **v1.7** 📝 | PLANNED — post-stable extra |
-| S18 | Simplified Chinese pinyin | **v1.8** 📝 | PLANNED — post-stable extra |
+| S16 | Farsi + Arabic (RTL) | **v1.6** 📝 | SUPERSEDED — built as S18.0 (v1.8.0) |
+| S17 | Japanese kana + kanji | **v1.7** 📝 | SUPERSEDED — built as S20.0/S20.1 (v1.10) |
+| S18 | Simplified Chinese pinyin | **v1.8** 📝 | SUPERSEDED — built as S21.0 (v1.11.0) |
 
 ## 12. ACCEPTED 2026-10-22: v1.5 handwriting, language coverage, Korean and Hindi
 > **Accepted 2026-10-22 (decision 49): all 13 open decisions in §12.9 accepted at the recommendations.** Built and tested with the emulator and CI only; device checks go to `docs/device-checklist-prerelease.md` (decision 48). Sizes and efforts below are estimates.

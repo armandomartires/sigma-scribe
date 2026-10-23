@@ -601,9 +601,11 @@ impl App {
         }
         let r = match tilt {
             Tilt::Upright => Rotation::R0,
-            Tilt::Clockwise => Rotation::R90,
+            // Checked on the Forma: a quarter turn clockwise needs R270,
+            // the screen turns the other way to stay upright.
+            Tilt::Clockwise => Rotation::R270,
             Tilt::UpsideDown => Rotation::R180,
-            Tilt::CounterClockwise => Rotation::R270,
+            Tilt::CounterClockwise => Rotation::R90,
         };
         self.tilt = match self.tilt {
             _ if r == self.settings.rotation => None,
@@ -702,6 +704,10 @@ impl App {
             };
         }
         self.keyboard.lang = self.settings.kb_layout;
+        if !self.keyboard.lang.has_compact() {
+            // Too many keys for the compact board (v1.9).
+            self.keyboard.layout = sigma_core::keyboard::Layout::Full;
+        }
         sigma_device::usbkbd::set_layout(self.settings.kb_layout);
         let anchor = match c.refit() {
             Some(Some(true)) => Some(Anchor::Size),
@@ -1062,14 +1068,17 @@ impl App {
         let b = &mut self.scratch;
         match k {
             HwKey::Char(c) => {
-                let t = self.keyboard.composer.feed(c);
-                if !t.is_empty() {
-                    self.scratch.insert(&t);
+                self.keyboard
+                    .composer
+                    .type_char(&mut self.scratch, self.settings.kb_layout, c);
+            }
+            HwKey::Backspace => self.keyboard.composer.backspace(b, self.settings.kb_layout),
+            HwKey::Delete => b.delete_forward(),
+            HwKey::Return => {
+                if !self.keyboard.composer.enter(b) {
+                    b.newline();
                 }
             }
-            HwKey::Backspace => b.backspace(),
-            HwKey::Delete => b.delete_forward(),
-            HwKey::Return => b.newline(),
             HwKey::Tab => b.insert_tab(self.settings.tab_kind()),
             HwKey::Left => b.left(),
             HwKey::Right => b.right(),
@@ -1525,6 +1534,7 @@ impl App {
             self.scratch_key(k)
         } else {
             let tab = self.settings.tab_kind();
+            self.keyboard.rtl = self.caret_rtl();
             let a = self.keyboard.press(k, &mut self.buffer, tab);
             self.after_key(a)
         };
@@ -2883,16 +2893,24 @@ impl App {
         Some(Refresh::Fast)
     }
 
+    /// The caret is in a right-to-left row of the note.
+    fn caret_rtl(&self) -> bool {
+        let page = self.screen.layout(self.keys_visible(), &self.keyboard).page;
+        self.screen.caret_rtl(&self.buffer, page)
+    }
+
     fn hw_into_field(&mut self, k: HwKey) -> Option<Refresh> {
         let (_, field) = self.rename.as_mut()?;
         match k {
             HwKey::Char(c) => {
-                let t = self.keyboard.composer.feed(c);
-                if !t.is_empty() {
-                    field.insert(&t);
-                }
+                self.keyboard
+                    .composer
+                    .type_char(field, self.settings.kb_layout, c);
             }
-            HwKey::Backspace => field.backspace(),
+            HwKey::Backspace => self
+                .keyboard
+                .composer
+                .backspace(field, self.settings.kb_layout),
             HwKey::Delete => field.delete_forward(),
             HwKey::Left => field.left(),
             HwKey::Right => field.right(),
@@ -3477,7 +3495,20 @@ impl App {
             Event::Tap { x, y } if self.in_find_bar(x, y) => self.find_tap(x, y),
             Event::Tap { x, y } if self.in_drawer(x, y) => self.drawer_tap(x, y),
             Event::Key(k) => {
-                if !matches!(k, HwKey::Char(_)) {
+                // Backspace, Return and Esc act on a composition themselves.
+                // Left and Right choose the phrase while Japanese is converting.
+                let phrase = matches!(k, HwKey::Left | HwKey::Right)
+                    && self.keyboard.composer.candidates().is_some();
+                if phrase {
+                    self.keyboard
+                        .composer
+                        .phrase_arrow(&mut self.buffer, k == HwKey::Right, false);
+                    return Some(Refresh::Fast);
+                }
+                if !matches!(
+                    k,
+                    HwKey::Char(_) | HwKey::Backspace | HwKey::Return | HwKey::Escape
+                ) {
                     let t = self.keyboard.composer.flush();
                     if !t.is_empty() {
                         self.buffer.insert(&t);
@@ -3485,21 +3516,39 @@ impl App {
                 }
                 match k {
                     HwKey::Char(c) => {
-                        let t = self.keyboard.composer.feed(c);
-                        if !t.is_empty() {
-                            self.buffer.insert(&t);
+                        self.keyboard.composer.type_char(
+                            &mut self.buffer,
+                            self.settings.kb_layout,
+                            c,
+                        );
+                    }
+                    HwKey::Backspace => self
+                        .keyboard
+                        .composer
+                        .backspace(&mut self.buffer, self.settings.kb_layout),
+                    HwKey::Delete => self.buffer.delete_forward(),
+                    HwKey::Return => {
+                        if !self.keyboard.composer.enter(&mut self.buffer) {
+                            self.buffer.newline();
                         }
                     }
-                    HwKey::Backspace => self.buffer.backspace(),
-                    HwKey::Delete => self.buffer.delete_forward(),
-                    HwKey::Return => self.buffer.newline(),
                     HwKey::Tab => self.buffer.insert_tab(self.settings.tab_kind()),
-                    HwKey::Left => self.buffer.left(),
-                    HwKey::Right => self.buffer.right(),
+                    HwKey::Left | HwKey::Right => {
+                        // Flipped in a right-to-left row (v1.8).
+                        if (k == HwKey::Left) != self.caret_rtl() {
+                            self.buffer.left();
+                        } else {
+                            self.buffer.right();
+                        }
+                    }
                     HwKey::Up => self.screen.caret_row(&mut self.buffer, page, false),
                     HwKey::Down => self.screen.caret_row(&mut self.buffer, page, true),
                     HwKey::Home | HwKey::End | HwKey::PageUp | HwKey::PageDown => return None,
                     HwKey::Escape => {
+                        if self.keyboard.composer.escape(&mut self.buffer) {
+                            self.save();
+                            return Some(Refresh::Fast);
+                        }
                         let had = self.sel_ui.take().is_some();
                         if !had && !self.history.is_empty() {
                             return self.go_back();
@@ -3558,8 +3607,14 @@ impl App {
                         Some(Refresh::Full)
                     }
                     Hit::Drawer(p) => Some(self.toggle_pane(p)),
+                    Hit::Candidate(i) => {
+                        self.keyboard.composer.pick(&mut self.buffer, i);
+                        self.save();
+                        Some(Refresh::Partial)
+                    }
                     Hit::Key(k) => {
                         let tab = self.settings.tab_kind();
+                        self.keyboard.rtl = self.caret_rtl();
                         let a = self.keyboard.press(k, &mut self.buffer, tab);
                         self.after_key(a)
                     }

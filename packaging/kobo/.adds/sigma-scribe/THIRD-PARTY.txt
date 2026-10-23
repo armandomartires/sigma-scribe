@@ -8,11 +8,32 @@ This binary statically links:
 - FBInk by NiLuJe — GPL-3.0-or-later — https://github.com/NiLuJe/FBInk
   (commit 886f25f1, built with MINIMAL=true IMAGE=true KOBO=true).
   FBInk's own bundled components keep their licences, listed in its source.
+- rustybuzz (MIT, a Rust port of HarfBuzz) and unicode-bidi (MIT / Apache-2.0) and unicode-segmentation (MIT / Apache-2.0), with their
+  dependencies (ttf-parser, unicode-script, unicode-properties, unicode-ccc, bitflags…),
+  for Arabic-script and Hebrew shaping and right-to-left order.
 - The Rust standard library and musl libc (MIT / Apache-2.0, MIT).
+
+Dictionary: SKK-JISYO.L, the large SKK dictionary (dict/skk-jisyo.txt, converted from
+EUC-JP to UTF-8, otherwise unchanged; source https://github.com/skk-dev/dict). Copyright
+the SKK Development Team and contributors (see dict/SKK-JISYO.L-NOTICE.txt); GNU General
+Public License version 2 or (at your option) any later version. It is used here under
+version 3 of that licence (https://www.gnu.org/licenses/gpl-3.0.txt), the same family as
+this program's AGPL-3.0; it is data read at run time, in its own file. Japanese input
+(v1.10) also has a small built-in dictionary written for this project (AGPL-3.0-only).
+
+Dictionaries: the pinyin dictionaries dict/pinyin-hans.txt and dict/pinyin-hant.txt, built from
+the Rime project's luna-pinyin and essay data (https://github.com/rime/rime-luna-pinyin,
+https://github.com/rime/rime-essay), GNU Lesser General Public License version 3 (dict/LGPL-3.0.txt),
+with data from Chewing, OpenCC and the Android Pinyin IME (Apache-2.0), CC-CEDICT and MoeDict (CC0);
+see dict/PINYIN-NOTICE.txt. Modified (reduced, Simplified form made with OpenCC), used as data
+read at run time, in its own files. Chinese input (v1.11) also has a small built-in seed written for
+this project (AGPL-3.0-only).
 
 Fonts (SIL Open Font License 1.1, texts in OFL-*.txt):
 - Literata (Regular, SemiBold, Italic)
 - Atkinson Hyperlegible
+- Noto Naskh Arabic and Noto Sans Hebrew (Regular; Arabic, Persian, Urdu, Hebrew)
+- Noto Sans Devanagari, Bengali, Tamil and Thai (Regular)
 
 Icons: Lucide (lucide-static 1.61.0), ISC licence, baked into the binary
 (eye, pencil, search, sticky-note, list-todo, table-of-contents, share-2,

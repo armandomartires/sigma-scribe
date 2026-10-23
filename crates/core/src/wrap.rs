@@ -7,6 +7,23 @@
 /// Width of a run of text in the front end's unit (pixels or grid cells).
 pub trait TextMeasure {
     fn width(&self, text: &str) -> u32;
+
+    /// x of the caret at byte `at` of a row, from the row's left end. A
+    /// right-to-left row (v1.8) is laid out by its glyphs, not by the
+    /// width of the text before the caret.
+    fn caret_x(&self, row: &str, at: usize) -> u32 {
+        self.width(&row[..at])
+    }
+
+    /// Byte of a right-to-left row nearest to `x`; None: use widths.
+    fn index_at(&self, _row: &str, _x: u32) -> Option<usize> {
+        None
+    }
+
+    /// Does the row read right to left (it is drawn flush right)?
+    fn rtl(&self, _row: &str) -> bool {
+        false
+    }
 }
 
 /// Every char is one cell wide; tabs expand to `tab` cells.
@@ -77,16 +94,28 @@ fn wrap_logical(
             return;
         }
         // Longest prefix that fits.
-        let mut fit = 0;
-        for (i, c) in rest.char_indices() {
-            let next = i + c.len_utf8();
-            if m.width(&rest[..next]) > max {
-                break;
+        // (Binary search: shaped text is costly to measure.)
+        let bounds = cluster_ends(rest);
+        let (mut lo, mut hi) = (0, bounds.len());
+        while lo < hi {
+            let mid = (lo + hi) / 2;
+            if m.width(&rest[..bounds[mid]]) > max {
+                hi = mid;
+            } else {
+                lo = mid + 1;
             }
-            fit = next;
         }
+        // Never between a letter and its marks, nor where Thai forbids it.
+        let mut k = lo;
+        while k > 0 && !may_break(rest, bounds[k - 1]) {
+            k -= 1;
+        }
+        if k == 0 && lo > 0 {
+            k = lo;
+        }
+        let mut fit = if k == 0 { 0 } else { bounds[k - 1] };
         if fit == 0 {
-            fit = rest.chars().next().map_or(rest.len(), char::len_utf8);
+            fit = bounds.first().copied().unwrap_or(rest.len());
         }
         // Prefer to break after the last space inside (or right after) the fit.
         let mut cut = rest[..fit].rfind(' ').map(|i| i + 1);
@@ -101,6 +130,30 @@ fn wrap_logical(
         });
         row_start += cut;
     }
+}
+
+/// Byte offsets just after each grapheme cluster of `s` (just after each
+/// char when `s` is ASCII, the common case).
+fn cluster_ends(s: &str) -> Vec<usize> {
+    use unicode_segmentation::UnicodeSegmentation;
+    if s.is_ascii() {
+        return (1..=s.len()).collect();
+    }
+    s.grapheme_indices(true).map(|(i, g)| i + g.len()).collect()
+}
+
+/// Thai has no spaces between words: a row may end between letters, but
+/// not after a leading vowel (เ แ โ ไ ใ) nor before a following vowel or
+/// sign (ะ า ำ ๆ ฯ).
+fn may_break(s: &str, at: usize) -> bool {
+    let before = s[..at].chars().next_back();
+    let after = s[at..].chars().next();
+    let thai = |c: Option<char>| c.is_some_and(|c| ('\u{0E00}'..='\u{0E7F}').contains(&c));
+    if !thai(before) && !thai(after) {
+        return true;
+    }
+    !matches!(before, Some('เ' | 'แ' | 'โ' | 'ไ' | 'ใ'))
+        && !matches!(after, Some('ะ' | 'า' | 'ำ' | 'ๆ' | 'ฯ'))
 }
 
 /// Row and column (in measure units) of a caret byte offset.
@@ -124,13 +177,16 @@ pub fn caret_cell(
         }
     }
     let r = rows[found];
-    (found, m.width(&text[r.start..caret]))
+    (found, m.caret_x(&text[r.start..r.end], caret - r.start))
 }
 
 /// Byte offset nearest to `col` units into `row` (tap or up/down by row).
 #[must_use]
 pub fn offset_at(text: &str, row: VisualLine, col: u32, m: &dyn TextMeasure) -> usize {
     let s = &text[row.start..row.end];
+    if let Some(i) = m.index_at(s, col) {
+        return row.start + i;
+    }
     let mut best = row.start;
     for (i, c) in s.char_indices() {
         let after = i + c.len_utf8();
@@ -210,5 +266,40 @@ mod tests {
             .collect::<Vec<_>>()
             .join("");
         assert_eq!(joined, t.replace('\n', ""));
+    }
+}
+
+#[cfg(test)]
+mod cluster_tests {
+    use super::*;
+
+    fn rows(text: &str, max: u32) -> Vec<&str> {
+        wrap(text, max, &MonoMeasure::default())
+            .iter()
+            .map(|r| &text[r.start..r.end])
+            .collect()
+    }
+
+    #[test]
+    fn a_row_never_ends_inside_a_letter_and_its_marks() {
+        // Each of क्षि and की is one cluster; width 1 per char.
+        let t = "कीकीकीकी";
+        for r in rows(t, 3) {
+            assert!(r.chars().count() % 2 == 0, "{r:?}");
+        }
+        let hindi = "क्षिक्षिक्षि";
+        for r in rows(hindi, 5) {
+            assert!(r.chars().count() % 4 == 0, "{r:?}");
+        }
+    }
+
+    #[test]
+    fn thai_breaks_between_syllables_not_after_a_leading_vowel() {
+        for r in rows("เกเกเกเกเกเก", 3) {
+            assert!(!r.ends_with('เ'), "{r:?}");
+        }
+        for r in rows("กำกำกำกำ", 3) {
+            assert!(!r.starts_with('ำ'), "{r:?}");
+        }
     }
 }

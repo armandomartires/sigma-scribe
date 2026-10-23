@@ -1,0 +1,32 @@
+# v1.7.0 (S17.0): Vietnamese typing, Telex and VNI, on USB and on-screen keys.
+copy-notes tests/test-notes/_test
+usb plug
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+shot v1.7.0-layout-choices-page2
+tap-on Vietnamese (Telex)
+expect-setting layout=vi
+esc
+esc
+usb-type Vieetj Nam, nguwowif Vieetj
+expect Việt Nam, người Việt
+usb-type  ddi chaof, hoaf thuyr quas
+expect Việt Nam, người Việt đi chào, hòa thủy quá
+usb-type  aaa
+expect Việt Nam, người Việt đi chào, hòa thủy quá aa
+type  tieengs
+expect Việt Nam, người Việt đi chào, hòa thủy quá aa tiếng
+shot v1.7.0-telex-full
+tap-on Options
+tap-on Keyboard & input
+tap-on Layout
+page next
+tap-on Vietnamese (VNI)
+expect-setting layout=vi-vni
+esc
+esc
+usb-type  Vie6t5 d9i
+expect Việt Nam, người Việt đi chào, hòa thủy quá aa tiếng Việt đi
+shot v1.7.0-vni
