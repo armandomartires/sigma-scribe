@@ -313,6 +313,10 @@ impl Keyboard {
                     }
                     .into();
                 }
+                if ch == '中' {
+                    // The 中 / A switch of the Chinese layouts (v1.11).
+                    return if self.composer.chinese_direct() { "A" } else { "中" }.into();
+                }
                 layouts::spacing(ch).to_string()
             }
             Key::Char(c) => (if self.shift_on() { shifted(c) } else { c }).to_string(),

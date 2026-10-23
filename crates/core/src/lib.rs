@@ -24,6 +24,7 @@ pub mod store;
 pub mod text;
 pub mod viet;
 pub mod wrap;
+pub mod zh;
 
 pub use buffer::Buffer;
 pub use keyboard::{Key, KeyAction, Keyboard, Layer};

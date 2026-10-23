@@ -434,7 +434,7 @@ mod layout_glyphs {
                     [b, s, a]
                         .into_iter()
                         .flatten()
-                        .filter(|&c| !sigma_core::hangul::is_jamo(c) && c != '半')
+                        .filter(|&c| !sigma_core::hangul::is_jamo(c) && c != '半' && c != '中')
                         .map(spacing),
                 );
             }

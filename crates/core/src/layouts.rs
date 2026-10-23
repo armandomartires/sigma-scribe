@@ -66,9 +66,13 @@ pub enum KeyLayout {
     Th,
     /// Japanese: romaji to kana, kana to kanji (v1.10).
     Ja,
+    /// Chinese pinyin, Simplified characters (v1.11).
+    ZhHans,
+    /// Chinese pinyin, Traditional characters (v1.11).
+    ZhHant,
 }
 
-pub const ALL: [KeyLayout; 33] = [
+pub const ALL: [KeyLayout; 35] = [
     KeyLayout::Us,
     KeyLayout::Uk,
     KeyLayout::Fr,
@@ -102,6 +106,8 @@ pub const ALL: [KeyLayout; 33] = [
     KeyLayout::Ta,
     KeyLayout::Th,
     KeyLayout::Ja,
+    KeyLayout::ZhHans,
+    KeyLayout::ZhHant,
 ];
 
 /// evdev codes of the 48 positions, in table order.
@@ -684,6 +690,29 @@ const JA: Table = Table {
     ],
 };
 
+// Chinese pinyin: the US keys feed the pinyin input; the key left of 1 is the
+// 中 / A switch; AltGr types the US key.
+const ZH: Table = Table {
+    base: [
+        "中1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+    shift: [
+        "~!@#$%^&*()_+",
+        "QWERTYUIOP{}|",
+        "ASDFGHJKL:\" ",
+        "ZXCVBNM<>?",
+    ],
+    altgr: [
+        "`1234567890-=",
+        "qwertyuiop[]\\",
+        "asdfghjkl;' ",
+        "zxcvbnm,./",
+    ],
+};
+
 const RU: Table = Table {
     base: [
         "ё1234567890-=",
@@ -787,6 +816,7 @@ fn table(l: KeyLayout) -> &'static Table {
         KeyLayout::Ta => &TAMIL,
         KeyLayout::Th => &THAI,
         KeyLayout::Ja => &JA,
+        KeyLayout::ZhHans | KeyLayout::ZhHant => &ZH,
     }
 }
 
@@ -837,6 +867,8 @@ impl KeyLayout {
             Self::Ta => "ta",
             Self::Th => "th",
             Self::Ja => "ja",
+            Self::ZhHans => "zh-hans",
+            Self::ZhHant => "zh-hant",
         }
     }
 
@@ -877,6 +909,8 @@ impl KeyLayout {
             Self::Ta => "Tamil (InScript)",
             Self::Th => "Thai (Kedmanee)",
             Self::Ja => "Japanese (romaji)",
+            Self::ZhHans => "Chinese Simplified (pinyin)",
+            Self::ZhHant => "Chinese Traditional (pinyin)",
         }
     }
 
@@ -966,6 +1000,8 @@ impl KeyLayout {
                 | Self::Ta
                 | Self::Th
                 | Self::Ja
+                | Self::ZhHans
+                | Self::ZhHant
         )
     }
 
@@ -1032,13 +1068,26 @@ impl KeyLayout {
     /// board only.
     #[must_use]
     pub fn has_compact(self) -> bool {
-        !matches!(self, Self::Deva | Self::Bn | Self::Ta | Self::Th | Self::Ja)
+        !matches!(
+            self,
+            Self::Deva | Self::Bn | Self::Ta | Self::Th | Self::Ja | Self::ZhHans | Self::ZhHant
+        )
     }
 
     /// Japanese typing: romaji to kana, then kanji.
     #[must_use]
     pub fn japanese(self) -> bool {
         self == Self::Ja
+    }
+
+    /// Chinese pinyin typing, and which characters it writes.
+    #[must_use]
+    pub fn chinese(self) -> Option<crate::zh::Script> {
+        match self {
+            Self::ZhHans => Some(crate::zh::Script::Hans),
+            Self::ZhHant => Some(crate::zh::Script::Hant),
+            _ => None,
+        }
     }
 
     /// Korean typing: jamo become syllables.
@@ -1115,6 +1164,8 @@ pub struct Composer {
     at: usize,
     /// Japanese input in progress (v1.10).
     ja: JaState,
+    /// Chinese input in progress (v1.11).
+    zh: ZhState,
     /// What `shown` is: 0 nothing, 1 Vietnamese, 2 Korean, 3 Japanese.
     kind: u8,
 }
@@ -1138,6 +1189,59 @@ struct Seg {
     reading: String,
     cands: Vec<String>,
     sel: usize,
+}
+
+/// The Chinese preedit: the pinyin typed, its candidates, the chosen one.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct ZhState {
+    /// Direct (Latin) input instead of pinyin.
+    direct: bool,
+    input: String,
+    cands: Vec<crate::zh::Cand>,
+    texts: Vec<String>,
+    sel: usize,
+    script: Option<crate::zh::Script>,
+}
+
+impl ZhState {
+    fn active(&self) -> bool {
+        !self.input.is_empty()
+    }
+
+    fn refresh(&mut self) {
+        let script = self.script.unwrap_or(crate::zh::Script::Hans);
+        self.cands = crate::zh::candidates(script, &self.input);
+        self.texts = self.cands.iter().map(|c| c.text.clone()).collect();
+        self.sel = 0;
+    }
+
+    /// Forgets the input (the mode stays).
+    fn clear(&mut self) {
+        self.input.clear();
+        self.cands.clear();
+        self.texts.clear();
+        self.sel = 0;
+    }
+}
+
+/// The full-width mark for a typed punctuation key.
+fn zh_punct(c: char) -> char {
+    match c {
+        ',' => '，',
+        '.' => '。',
+        '?' => '？',
+        '!' => '！',
+        ':' => '：',
+        ';' => '；',
+        '(' => '（',
+        ')' => '）',
+        '[' => '【',
+        ']' => '】',
+        '\\' => '、',
+        '<' => '《',
+        '>' => '》',
+        _ => c,
+    }
 }
 
 impl From<crate::ja::Phrase> for Seg {
@@ -1230,6 +1334,9 @@ impl Composer {
         if lang.japanese() {
             return self.type_ja(buffer, c);
         }
+        if let Some(script) = lang.chinese() {
+            return self.type_zh(buffer, c, script);
+        }
         let vni = lang.viet();
         let hangul = lang.hangul();
         if vni.is_none() && !hangul {
@@ -1302,6 +1409,113 @@ impl Composer {
         true
     }
 
+    /// Chinese: letters are pinyin with live candidates; Space writes the
+    /// chosen one, 1–9 pick, punctuation writes the first and itself in
+    /// full width; the 中 key switches to direct input.
+    fn type_zh(&mut self, buffer: &mut Buffer, c: char, script: crate::zh::Script) -> bool {
+        self.sync(buffer);
+        self.zh.script = Some(script);
+        if c == '中' {
+            self.zh_commit_raw();
+            self.zh.direct = !self.zh.direct;
+            return false;
+        }
+        if self.zh.direct {
+            buffer.insert(&c.to_string());
+            return true;
+        }
+        let active = self.zh.active();
+        if c.is_ascii_lowercase() || (c == '\'' && active) {
+            self.zh.input.push(c);
+            self.zh.refresh();
+            self.put_zh(buffer);
+            return true;
+        }
+        if c == ' ' && active {
+            self.zh_pick(buffer, self.zh.sel);
+            return true;
+        }
+        if c.is_ascii_digit() && c != '0' && active && !self.zh.cands.is_empty() {
+            let i = c as usize - '1' as usize;
+            if i < self.zh.cands.len().min(9) {
+                self.zh_pick(buffer, i);
+            }
+            return true;
+        }
+        // Anything else writes what is chosen first.
+        let after_digit = !active
+            && buffer.text()[..buffer.caret()]
+                .chars()
+                .next_back()
+                .is_some_and(|p| p.is_ascii_digit());
+        if active {
+            if self.zh.cands.is_empty() {
+                self.zh_commit_raw();
+            } else {
+                self.zh_pick_all(buffer);
+            }
+        }
+        let out = if after_digit && matches!(c, '.' | ',' | ':') {
+            c
+        } else {
+            zh_punct(c)
+        };
+        buffer.insert(&out.to_string());
+        true
+    }
+
+    /// Shows the typed pinyin as the preedit.
+    fn put_zh(&mut self, buffer: &mut Buffer) {
+        self.kind = 3;
+        let new = self.zh.input.clone();
+        self.put(buffer, new);
+    }
+
+    /// Leaves the typed letters in the buffer and starts afresh.
+    fn zh_commit_raw(&mut self) {
+        self.zh.clear();
+        self.raw.clear();
+        self.shown.clear();
+    }
+
+    /// Writes candidate `i`; what it does not cover stays as the preedit.
+    fn zh_pick(&mut self, buffer: &mut Buffer, i: usize) {
+        let Some(c) = self.zh.cands.get(i).cloned() else {
+            self.zh_commit_raw();
+            return;
+        };
+        let rest = self.zh.input[c.used.min(self.zh.input.len())..]
+            .trim_start_matches('\'')
+            .to_string();
+        self.put(buffer, String::new());
+        buffer.insert(&c.text);
+        self.shown.clear();
+        self.at = buffer.caret();
+        self.zh.input = rest;
+        if self.zh.input.is_empty() {
+            self.zh_commit_raw();
+        } else {
+            self.zh.refresh();
+            self.put_zh(buffer);
+        }
+    }
+
+    /// Writes the chosen candidate and goes on picking until all the input
+    /// is written (the first one each time).
+    fn zh_pick_all(&mut self, buffer: &mut Buffer) {
+        let mut first = true;
+        while self.zh.active() {
+            if self.zh.cands.is_empty() {
+                // Letters that spell no syllable are written as typed.
+                self.zh_commit_raw();
+                break;
+            }
+            let i = if first { self.zh.sel } else { 0 };
+            first = false;
+            self.zh_pick(buffer, i);
+        }
+    }
+
     /// Shows the preedit (or the chosen candidate) in the buffer.
     fn put_ja(&mut self, buffer: &mut Buffer) {
         self.kind = 3;
@@ -1333,16 +1547,26 @@ impl Composer {
         self.ja.direct
     }
 
-    /// Japanese is being composed (reading or candidates on screen).
+    /// Chinese direct (Latin) input is on.
+    #[must_use]
+    pub fn chinese_direct(&self) -> bool {
+        self.zh.direct
+    }
+
+    /// Japanese or Chinese is being composed (reading or candidates on
+    /// screen).
     #[must_use]
     pub fn composing_ja(&self) -> bool {
-        self.ja.active()
+        self.ja.active() || self.zh.active()
     }
 
     /// The candidates of the current phrase and the chosen one, while
     /// converting.
     #[must_use]
     pub fn candidates(&self) -> Option<(&[String], usize)> {
+        if self.zh.active() {
+            return (!self.zh.texts.is_empty()).then_some((&self.zh.texts[..], self.zh.sel));
+        }
         self.ja
             .segs
             .get(self.ja.cur)
@@ -1367,6 +1591,11 @@ impl Composer {
     /// bar); the last phrase commits the sentence, an earlier one moves on
     /// to the next.
     pub fn pick(&mut self, buffer: &mut Buffer, i: usize) {
+        if self.zh.active() {
+            self.sync(buffer);
+            self.zh_pick(buffer, i);
+            return;
+        }
         let cur = self.ja.cur;
         match self.ja.segs.get_mut(cur) {
             Some(s) if i < s.cands.len() => s.sel = i,
@@ -1383,6 +1612,16 @@ impl Composer {
     /// While converting: Left / Right choose the phrase, with `extend`
     /// (Shift) they move the boundary after it. False when not converting.
     pub fn phrase_arrow(&mut self, buffer: &mut Buffer, right: bool, extend: bool) -> bool {
+        if self.zh.active() && !self.zh.cands.is_empty() {
+            // Chinese: the arrows move the choice along the candidates.
+            let n = self.zh.cands.len();
+            self.zh.sel = if right {
+                (self.zh.sel + 1) % n
+            } else {
+                (self.zh.sel + n - 1) % n
+            };
+            return true;
+        }
         if !self.ja.converting() {
             return false;
         }
@@ -1401,6 +1640,11 @@ impl Composer {
     /// Return: commits what is being composed (no newline then). Otherwise
     /// writes a waiting accent and returns false (the caller breaks the line).
     pub fn enter(&mut self, buffer: &mut Buffer) -> bool {
+        if self.zh.active() {
+            // The pinyin as typed stays.
+            self.zh_commit_raw();
+            return true;
+        }
         if self.ja.active() {
             self.sync(buffer);
             crate::ja::finish(&mut self.ja.kana, &mut self.ja.pend);
@@ -1420,6 +1664,12 @@ impl Composer {
     /// Esc: from the candidates back to the reading, from the reading to
     /// nothing. False when nothing was being composed.
     pub fn escape(&mut self, buffer: &mut Buffer) -> bool {
+        if self.zh.active() {
+            self.sync(buffer);
+            self.put(buffer, String::new());
+            self.zh_commit_raw();
+            return true;
+        }
         if !self.ja.active() {
             return false;
         }
@@ -1447,7 +1697,7 @@ impl Composer {
         }
         let start = end.checked_sub(self.shown.len())?;
         match self.kind {
-            3 if self.ja.active() => Some((start, end)),
+            3 if self.ja.active() || self.zh.active() => Some((start, end)),
             2 => {
                 let last = self.shown.chars().next_back()?;
                 Some((end - last.len_utf8(), end))
@@ -1463,6 +1713,22 @@ impl Composer {
             // A waiting accent is dropped, as when it was written first and
             // then taken back.
             return;
+        }
+        if self.zh.active() {
+            self.sync(buffer);
+            if self.zh.active() {
+                self.zh.input.pop();
+                if self.zh.input.is_empty() {
+                    self.zh.clear();
+                } else {
+                    self.zh.refresh();
+                }
+                self.put_zh(buffer);
+                if !self.zh.active() {
+                    self.zh_commit_raw();
+                }
+                return;
+            }
         }
         if lang.japanese() && self.ja.active() {
             self.sync(buffer);
@@ -1533,6 +1799,7 @@ impl Composer {
     pub fn forget(&mut self) {
         self.raw.clear();
         self.shown.clear();
+        self.zh.clear();
         self.ja_commit();
     }
 
@@ -1829,6 +2096,77 @@ mod tests {
         }
         assert_eq!(b.text(), second);
         crate::ja::forget_learned();
+    }
+
+    fn type_str(c: &mut Composer, b: &mut Buffer, l: KeyLayout, s: &str) {
+        for ch in s.chars() {
+            c.type_char(b, l, ch);
+        }
+    }
+
+    #[test]
+    fn chinese_pinyin_candidates_pick_and_partial_commit() {
+        let mut b = Buffer::new("");
+        let mut c = Composer::default();
+        let l = KeyLayout::ZhHans;
+        type_str(&mut c, &mut b, l, "nihao");
+        // The pinyin is the underlined preedit; the candidates are live.
+        assert_eq!(b.text(), "nihao");
+        assert_eq!(c.composing(&b), Some((0, 5)));
+        let (cands, sel) = c.candidates().expect("candidates");
+        assert_eq!((cands[0].as_str(), sel), ("你好", 0));
+        // Space writes the chosen candidate.
+        c.type_char(&mut b, l, ' ');
+        assert_eq!(b.text(), "你好");
+        assert!(!c.composing_ja());
+        // A candidate that covers the start leaves the rest typed on.
+        type_str(&mut c, &mut b, l, "nihao");
+        let i = c.candidates().unwrap().0.iter().position(|x| x == "你").unwrap();
+        c.pick(&mut b, i);
+        assert_eq!(b.text(), "你好你hao");
+        assert_eq!(c.composing(&b).map(|x| b.text()[x.0..x.1].to_string()).as_deref(), Some("hao"));
+        // A digit picks by number; the rest of the input is written.
+        c.type_char(&mut b, l, '1');
+        assert_eq!(b.text(), "你好你好");
+        assert!(!c.composing_ja());
+    }
+
+    #[test]
+    fn chinese_punctuation_enter_escape_backspace_and_direct_input() {
+        let mut b = Buffer::new("");
+        let mut c = Composer::default();
+        let l = KeyLayout::ZhHant;
+        // Punctuation writes the chosen candidate, then itself in full width.
+        type_str(&mut c, &mut b, l, "zhongguo,");
+        assert_eq!(b.text(), "中國，");
+        // After a digit, the point stays a point.
+        type_str(&mut c, &mut b, l, "3.");
+        assert_eq!(b.text(), "中國，3.");
+        // Enter keeps the pinyin as typed; Esc takes it away; Backspace a letter.
+        type_str(&mut c, &mut b, l, "ab");
+        assert!(c.enter(&mut b));
+        assert_eq!(b.text(), "中國，3.ab");
+        type_str(&mut c, &mut b, l, "xyz");
+        assert!(c.candidates().is_none());
+        assert!(c.escape(&mut b));
+        assert_eq!(b.text(), "中國，3.ab");
+        type_str(&mut c, &mut b, l, "wo");
+        c.backspace(&mut b, l);
+        assert_eq!(b.text(), "中國，3.abw");
+        assert!(c.escape(&mut b));
+        // The arrows move the choice; the 中 key switches to direct input.
+        type_str(&mut c, &mut b, l, "shi");
+        let n = c.candidates().map_or(0, |x| x.0.len());
+        assert!(n > 2, "{n}");
+        assert!(c.phrase_arrow(&mut b, true, false));
+        assert_eq!(c.candidates().map(|x| x.1), Some(1));
+        let second = c.candidates().unwrap().0[1].clone();
+        c.type_char(&mut b, l, ' ');
+        assert!(b.text().ends_with(&second), "{}", b.text());
+        c.type_char(&mut b, l, '中');
+        assert!(c.chinese_direct());
+        type_str(&mut c, &mut b, l, "ab ");
+        assert!(b.text().ends_with("ab "));
     }
 
     #[test]

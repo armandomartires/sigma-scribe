@@ -1,0 +1,335 @@
+# Sigma Scribe seed: words by pinyin (Simplified), most common first.
+# Written for this project (AGPL-3.0-only).
+ni hao 你好
+ni men 你们
+wo men 我们
+ta men 他们
+zhong guo 中国
+zhong wen 中文
+han yu 汉语
+han zi 汉字
+ying yu 英语
+ying wen 英文
+ri ben 日本
+ri yu 日语
+han guo 韩国
+mei guo 美国
+fa guo 法国
+de guo 德国
+shi jie 世界
+bei jing 北京
+shang hai 上海
+xiang gang 香港
+tai wan 台湾
+guang zhou 广州
+shen zhen 深圳
+xie xie 谢谢
+bu ke qi 不客气
+dui bu qi 对不起
+mei guan xi 没关系
+zai jian 再见
+zao shang hao 早上好
+wan an 晚安
+huan ying 欢迎
+qing wen 请问
+xing fu 幸福
+kuai le 快乐
+sheng ri kuai le 生日快乐
+xin nian kuai le 新年快乐
+peng you 朋友
+jia ren 家人
+jia ting 家庭
+fu mu 父母
+ba ba 爸爸
+ma ma 妈妈
+ge ge 哥哥
+jie jie 姐姐
+di di 弟弟
+mei mei 妹妹
+er zi 儿子
+nv er 女儿
+hai zi 孩子
+xue sheng 学生
+lao shi 老师
+xue xiao 学校
+da xue 大学
+yi sheng 医生
+yi yuan 医院
+gong si 公司
+gong zuo 工作
+gong cheng shi 工程师
+yin hang 银行
+shang dian 商店
+fan dian 饭店
+jiu dian 酒店
+can ting 餐厅
+ji chang 机场
+huo che zhan 火车站
+di tie 地铁
+qi che 汽车
+fei ji 飞机
+zi xing che 自行车
+dian shi 电视
+dian nao 电脑
+dian hua 电话
+shou ji 手机
+wang luo 网络
+hu lian wang 互联网
+you xiang 邮箱
+dian zi you jian 电子邮件
+xin xi 信息
+shu ju 数据
+wen jian 文件
+ruan jian 软件
+cheng xu 程序
+xi tong 系统
+ji suan ji 计算机
+ren gong zhi neng 人工智能
+shu zi 数字
+shi jian 时间
+jin tian 今天
+ming tian 明天
+zuo tian 昨天
+xian zai 现在
+yi hou 以后
+yi qian 以前
+zao shang 早上
+shang wu 上午
+zhong wu 中午
+xia wu 下午
+wan shang 晚上
+xing qi 星期
+xing qi yi 星期一
+xing qi er 星期二
+xing qi san 星期三
+xing qi si 星期四
+xing qi wu 星期五
+xing qi liu 星期六
+xing qi tian 星期天
+zhou mo 周末
+yue fen 月份
+nian ji 年级
+chun tian 春天
+xia tian 夏天
+qiu tian 秋天
+dong tian 冬天
+tian qi 天气
+tai yang 太阳
+yue liang 月亮
+xing xing 星星
+xia yu 下雨
+xia xue 下雪
+shui guo 水果
+ping guo 苹果
+xiang jiao 香蕉
+cai dan 菜单
+mi fan 米饭
+mian tiao 面条
+mian bao 面包
+niu nai 牛奶
+ka fei 咖啡
+cha 茶
+pi jiu 啤酒
+chi fan 吃饭
+he shui 喝水
+shui jiao 睡觉
+qi chuang 起床
+kan shu 看书
+xie zi 写字
+du shu 读书
+xue xi 学习
+gong zuo 工作
+xiu xi 休息
+lv you 旅游
+lv xing 旅行
+mai dong xi 买东西
+zou lu 走路
+kai che 开车
+da dian hua 打电话
+shuo hua 说话
+ting yin yue 听音乐
+yin yue 音乐
+dian ying 电影
+you xi 游戏
+yun dong 运动
+zu qiu 足球
+lan qiu 篮球
+yu mao qiu 羽毛球
+you yong 游泳
+pao bu 跑步
+ai hao 爱好
+xi huan 喜欢
+ai 爱
+xiang yao 想要
+xu yao 需要
+ke yi 可以
+ke neng 可能
+yi ding 一定
+dang ran 当然
+ye xu 也许
+bi xu 必须
+yin wei 因为
+suo yi 所以
+ru guo 如果
+dan shi 但是
+ran hou 然后
+hai shi 还是
+huo zhe 或者
+er qie 而且
+wei shen me 为什么
+shen me 什么
+zen me 怎么
+zen me yang 怎么样
+duo shao 多少
+ji ge 几个
+na li 哪里
+na er 哪儿
+zhe li 这里
+na li 那里
+zhe ge 这个
+na ge 那个
+zhe me 这么
+na me 那么
+yi xia 一下
+yi dian 一点
+yi qi 一起
+yi zhi 一直
+yi jing 已经
+hai mei 还没
+bu yao 不要
+bu shi 不是
+mei you 没有
+bu hui 不会
+bu neng 不能
+bu cuo 不错
+hen hao 很好
+fei chang 非常
+te bie 特别
+zui hao 最好
+geng hao 更好
+tai hao le 太好了
+zhen de 真的
+zhen hao 真好
+dui 对
+mei cuo 没错
+zhi dao 知道
+bu zhi dao 不知道
+ren shi 认识
+li jie 理解
+dong le 懂了
+ji de 记得
+wang le 忘了
+jue de 觉得
+ren wei 认为
+xi wang 希望
+xiang xin 相信
+dan xin 担心
+gao xing 高兴
+sheng qi 生气
+nan guo 难过
+lei le 累了
+e le 饿了
+ke le 渴了
+hao chi 好吃
+hao he 好喝
+hao kan 好看
+hao ting 好听
+piao liang 漂亮
+ke ai 可爱
+cong ming 聪明
+nu li 努力
+rong yi 容易
+kun nan 困难
+zhong yao 重要
+fang bian 方便
+an quan 安全
+jian kang 健康
+shen ti 身体
+tou fa 头发
+yan jing 眼睛
+shou 手
+jiao 脚
+xin 心
+wen ti 问题
+da an 答案
+fang fa 方法
+yuan yin 原因
+jie guo 结果
+jing yan 经验
+ji hui 机会
+xuan ze 选择
+jue ding 决定
+ji hua 计划
+mu biao 目标
+meng xiang 梦想
+sheng huo 生活
+ren sheng 人生
+she hui 社会
+jing ji 经济
+zheng fu 政府
+wen hua 文化
+li shi 历史
+ke xue 科学
+ji shu 技术
+yan jiu 研究
+jiao yu 教育
+xin wen 新闻
+bao zhi 报纸
+za zhi 杂志
+shu dian 书店
+tu shu guan 图书馆
+bi ji 笔记
+zuo ye 作业
+kao shi 考试
+cheng ji 成绩
+bi ye 毕业
+shu fu 舒服
+qing song 轻松
+hui jia 回家
+chu men 出门
+kai shi 开始
+jie shu 结束
+ji xu 继续
+deng yi xia 等一下
+mei wen ti 没问题
+ming bai 明白
+qing zhu yi 请注意
+zhu yi 注意
+xie xie ni 谢谢你
+wo ai ni 我爱你
+wo shi 我是
+wo xiang 我想
+wo yao 我要
+wo you 我有
+wo de 我的
+ni de 你的
+ta de 他的
+da jia 大家
+da jia hao 大家好
+ren men 人们
+yi ge 一个
+liang ge 两个
+san ge 三个
+shi ge 十个
+bai fen zhi 百分之
+yi qian 一千
+yi wan 一万
+ban tian 半天
+yi ban 一般
+zhi qian 之前
+zhi hou 之后
+zhi jian 之间
+zhong jian 中间
+pang bian 旁边
+li mian 里面
+wai mian 外面
+shang mian 上面
+xia mian 下面
+qian mian 前面
+hou mian 后面
+zuo bian 左边
+you bian 右边
+dong bian 东边
+nan bian 南边
+xi bian 西边
+bei bian 北边

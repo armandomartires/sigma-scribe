@@ -814,5 +814,11 @@ Thai (Kedmanee)
 Japanese (romaji)
 = Japans (romaji)
 
+Chinese Simplified (pinyin)
+= Chinees vereenvoudigd (pinyin)
+
+Chinese Traditional (pinyin)
+= Chinees traditioneel (pinyin)
+
 Machine-drafted translation, best effort; a native review is needed. Follows the Kobo's language.
 = Machinaal opgestelde vertaling, naar beste kunnen; een moedertaalcontrole is nodig. Volgt de taal van de Kobo.

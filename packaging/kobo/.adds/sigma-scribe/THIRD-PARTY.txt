@@ -21,6 +21,14 @@ version 3 of that licence (https://www.gnu.org/licenses/gpl-3.0.txt), the same f
 this program's AGPL-3.0; it is data read at run time, in its own file. Japanese input
 (v1.10) also has a small built-in dictionary written for this project (AGPL-3.0-only).
 
+Dictionaries: the pinyin dictionaries dict/pinyin-hans.txt and dict/pinyin-hant.txt, built from
+the Rime project's luna-pinyin and essay data (https://github.com/rime/rime-luna-pinyin,
+https://github.com/rime/rime-essay), GNU Lesser General Public License version 3 (dict/LGPL-3.0.txt),
+with data from Chewing, OpenCC and the Android Pinyin IME (Apache-2.0), CC-CEDICT and MoeDict (CC0);
+see dict/PINYIN-NOTICE.txt. Modified (reduced, Simplified form made with OpenCC), used as data
+read at run time, in its own files. Chinese input (v1.11) also has a small built-in seed written for
+this project (AGPL-3.0-only).
+
 Fonts (SIL Open Font License 1.1, texts in OFL-*.txt):
 - Literata (Regular, SemiBold, Italic)
 - Atkinson Hyperlegible

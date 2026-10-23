@@ -14,6 +14,7 @@ cp assets/fonts/OFL-*.txt "$OUT/.adds/sigma-scribe/"
 mkdir -p "$OUT/.adds/sigma-scribe/dict"
 cp assets/ja/skk-jisyo.txt "$OUT/.adds/sigma-scribe/dict/skk-jisyo.txt"
 cp assets/ja/SKK-JISYO.L-NOTICE.txt "$OUT/.adds/sigma-scribe/dict/"
+cp assets/zh/pinyin-hans.txt assets/zh/pinyin-hant.txt assets/zh/PINYIN-NOTICE.txt assets/zh/LGPL-3.0.txt "$OUT/.adds/sigma-scribe/dict/"
 chmod 755 "$OUT/.adds/sigma-scribe/sigma-scribe" "$OUT/.adds/sigma-scribe/launch.sh"
 ( cd "$OUT" && find . -type f | sort | xargs sha256sum ) > "$OUT.sha256"
 # Reproducible tarball: fixed order, owner, mode and time; gzip without name/time.

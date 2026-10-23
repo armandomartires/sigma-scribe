@@ -151,6 +151,13 @@ Installed on the Forma today: **1.6.2 + main ea32b50** (2026-10-23, binary only;
 - [ ] Phrases (v1.10.1): `watashihagakuseidesu` + Space → two phrases; Left / Right change the heavier underline; Shift + Right moves the boundary; a tap on a candidate moves on to the next phrase.
 - [ ] Han / kana size and line height next to Latin; wrapping a long Japanese paragraph (rows break at any kana).
 
+## Chinese (v1.11.0)
+- [ ] The CJK font pack is on the Kobo (`fonts/cjk.ttf`, rebuilt for Chinese) and the dictionaries `dict/pinyin-hans.txt`, `pinyin-hant.txt` are there.
+- [ ] Layout → Chinese Simplified (pinyin): `woaizhongguo` → 我爱中国 on the bar; Space writes it; `nihao` then 1–9 picks; Left / Right move the choice; a candidate that covers the start leaves the rest.
+- [ ] Time from the first letter to the candidates (the dictionary loads once, about 3 MB); typing speed afterwards; no ghosting on the candidate bar.
+- [ ] Punctuation in full width; `3.14` keeps its point; Enter keeps the pinyin; Esc removes it; 中 / A key.
+- [ ] Chinese Traditional (pinyin): `woaizhongguo` → 我愛中國; `tushuguan` → 圖書館.
+
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).
 
