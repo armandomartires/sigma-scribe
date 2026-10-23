@@ -2,7 +2,7 @@
 
 > **Standing order (user, 2026-10-22):** development past v1.4 uses only the emulator and CI. **All device testing waits for one pass on the Kobo Forma before the final stable release.** Every version adds its device checks here instead of asking for an install. Nothing on this list has been run unless it is ticked with a date. Install for the pass follows `docs/install-plan-forma.md` (needs approval): serial check (<FORMA-SERIAL>), never sdb, checksum-verified backup, binary-only replace.
 
-Installed on the Forma: the install plan run log says **1.6.2 + main ea32b50** (2026-10-23, binary only), the changelog says **1.10.1** with the system CJK font. **Confirm in Help → App info before the pass.** Run order: `docs/device-pass-run-order.md`. Earlier line, kept for the record: 1.4.0. Built and waiting: 1.4.1 … 1.4.6 (and the diagnostic 1.4.6-probe, draft PR #22).
+Installed on the Forma: **main 99d6887 = 1.11.1** (2026-10-23, binary, dictionaries and notices; fonts/cjk.ttf already present; see the install plan run log). Run order: `docs/device-pass-run-order.md`.
 
 ## Logs to collect during the pass
 - [ ] `/mnt/onboard/.adds/sigma-scribe/sigma-scribe.log` (perf lines: typing `perf:` p50/p95, `perf pointer:` p50/p95, count of `gl16-cleanup`).
