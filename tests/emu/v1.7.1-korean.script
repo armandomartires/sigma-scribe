@@ -5,8 +5,7 @@ tap-on Options
 tap-on Keyboard & input
 tap-on Layout
 page next
-page next
-shot v1.7.1-layout-choices-page3
+shot v1.7.1-layout-choices-page2
 tap-on Korean (Dubeolsik)
 expect-setting layout=ko
 esc

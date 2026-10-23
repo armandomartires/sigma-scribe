@@ -1,5 +1,7 @@
 # v1.2 (S12): four rotations + Auto. The Kobo build has the sensor off;
 # here a pretend sensor shows Auto, then the manual choices.
+# On the Forma a quarter turn clockwise gives Landscape inverted (R270,
+# decision in 766168f), so ccw is Landscape and cw is Landscape inverted.
 copy-notes tests/test-notes/_test
 expect-rotation Portrait
 expect-orientation-status Auto (no sensor) — Portrait
@@ -8,7 +10,7 @@ shot v1.2-options-auto-no-sensor
 tap-on Close
 sensor on
 expect-orientation-status Auto — Portrait
-tilt cw
+tilt ccw
 wait 300
 expect-rotation Portrait
 wait 600
@@ -18,7 +20,7 @@ tilt 180
 wait 900
 expect-rotation Portrait inverted
 shot v1.2-auto-portrait-inverted
-tilt ccw
+tilt cw
 wait 900
 expect-rotation Landscape inverted
 shot v1.2-auto-landscape-inverted

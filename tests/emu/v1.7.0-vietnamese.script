@@ -6,7 +6,6 @@ tap-on Keyboard & input
 tap-on Layout
 page next
 shot v1.7.0-layout-choices-page2
-page next
 tap-on Vietnamese (Telex)
 expect-setting layout=vi
 esc
@@ -23,7 +22,6 @@ shot v1.7.0-telex-full
 tap-on Options
 tap-on Keyboard & input
 tap-on Layout
-page next
 page next
 tap-on Vietnamese (VNI)
 expect-setting layout=vi-vni

@@ -5,8 +5,7 @@ tap-on Options
 tap-on Keyboard & input
 tap-on Layout
 page next
-page next
-shot v1.8.0-layout-choices-page3
+shot v1.8.0-layout-choices-page2
 tap-on Arabic
 expect-setting layout=ar
 esc
@@ -21,12 +20,11 @@ usb-key Left
 usb-key Left
 usb-type X
 shot v1.8.0-arrows
-key Return
+usb-key Enter
 usb-type  ﻻ
 tap-on Options
 tap-on Keyboard & input
 tap-on Layout
-page next
 page next
 page next
 tap-on Hebrew
@@ -39,12 +37,11 @@ tap-on Options
 tap-on Keyboard & input
 tap-on Layout
 page next
-page next
 tap-on Persian (Farsi)
 expect-setting layout=fa
 esc
 esc
-key Return
+usb-key Enter
 usb-type سلام دنیا گچپژ
 shot v1.8.0-persian
 tap-on Options
@@ -56,7 +53,7 @@ tap-on Urdu (phonetic)
 expect-setting layout=ur
 esc
 esc
-key Return
+usb-key Enter
 usb-type اردو زبان
 expect اردو زبان
 shot v1.8.0-urdu
