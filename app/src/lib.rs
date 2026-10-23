@@ -601,9 +601,11 @@ impl App {
         }
         let r = match tilt {
             Tilt::Upright => Rotation::R0,
-            Tilt::Clockwise => Rotation::R90,
+            // Checked on the Forma: a quarter turn clockwise needs R270,
+            // the screen turns the other way to stay upright.
+            Tilt::Clockwise => Rotation::R270,
             Tilt::UpsideDown => Rotation::R180,
-            Tilt::CounterClockwise => Rotation::R270,
+            Tilt::CounterClockwise => Rotation::R90,
         };
         self.tilt = match self.tilt {
             _ if r == self.settings.rotation => None,

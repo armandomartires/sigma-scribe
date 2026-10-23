@@ -35,6 +35,7 @@ pub struct KoboDevice {
     events: Receiver<Event>,
     otg: OtgSwitch,
     epoch: Instant,
+    gsensor: bool,
 }
 
 impl KoboDevice {
@@ -64,8 +65,25 @@ impl KoboDevice {
         let at_start = std::fs::read_to_string(PROC_DEVICES)
             .map(|t| keyboards(&t))
             .unwrap_or_default();
+        // The accelerometer (v1.12) is read by its own thread, not the touch decoder.
+        let accel = std::fs::read_to_string(PROC_DEVICES)
+            .ok()
+            .and_then(|t| crate::gsensor::find_node(&t));
+        let accel_n: Option<u32> = accel
+            .as_deref()
+            .and_then(|p| p.strip_prefix("/dev/input/event"))
+            .and_then(|n| n.parse().ok());
+        let mut gsensor = false;
+        if crate::gsensor::ENABLED {
+            if let Some(path) = accel.as_deref() {
+                if let Ok(f) = File::open(path) {
+                    spawn_accel_reader(f, tx.clone(), epoch);
+                    gsensor = true;
+                }
+            }
+        }
         for n in 0..4 {
-            if at_start.contains(&n) {
+            if at_start.contains(&n) || (gsensor && accel_n == Some(n)) {
                 continue;
             }
             let Ok(mut f) = File::open(format!("/dev/input/event{n}")) else {
@@ -106,6 +124,7 @@ impl KoboDevice {
             events: rx,
             epoch,
             pointer_updates: 0,
+            gsensor,
         })
     }
 }
@@ -177,6 +196,10 @@ impl Device for KoboDevice {
         r
     }
 
+    fn has_gsensor(&self) -> bool {
+        self.gsensor
+    }
+
     fn next_event(&mut self) -> Option<Event> {
         // Ticks every 50 ms so a resting finger becomes a long-press.
         match self.events.recv_timeout(Duration::from_millis(50)) {
@@ -200,6 +223,36 @@ impl Drop for KoboDevice {
             sg_close();
         }
     }
+}
+
+/// Reads the accelerometer's X/Y/Z, and on every report that changes the
+/// way the device is held sends [`Event::Tilt`] (flat / diagonal sends
+/// nothing, so the last rotation stays).
+fn spawn_accel_reader(mut f: File, tx: Sender<Event>, epoch: Instant) {
+    use crate::gsensor::{Tilt, ABS_X, ABS_Y, EV_ABS};
+    thread::spawn(move || {
+        let (mut x, mut y) = (0, 0);
+        let mut last: Option<Tilt> = None;
+        let mut buf = [0u8; EVENT_SIZE_ARM32];
+        while f.read_exact(&mut buf).is_ok() {
+            let e = decode_arm32(&buf);
+            if e.kind == EV_ABS && e.code == ABS_X {
+                x = e.value;
+            } else if e.kind == EV_ABS && e.code == ABS_Y {
+                y = e.value;
+            } else if e.kind == 0 {
+                if let Some(tilt) = Tilt::from_accel(x, y) {
+                    if last != Some(tilt) {
+                        last = Some(tilt);
+                        let t = epoch.elapsed().as_millis() as u64;
+                        if tx.send(Event::Tilt { tilt, t }).is_err() {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 const PROC_DEVICES: &str = "/proc/bus/input/devices";
