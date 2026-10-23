@@ -2,7 +2,7 @@
 
 > **Standing order (user, 2026-10-22):** development past v1.4 uses only the emulator and CI. **All device testing waits for one pass on the Kobo Forma before the final stable release.** Every version adds its device checks here instead of asking for an install. Nothing on this list has been run unless it is ticked with a date. Install for the pass follows `docs/install-plan-forma.md` (needs approval): serial check (<FORMA-SERIAL>), never sdb, checksum-verified backup, binary-only replace.
 
-Installed on the Forma today: **1.6.2 + main ea32b50** (2026-10-23, binary only; see the install plan run log). Earlier line, kept for the record: 1.4.0. Built and waiting: 1.4.1 … 1.4.6 (and the diagnostic 1.4.6-probe, draft PR #22).
+Installed on the Forma: the install plan run log says **1.6.2 + main ea32b50** (2026-10-23, binary only), the changelog says **1.10.1** with the system CJK font. **Confirm in Help → App info before the pass.** Run order: `docs/device-pass-run-order.md`. Earlier line, kept for the record: 1.4.0. Built and waiting: 1.4.1 … 1.4.6 (and the diagnostic 1.4.6-probe, draft PR #22).
 
 ## Logs to collect during the pass
 - [ ] `/mnt/onboard/.adds/sigma-scribe/sigma-scribe.log` (perf lines: typing `perf:` p50/p95, `perf pointer:` p50/p95, count of `gl16-cleanup`).
@@ -18,8 +18,9 @@ Installed on the Forma today: **1.6.2 + main ea32b50** (2026-10-23, binary only;
 - [ ] Legibility and fit at 200 % on the panel (title bar, sheets, drawer, Find, status bar); Lucide icons crisp.
 
 ## Orientation (v1.2, S12)
-- [ ] Read-only g-sensor probe: node and codes per hold (see the probe procedure); map 0x19 / 0x1a.
-- [ ] After the mapping and an approved `ENABLED = true` build: touch lands under the finger in all four rotations; page buttons right upside down; no turning mid-typing.
+- [x] Read-only g-sensor probe, 2026-10-23: the Forma sends raw EV_ABS, not MSC_RAW; fixed in the Unreleased build (Auto orientation reads the accelerometer).
+- [ ] Auto turns the screen in all four ways on the Forma; touch lands under the finger in each; page buttons right upside down; no turning mid-typing.
+- [ ] Settings → Display → Orientation: the three buttons (Auto, Portrait, Landscape) work and show the choice.
 
 ## Keyboard layouts (v1.3, S13)
 - [ ] AltGr on the K400 and a 60 % board; dead keys from a real USB keyboard (FR, DE, PT).

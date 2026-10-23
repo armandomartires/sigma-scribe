@@ -164,9 +164,9 @@ User decisions (2026-10-21 21:24): v1.0.1 = pointer trails + reverse scroll + "U
 **Answered 2026-10-21 21:31 (decision 31):** translations machine-drafted by Grok Bot for all UI languages (best effort, no reviewer); UI language follows the Kobo (`Kobo eReader.conf` → `[ApplicationPreferences] CurrentLocale`, read-only, EN fallback); opt-in local handwriting collection yes; character boxes OK as v1.5 fallback; SKK-style Japanese first; test notes prefixed `test-`. Defaults kept: CJK subsets + optional full font; Modern Standard Arabic first, Urdu letters later. **No open questions left in the plan.**
 
 ### Before the stable release (v1.4) — admin checklist (decision 36)
-- [ ] Publish the v1.0.0 draft GitHub release — needs the user's approval
-- [ ] Tag v1.0.1 — needs the user's approval
-- [ ] Tag v1.0.2 — needs the user's approval
+- [x] Publish the v1.0.0 draft GitHub release — done 2026-10-23
+- [x] Tag v1.0.1 — done 2026-10-23
+- [x] Tag v1.0.2 — done 2026-10-23
 
 ### Roadmap after v0.2 (confirmed)
 
