@@ -442,6 +442,8 @@ pub struct App {
     /// A finger on a paged scroll bar (Settings, Help, Preview): where it
     /// went down and whether it has moved (v1.13.1).
     bar_drag: Option<(i32, bool)>,
+    /// UI scale picked on its slider but not applied until the finger lifts.
+    ui_scale_drag: Option<u16>,
     /// Panel size as the device reports it (portrait on the Forma).
     phys: (u32, u32),
     /// Rotated copy of the canvas sent to the panel in landscape.
@@ -560,6 +562,7 @@ impl App {
             settings_focus: None,
             slider_touch: None,
             bar_drag: None,
+            ui_scale_drag: None,
             phys: (width, height),
             phys_canvas: Canvas::new(width, height, 255),
             drawer: [false; 3],
@@ -1179,6 +1182,7 @@ impl App {
             focus: self.settings_focus,
             hw_samples: self.hwr.samples,
             light: self.light_have.then_some(self.light_step),
+            ui_scale_pending: self.ui_scale_drag,
         }
     }
 
@@ -1320,6 +1324,12 @@ impl App {
                 let (lab, ch) = self.screen.options_slider_at(&self.options_model(), x, y)?;
                 self.slider_touch = Some(lab);
                 self.settings_focus = Some(lab);
+                // UI scale rescales everything: only the thumb moves while
+                // the finger is down, the scale changes on release.
+                if let Some(Change::UiScaleTo(v)) = ch {
+                    self.ui_scale_drag = Some(v);
+                    return Some(Some(Refresh::Partial));
+                }
                 Some(Some(match ch {
                     Some(c) => self.change(c),
                     None => Refresh::Partial,
@@ -1333,6 +1343,22 @@ impl App {
                 let ch = self
                     .screen
                     .options_slider_drag(&self.options_model(), lab, x);
+                if lab == "UI scale" {
+                    let Some(Change::UiScaleTo(v)) = ch else {
+                        return Some(None);
+                    };
+                    if phase == Phase::Up {
+                        self.ui_scale_drag = None;
+                        return Some(Some(if v == self.settings.ui_scale {
+                            Refresh::Partial
+                        } else {
+                            self.change(Change::UiScaleTo(v))
+                        }));
+                    }
+                    let moved = self.ui_scale_drag != Some(v);
+                    self.ui_scale_drag = Some(v);
+                    return Some(moved.then_some(Refresh::Partial));
+                }
                 Some(match ch {
                     Some(Change::KbSize(v)) if v == self.settings.kb_size => None,
                     Some(Change::SizeTo(v)) if (v - self.settings.size).abs() < 0.05 => None,

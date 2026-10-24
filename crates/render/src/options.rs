@@ -545,6 +545,9 @@ pub struct OptionsModel<'a> {
     /// The front light's step when the device has one (v1.12); `None`
     /// hides Display → Backlight.
     pub light: Option<u8>,
+    /// UI scale while its slider is being dragged: the thumb moves and the
+    /// value shows, but the scale itself only changes on release (v1.13.1).
+    pub ui_scale_pending: Option<u16>,
 }
 
 /// One drawn line of a page: a section band or a row.
@@ -711,15 +714,10 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
             }
         }
         "UI scale" => {
+            let shown = m.ui_scale_pending.unwrap_or(m.settings.ui_scale);
             let stops: Vec<Cell> = sigma_core::settings::UI_SCALES
                 .iter()
-                .map(|&v| {
-                    choice(
-                        &format!("{v} %"),
-                        Change::UiScaleTo(v),
-                        v == m.settings.ui_scale,
-                    )
-                })
+                .map(|&v| choice(&format!("{v} %"), Change::UiScaleTo(v), v == shown))
                 .collect();
             Kind::Slider {
                 value: stops.iter().position(|c| c.active).unwrap_or(0),
@@ -1606,6 +1604,7 @@ mod tests {
             focus: None,
             hw_samples: 0,
             light: None,
+            ui_scale_pending: None,
         }
     }
 
