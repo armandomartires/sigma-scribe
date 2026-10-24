@@ -1,0 +1,30 @@
+# v1.11.2: caret and page keys, Insert / overwrite and a working Undo in the Write panel.
+copy-notes tests/test-notes/_test
+tap-on Write
+shot v1.11.2-write-panel
+tap-on @
+tap-on ?
+expect @?
+tap-on Undo
+expect-not ?
+tap-on Undo
+expect-not @
+# Home and End move along the line, PgDn / PgUp by a screen.
+tap 100 168
+tap-on End
+expect-caret-after # Start here
+tap-on Home
+tap-on PgDn
+tap-on PgUp
+# Insert: typed characters replace the ones after the caret.
+tap 100 168
+tap-on Ins
+tap-on @
+tap-on @
+expect @@
+expect-not @@@
+shot v1.11.2-overwrite
+tap-on Undo
+expect-not @@
+tap-on Ins
+tap-on Done
