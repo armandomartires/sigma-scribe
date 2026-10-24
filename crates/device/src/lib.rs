@@ -209,6 +209,7 @@ pub enum HwKey {
     End,
     PageUp,
     PageDown,
+    Insert,
 }
 
 /// Mouse buttons (v0.8.1).

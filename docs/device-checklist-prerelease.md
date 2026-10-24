@@ -159,6 +159,13 @@ Installed on the Forma: **main 99d6887 = 1.11.1** (2026-10-23, binary, dictionar
 - [ ] Punctuation in full width; `3.14` keeps its point; Enter keeps the pinyin; Esc removes it; 中 / A key.
 - [ ] Chinese Traditional (pinyin): `woaizhongguo` → 我愛中國; `tushuguan` → 圖書館.
 
+## Write panel keys, Insert and Undo (Unreleased after 1.11.1)
+- [ ] Write: the row above the writing area shows Home, End, PgUp, PgDn, Ins and Undo; each is easy to hit with a finger at 200 %; the writing area is still comfortable (portrait and landscape).
+- [ ] Home / End move the caret along the line; PgUp / PgDn move by a screen; a reading still pending is typed first; the candidate bar clears.
+- [ ] Ins: the status bar shows `OVR`; typing with the panel keys, the keyboard and a USB keyboard replaces the next character and never eats a line break; Ins again goes back; Korean and Japanese layouts still insert.
+- [ ] USB keyboard: the Insert key toggles it.
+- [ ] Undo after a reading is typed takes the text back (not only unread ink); with ink pending it removes the last stroke first.
+
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).
 
