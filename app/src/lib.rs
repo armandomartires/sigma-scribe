@@ -1121,7 +1121,9 @@ impl App {
             HwKey::Right => b.right(),
             HwKey::Up => b.up(),
             HwKey::Down => b.down(),
-            HwKey::Home | HwKey::End | HwKey::PageUp | HwKey::PageDown => return None,
+            HwKey::Home | HwKey::End | HwKey::PageUp | HwKey::PageDown | HwKey::Insert => {
+                return None
+            }
             HwKey::Escape => {
                 self.scratch_focus = false;
                 return Some(Refresh::Fast);
@@ -1560,6 +1562,13 @@ impl App {
             HwKey::End => Key::End,
             HwKey::PageUp => Key::PgUp,
             HwKey::PageDown => Key::PgDn,
+            HwKey::Insert => {
+                if self.rename.is_some() || self.find_typing() || self.scratch_focused() {
+                    return None;
+                }
+                self.buffer.toggle_overwrite();
+                return Some(Refresh::Partial);
+            }
         };
         let kb = &mut self.keyboard;
         let saved = (kb.shift, kb.ctrl, kb.alt);
@@ -1884,6 +1893,7 @@ impl App {
     /// # Errors
     /// The device could not present the frame.
     pub fn render(&mut self, dev: &mut dyn Device, refresh: Refresh) -> std::io::Result<()> {
+        self.screen.overwrite = self.buffer.overwrite();
         if refresh == Refresh::Pointer
             && std::mem::take(&mut self.pointer_fast)
             && self.base.pixels.len() == self.canvas.pixels.len()
@@ -2533,6 +2543,27 @@ impl App {
         Some(Refresh::Partial)
     }
 
+    /// Undo in the Letters and Free panels (v1.11.2): the last stroke that
+    /// is still unread; with none pending (the reading is already in the
+    /// note) it takes back what was last typed, as Ctrl+Z does. `text` off
+    /// (Train) leaves the note alone.
+    fn ink_undo(&mut self, text: bool) -> Option<Refresh> {
+        let ink = self.ink.as_mut()?;
+        if ink.ink.undo() {
+            if ink.ink.strokes.is_empty() {
+                ink.boxi = None;
+            }
+            return Some(Refresh::Partial);
+        }
+        if !text || !self.buffer.undo() {
+            return None;
+        }
+        ink.cands.clear();
+        ink.replace_ok = false;
+        self.save();
+        Some(Refresh::Partial)
+    }
+
     /// Types `s` from the letters panel (reads a pending box first).
     fn letters_type(&mut self, s: &str, back: bool) -> Option<Refresh> {
         let words = self.ink.as_ref()?.mode == sigma_render::ink::InkMode::Free;
@@ -2685,15 +2716,31 @@ impl App {
                 self.ink = None;
                 return Some(Refresh::Partial);
             }
-            (InkMode::Free, InkButton::Undo) => {
-                let ink = self.ink.as_mut()?;
-                if ink.ink.undo() {
-                    if ink.ink.strokes.is_empty() {
-                        ink.boxi = None;
-                    }
-                    return Some(Refresh::Partial);
+            (InkMode::Free, InkButton::Undo) => return self.ink_undo(true),
+            (
+                InkMode::Letters | InkMode::Free,
+                InkButton::Home | InkButton::End | InkButton::PgUp | InkButton::PgDn,
+            ) => {
+                use sigma_device::HwKey;
+                let _ = self.read_letter();
+                if let Some(ink) = &mut self.ink {
+                    // The caret moves on: the last reading is no longer at it.
+                    ink.cands.clear();
+                    ink.replace_ok = false;
                 }
-                return None;
+                let key = match b {
+                    InkButton::Home => HwKey::Home,
+                    InkButton::End => HwKey::End,
+                    InkButton::PgUp => HwKey::PageUp,
+                    _ => HwKey::PageDown,
+                };
+                let _ = self.chord(key, Mods::default());
+                return Some(Refresh::Partial);
+            }
+            (InkMode::Letters | InkMode::Free, InkButton::Ins) => {
+                let _ = self.read_letter();
+                self.buffer.toggle_overwrite();
+                return Some(Refresh::Partial);
             }
             (InkMode::Letters, InkButton::Cancel) => {
                 let _ = self.read_letter();
@@ -2746,16 +2793,8 @@ impl App {
                 }
                 return Some(Refresh::Partial);
             }
-            (InkMode::Letters | InkMode::Train(_), InkButton::Undo) => {
-                let ink = self.ink.as_mut()?;
-                if ink.ink.undo() {
-                    if ink.ink.strokes.is_empty() {
-                        ink.boxi = None;
-                    }
-                    return Some(Refresh::Partial);
-                }
-                return None;
-            }
+            (InkMode::Letters, InkButton::Undo) => return self.ink_undo(true),
+            (InkMode::Train(_), InkButton::Undo) => return self.ink_undo(false),
             (InkMode::Draw, _) => {}
             _ => return None,
         }
@@ -2966,7 +3005,8 @@ impl App {
             | HwKey::Home
             | HwKey::End
             | HwKey::PageUp
-            | HwKey::PageDown => {}
+            | HwKey::PageDown
+            | HwKey::Insert => {}
         }
         Some(Refresh::Fast)
     }
@@ -3445,9 +3485,9 @@ impl App {
             Event::Wheel { notches } => self.wheel(notches),
             Event::Chord { key, mods } => self.chord(key, mods),
             // Nav keys only a USB keyboard has: the on-screen key path.
-            Event::Key(k @ (HwKey::Home | HwKey::End | HwKey::PageUp | HwKey::PageDown)) => {
-                self.chord(k, Mods::default())
-            }
+            Event::Key(
+                k @ (HwKey::Home | HwKey::End | HwKey::PageUp | HwKey::PageDown | HwKey::Insert),
+            ) => self.chord(k, Mods::default()),
             Event::Quit | Event::Power => {
                 self.save();
                 self.save_scratch();
@@ -3554,11 +3594,17 @@ impl App {
                 }
                 match k {
                     HwKey::Char(c) => {
+                        // Overwrite is for plain typing, not for composing layouts.
+                        let over = self.buffer.overwrite();
+                        if self.settings.kb_layout.composes() {
+                            self.buffer.set_overwrite(false);
+                        }
                         self.keyboard.composer.type_char(
                             &mut self.buffer,
                             self.settings.kb_layout,
                             c,
                         );
+                        self.buffer.set_overwrite(over);
                     }
                     HwKey::Backspace => self
                         .keyboard
@@ -3581,7 +3627,9 @@ impl App {
                     }
                     HwKey::Up => self.screen.caret_row(&mut self.buffer, page, false),
                     HwKey::Down => self.screen.caret_row(&mut self.buffer, page, true),
-                    HwKey::Home | HwKey::End | HwKey::PageUp | HwKey::PageDown => return None,
+                    HwKey::Home | HwKey::End | HwKey::PageUp | HwKey::PageDown | HwKey::Insert => {
+                        return None
+                    }
                     HwKey::Escape => {
                         if self.keyboard.composer.escape(&mut self.buffer) {
                             self.save();
@@ -3843,6 +3891,11 @@ impl App {
                 "Space" => InkButton::Space,
                 "Erase" => InkButton::Back,
                 "Return" => InkButton::Enter,
+                "Home" => InkButton::Home,
+                "End" => InkButton::End,
+                "PgUp" => InkButton::PgUp,
+                "PgDn" => InkButton::PgDn,
+                "Ins" => InkButton::Ins,
                 "Train" => InkButton::Train,
                 "Skip" => InkButton::Skip,
                 "Save" => InkButton::Save,
@@ -4349,7 +4402,8 @@ impl App {
             | HwKey::Home
             | HwKey::End
             | HwKey::PageUp
-            | HwKey::PageDown => return None,
+            | HwKey::PageDown
+            | HwKey::Insert => return None,
             HwKey::Escape => Key::Esc,
         };
         if let Key::Char(c) = key {

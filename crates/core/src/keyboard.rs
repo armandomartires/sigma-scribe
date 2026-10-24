@@ -564,8 +564,20 @@ impl Keyboard {
         }
     }
 
-    /// Applies a key to the focused buffer.
+    /// Applies a key to the focused buffer. Overwrite (Insert) applies to
+    /// plain typing only: a layout that composes (Vietnamese, Korean,
+    /// Japanese, Chinese, Indic, Thai) or a waiting dead key inserts.
     pub fn press(&mut self, key: Key, buffer: &mut Buffer, tab: TabKind) -> KeyAction {
+        let over = buffer.overwrite();
+        if over && (self.lang.composes() || self.composer.pending.is_some()) {
+            buffer.set_overwrite(false);
+        }
+        let action = self.press_key(key, buffer, tab);
+        buffer.set_overwrite(over);
+        action
+    }
+
+    fn press_key(&mut self, key: Key, buffer: &mut Buffer, tab: TabKind) -> KeyAction {
         // Any key that is not a character or a modifier writes a waiting
         // accent first (v1.3 composer).
         if self.composer.pending.is_some()

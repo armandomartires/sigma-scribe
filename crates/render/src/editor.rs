@@ -171,6 +171,8 @@ pub struct EditorScreen {
     pub scroll: usize,
     /// A USB keyboard is connected (v0.8).
     pub usb_live: bool,
+    /// Typing overwrites (the Insert key): the status bar says `OVR`.
+    pub overwrite: bool,
     /// Navigation history is not empty: show the Back arrow (v1.0.2).
     pub back_on: bool,
     /// Settings → Word mode is on (v1.5.3): Letters offers Words.
@@ -232,6 +234,7 @@ impl EditorScreen {
             key_theme: None,
             cfg: Settings::default(),
             usb_live: false,
+            overwrite: false,
             back_on: false,
             ink_words: false,
             drawer_open: [false; 3],
@@ -1388,7 +1391,12 @@ impl EditorScreen {
             if t == Theme::NIGHT { "Night" } else { "Paper" },
             save.label()
         );
-        tr(&s).into_owned()
+        let s = tr(&s).into_owned();
+        if self.overwrite {
+            format!("OVR \u{b7} {s}")
+        } else {
+            s
+        }
     }
 
     /// "Aa" in a 44 px target: the Options sheet.
