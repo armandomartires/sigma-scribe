@@ -23,14 +23,14 @@ shot v1.0-graph
 tap-on Close
 tap-on Options
 shot v1.0-options
-tap-on Paper/Night
+tap-on Dark mode/On
 tap-on Close
 shot v1.0-night
 tap-on Help
 shot v1.0-help
 tap-on Close
 tap-on Options
-tap-on Paper/Day
+tap-on Dark mode/Off
 tap-on Orientation/Landscape
 tap-on Close
 expect-screen 1920x1440

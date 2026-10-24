@@ -1,3 +1,9 @@
 # Σscribe (AGPL-3.0, SIGMArecon). Launches over the stock reader;
 # leaving the app reboots the Kobo back into the stock reader.
 menu_item:main:Σscribe:cmd_spawn:quiet:exec /mnt/onboard/.adds/sigma-scribe/launch.sh
+# The NickelMenu tab (firmware 4.23.15505+, the bottom bar of the home
+# screen) is called My Apps and has its own icon: a grid, outlined, and
+# filled while the tab is open.
+experimental:menu_main_15505_label:My Apps
+experimental:menu_main_15505_icon:/mnt/onboard/.adds/sigma-scribe/icons/my-apps.png
+experimental:menu_main_15505_icon_active:/mnt/onboard/.adds/sigma-scribe/icons/my-apps-active.png

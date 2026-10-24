@@ -17,7 +17,7 @@ usb unplug
 shot v1.4.5-auto-off-focus-paper
 tap-on Back
 tap-on Display
-tap-on Paper/Night
+tap-on Dark mode/On
 tap-on Back
 tap-on Keyboard & input
 shot v1.4.5-auto-off-night
@@ -26,5 +26,5 @@ expect-setting keyboard_size=auto
 shot v1.4.5-auto-on-night
 tap-on Back
 tap-on Display
-tap-on Paper/Day
+tap-on Dark mode/Off
 tap-on Close

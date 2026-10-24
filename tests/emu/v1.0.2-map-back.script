@@ -39,7 +39,7 @@ tap-on Back
 expect-open _test/test-00-start-here.md
 # Night and landscape map.
 tap-on Options
-tap-on Paper/Night
+tap-on Dark mode/On
 tap-on Orientation/Landscape
 tap-on Close
 tap-on Graph
@@ -47,6 +47,6 @@ tap-on Node:_test/test-todos.md
 shot v1.0.2-graph-map-landscape-night
 tap-on Close
 tap-on Options
-tap-on Paper/Day
+tap-on Dark mode/Off
 tap-on Orientation/Portrait
 tap-on Close

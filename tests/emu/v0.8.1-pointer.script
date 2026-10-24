@@ -66,7 +66,7 @@ click
 # Night and landscape.
 pointer-to-control Options
 click
-pointer-to-control Paper/Night
+pointer-to-control Dark mode/On
 click
 pointer-to-control Orientation/Landscape
 click
@@ -78,7 +78,7 @@ wait 200
 shot v0.8.1-landscape-night
 pointer-to-control Options
 click
-pointer-to-control Paper/Day
+pointer-to-control Dark mode/Off
 click
 pointer-to-control Orientation/Portrait
 click

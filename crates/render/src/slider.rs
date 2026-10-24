@@ -38,8 +38,8 @@ pub struct Geom {
     pub track_y: i32,
 }
 
-/// Lays out `n` stops across `area`; the track sits in the upper half and
-/// the labels under it.
+/// Lays out `n` stops across `area`; the value label sits above the thumb,
+/// the track in the lower half, the end labels on the value's line.
 #[must_use]
 pub fn geom(area: Rect, n: usize, s: Scale) -> Geom {
     let n = n.max(1) as i32;
@@ -70,7 +70,7 @@ pub fn geom(area: Rect, n: usize, s: Scale) -> Geom {
         area,
         stops,
         xs,
-        track_y: area.y + area.h * 2 / 5,
+        track_y: area.y + area.h * 3 / 5,
     }
 }
 
@@ -105,10 +105,13 @@ fn ring(c: &mut Canvas, cx: i32, cy: i32, r: i32, t: i32, ink: u8, paper: u8) {
 /// greyscale refresh; never shown while the slider moves.
 pub const MUTED: u8 = 0x88;
 
-/// Draws the slider straight on the page (v1.4.5: no plate, no frame).
-/// Enabled: solid `ink` only (track, dots, thumb; labels in ink). Disabled:
-/// everything in [`MUTED`] grey, hollow dots, hollow thumb. Focus: a
-/// bigger thumb with a thicker ring. `paper` is the page colour behind it.
+/// Draws the slider straight on the page, after the Kobo's own (v1.13.1):
+/// a thick track up to a hollow ring thumb, a hairline after it, the
+/// current value above the thumb and the end labels above the track ends.
+/// There is no dot per stop; taps and drags still snap to the stops.
+/// Enabled: solid `ink` only (DU-safe, only the thumb and the track change).
+/// Disabled: everything in [`MUTED`] grey. Focus: a bigger thumb with a
+/// thicker ring. `paper` is the page colour behind it.
 pub fn draw(
     c: &mut Canvas,
     g: &Geom,
@@ -122,57 +125,86 @@ pub fn draw(
     let (Some(&first), Some(&last)) = (g.xs.first(), g.xs.last()) else {
         return;
     };
-    let th = s.px(3.0).max(2);
-    let ty = g.track_y - th / 2;
-    if sl.enabled {
-        c.fill(Rect::new(first, ty, last - first, th), fg);
-    } else {
-        let dash = s.px(4.0).max(2);
-        let mut x = first;
-        while x < last {
-            c.fill(Rect::new(x, ty, dash.min(last - x), th), fg);
-            x += 2 * dash;
-        }
+    let tx = g.xs.get(sl.value).copied().unwrap_or(first);
+    let thick = s.px(4.0).max(3);
+    let hair = s.px(1.5).max(1);
+    // Done part thick, the rest a hairline.
+    c.fill(
+        Rect::new(first, g.track_y - thick / 2, tx - first, thick),
+        fg,
+    );
+    c.fill(Rect::new(tx, g.track_y - hair / 2, last - tx, hair), fg);
+    // The thumb: a hollow ring (paper inside).
+    let mut r = s.px(15.0).max(MIN_TARGET / 3);
+    let mut t = s.px(3.0).max(2);
+    if sl.focused && sl.enabled {
+        r += s.px(3.0).max(2);
+        t += s.px(1.5).max(1);
     }
-    let dot = s.px(5.0).max(3);
-    let line = s.px(1.5).max(1);
-    for &x in &g.xs {
-        if sl.enabled {
-            disc(c, x, g.track_y, dot, fg);
-        } else {
-            ring(c, x, g.track_y, dot, line, fg, paper);
-        }
-    }
-    if let Some(&tx) = g.xs.get(sl.value) {
-        let mut r = s.px(11.0).max(MIN_TARGET / 4);
-        let mut t = line;
-        if sl.focused && sl.enabled {
-            // Focus without a frame: a bigger thumb with a thicker ring.
-            r += s.px(3.0).max(2);
-            t = line * 2;
-        }
-        if sl.enabled {
-            ring(c, tx, g.track_y, r + t, t, fg, paper);
-            disc(c, tx, g.track_y, r - line, fg);
-        } else {
-            ring(c, tx, g.track_y, r, line * 2, fg, paper);
-        }
-    }
+    ring(c, tx, g.track_y, r, t, fg, paper);
+    // The value over the thumb, the end labels under the ends.
     let size = ui * 0.85;
-    let face = if sl.enabled {
-        Face::AtkinsonBold
-    } else {
-        Face::Atkinson
-    };
-    let base = g.track_y as f32 + s.px(30.0) as f32;
-    for (i, (&x, lab)) in g.xs.iter().zip(&sl.stops).enumerate() {
-        let f = if i == sl.value {
-            Face::AtkinsonBold
-        } else {
-            face
+    let lift = r + s.px(12.0);
+    if let Some(lab) = sl.stops.get(sl.value).filter(|l| !l.is_empty()) {
+        let w = fonts.width(Face::AtkinsonBold, size, lab);
+        let (lo, hi) = (g.area.x as f32, (g.area.x + g.area.w) as f32 - w);
+        let x = (tx as f32 - w / 2.0).clamp(lo, hi.max(lo));
+        fonts.draw(
+            c,
+            Face::AtkinsonBold,
+            size,
+            x,
+            (g.track_y - lift) as f32,
+            lab,
+            fg,
+        );
+    }
+    // End labels on the same line as the value, above the track's ends.
+    let line_y = (g.track_y - lift) as f32;
+    for i in [0, sl.stops.len().saturating_sub(1)] {
+        if i == sl.value {
+            continue;
+        }
+        let (Some(lab), Some(&x)) = (sl.stops.get(i), g.xs.get(i)) else {
+            continue;
         };
-        let w = fonts.width(f, size, lab);
-        fonts.draw(c, f, size, x as f32 - w / 2.0, base, lab, fg);
+        if lab.is_empty() {
+            continue;
+        }
+        let w = fonts.width(Face::Atkinson, size, lab);
+        let (lo, hi) = (g.area.x as f32, (g.area.x + g.area.w) as f32 - w);
+        let lx = (x as f32 - w / 2.0).clamp(lo, hi.max(lo));
+        if sl.enabled {
+            text_1bit(c, fonts, (Face::Atkinson, size), lx, line_y, lab, fg);
+        } else {
+            fonts.draw(c, Face::Atkinson, size, lx, line_y, lab, fg);
+        }
+    }
+}
+
+/// Text in 1-bit ink (coverage >= 50 % is `ink`, the rest is left alone): a
+/// label that changes while the thumb moves must stay pure black and white.
+fn text_1bit(
+    c: &mut Canvas,
+    fonts: &Fonts,
+    (face, size): (Face, f32),
+    x: f32,
+    base: f32,
+    t: &str,
+    ink: u8,
+) {
+    let tw = fonts.width(face, size, t).ceil() as i32 + 4;
+    let th = (size * 1.6).ceil() as i32;
+    let (ox, oy) = (x.floor() as i32 - 2, (base - size * 1.15).floor() as i32);
+    let mut tmp = Canvas::new(tw.max(1) as u32, th.max(1) as u32, 255);
+    fonts.draw(&mut tmp, face, size, x - ox as f32, base - oy as f32, t, 0);
+    let b = c.bounds();
+    for yy in 0..th {
+        for xx in 0..tw {
+            if tmp.pixels[(yy * tw + xx) as usize] < 128 && b.contains(ox + xx, oy + yy) {
+                c.pixels[((oy + yy) * c.width as i32 + ox + xx) as usize] = ink;
+            }
+        }
     }
 }
 

@@ -75,7 +75,7 @@ What it means for Σscribe: the Kobo keyboard is a **five-row phone-style board*
 | Checkbox + italic "On" | `Kind::Check`; also Experimental features |
 | Segmented control | `Kind::Inline` (selected filled) |
 | Slider, hollow thumb | `crates/render/src/slider.rs` (stops, thumb) — Backlight, Keyboard size, Size |
-| Toggle switch (Date and time, Natural light, parental lock) | not used; checkboxes carry on/off everywhere. A switch could replace them later if the whole app moves. |
+| Toggle switch (Date and time, Natural light, parental lock) | `switch.rs`, used for every on/off setting: ON = dark capsule, knob with an ink ring at the right; OFF = outlined capsule, ringed knob at the left; upper-case state word before it |
 | Drop-down row ("value ⌄") | `Kind::Pick`, opens a choice page |
 | Grey wash button with an italic label (Continue, Cancel, Done) | not yet; our dialogs use filled/outlined cells. A candidate for confirmations. |
 | Progress bar (dark part, light remainder) | not yet |

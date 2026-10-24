@@ -26,13 +26,13 @@ expect-setting ui_lang=fr
 shot v1.5.5-fr-chosen
 tap-on Back
 tap-on Display
-tap-on Paper/Night
+tap-on Dark mode/On
 tap-on Back
 tap-on Language
 shot v1.5.5-fr-chosen-night
 tap-on Back
 tap-on Display
-tap-on Paper/Day
+tap-on Dark mode/Off
 tap-on Orientation/Landscape
 tap-on Back
 tap-on Language

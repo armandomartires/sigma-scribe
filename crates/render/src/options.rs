@@ -91,15 +91,11 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
             ),
         },
         OptRow {
-            label: "Paper",
+            label: "Dark mode",
             hint: "Night is the same page, inverted",
             cells: vec![
-                choice("Day", Change::Paper(Paper::Day), s.paper == Paper::Day),
-                choice(
-                    "Night",
-                    Change::Paper(Paper::Night),
-                    s.paper == Paper::Night,
-                ),
+                choice("Off", Change::Paper(Paper::Day), s.paper == Paper::Day),
+                choice("On", Change::Paper(Paper::Night), s.paper == Paper::Night),
             ],
         },
         OptRow {
@@ -418,7 +414,7 @@ pub const CATEGORIES: [(&str, &[Section]); 7] = [
     (
         "Display",
         &[
-            ("Page", &["Paper", "UI scale", "Drawer"]),
+            ("Page", &["Dark mode", "UI scale", "Drawer"]),
             ("Light", &["Backlight"]),
             ("Orientation", &["Orientation", "Upside down"]),
         ],
@@ -475,6 +471,7 @@ pub const CATEGORIES: [(&str, &[Section]); 7] = [
 #[derive(Clone, Debug, PartialEq)]
 pub enum Kind {
     /// Checkbox + "On": tap toggles.
+    /// An on/off setting: a toggle switch (`crate::switch`).
     Check { on: bool, change: Change },
     /// Two-way choice: inline buttons.
     Inline(Vec<Cell>),
@@ -501,6 +498,9 @@ pub enum Kind {
 pub struct DRow {
     pub label: &'static str,
     pub kind: Kind,
+    /// A greyed row says why, in small print under its label (rulebook
+    /// §5.5 and §5.7); `None` on every row that is live.
+    pub note: Option<&'static str>,
 }
 
 pub struct OptionsModel<'a> {
@@ -611,6 +611,10 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
                 cells: r.cells[..2].to_vec(),
             })
         }
+        // Greyed (with a note) while Line is off.
+        "Words per line" if !m.settings.line_on => {
+            Kind::Muted(format!("{} words", m.settings.line_words))
+        }
         "Words per line" => {
             let r = rows.iter().find(|r| r.label == "Line")?;
             Kind::Stepper(r.cells[2..].to_vec())
@@ -698,6 +702,9 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
         "Upside down" if m.settings.orientation == Orientation::Auto => {
             Kind::Muted(tr(if m.settings.upside_down { "On" } else { "Off" }).into_owned())
         }
+        // Words per line only matters with Line on; Tab width only with
+        // Tab key set to Spaces: greyed, with the reason as a note.
+        "Tab width" if !m.settings.tab_spaces => Kind::Muted(m.settings.tab_width.to_string()),
         // v1.5.2: what Train saved, and a way to delete it.
         "My handwriting" => Kind::Inline(vec![
             value(format!("{}: {}", tr("Samples"), m.hw_samples)),
@@ -709,7 +716,17 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
         "USB keyboard, mouse & export" => Kind::Link(2),
         _ => row_kind(rows.iter().find(|r| r.label == label)?),
     };
-    Some(DRow { label, kind })
+    let note = match (label, &kind) {
+        ("Upside down", Kind::Muted(_)) => Some("Needs Portrait or Landscape"),
+        ("Interface language", Kind::Muted(_)) => Some("Follows the Kobo's language"),
+        ("Words per line", Kind::Muted(_)) => Some("Needs Line on"),
+        ("Tab width", Kind::Muted(_)) => Some("Used when Tab key is Spaces"),
+        ("Keyboard size", Kind::Slider { enabled: false, .. }) => {
+            Some("Turn off Auto keyboard size")
+        }
+        _ => None,
+    };
+    Some(DRow { label, kind, note })
 }
 
 /// The choices of a Pick row: label, change, active.
@@ -855,7 +872,7 @@ impl EditorScreen {
                 .width(Face::LiterataItalic, self.ui_px(), &tr("On")) as i32
             + s.px(8.0);
         Rect::new(
-            band.x + band.w - s.px(20.0) - w,
+            band.x + band.w - w,
             band.y + (band.h - s.px(44.0)) / 2,
             w,
             s.px(44.0),
@@ -893,6 +910,7 @@ impl EditorScreen {
                             value,
                             enabled,
                         },
+                    ..
                 }) => Some((
                     *label,
                     self.slider_geom(*band, stops.len()),
@@ -1032,8 +1050,13 @@ impl EditorScreen {
                 Item::Row(DRow {
                     kind: Kind::Check { .. },
                     ..
-                })
-                | Item::Choice(..) => vec![self.check_box(band)],
+                }) => vec![crate::switch::target(
+                    band,
+                    self.scale(),
+                    &self.fonts,
+                    self.ui_px(),
+                )],
+                Item::Choice(..) => vec![self.check_box(band)],
                 Item::Row(DRow {
                     kind: Kind::Pick(_) | Kind::Link(_),
                     ..
@@ -1122,7 +1145,7 @@ impl EditorScreen {
 
     /// Named controls on the current page (emulator, touch audit):
     /// `Close`, `Back`, `Page`, category names, `Row/Cell` for buttons and
-    /// steppers (`Paper/Night`, `Size/+`), `Row/On` / `Row/Off` for
+    /// steppers (`Size/+`), `Row/On` / `Row/Off` for
     /// checkboxes, `Row` for a choice row, `Row/Choice` on a choice page.
     #[must_use]
     pub fn options_controls(&self, m: &OptionsModel<'_>) -> Vec<(String, Rect)> {
@@ -1376,9 +1399,51 @@ impl EditorScreen {
                     self.draw_check(c, cells[0], *on, false, t);
                 }
                 Item::Row(d) => {
-                    label(c, &tr(d.label));
+                    if let Some(note) = d.note {
+                        // Label up, the reason in small print under it.
+                        let nb = mid + ui * 1.0;
+                        self.fonts.draw(
+                            c,
+                            Face::Literata,
+                            ui,
+                            band.x as f32,
+                            base - ui * 0.45,
+                            &format!("{}:", tr(d.label)),
+                            t.ink,
+                        );
+                        // Kept to the column left of the controls: smaller,
+                        // then cut, so it never runs under them.
+                        let room = cells.iter().map(|r| r.x).min().unwrap_or(band.x + band.w)
+                            - band.x
+                            - s.px(12.0);
+                        let text = tr(note).into_owned();
+                        let mut size = ui * 0.8;
+                        let w = self.fonts.width(Face::Atkinson, size, &text);
+                        if w > room as f32 {
+                            size = (size * room as f32 / w).max(ui * 0.62);
+                        }
+                        let mut shown = text;
+                        while self.fonts.width(Face::Atkinson, size, &shown) > room as f32
+                            && shown.chars().count() > 3
+                        {
+                            shown.pop();
+                            shown = shown.trim_end().to_owned();
+                            if self.fonts.width(Face::Atkinson, size, &format!("{shown}…"))
+                                <= room as f32
+                            {
+                                shown.push('…');
+                                break;
+                            }
+                        }
+                        self.fonts
+                            .draw(c, Face::Atkinson, size, band.x as f32, nb, &shown, t.mute);
+                    } else {
+                        label(c, &tr(d.label));
+                    }
                     match &d.kind {
-                        Kind::Check { on, .. } => self.draw_check(c, cells[0], *on, true, t),
+                        Kind::Check { on, .. } => {
+                            crate::switch::draw(c, s, &self.fonts, ui, cells[0], *on, t);
+                        }
                         Kind::Pick(v) => italic(c, &tr(v), t.ink),
                         Kind::Link(_) => italic(c, &tr("Open"), t.ink),
                         Kind::Info(v) => italic(c, v, t.mute),
@@ -1593,7 +1658,7 @@ mod tests {
         ));
         assert!(matches!(kind("USB keyboard & mouse"), Kind::Check { .. }));
         assert!(matches!(kind("Line"), Kind::Check { .. }));
-        assert!(matches!(kind("Paper"), Kind::Inline(_)));
+        assert!(matches!(kind("Dark mode"), Kind::Check { .. }));
         assert!(matches!(kind("Scroll"), Kind::Inline(_)));
         assert!(matches!(kind("Size"), Kind::Slider { .. }));
         assert!(matches!(kind("Orientation"), Kind::Inline(_)));
@@ -1639,7 +1704,7 @@ mod tests {
         let m = model(&st, &k, p, 0);
         let (x, y) = e.options_control(&m, "Back").unwrap();
         assert_eq!(e.options_hit(&m, x, y), OptionsHit::Back);
-        assert_eq!(e.options_step(&m, "Paper/Night").as_deref(), Some("Back"));
+        assert_eq!(e.options_step(&m, "Dark mode/On").as_deref(), Some("Back"));
         let m = model(&st, &k, SettingsPage::Root, 0);
         assert_eq!(
             e.options_step(&m, "Layout/+").as_deref(),

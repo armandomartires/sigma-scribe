@@ -50,7 +50,7 @@ fn set_ui(app: &mut App, want: u16) {
 
 fn check_band(app: &App, area: sigma_render::canvas::Rect, enabled: bool, tag: &str) {
     let sc = app.screen.scale();
-    let ty = area.y + area.h * 2 / 5;
+    let ty = area.y + area.h * 3 / 5;
     let half = sc.px(18.0);
     let cw = app.canvas.width as usize;
     let paper = app.canvas.pixels[(area.y as usize + 1) * cw + area.x as usize + 1];

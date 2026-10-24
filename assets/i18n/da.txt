@@ -832,3 +832,33 @@ Light
 = Lys
 Enhanced keyboard
 = Udvidet tastatur
+
+Sketch
+= Skitse
+
+Redo
+= Gentag
+
+Loading…
+= Indlæser…
+
+In Write mode a sketch is added to the note as an image link. Preview shows the whole sketch.
+= I skrivetilstand tilføjes en skitse til noten som et billedlink. Eksempelvisningen viser hele skitsen.
+
+Needs Portrait or Landscape
+= Kræver Stående eller Liggende
+
+Follows the Kobo's language
+= Følger Kobo'ens sprog
+
+Needs Line on
+= Kræver Linje til
+
+Used when Tab key is Spaces
+= Bruges, når Tab-tasten er sat til Mellemrum
+
+Turn off Auto keyboard size
+= Slå automatisk størrelse fra
+
+Dark mode
+= Mørk tilstand

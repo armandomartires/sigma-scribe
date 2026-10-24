@@ -832,3 +832,33 @@ Light
 = Luz
 Enhanced keyboard
 = Teclado mejorado
+
+Sketch
+= Boceto
+
+Redo
+= Rehacer
+
+Loading…
+= Cargando…
+
+In Write mode a sketch is added to the note as an image link. Preview shows the whole sketch.
+= En modo Escritura, un boceto se añade a la nota como enlace de imagen. La vista previa muestra el boceto completo.
+
+Needs Portrait or Landscape
+= Requiere Vertical u Horizontal
+
+Follows the Kobo's language
+= Sigue el idioma del Kobo
+
+Needs Line on
+= Requiere Línea activada
+
+Used when Tab key is Spaces
+= Se usa cuando la tecla Tab está en Espacios
+
+Turn off Auto keyboard size
+= Desactiva el tamaño automático
+
+Dark mode
+= Modo oscuro

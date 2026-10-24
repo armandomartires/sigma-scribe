@@ -832,3 +832,33 @@ Light
 = Luce
 Enhanced keyboard
 = Tastiera avanzata
+
+Sketch
+= Schizzo
+
+Redo
+= Ripeti
+
+Loading…
+= Caricamento…
+
+In Write mode a sketch is added to the note as an image link. Preview shows the whole sketch.
+= In modalità Scrittura, uno schizzo viene aggiunto alla nota come link a un'immagine. L'anteprima mostra lo schizzo intero.
+
+Needs Portrait or Landscape
+= Richiede Verticale o Orizzontale
+
+Follows the Kobo's language
+= Segue la lingua del Kobo
+
+Needs Line on
+= Richiede Riga attiva
+
+Used when Tab key is Spaces
+= Usato quando il tasto Tab è su Spazi
+
+Turn off Auto keyboard size
+= Disattiva la dimensione auto
+
+Dark mode
+= Modalità scura

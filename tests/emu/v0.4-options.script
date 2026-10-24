@@ -3,7 +3,7 @@ expect-open field-notes.md
 expect-screen 1440x1920
 tap-on Options
 shot v0.4-options
-tap-on Paper/Night
+tap-on Dark mode/On
 expect-setting paper=night
 shot v0.4-options-night
 tap-on Close
@@ -15,7 +15,7 @@ tap-on Close
 shot v0.4-night-light-keys
 tap-on Options
 tap-on Keyboard tone/Theme
-tap-on Paper/Day
+tap-on Dark mode/Off
 tap-on Type/Atkinson
 expect-setting type=atkinson
 # Line mode: N words a row, kept when Size or Margin moves.
@@ -28,7 +28,7 @@ tap-on Line/+
 tap-on Size/4
 tap-on Size/5
 expect-words 12
-tap-on Margin/+
+tap-on Margin/4
 expect-words 12
 tap-on Type/Literata
 expect-words 12

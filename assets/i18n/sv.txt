@@ -832,3 +832,33 @@ Light
 = Ljus
 Enhanced keyboard
 = Utökat tangentbord
+
+Sketch
+= Skiss
+
+Redo
+= Gör om
+
+Loading…
+= Läser in…
+
+In Write mode a sketch is added to the note as an image link. Preview shows the whole sketch.
+= I skrivläge läggs en skiss till i anteckningen som en bildlänk. Förhandsgranskningen visar hela skissen.
+
+Needs Portrait or Landscape
+= Kräver Stående eller Liggande
+
+Follows the Kobo's language
+= Följer Kobos språk
+
+Needs Line on
+= Kräver Linje på
+
+Used when Tab key is Spaces
+= Används när Tab-tangenten är satt till Blanksteg
+
+Turn off Auto keyboard size
+= Stäng av automatisk storlek
+
+Dark mode
+= Mörkt läge

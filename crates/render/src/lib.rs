@@ -20,6 +20,7 @@ pub mod preview;
 pub mod scrollbar;
 pub(crate) mod shape;
 pub mod slider;
+pub mod switch;
 pub mod theme;
 
 pub use canvas::{Canvas, Rect};

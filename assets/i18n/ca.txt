@@ -832,3 +832,33 @@ Light
 = Llum
 Enhanced keyboard
 = Teclat avançat
+
+Sketch
+= Esbós
+
+Redo
+= Refés
+
+Loading…
+= S'està carregant…
+
+In Write mode a sketch is added to the note as an image link. Preview shows the whole sketch.
+= En mode Escriptura, un esbós s'afegeix a la nota com a enllaç d'imatge. La vista prèvia mostra l'esbós sencer.
+
+Needs Portrait or Landscape
+= Requereix Vertical o Horitzontal
+
+Follows the Kobo's language
+= Segueix l'idioma del Kobo
+
+Needs Line on
+= Requereix Línia activada
+
+Used when Tab key is Spaces
+= S'usa quan la tecla Tab és a Espais
+
+Turn off Auto keyboard size
+= Desactiva la mida automàtica
+
+Dark mode
+= Mode fosc

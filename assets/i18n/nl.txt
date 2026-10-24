@@ -832,3 +832,33 @@ Light
 = Licht
 Enhanced keyboard
 = Uitgebreid toetsenbord
+
+Sketch
+= Schets
+
+Redo
+= Opnieuw
+
+Loading…
+= Laden…
+
+In Write mode a sketch is added to the note as an image link. Preview shows the whole sketch.
+= In schrijfmodus wordt een schets als afbeeldingslink aan de notitie toegevoegd. De voorvertoning toont de hele schets.
+
+Needs Portrait or Landscape
+= Vereist Staand of Liggend
+
+Follows the Kobo's language
+= Volgt de taal van de Kobo
+
+Needs Line on
+= Vereist Regel aan
+
+Used when Tab key is Spaces
+= Gebruikt als de Tab-toets op Spaties staat
+
+Turn off Auto keyboard size
+= Zet automatische grootte uit
+
+Dark mode
+= Donkere modus

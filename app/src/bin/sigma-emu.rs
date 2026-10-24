@@ -9,7 +9,7 @@
 //!   move-handle-end W | move-handle-start W | expect-bar A,B|none
 //!   expect-clipboard T | expect-caret-after W |
 //!   expect-not TEXT | expect-selection TEXT | clear-field | expect-file PATH | expect-no-file PATH | expect-open PATH
-//!   v0.4: tap-on Options | tap-on Row/Cell (in Options, e.g. Paper/Night, Size/+)
+//!   v0.4: tap-on Options | tap-on Row/Cell (in Options, e.g. Dark mode/On, Size/+)
 //!   tap-on Split|Full|Centre|Arrows|123|Pad left|Pad right (landscape bar)
 //!   expect-setting KEY=VALUE | expect-words N | expect-screen WxH | restart
 //!   v0.5: tap-on Contents|To-dos|Scratch (icons) | tap-on Heading:TEXT |
