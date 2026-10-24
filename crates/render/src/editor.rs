@@ -729,11 +729,7 @@ impl EditorScreen {
     pub fn scroll_bar_zone(&self, buffer: &Buffer, page: Rect) -> Option<(Rect, Rect)> {
         let rows = self.rows(buffer, page).len();
         let (strip, thumb) = self.scroll_bar(page, rows, self.visible_rows(page))?;
-        let left = (strip.x + strip.w / 2 - self.px(22.0)).max(page.x);
-        Some((
-            Rect::new(left, page.y, page.x + page.w - left, page.h),
-            thumb,
-        ))
+        Some((crate::scrollbar::zone(self.page_s, page, strip), thumb))
     }
 
     /// Drag: the thumb's centre follows the finger at `y`.
@@ -2114,6 +2110,19 @@ impl EditorScreen {
         } else {
             Hit::Nothing
         }
+    }
+
+    /// The preview's scroll bar as a paged bar (v1.13.1): the page's place
+    /// among `n` pages; `None` with one page.
+    #[must_use]
+    pub fn preview_paged_bar(
+        &self,
+        keyboard: &Keyboard,
+        n: usize,
+        at: usize,
+    ) -> Option<crate::scrollbar::Paged> {
+        let l = self.layout(false, keyboard);
+        crate::scrollbar::Paged::new(self.page_s, l.page, n, at)
     }
 
     /// Draws preview mode: title with the pencil, one page, status bar.

@@ -72,7 +72,7 @@ What it means for Σscribe: the Kobo keyboard is a **five-row phone-style board*
 | Top bar (back, centred "Settings", close) | `draw_options` top bar |
 | Page title + "Page i of n" + scroll bar | Settings sub-pages and `crates/render/src/scrollbar.rs` |
 | Band | `Item::Band` (upper-case, grey wash) |
-| Checkbox + italic "On" | `Kind::Check`; also Experimental features |
+| Checkbox + italic "On" (Kobo beta features) | not used: on/off is a toggle switch (`switch.rs`); a choice list uses radio buttons (`radio.rs`) |
 | Segmented control | `Kind::Inline` (selected filled) |
 | Slider, hollow thumb | `crates/render/src/slider.rs` (stops, thumb) — Backlight, Keyboard size, Size |
 | Toggle switch (Date and time, Natural light, parental lock) | `switch.rs`, used for every on/off setting: ON = dark capsule, knob with an ink ring at the right; OFF = outlined capsule, ringed knob at the left; upper-case state word before it |

@@ -53,6 +53,13 @@ pub fn notes_dir() -> PathBuf {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PagedBar {
+    Settings,
+    Help,
+    Preview,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Drag {
     /// Dragging a handle; the other end stays put.
     Handle { fixed: usize },
@@ -432,6 +439,9 @@ pub struct App {
     /// A finger went down on a Settings slider (v1.4.4): the drag owns the
     /// touch until it lifts.
     slider_touch: Option<&'static str>,
+    /// A finger on a paged scroll bar (Settings, Help, Preview): where it
+    /// went down and whether it has moved (v1.13.1).
+    bar_drag: Option<(i32, bool)>,
     /// Panel size as the device reports it (portrait on the Forma).
     phys: (u32, u32),
     /// Rotated copy of the canvas sent to the panel in landscape.
@@ -549,6 +559,7 @@ impl App {
             settings_sub: 0,
             settings_focus: None,
             slider_touch: None,
+            bar_drag: None,
             phys: (width, height),
             phys_canvas: Canvas::new(width, height, 255),
             drawer: [false; 3],
@@ -1209,6 +1220,100 @@ impl App {
     /// A finger on Settings (v1.4.4): a touch that starts on a slider is a
     /// drag that snaps to the nearest stop; anything else goes on to the
     /// gesture recogniser (taps).
+    /// The paged scroll bar on the screen in front, if it has more than one
+    /// page: Settings, a Help sub-page or Preview (v1.13.1).
+    fn paged_bar(&self) -> Option<(PagedBar, sigma_render::scrollbar::Paged)> {
+        if self.ink.is_some() || self.rename.is_some() {
+            return None;
+        }
+        if self.options {
+            let l = self.screen.options_layout(&self.options_model());
+            return l.bar.map(|b| (PagedBar::Settings, b));
+        }
+        if let Some(h) = &self.help {
+            let b = self.screen.help_paged_bar(&self.help_model(h))?;
+            return Some((PagedBar::Help, b));
+        }
+        if self.files.is_some() || self.graph.is_some() {
+            return None;
+        }
+        let p = self.preview.as_ref()?;
+        let b = self
+            .screen
+            .preview_paged_bar(&self.keyboard, p.doc.pages.len(), p.page)?;
+        Some((PagedBar::Preview, b))
+    }
+
+    /// Turns to `page` on the bar's screen; `None` when already there.
+    fn set_bar_page(&mut self, kind: PagedBar, page: usize, last: bool) -> Option<Refresh> {
+        match kind {
+            PagedBar::Settings => {
+                if page == self.settings_sub {
+                    return None;
+                }
+                self.settings_sub = page;
+                Some(if last {
+                    Refresh::Full
+                } else {
+                    Refresh::Partial
+                })
+            }
+            PagedBar::Help => {
+                let h = self.help.as_mut()?;
+                (page != h.at).then(|| {
+                    h.at = page;
+                    Refresh::Partial
+                })
+            }
+            PagedBar::Preview => {
+                let p = self.preview.as_mut()?;
+                (page != p.page).then(|| {
+                    p.page = page;
+                    Refresh::Partial
+                })
+            }
+        }
+    }
+
+    /// A tap on the bar: the page before or after, from the thumb's centre.
+    fn bar_tap(&mut self, x: i32, y: i32) -> Option<Option<Refresh>> {
+        let (kind, b) = self.paged_bar()?;
+        b.zone
+            .contains(x, y)
+            .then(|| self.set_bar_page(kind, b.tap(y), true))
+    }
+
+    /// A finger on a paged scroll bar: drag the thumb, or tap above or below
+    /// it. `None` when the touch is not on the bar.
+    fn bar_touch(&mut self, phase: Phase, x: i32, y: i32) -> Option<Option<Refresh>> {
+        match phase {
+            Phase::Down => {
+                let (_, b) = self.paged_bar()?;
+                if !b.zone.contains(x, y) {
+                    return None;
+                }
+                self.bar_drag = Some((y, false));
+                Some(None)
+            }
+            Phase::Move | Phase::Up => {
+                let (y0, moved) = self.bar_drag?;
+                let (kind, b) = self.paged_bar()?;
+                let moved = moved || (y - y0).abs() > self.screen.scale().px(12.0);
+                if phase == Phase::Up {
+                    self.bar_drag = None;
+                    let page = if moved { b.drag_to(y) } else { b.tap(y) };
+                    return Some(self.set_bar_page(kind, page, true));
+                }
+                self.bar_drag = Some((y0, moved));
+                Some(if moved {
+                    self.set_bar_page(kind, b.drag_to(y), false)
+                } else {
+                    None
+                })
+            }
+        }
+    }
+
     fn options_touch(&mut self, phase: Phase, x: i32, y: i32) -> Option<Option<Refresh>> {
         match phase {
             Phase::Down => {
@@ -3486,6 +3591,9 @@ impl App {
         let page = self.screen.layout(self.keys_visible(), &self.keyboard).page;
         match e {
             Event::Tilt { .. } => None,
+            Event::Tap { x, y } if self.paged_bar().is_some_and(|(_, b)| b.zone.contains(x, y)) => {
+                self.bar_tap(x, y).flatten()
+            }
             Event::Tap { x, y } if self.ink.is_some() => {
                 let l = self.panel_layout()?;
                 if !l.panel.contains(x, y) {
@@ -3496,6 +3604,9 @@ impl App {
             }
             Event::Touch { phase, x, y, t } => {
                 if let Some(r) = self.ink_touch(phase, x, y, t) {
+                    return r;
+                }
+                if let Some(r) = self.bar_touch(phase, x, y) {
                     return r;
                 }
                 if self.options {
@@ -5030,7 +5141,7 @@ impl App {
         });
     }
 
-    fn help_model<'a>(&'a self, h: &'a HelpState) -> HelpModel<'a> {
+    pub fn help_model<'a>(&'a self, h: &'a HelpState) -> HelpModel<'a> {
         HelpModel {
             page: h.page,
             doc: h.doc.as_ref(),
@@ -5104,14 +5215,16 @@ impl App {
         }
         if let Some(h) = &self.help {
             let m = self.help_model(h);
-            let l = self.screen.help_layout(m.keyboard);
+            let l = self
+                .screen
+                .help_layout(m.keyboard, h.page != HelpPage::Menu);
             add("Close", l.close);
             if h.page == HelpPage::Menu {
                 add("App info", l.rows[0]);
                 add("Markdown reference", l.rows[1]);
                 add("USB keyboard, mouse & export", l.rows[2]);
-            } else {
-                add("Back", l.crumb);
+            } else if let Some(b) = l.back {
+                add("Back", b);
             }
             return out;
         }

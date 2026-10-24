@@ -33,6 +33,9 @@ pub struct Metrics {
     pub min_thumb: i32,
     /// Outline of the thumb.
     pub line: i32,
+    /// Air between a page's content (a switch, a radio, a value) and the
+    /// bar's inner side.
+    pub content_gap: i32,
 }
 
 impl Metrics {
@@ -40,6 +43,7 @@ impl Metrics {
     const INSET: f32 = 8.0;
     const MIN_THUMB: f32 = 40.0;
     const LINE: f32 = 2.5;
+    const CONTENT_GAP: f32 = 24.0;
 
     #[must_use]
     pub fn new(page_scale: crate::theme::Scale) -> Self {
@@ -50,6 +54,7 @@ impl Metrics {
             inset: page_scale.px(Self::INSET),
             min_thumb: page_scale.px(Self::MIN_THUMB),
             line: page_scale.px(Self::LINE).max(2),
+            content_gap: page_scale.px(Self::CONTENT_GAP),
         }
     }
 
@@ -58,6 +63,13 @@ impl Metrics {
     #[must_use]
     pub fn clearance(self) -> i32 {
         self.w + self.margin
+    }
+
+    /// How far in from the screen edge a page's content stops: the bar and
+    /// the air before it.
+    #[must_use]
+    pub fn content_inset(self) -> i32 {
+        self.clearance() + self.content_gap
     }
 }
 
@@ -78,6 +90,60 @@ pub fn bar(
     let m = Metrics::new(s);
     let strip = strip(page, m.w, m.margin, m.inset);
     Some((strip, thumb(strip, total, visible, at, m.min_thumb)))
+}
+
+/// Where a finger grabs a bar: the strip widened to a touch target, out to
+/// the page's right edge, the whole height of `page`. Shared by every screen
+/// that lets the bar be dragged or tapped.
+#[must_use]
+pub fn zone(s: crate::theme::Scale, page: Rect, strip: Rect) -> Rect {
+    let left = (strip.x - s.px(4.0)).max(page.x);
+    Rect::new(left, page.y, page.x + page.w - left, page.h)
+}
+
+/// A bar that stands for `n` pages (Settings, Help, Preview): where it is,
+/// where a finger can grab it, and what a drag or a tap on it means.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Paged {
+    pub zone: Rect,
+    pub strip: Rect,
+    pub thumb: Rect,
+    pub n: usize,
+    pub at: usize,
+}
+
+impl Paged {
+    /// `None` when there is one page or none.
+    #[must_use]
+    pub fn new(s: crate::theme::Scale, page: Rect, n: usize, at: usize) -> Option<Self> {
+        let (strip, thumb) = bar(s, page, n, 1, at)?;
+        Some(Self {
+            zone: zone(s, page, strip),
+            strip,
+            thumb,
+            n,
+            at,
+        })
+    }
+
+    /// Drag: the page the thumb lands on when its centre follows `y`.
+    #[must_use]
+    pub fn drag_to(&self, y: i32) -> usize {
+        let span = (self.strip.h - self.thumb.h).max(1) as f32;
+        let f = ((y - self.thumb.h / 2 - self.strip.y) as f32 / span).clamp(0.0, 1.0);
+        (f * (self.n - 1) as f32).round() as usize
+    }
+
+    /// Tap: the page before when `y` is above the thumb's centre, the page
+    /// after when below.
+    #[must_use]
+    pub fn tap(&self, y: i32) -> usize {
+        if y < self.thumb.y + self.thumb.h / 2 {
+            self.at.saturating_sub(1)
+        } else {
+            (self.at + 1).min(self.n - 1)
+        }
+    }
 }
 
 /// Draws [`bar`] on `bg` (the paper, or a margin's tone) in the theme's ink:

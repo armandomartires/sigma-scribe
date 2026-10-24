@@ -385,7 +385,7 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
 /// runs over a row.
 fn side_pad(s: crate::theme::Scale, page: crate::theme::Scale) -> i32 {
     s.px(20.0)
-        .max(crate::scrollbar::Metrics::new(page).clearance() + s.px(4.0))
+        .max(crate::scrollbar::Metrics::new(page).content_inset())
 }
 
 /// Where Settings is: the category list, one category, or a choice list.
@@ -467,6 +467,19 @@ pub const CATEGORIES: [(&str, &[Section]); 7] = [
     ),
 ];
 
+/// The geometry of a Settings or Help page's top bar and title.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct PageHeader {
+    pub back: Option<Rect>,
+    pub heading_y: i32,
+    /// Where the content starts.
+    pub top: i32,
+    /// "Page i of n", right of the title.
+    pub pager: Rect,
+    /// Side padding.
+    pub pad: i32,
+}
+
 /// How a row is shown and what a tap does.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Kind {
@@ -546,7 +559,7 @@ pub struct OptionsLayout {
     pub pages: usize,
     /// The scroll bar over the sub-pages (v1.12): track strip and thumb,
     /// when there is more than one page. Display only.
-    pub bar: Option<(Rect, Rect)>,
+    pub bar: Option<crate::scrollbar::Paged>,
     /// Big page title baseline.
     pub heading_y: i32,
     /// Items on the current sub-page: the item, its band, its controls.
@@ -863,22 +876,6 @@ impl EditorScreen {
         .max(s.px(60.0))
     }
 
-    fn check_box(&self, band: Rect) -> Rect {
-        // Box + "On" read as one target, Kobo style.
-        let s = self.scale();
-        let w = s.px(44.0)
-            + self
-                .fonts
-                .width(Face::LiterataItalic, self.ui_px(), &tr("On")) as i32
-            + s.px(8.0);
-        Rect::new(
-            band.x + band.w - w,
-            band.y + (band.h - s.px(44.0)) / 2,
-            w,
-            s.px(44.0),
-        )
-    }
-
     /// The slider's area in a row (v1.4.4): the right part of the row,
     /// at most 300 brief px, never narrower than 44 px per stop.
     fn slider_geom(&self, band: Rect, n: usize) -> crate::slider::Geom {
@@ -966,13 +963,14 @@ impl EditorScreen {
             })
     }
 
+    /// Where the top bar and the page title go, for Settings and Help alike
+    /// (the Kobo pattern, rulebook §5.1).
     #[must_use]
-    pub fn options_layout(&self, m: &OptionsModel<'_>) -> OptionsLayout {
-        let base = self.layout(false, m.keyboard);
+    pub(crate) fn page_header(&self, base: &Layout, back_on: bool) -> PageHeader {
         let s = self.scale();
         let w = self.width as i32;
         let pad = side_pad(s, self.page_scale());
-        let back = (m.page != SettingsPage::Root).then(|| {
+        let back = back_on.then(|| {
             Rect::new(
                 s.px(4.0),
                 base.close_button.y,
@@ -981,7 +979,84 @@ impl EditorScreen {
             )
         });
         let heading_y = base.title.h + s.px(40.0);
-        let top = heading_y + s.px(16.0);
+        let pw = self
+            .fonts
+            .width(Face::LiterataItalic, self.ui_px() * 0.9, "Page 00 of 00")
+            as i32;
+        PageHeader {
+            back,
+            heading_y,
+            top: heading_y + s.px(16.0),
+            pager: Rect::new(w - pad - pw, heading_y - s.px(30.0), pw, s.px(44.0)),
+            pad,
+        }
+    }
+
+    /// Draws the top bar (back arrow, small centred title, close), the big
+    /// page title and, when there is more than one page, "Page i of n".
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn draw_page_header(
+        &self,
+        c: &mut Canvas,
+        base: &Layout,
+        h: &PageHeader,
+        small: &str,
+        big: &str,
+        pages: Option<(usize, usize)>,
+        t: Theme,
+    ) {
+        let ui = self.ui_px();
+        let w = self.width as i32;
+        // No rule under the bar (Kobo Forma 4.x look).
+        let bar_base = base.title.y as f32
+            + base.title.h as f32 / 2.0
+            + self.fonts.ascent(Face::Literata, ui) / 2.6;
+        let top = tr(small);
+        let tw = self.fonts.width(Face::Literata, ui * 0.9, &top);
+        self.fonts.draw(
+            c,
+            Face::Literata,
+            ui * 0.9,
+            (w as f32 - tw) / 2.0,
+            bar_base,
+            &top,
+            t.ink,
+        );
+        crate::icons::draw_icon(c, crate::icons::Icon::Close, base.close_button, t.ink);
+        if let Some(b) = h.back {
+            crate::icons::draw_icon(c, crate::icons::Icon::Back, b, t.ink);
+        }
+        self.fonts.draw(
+            c,
+            Face::Literata,
+            ui * 1.5,
+            h.pad as f32,
+            h.heading_y as f32,
+            &tr(big),
+            t.ink,
+        );
+        if let Some((at, n)) = pages.filter(|&(_, n)| n > 1) {
+            let txt = tr(&format!("Page {} of {}", at + 1, n)).into_owned();
+            let pw = self.fonts.width(Face::LiterataItalic, ui * 0.9, &txt);
+            self.fonts.draw(
+                c,
+                Face::LiterataItalic,
+                ui * 0.9,
+                (h.pager.x + h.pager.w) as f32 - pw,
+                h.heading_y as f32,
+                &txt,
+                t.ink,
+            );
+        }
+    }
+
+    #[must_use]
+    pub fn options_layout(&self, m: &OptionsModel<'_>) -> OptionsLayout {
+        let base = self.layout(false, m.keyboard);
+        let s = self.scale();
+        let w = self.width as i32;
+        let hd = self.page_header(&base, m.page != SettingsPage::Root);
+        let (pad, back, heading_y, top) = (hd.pad, hd.back, hd.heading_y, hd.top);
         let row_h = s.px(52.0);
         let band_h = s.px(24.0);
         let bottom = self.height as i32 - s.px(12.0);
@@ -1056,7 +1131,7 @@ impl EditorScreen {
                     &self.fonts,
                     self.ui_px(),
                 )],
-                Item::Choice(..) => vec![self.check_box(band)],
+                Item::Choice(..) => vec![crate::radio::target(band, self.scale())],
                 Item::Row(DRow {
                     kind: Kind::Pick(_) | Kind::Link(_),
                     ..
@@ -1067,17 +1142,11 @@ impl EditorScreen {
             items.push((it, band, cells));
             y += h;
         }
-        let pager = (n > 1).then(|| {
-            let pw = self
-                .fonts
-                .width(Face::LiterataItalic, self.ui_px() * 0.9, "Page 00 of 00")
-                as i32;
-            Rect::new(w - pad - pw, heading_y - s.px(30.0), pw, s.px(44.0))
-        });
+        let pager = (n > 1).then_some(hd.pager);
         let bar = (n > 1)
             .then(|| {
                 let page = Rect::new(0, top, w, bottom - top);
-                crate::scrollbar::bar(self.page_scale(), page, n, 1, sub)
+                crate::scrollbar::Paged::new(self.page_scale(), page, n, sub)
             })
             .flatten();
         OptionsLayout {
@@ -1291,58 +1360,19 @@ impl EditorScreen {
         let l = self.options_layout(m);
         let s = self.scale();
         let ui = self.ui_px();
-        let w = self.width as i32;
         c.fill(c.bounds(), t.paper);
-        // Top bar: back arrow, small centred "Settings", close; no rule
-        // (Kobo Forma 4.x look).
-        let bar_base = l.base.title.y as f32
-            + l.base.title.h as f32 / 2.0
-            + self.fonts.ascent(Face::Literata, ui) / 2.6;
-        let top = tr("Settings");
-        let tw = self.fonts.width(Face::Literata, ui * 0.9, &top);
-        self.fonts.draw(
+        let hd = self.page_header(&l.base, l.back.is_some());
+        self.draw_page_header(
             c,
-            Face::Literata,
-            ui * 0.9,
-            (w as f32 - tw) / 2.0,
-            bar_base,
-            &top,
-            t.ink,
+            &l.base,
+            &hd,
+            "Settings",
+            page_title(m.page),
+            Some((m.sub.min(l.pages - 1), l.pages)),
+            t,
         );
-        crate::icons::draw_icon(c, crate::icons::Icon::Close, l.close, t.ink);
-        if let Some(b) = l.back {
-            crate::icons::draw_icon(c, crate::icons::Icon::Back, b, t.ink);
-        }
-        let pad = side_pad(s, self.page_scale()) as f32;
-        self.fonts.draw(
-            c,
-            Face::Literata,
-            ui * 1.5,
-            pad,
-            l.heading_y as f32,
-            &tr(page_title(m.page)),
-            t.ink,
-        );
-        if let Some(p) = l.pager {
-            let txt = tr(&format!(
-                "Page {} of {}",
-                m.sub.min(l.pages - 1) + 1,
-                l.pages
-            ))
-            .into_owned();
-            let pw = self.fonts.width(Face::LiterataItalic, ui * 0.9, &txt);
-            self.fonts.draw(
-                c,
-                Face::LiterataItalic,
-                ui * 0.9,
-                (p.x + p.w) as f32 - pw,
-                l.heading_y as f32,
-                &txt,
-                t.ink,
-            );
-        }
         if let Some(b) = l.bar {
-            crate::scrollbar::draw_bar(c, self.page_scale(), b, t, t.paper);
+            crate::scrollbar::draw_bar(c, self.page_scale(), (b.strip, b.thumb), t, t.paper);
         }
         let n = l.items.len();
         for (k, (it, band, cells)) in l.items.iter().enumerate() {
@@ -1396,7 +1426,7 @@ impl EditorScreen {
                 Item::Choice(lab, _, on) => {
                     self.fonts
                         .draw(c, Face::Literata, ui, band.x as f32, base, &tr(lab), t.ink);
-                    self.draw_check(c, cells[0], *on, false, t);
+                    crate::radio::draw(c, s, cells[0], *on, t);
                 }
                 Item::Row(d) => {
                     if let Some(note) = d.note {
@@ -1509,40 +1539,6 @@ impl EditorScreen {
         }
         l
     }
-
-    /// Kobo-style checkbox: an outlined square, ticked when on, and an
-    /// italic "On" beside it (`with_on`).
-    fn draw_check(&self, c: &mut Canvas, r: Rect, on: bool, with_on: bool, t: Theme) {
-        let s = self.scale();
-        let ui = self.ui_px();
-        let b = s.px(20.0);
-        let on_w = if with_on {
-            self.fonts.width(Face::LiterataItalic, ui, &tr("On")) as i32 + s.px(8.0)
-        } else {
-            0
-        };
-        let bx = r.x + r.w - on_w - b - s.px(4.0);
-        let by = r.y + (r.h - b) / 2;
-        let bw = s.px(1.5).max(1);
-        c.stroke(Rect::new(bx, by, b, b), bw, t.ink);
-        if on {
-            let i = s.px(4.0);
-            c.fill(Rect::new(bx + i, by + i, b - 2 * i, b - 2 * i), t.ink);
-        }
-        if with_on {
-            let base =
-                r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(Face::LiterataItalic, ui) / 2.6;
-            self.fonts.draw(
-                c,
-                Face::LiterataItalic,
-                ui,
-                (r.x + r.w - on_w + s.px(8.0)) as f32,
-                base,
-                &tr("On"),
-                t.ink,
-            );
-        }
-    }
 }
 
 #[cfg(test)]
@@ -1587,7 +1583,7 @@ mod tests {
             let l = e.options_layout(&model(&st, &k, SettingsPage::Category(0), 0));
             let page = Rect::new(0, 100, 1440, 1000);
             let (strip, _) = e.scroll_bar(page, 400, 40).unwrap();
-            if let Some((s, _)) = l.bar {
+            if let Some(crate::scrollbar::Paged { strip: s, .. }) = l.bar {
                 assert_eq!(s.w, strip.w, "Settings vs editor at {ui}%");
             }
             assert_eq!(*want.get_or_insert(strip.w), strip.w, "editor at {ui}%");
