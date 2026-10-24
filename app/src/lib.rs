@@ -574,7 +574,26 @@ impl App {
             running: true,
         };
         app.set_gsensor(false);
+        app.sync_keyboard_style();
         app
+    }
+
+    /// The Kobo style board while Enhanced keyboard is off (v1.13); back to
+    /// the Compact / Full board (its saved choice) when it is on. Layer and
+    /// shift start over when the style changes.
+    pub fn sync_keyboard_style(&mut self) {
+        use sigma_core::keyboard::{Layer, Style};
+        let want = if self.settings.kobo_keyboard() {
+            Style::Kobo
+        } else {
+            Style::Enhanced
+        };
+        if self.keyboard.style != want {
+            self.keyboard.style = want;
+            self.keyboard.layer = Layer::Letters;
+            self.keyboard.shift = false;
+            self.keyboard.shift_lock = false;
+        }
     }
 
     /// Writes every setting to `notes/.sigma-settings` (atomic).
@@ -721,6 +740,7 @@ impl App {
             };
         }
         self.keyboard.lang = self.settings.kb_layout;
+        self.sync_keyboard_style();
         if !self.keyboard.lang.has_compact() {
             // Too many keys for the compact board (v1.9).
             self.keyboard.layout = sigma_core::keyboard::Layout::Full;

@@ -26,6 +26,8 @@ const ICONS: &[&str] = &[
     "chevron-left",
     "chevron-right",
     "space",
+    // v1.13 Kobo style keyboard.
+    "arrow-big-up",
 ];
 
 /// A touch target is 44 brief units; the glyph is half of it.

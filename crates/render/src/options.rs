@@ -249,6 +249,14 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
             ],
         },
         OptRow {
+            label: "Enhanced keyboard",
+            hint: "Off: the Kobo reader's keyboard, with no options on it",
+            cells: vec![
+                choice("Off", Change::EnhancedKeyboard(false), !s.enhanced_keyboard),
+                choice("On", Change::EnhancedKeyboard(true), s.enhanced_keyboard),
+            ],
+        },
+        OptRow {
             label: "Letter boxes",
             hint: "One character per box instead of free writing",
             cells: vec![
@@ -401,7 +409,7 @@ pub const CATEGORIES: [(&str, &[Section]); 7] = [
         &[
             (
                 "On-screen keyboard",
-                &["Keyboard", "Layout", "Keyboard tone"],
+                &["Enhanced keyboard", "Keyboard", "Layout", "Keyboard tone"],
             ),
             ("Keyboard size", &["Auto keyboard size", "Keyboard size"]),
             (
@@ -570,6 +578,10 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
     if matches!(label, "Fast ink (A2)" | "Word mode (experimental)") && !m.settings.experimental {
         return None;
     }
+    // The Compact / Full choice belongs to the enhanced keyboard only (v1.13).
+    if label == "Keyboard" && !m.settings.enhanced_keyboard {
+        return None;
+    }
     let rows = option_rows(m.settings);
     let kind = match label {
         "Line" => {
@@ -703,11 +715,15 @@ fn summary(m: &OptionsModel<'_>, cat: usize) -> String {
         ),
         2 => format!(
             "{}, {}",
-            tr(if s.keyboard == KbLayout::Full {
-                "Full"
+            if s.kobo_keyboard() {
+                "Kobo".into()
             } else {
-                "Compact"
-            }),
+                tr(if s.keyboard == KbLayout::Full {
+                    "Full"
+                } else {
+                    "Compact"
+                })
+            },
             tr(s.kb_layout.label())
         ),
         3 => m.language.to_owned(),

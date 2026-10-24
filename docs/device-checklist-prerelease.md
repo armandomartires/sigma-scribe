@@ -166,6 +166,14 @@ Installed on the Forma: **main 99d6887 = 1.11.1** (2026-10-23, binary, dictionar
 - [ ] Display → Backlight appears on the Forma and moves the front light in nine steps from off to full; the log has `light: sysfs …` lines for every device and `light: using <name>`. If the light does not respond or the wrong light moves (the warm one), copy the `light:` lines and set `SIGMA_LIGHT_DEVICE=<name>` in `launch.sh`.
 - [ ] The light keeps its level when the app exits to the stock reader.
 
+## Kobo style keyboard (Unreleased after 1.11.1)
+- [ ] Settings → Keyboard & input → Enhanced keyboard off: the keyboard becomes the Kobo-style board (number row, three letter rows, bottom row with `#&+`, `ÉÀÇ`, a bracket Space, ← →, a dark Return); every key is easy to hit with a finger at 200 % and the keys read clearly.
+- [ ] Shift is one-shot (the arrow key inverts); letters, digits, `@` and `.` type as shown; Back deletes; ← → move the caret; Return starts a new line.
+- [ ] `#&+` shows the symbols layer (`£ € ¡ ¿ « » ¢ ¥ • °` present), `ÉÀÇ` the accents layer; Shift there switches capitals and lower case; the two bottom-left keys always name the other two layers.
+- [ ] Landscape: the board is centred at portrait key size and there is no Split / Full / Centre bar; nothing else is on the board.
+- [ ] Enhanced keyboard on: Compact and Full as before and no `#&+` or `ÉÀÇ` anywhere on them.
+- [ ] A layout the Kobo board has no room for (Japanese, Chinese, Indic, Thai) keeps the Full board with the setting off.
+
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist).
 

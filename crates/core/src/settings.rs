@@ -200,6 +200,11 @@ pub struct Settings {
     /// tested yet (Asian and right-to-left layouts, Word mode, Fast ink).
     /// Off by default. `experimental=`.
     pub experimental: bool,
+    /// Keyboard & input → Enhanced keyboard (v1.13). On (default): the
+    /// Compact / Full boards. Off: the Kobo style board, with no options on
+    /// the keyboard itself (layouts that do not fit it keep the Full board).
+    /// `enhanced_keyboard=`.
+    pub enhanced_keyboard: bool,
 }
 
 /// Backlight steps above off: nine stops, 0 to 8 (Display → Backlight).
@@ -315,6 +320,7 @@ impl Default for Settings {
             lang_override: false,
             ui_lang: UiLang::En,
             experimental: false,
+            enhanced_keyboard: true,
         }
     }
 }
@@ -354,6 +360,8 @@ pub enum Change {
     /// Experimental features on / off (v1.12). Turning them off puts an
     /// experimental layout back to US.
     Experimental(bool),
+    /// Enhanced keyboard on / off (v1.13): off is the Kobo style board.
+    EnhancedKeyboard(bool),
     /// The backlight step, 0 to [`BACKLIGHT_MAX`] (v1.12). Not a saved
     /// setting: the app sends it to the front light, which keeps it.
     Backlight(u8),
@@ -504,6 +512,7 @@ impl Settings {
                     self.kb_layout = crate::layouts::KeyLayout::Us;
                 }
             }
+            Change::EnhancedKeyboard(on) => self.enhanced_keyboard = on,
             Change::Backlight(_) => {}
             Change::KbAuto(on) => {
                 self.kb_size = if on { 0 } else { self.keyboard_scale() };
@@ -678,6 +687,7 @@ impl Settings {
                 "ui_lang_override" => s.lang_override = b().unwrap_or(s.lang_override),
                 "ui_lang" => s.ui_lang = UiLang::from_code(v).unwrap_or(s.ui_lang),
                 "experimental" => s.experimental = b().unwrap_or(s.experimental),
+                "enhanced_keyboard" => s.enhanced_keyboard = b().unwrap_or(s.enhanced_keyboard),
                 _ => {}
             }
         }
@@ -699,6 +709,14 @@ impl Settings {
         }
         s.sync_rotation();
         s
+    }
+
+    /// The Kobo style board is in use: Enhanced keyboard is off and the
+    /// layout fits it (the Indic, Thai, Japanese and Chinese layouts keep the
+    /// Full board).
+    #[must_use]
+    pub fn kobo_keyboard(&self) -> bool {
+        !self.enhanced_keyboard && self.kb_layout.has_compact()
     }
 
     /// The layouts the list offers: the experimental ones only while
@@ -746,7 +764,7 @@ impl Settings {
         format!(
             "keyboard={}\npaper={}\ntype={}\nline={}\nline_words={}\nsize={}\nleading={}\nmargin={}\n\
              tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\nusb={}\nscroll={}\norientation={}\n\
-             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\nink_words={}\nink_boxes={}\nui_lang_override={}\nui_lang={}\nexperimental={}\n",
+             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\nink_words={}\nink_boxes={}\nui_lang_override={}\nui_lang={}\nexperimental={}\nenhanced_keyboard={}\n",
             self.keyboard.name(),
             match self.paper {
                 Paper::Day => "day",
@@ -805,6 +823,7 @@ impl Settings {
             on(self.lang_override),
             self.ui_lang.code(),
             on(self.experimental),
+            on(self.enhanced_keyboard),
         )
     }
 }

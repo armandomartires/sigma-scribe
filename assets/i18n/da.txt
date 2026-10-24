@@ -830,3 +830,5 @@ Backlight
 = Baggrundslys
 Light
 = Lys
+Enhanced keyboard
+= Udvidet tastatur

@@ -831,3 +831,5 @@ Backlight
 = Brilho
 Light
 = Luz
+Enhanced keyboard
+= Teclado avançado
