@@ -6,6 +6,7 @@ pub mod evdev;
 #[cfg(target_arch = "arm")]
 pub mod fbink;
 pub mod gsensor;
+pub mod light;
 pub mod otg;
 pub mod pointer;
 pub mod usbkbd;
@@ -189,6 +190,18 @@ pub trait Device {
     /// Auto orientation keeps the last rotation.
     fn has_gsensor(&self) -> bool {
         false
+    }
+    /// The front light's step, 0 (off) to 8 (full), when the device has
+    /// one (v1.12). Default: no light, so Display shows no Backlight row.
+    fn light_step(&mut self) -> Option<u8> {
+        None
+    }
+    /// Sets the front light to a step, 0 to 8 (v1.12).
+    ///
+    /// # Errors
+    /// The light could not be written (the app carries on without it).
+    fn set_light(&mut self, _step: u8) -> io::Result<()> {
+        Ok(())
     }
 }
 

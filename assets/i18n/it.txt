@@ -822,3 +822,11 @@ Chinese Traditional (pinyin)
 
 Machine-drafted translation, best effort; a native review is needed. Follows the Kobo's language.
 = Traduzione automatica, al meglio; serve una revisione madrelingua. Segue la lingua del Kobo.
+Experimental features
+= Funzioni sperimentali
+Not fully tested yet
+= Non ancora testate a fondo
+Backlight
+= Retroilluminazione
+Light
+= Luce

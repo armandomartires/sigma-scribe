@@ -168,6 +168,9 @@ User decisions (2026-10-21 21:24): v1.0.1 = pointer trails + reverse scroll + "U
 - [x] Tag v1.0.1 — done 2026-10-23
 - [x] Tag v1.0.2 — done 2026-10-23
 
+### Proposals awaiting a decision (2026-10-24)
+- **Kobo-style on-screen keyboard as an option** (user idea after photographing the stock keyboard, `docs/ui-reference/` "Kobo on-screen keyboard"). Settings → Keyboard & input → *Keyboard style*: **Sigma** (today's Compact and Full boards, with Ctrl/Alt/arrows/Esc, the choice for writers who use shortcuts) or **Kobo** (five rows: always-visible number row, three letter rows with Shift and Back, a bottom row with symbols, accents, an underline-bracket space bar, ← →, and one dark action key; layers letters / symbols / accents, Shift switches case on all of them). Built on the Compact board's code (`crates/core/src/keyboard.rs`, `crates/render/src/editor.rs`), so Compact's targets, sizes (Keyboard size slider) and layout languages carry over; the accents layer would come from the active layout (the Kobo's is Latin). Open questions for the user: (1) does Kobo style replace Compact or sit beside Compact and Full (three styles)? (2) landscape: the Kobo's board is one row set stretched across; keep our Split / Full / Centre choices? (3) is the accents layer worth it now that long-press accents are deferred (S13-D3)? Estimate: one sprint, emulator and CI only, device checks added to the pre-release checklist.
+
 ### Roadmap after v0.2 (confirmed)
 
 | # | Sprint | Release | Contents |

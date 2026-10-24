@@ -1,5 +1,6 @@
 # v1.8.0 (S18.0): Arabic, Persian, Urdu and Hebrew layouts; bidi order, shaping, flush-right rows.
 copy-notes tests/test-notes/_test
+experimental on
 usb plug
 tap-on Options
 tap-on Keyboard & input

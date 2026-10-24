@@ -140,6 +140,10 @@ fn a2_setting_switches_the_live_waveform() {
     let mut r = Rig::new("a2", 1440, 1920);
     assert!(!r.app.settings.ink_a2, "A2 is off by default");
     r.app.change(Change::InkA2(true));
+    // Fast ink is an experimental feature: it does nothing until they are on.
+    assert!(!r.app.settings.fast_ink());
+    r.app.change(Change::Experimental(true));
+    assert!(r.app.settings.fast_ink());
     r.tap("Write");
     r.tap("Draw");
     let sent = r.stroke(0);

@@ -1,5 +1,6 @@
 # v1.10.0 (S20.0): Japanese, romaji to kana, Space converts, candidates, Enter commits.
 copy-notes tests/test-notes/_test
+experimental on
 usb plug
 tap-on Options
 tap-on Keyboard & input

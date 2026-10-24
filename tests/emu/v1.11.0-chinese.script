@@ -1,5 +1,6 @@
 # v1.11.0 (S21.0): Chinese pinyin, live candidates, Space / digits pick, partial commit, Traditional.
 copy-notes tests/test-notes/_test
+experimental on
 usb plug
 tap-on Options
 tap-on Keyboard & input

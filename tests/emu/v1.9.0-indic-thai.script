@@ -1,5 +1,6 @@
 # v1.9.0 (S19.0): Devanagari, Bengali, Tamil InScript and Thai Kedmanee; shaping, clusters.
 copy-notes tests/test-notes/_test
+experimental on
 usb plug
 tap-on Options
 tap-on Keyboard & input

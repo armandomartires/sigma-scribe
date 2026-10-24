@@ -17,6 +17,7 @@ pub mod ink;
 pub mod options;
 pub mod pointer;
 pub mod preview;
+pub mod scrollbar;
 pub(crate) mod shape;
 pub mod slider;
 pub mod theme;
