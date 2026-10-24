@@ -2354,8 +2354,23 @@ impl App {
     /// Caret tap: pending ink is read, then the caret goes to the tapped
     /// spot of the note.
     fn place_caret(&mut self, x: i32, y: i32) -> Option<Refresh> {
-        let Hit::Caret(at) = self.editor_hit(x, y) else {
-            return None;
+        let at = match self.editor_hit(x, y) {
+            Hit::Caret(at) => at,
+            // The title bar stays live while the panel is open: reading
+            // the pending ink, the panel closes and the tap goes on to it.
+            Hit::Back
+            | Hit::Files
+            | Hit::TogglePreview
+            | Hit::Options
+            | Hit::Find
+            | Hit::Graph
+            | Hit::Help
+            | Hit::Drawer(_) => {
+                let _ = self.read_letter();
+                self.ink = None;
+                return self.handle_inner(Event::Tap { x, y });
+            }
+            _ => return None,
         };
         let _ = self.read_letter();
         self.buffer.set_caret(at);

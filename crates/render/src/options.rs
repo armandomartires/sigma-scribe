@@ -650,6 +650,10 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
             Kind::Pick(m.settings.ui_lang.name().to_owned())
         }
         "Interface language" => Kind::Muted(m.language.to_owned()),
+        // Auto follows the sensor, so there is no 180° to choose: greyed.
+        "Upside down" if m.settings.orientation == Orientation::Auto => {
+            Kind::Muted(tr(if m.settings.upside_down { "On" } else { "Off" }).into_owned())
+        }
         // v1.5.2: what Train saved, and a way to delete it.
         "My handwriting" => Kind::Inline(vec![
             value(format!("{}: {}", tr("Samples"), m.hw_samples)),
@@ -1507,7 +1511,17 @@ mod tests {
         let k = Keyboard::default();
         let m = model(&st, &k, SettingsPage::Root, 0);
         let kind = |l| display_row(&m, l).unwrap().kind;
-        assert!(matches!(kind("Upside down"), Kind::Check { .. }));
+        // Auto has no 180° to pick: greyed until Portrait or Landscape.
+        assert!(matches!(kind("Upside down"), Kind::Muted(_)));
+        let fixed = Settings {
+            orientation: Orientation::Portrait,
+            ..Settings::default()
+        };
+        let mf = model(&fixed, &k, SettingsPage::Root, 0);
+        assert!(matches!(
+            display_row(&mf, "Upside down").unwrap().kind,
+            Kind::Check { .. }
+        ));
         assert!(matches!(kind("USB keyboard & mouse"), Kind::Check { .. }));
         assert!(matches!(kind("Line"), Kind::Check { .. }));
         assert!(matches!(kind("Paper"), Kind::Inline(_)));
@@ -1534,6 +1548,10 @@ mod tests {
             e.options_hit(&m, x, y),
             OptionsHit::Open(SettingsPage::Category(1))
         );
+        let st = Settings {
+            orientation: Orientation::Portrait,
+            ..st
+        };
         let m = model(&st, &k, SettingsPage::Category(1), 0);
         let (x, y) = e.options_control(&m, "Upside down/On").unwrap();
         assert_eq!(

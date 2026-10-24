@@ -272,3 +272,53 @@ fn the_letters_panel_has_a_second_row_with_the_nav_keys() {
         );
     }
 }
+
+/// v1.13: the title bar keeps working while a panel is open: Options
+/// closes the panel and opens Settings, in the Write panel and in boxes.
+#[test]
+fn the_title_bar_stays_live_with_the_panel_open() {
+    for boxes in [false, true] {
+        let mut r = Rig::new(if boxes { "bar-boxes" } else { "bar-free" });
+        r.app.change(Change::InkBoxes(boxes));
+        let (x, y) = r.app.control_centre("Options").expect("Options");
+        r.app.open_ink();
+        assert!(r.app.panel_layout().is_some());
+        r.touch(Phase::Down, x, y);
+        r.touch(Phase::Up, x, y);
+        assert!(
+            r.app.panel_layout().is_none(),
+            "panel closed, boxes={boxes}"
+        );
+        assert!(r.app.options, "Settings open, boxes={boxes}");
+    }
+}
+
+/// v1.13: letter boxes: Words on the left, Train and Done on the right,
+/// the edit keys centred between them.
+#[test]
+fn letter_boxes_put_words_left_train_done_right_keys_centre() {
+    let mut r = Rig::new("boxes-layout");
+    r.app.change(Change::InkBoxes(true));
+    r.app.open_ink();
+    let l = r.app.panel_layout().unwrap();
+    let at = |b: InkButton| l.buttons.iter().find(|(_, k)| *k == b).unwrap().0;
+    let (mode, done, train) = (
+        at(InkButton::Mode),
+        at(InkButton::Cancel),
+        at(InkButton::Train),
+    );
+    assert!(mode.x < 100 && done.x + done.w > l.panel.w - 100);
+    assert!(train.x > l.panel.w / 2 && done.x > train.x);
+    let mid: Vec<_> = [
+        InkButton::Undo,
+        InkButton::Space,
+        InkButton::Back,
+        InkButton::Enter,
+    ]
+    .iter()
+    .map(|b| at(*b))
+    .collect();
+    let (lo, hi) = (mid[0].x, mid[3].x + mid[3].w);
+    assert!(lo > mode.x + mode.w && hi < train.x);
+    assert!(((lo + hi) / 2 - l.panel.w / 2).abs() < 80, "centred");
+}

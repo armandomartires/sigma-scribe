@@ -327,14 +327,11 @@ impl EditorScreen {
                     (InkButton::Cancel, &["Cancel"]),
                 ],
             ),
+            // Letters: Words stays left, Train and Done right, the keys
+            // between them are centred (placed below); Free uses its own
+            // layout (`free_layout`).
             InkMode::Letters | InkMode::Free => (
-                &[
-                    (InkButton::Mode, &["Letters", "Draw", "Words"]),
-                    (InkButton::Undo, &["Undo"]),
-                    (InkButton::Space, &["Space"]),
-                    (InkButton::Back, &["Erase"]),
-                    (InkButton::Enter, &["Return"]),
-                ],
+                &[(InkButton::Mode, &["Letters", "Draw", "Words"])],
                 &[
                     (InkButton::Cancel, &["Done"]),
                     (InkButton::Train, &["Train"]),
@@ -357,13 +354,32 @@ impl EditorScreen {
             buttons.push((Rect::new(rx, by, ww, bh), *b));
             rx -= pad;
         }
+        if mode == InkMode::Letters {
+            // The edit keys, centred between the two ends of the row.
+            const MID: [(InkButton, &str); 4] = [
+                (InkButton::Undo, "Undo"),
+                (InkButton::Space, "Space"),
+                (InkButton::Back, "Erase"),
+                (InkButton::Enter, "Return"),
+            ];
+            let widths: Vec<i32> = MID.iter().map(|(_, l)| bw(l)).collect();
+            let total = widths.iter().sum::<i32>() + pad * (MID.len() as i32 - 1);
+            let free_l = x;
+            let free_r = rx;
+            let mut mx = (free_l + (free_r - free_l - total) / 2).max(free_l);
+            for ((b, _), ww) in MID.iter().zip(&widths) {
+                buttons.push((Rect::new(mx, by, *ww, bh), *b));
+                mx += ww + pad;
+            }
+        }
         let mut top = by + bh + pad;
         if mode == InkMode::Letters {
-            // A second row: the caret and page keys.
-            let mut nx = pad;
-            for b in NAV {
-                let ww = bw(label_of_nav(b));
-                buttons.push((Rect::new(nx, top, ww, bh), b));
+            // A second row: the caret and page keys, centred.
+            let widths: Vec<i32> = NAV.iter().map(|b| bw(label_of_nav(*b))).collect();
+            let total = widths.iter().sum::<i32>() + pad * (NAV.len() as i32 - 1);
+            let mut nx = ((w - total) / 2).max(pad);
+            for (b, ww) in NAV.iter().zip(&widths) {
+                buttons.push((Rect::new(nx, top, *ww, bh), *b));
                 nx += ww + pad;
             }
             top += bh + pad;
@@ -662,6 +678,9 @@ impl EditorScreen {
         mode: InkMode,
         v: &LettersView,
     ) {
+        // Same look as the Write panel (`draw_free`): outlined keys, plain
+        // candidate words, pure black on white.
+        let thin = self.px(1.0).max(1);
         c.fill(l.panel, WHITE);
         c.fill(
             Rect::new(l.panel.x, l.panel.y, l.panel.w, self.px(2.0).max(2)),
@@ -669,7 +688,13 @@ impl EditorScreen {
         );
         let ui = self.ui_px();
         let line = self.px(1.5).max(1);
+        let rad = self.px(8.0).max(4);
+        let rule_y = l.strip.y + l.strip.h + self.px(4.0);
+        if !matches!(mode, InkMode::Train(_)) {
+            c.fill(Rect::new(0, rule_y, l.panel.w, thin), BLACK);
+        }
         for (r, b) in &l.buttons {
+            let cand = matches!(b, InkButton::Cand(_));
             let t = match b {
                 InkButton::Cand(k) => match v.cands.get(*k) {
                     Some(ch) => ch.clone(),
@@ -677,32 +702,23 @@ impl EditorScreen {
                 },
                 _ => label_of(*b, pen, mode, self.ink_words),
             };
-            let filled = matches!(b, InkButton::Save | InkButton::Cand(0));
+            let filled = matches!(b, InkButton::Save);
             if filled {
                 c.fill(*r, BLACK);
-            } else {
-                c.stroke(*r, line, BLACK);
+            } else if !cand {
+                round_outline(c, *r, rad, line);
             }
-            let size = if matches!(b, InkButton::Cand(_)) {
-                ui * 1.3
-            } else {
-                ui
-            };
-            let face = if matches!(b, InkButton::Cand(_)) {
-                Face::Literata
-            } else {
-                Face::Atkinson
-            };
-            let tw = self.fonts.width(face, size, &t);
-            self.fonts.draw(
-                c,
-                face,
-                size,
+            let size = if cand { ui * 1.15 } else { ui };
+            let tw = self.fonts.width(Face::Atkinson, size, &t);
+            let (tx, ty) = (
                 r.x as f32 + (r.w as f32 - tw) / 2.0,
                 (r.y + r.h / 2) as f32 + size * 0.35,
-                &t,
-                if filled { WHITE } else { BLACK },
             );
+            if filled {
+                self.fonts.draw(c, Face::Atkinson, size, tx, ty, &t, WHITE);
+            } else {
+                self.text_1bit(c, Face::Atkinson, size, tx, ty, &t);
+            }
         }
         if let InkMode::Train(i) = mode {
             let ch = sigma_hwr::CHARSET.chars().nth(i).unwrap_or(' ');
@@ -714,14 +730,13 @@ impl EditorScreen {
                 v.saved,
                 tr("saved")
             );
-            self.fonts.draw(
+            self.text_1bit(
                 c,
                 Face::Atkinson,
                 ui * 1.2,
                 l.strip.x as f32,
                 (l.strip.y + l.strip.h / 2) as f32 + ui * 0.42,
                 &t,
-                BLACK,
             );
         }
         let dot = self.px(2.0).max(1);
