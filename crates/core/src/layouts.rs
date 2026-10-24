@@ -1085,6 +1085,25 @@ impl KeyLayout {
         )
     }
 
+    /// Whether typing on this layout composes text (re-spelling, syllables,
+    /// conjuncts, candidates), so the Insert key's overwrite does not apply.
+    #[must_use]
+    pub fn composes(self) -> bool {
+        matches!(
+            self,
+            Self::ViTelex
+                | Self::ViVni
+                | Self::Ko
+                | Self::Ja
+                | Self::ZhHans
+                | Self::ZhHant
+                | Self::Deva
+                | Self::Bn
+                | Self::Ta
+                | Self::Th
+        )
+    }
+
     /// The compact board has room for the letters of this layout (v1.9):
     /// the Indic and Thai layouts have too many keys, so they use the Full
     /// board only.

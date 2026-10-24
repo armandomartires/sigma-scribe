@@ -189,6 +189,7 @@ fn special(code: u16) -> Option<HwKey> {
         107 => HwKey::End,
         108 => HwKey::Down,
         109 => HwKey::PageDown,
+        110 => HwKey::Insert,
         111 => HwKey::Delete,
         _ => return None,
     })

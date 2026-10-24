@@ -37,6 +37,13 @@ pub enum InkButton {
     Type(char),
     Digits,
     Lang,
+    /// Caret and page keys of the panels (v1.11.2).
+    Home,
+    End,
+    PgUp,
+    PgDn,
+    /// Insert / overwrite.
+    Ins,
 }
 
 /// What the panel shows: free ink, character boxes, or enrolment of the
@@ -126,6 +133,25 @@ pub fn box_units(b: Rect, x: i32, y: i32) -> (f32, f32) {
     )
 }
 
+/// The caret and page keys, in panel order.
+const NAV: [InkButton; 5] = [
+    InkButton::Home,
+    InkButton::End,
+    InkButton::PgUp,
+    InkButton::PgDn,
+    InkButton::Ins,
+];
+
+fn label_of_nav(b: InkButton) -> &'static str {
+    match b {
+        InkButton::Home => "Home",
+        InkButton::End => "End",
+        InkButton::PgUp => "PgUp",
+        InkButton::PgDn => "PgDn",
+        _ => "Ins",
+    }
+}
+
 fn label_of(b: InkButton, pen: Pen, mode: InkMode, words: bool) -> String {
     let l = match b {
         InkButton::Undo => "Undo",
@@ -150,6 +176,11 @@ fn label_of(b: InkButton, pen: Pen, mode: InkMode, words: bool) -> String {
         InkButton::Train => "Train",
         InkButton::Skip => "Skip",
         InkButton::Save => "Save",
+        InkButton::Home => "Home",
+        InkButton::End => "End",
+        InkButton::PgUp => "PgUp",
+        InkButton::PgDn => "PgDn",
+        InkButton::Ins => "Ins",
         InkButton::Cand(_)
         | InkButton::Prev
         | InkButton::Next
@@ -326,7 +357,17 @@ impl EditorScreen {
             buttons.push((Rect::new(rx, by, ww, bh), *b));
             rx -= pad;
         }
-        let top = by + bh + pad;
+        let mut top = by + bh + pad;
+        if mode == InkMode::Letters {
+            // A second row: the caret and page keys.
+            let mut nx = pad;
+            for b in NAV {
+                let ww = bw(label_of_nav(b));
+                buttons.push((Rect::new(nx, top, ww, bh), b));
+                nx += ww + pad;
+            }
+            top += bh + pad;
+        }
         let area = Rect::new(pad, top, w - 2 * pad, panel.y + ph - top - pad);
         let mut boxes = Vec::new();
         let mut strip = Rect::new(area.x, area.y, area.w, 0);
@@ -451,8 +492,23 @@ impl EditorScreen {
                 buttons.push((rect, *b));
             }
         }
+        // The caret and page keys, Insert and Undo: one row above the
+        // writing area, as wide as the area.
         let ax = pad + 3 * kw + 3 * pad + pad;
-        let area = Rect::new(ax, top, w - ax - pad, panel.y + ph - top - pad);
+        let row = [
+            InkButton::Home,
+            InkButton::End,
+            InkButton::PgUp,
+            InkButton::PgDn,
+            InkButton::Ins,
+            InkButton::Undo,
+        ];
+        let rw = ((w - pad - ax - (row.len() as i32 - 1) * pad) / row.len() as i32).max(44);
+        for (k, b) in row.iter().enumerate() {
+            buttons.push((Rect::new(ax + k as i32 * (rw + pad), top, rw, kh), *b));
+        }
+        let ay = top + kh + pad;
+        let area = Rect::new(ax, ay, w - ax - pad, panel.y + ph - ay - pad);
         InkLayout {
             baseline_y: area.y + area.h * 7 / 10,
             panel,
@@ -541,6 +597,12 @@ impl EditorScreen {
                 }
                 InkButton::Type(ch) => Some(ch.to_string()),
                 InkButton::Digits => Some(if v.digits { "abc".into() } else { "123".into() }),
+                InkButton::Home
+                | InkButton::End
+                | InkButton::PgUp
+                | InkButton::PgDn
+                | InkButton::Ins
+                | InkButton::Undo => Some(label_of(*b, Pen::Finger, InkMode::Free, false)),
                 _ => None,
             };
             if let Some(t) = text {
