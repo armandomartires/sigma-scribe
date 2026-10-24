@@ -215,3 +215,40 @@ fn the_slider_sets_the_light_and_the_app_sends_it_to_the_device() {
     let _ = std::fs::remove_dir_all(&dir);
     let _ = (Event::Quit, Phase::Down, Refresh::Full);
 }
+
+/// v1.13.1: dragging the Backlight slider acts once per step, not on every
+/// move event (the Forma's log showed the same step up to five times in a
+/// row, each one a sysfs write).
+#[test]
+fn backlight_drag_acts_once_per_step() {
+    use sigma_device::{Event, Phase};
+    let dir = std::env::temp_dir().join(format!("sigma-light-once-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let mut app = sigma_scribe::App::new(1440, 1920, dir.clone());
+    let mut dev = sigma_device::desktop::DesktopDevice::new(1440, 1920);
+    dev.light = Some(2);
+    app.sync_light(&mut dev);
+    app.open_options();
+    app.settings_page = SettingsPage::Category(1);
+    let (x, y) = app.control_centre("Backlight/62 %").expect("the 62 % stop");
+    let mut t = 0u64;
+    let mut go = |app: &mut sigma_scribe::App, phase: Phase, dx: i32| {
+        t += 30;
+        app.handle(Event::Touch {
+            phase,
+            x: x + dx,
+            y,
+            t,
+        })
+    };
+    assert!(go(&mut app, Phase::Down, 0).is_some(), "the step is set");
+    assert_eq!(app.options_model().light, Some(5));
+    for dx in [1, 2, 3, 2, 1] {
+        assert!(
+            go(&mut app, Phase::Move, dx).is_none(),
+            "the same step again does nothing"
+        );
+    }
+    assert!(go(&mut app, Phase::Up, 0).is_none());
+    let _ = std::fs::remove_dir_all(&dir);
+}

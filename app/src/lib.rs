@@ -1365,6 +1365,9 @@ impl App {
                     Some(Change::LeadingTo(v)) if (v - self.settings.leading).abs() < 0.05 => None,
                     Some(Change::MarginTo(v)) if (v - self.settings.margin).abs() < 0.05 => None,
                     Some(Change::UiScaleTo(v)) if v == self.settings.ui_scale => None,
+                    // The same light step again (every drag event repeats it): no
+                    // redraw, no sysfs write, no log line.
+                    Some(Change::Backlight(n)) if n == self.light_step => None,
                     Some(c) => Some(self.change(c)),
                     None => None,
                 })
