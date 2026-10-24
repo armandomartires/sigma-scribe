@@ -29,6 +29,8 @@ pub struct Buffer {
     redo: Vec<(String, usize)>,
     /// Kind of the last edit, for coalescing typing into word-sized steps.
     last: Edit,
+    /// Insert key: a typed character replaces the one after the caret.
+    overwrite: bool,
 }
 
 /// Undo steps kept per open note.
@@ -55,7 +57,23 @@ impl Buffer {
             undo: Vec::new(),
             redo: Vec::new(),
             last: Edit::Break,
+            overwrite: false,
         }
+    }
+
+    /// Whether typing overwrites (the Insert key's other state).
+    #[must_use]
+    pub fn overwrite(&self) -> bool {
+        self.overwrite
+    }
+
+    pub fn set_overwrite(&mut self, on: bool) {
+        self.overwrite = on;
+    }
+
+    /// The Insert key: switch between inserting and overwriting.
+    pub fn toggle_overwrite(&mut self) {
+        self.overwrite = !self.overwrite;
     }
 
     #[must_use]
@@ -321,9 +339,17 @@ impl Buffer {
         } else {
             Edit::Typing
         });
+        let had_selection = self.selection().is_some();
         self.delete_selection();
         if s.is_empty() {
             return;
+        }
+        if self.overwrite && !had_selection && s.chars().count() == 1 && s != "\n" {
+            // Overwrite: the next character goes, but never a line break.
+            let next = self.next_grapheme(self.caret);
+            if next > self.caret && &self.text[self.caret..next] != "\n" {
+                self.text.replace_range(self.caret..next, "");
+            }
         }
         self.text.insert_str(self.caret, s);
         self.caret += s.len();
@@ -638,5 +664,45 @@ mod tests {
         assert_eq!(b.revision(), r);
         b.insert("b");
         assert!(b.revision() > r);
+    }
+
+    #[test]
+    fn overwrite_replaces_the_next_character_in_one_undo_step() {
+        let mut b = Buffer::new("abcd");
+        b.set_caret(1);
+        b.toggle_overwrite();
+        b.insert("X");
+        b.insert("Y");
+        assert_eq!(b.text(), "aXYd");
+        assert_eq!(b.caret(), 3);
+        assert!(b.undo());
+        assert_eq!(b.text(), "abcd");
+    }
+
+    #[test]
+    fn overwrite_never_eats_a_line_break_or_the_end() {
+        let mut b = Buffer::new("ab\ncd");
+        b.set_caret(2);
+        b.toggle_overwrite();
+        b.insert("X");
+        assert_eq!(b.text(), "abX\ncd");
+        b.set_caret(b.text().len());
+        b.insert("Z");
+        assert_eq!(b.text(), "abX\ncdZ");
+        // A line break typed in overwrite mode is inserted.
+        b.set_caret(1);
+        b.insert("\n");
+        assert_eq!(b.text(), "a\nbX\ncdZ");
+    }
+
+    #[test]
+    fn overwrite_off_inserts_and_pastes_insert() {
+        let mut b = Buffer::new("abcd");
+        b.set_caret(1);
+        b.insert("X");
+        assert_eq!(b.text(), "aXbcd");
+        b.toggle_overwrite();
+        b.insert("pq"); // more than one character: a paste, not typing
+        assert_eq!(b.text(), "aXpqbcd");
     }
 }
