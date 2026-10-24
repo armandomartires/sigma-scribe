@@ -695,31 +695,21 @@ impl EditorScreen {
         }
     }
 
-    /// Scroll position bar (v1.4.2): a thin strip on the page's right
-    /// edge, Kobo Settings style, a dashed track and a solid thumb sized
-    /// and placed by the visible share of the note. Pure 0x00 / 0xFF only,
-    /// so the fast DU waveform renders it cleanly; it only changes (and is
-    /// only sent to the panel, by the frame diff) when the note scrolls.
-    /// Not shown when the whole note fits. Display only.
+    /// Scroll position bar (v1.12: the Kobo's own look): a hairline track
+    /// in the page's right margin with a hollow rounded thumb sized and
+    /// placed by the visible share of the note (`crate::scrollbar`). Pure
+    /// 0x00 / 0xFF only, so the fast DU waveform renders it cleanly; it
+    /// only changes (and is only sent to the panel, by the frame diff) when
+    /// the note scrolls. Not shown when the whole note fits. Display only.
     #[must_use]
     pub fn scroll_bar(&self, page: Rect, total: usize, visible: usize) -> Option<(Rect, Rect)> {
         if total <= visible || page.h <= 0 {
             return None;
         }
         let p = self.page_s;
-        let w = p.px(6.0).max(4);
-        let strip = Rect::new(
-            page.x + page.w - w - p.px(2.0),
-            page.y + p.px(8.0),
-            w,
-            page.h - p.px(16.0),
-        );
-        let th = ((strip.h as f32 * visible as f32 / total as f32) as i32)
-            .max(p.px(24.0))
-            .min(strip.h);
-        let span = (total - visible).max(1) as f32;
-        let at = (self.scroll.min(total - visible) as f32 / span * (strip.h - th) as f32) as i32;
-        Some((strip, Rect::new(strip.x, strip.y + at, strip.w, th)))
+        let strip = crate::scrollbar::strip(page, p.px(12.0).max(8), p.px(6.0), p.px(8.0));
+        let thumb = crate::scrollbar::thumb(strip, total, visible, self.scroll, p.px(40.0));
+        Some((strip, thumb))
     }
 
     fn draw_scroll_bar(&self, c: &mut Canvas, page: Rect, total: usize, visible: usize, t: Theme) {
@@ -727,20 +717,13 @@ impl EditorScreen {
             return;
         };
         // Night pages are dark: the bar inverts, still only black and white.
-        let (bg, fg) = if t.paper < 128 {
+        let (paper, ink) = if t.paper < 128 {
             (0x00, 0xFF)
         } else {
             (0xFF, 0x00)
         };
-        c.fill(strip, bg);
-        let mid = strip.x + strip.w / 2;
-        let dash = self.page_s.px(4.0).max(2);
-        let mut y = strip.y;
-        while y < strip.y + strip.h {
-            c.fill(Rect::new(mid, y, 1, dash.min(strip.y + strip.h - y)), fg);
-            y += dash * 2;
-        }
-        c.fill(thumb, fg);
+        c.fill(strip, paper);
+        crate::scrollbar::draw(c, strip, thumb, ink, paper, self.page_s.px(2.0).max(2));
     }
 
     fn text_area(&self, page: Rect) -> Rect {
@@ -2514,7 +2497,10 @@ mod scroll_bar_tests {
         assert!(e.scroll_bar(page, 10, 20).is_none(), "fits: no bar");
         let (strip, top) = e.scroll_bar(page, 400, 40).unwrap();
         assert_eq!(top.y, strip.y, "at the top");
-        assert!((top.h - strip.h / 10).abs() <= 1, "a tenth of the note");
+        assert!(
+            top.h >= strip.h / 10 - 1,
+            "a tenth of the note, or the minimum"
+        );
         e.scroll = 360;
         let (_, end) = e.scroll_bar(page, 400, 40).unwrap();
         assert_eq!(end.y + end.h, strip.y + strip.h, "at the end");

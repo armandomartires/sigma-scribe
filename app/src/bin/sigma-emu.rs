@@ -754,6 +754,24 @@ fn main() -> ExitCode {
                 dev.gsensor = arg == "on";
                 app.set_gsensor(dev.gsensor);
             }
+            "experimental" => {
+                // v1.12: Settings → Experimental features, without the taps.
+                app.change(sigma_core::settings::Change::Experimental(arg == "on"));
+            }
+            "light" => {
+                // v1.12: pretend a front light at this step (0 to 8), or none.
+                dev.light = arg.parse::<u8>().ok();
+                app.sync_light(&mut dev);
+                if let Some(n) = dev.light {
+                    app.change(sigma_core::settings::Change::Backlight(n));
+                }
+            }
+            "expect-light" => {
+                app.sync_light(&mut dev);
+                if dev.light.map_or(String::new(), |n| n.to_string()) != arg {
+                    return fail(format!("light is {:?}", dev.light));
+                }
+            }
             "tilt" => {
                 use sigma_device::gsensor::Tilt;
                 let tilt = match arg {

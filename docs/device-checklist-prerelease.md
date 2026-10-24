@@ -159,6 +159,13 @@ Installed on the Forma: **main 99d6887 = 1.11.1** (2026-10-23, binary, dictionar
 - [ ] Punctuation in full width; `3.14` keeps its point; Enter keeps the pinyin; Esc removes it; 中 / A key.
 - [ ] Chinese Traditional (pinyin): `woaizhongguo` → 我愛中國; `tushuguan` → 圖書館.
 
+## Scroll bar, Experimental features and Backlight (Unreleased after 1.11.1)
+- [ ] Editor and Settings show the Kobo-style bar: hairline track in the right margin, hollow rounded thumb; it follows scrolling and Settings sub-pages; no grey, no ghost when it moves (Paper and Night).
+- [ ] Settings → Experimental features is off after a fresh install; the Layout list then has no Japanese, Chinese, Korean, Arabic, Persian, Urdu, Hebrew, Indic or Thai entries, and Handwriting has no Fast ink or Word mode rows. Turning it on shows them; turning it off while Japanese is the layout puts US back.
+- [ ] An older settings file that used Japanese (or Word mode, or Fast ink) comes up with Experimental features already on.
+- [ ] Display → Backlight appears on the Forma and moves the front light in nine steps from off to full; the log has `light: sysfs …` lines for every device and `light: using <name>`. If the light does not respond or the wrong light moves (the warm one), copy the `light:` lines and set `SIGMA_LIGHT_DEVICE=<name>` in `launch.sh`.
+- [ ] The light keeps its level when the app exits to the stock reader.
+
 ## Write panel keys, Insert and Undo (Unreleased after 1.11.1)
 - [ ] Write: the row above the writing area shows Home, End, PgUp, PgDn, Ins and Undo; each is easy to hit with a finger at 200 %; the writing area is still comfortable (portrait and landscape).
 - [ ] Home / End move the caret along the line; PgUp / PgDn move by a screen; a reading still pending is typed first; the candidate bar clears.

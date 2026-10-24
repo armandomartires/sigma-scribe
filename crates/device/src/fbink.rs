@@ -36,6 +36,8 @@ pub struct KoboDevice {
     otg: OtgSwitch,
     epoch: Instant,
     gsensor: bool,
+    /// The front light (v1.12), when sysfs shows one.
+    light: Option<crate::light::Light>,
 }
 
 impl KoboDevice {
@@ -125,8 +127,24 @@ impl KoboDevice {
             epoch,
             pointer_updates: 0,
             gsensor,
+            light: open_light(),
         })
     }
+}
+
+/// Finds the front light and logs what sysfs shows, so a wrong pick is easy
+/// to see in the log (v1.12).
+fn open_light() -> Option<crate::light::Light> {
+    let root = std::path::Path::new(crate::light::ROOT);
+    for line in crate::light::describe(root) {
+        eprintln!("light: sysfs {line}");
+    }
+    let l = crate::light::Light::find(root);
+    match &l {
+        Some(l) => eprintln!("light: using {} (step {:?})", l.name(), l.step()),
+        None => eprintln!("light: no front light found"),
+    }
+    l
 }
 
 impl Device for KoboDevice {
@@ -193,6 +211,20 @@ impl Device for KoboDevice {
             r,
             self.otg.role()
         );
+        r
+    }
+
+    fn light_step(&mut self) -> Option<u8> {
+        self.light.as_ref()?.step()
+    }
+
+    fn set_light(&mut self, step: u8) -> io::Result<()> {
+        let l = self
+            .light
+            .as_ref()
+            .ok_or_else(|| io::Error::other("no front light"))?;
+        let r = l.set_step(step);
+        eprintln!("light: {} -> step {step}: {r:?}", l.name());
         r
     }
 

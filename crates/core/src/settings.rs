@@ -196,7 +196,14 @@ pub struct Settings {
     pub lang_override: bool,
     /// The interface language chosen while the override is on. `ui_lang=`.
     pub ui_lang: UiLang,
+    /// Settings → Experimental features (v1.12): features that are not fully
+    /// tested yet (Asian and right-to-left layouts, Word mode, Fast ink).
+    /// Off by default. `experimental=`.
+    pub experimental: bool,
 }
+
+/// Backlight steps above off: nine stops, 0 to 8 (Display → Backlight).
+pub const BACKLIGHT_MAX: u8 = 8;
 
 /// An interface language the user can pick (v1.5.5).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -307,6 +314,7 @@ impl Default for Settings {
             ink_boxes: false,
             lang_override: false,
             ui_lang: UiLang::En,
+            experimental: false,
         }
     }
 }
@@ -343,6 +351,12 @@ pub enum Change {
     UiScale(i8),
     /// One step through the keyboard layouts (v1.3).
     KbLayout(i8),
+    /// Experimental features on / off (v1.12). Turning them off puts an
+    /// experimental layout back to US.
+    Experimental(bool),
+    /// The backlight step, 0 to [`BACKLIGHT_MAX`] (v1.12). Not a saved
+    /// setting: the app sends it to the front light, which keeps it.
+    Backlight(u8),
     /// Keyboard size (v1.4.3): 0 = Auto, or a percentage from `KB_SIZES`.
     KbSize(u16),
     /// Keyboard size Auto on / off (v1.4.4). Off keeps the size Auto was
@@ -479,11 +493,18 @@ impl Settings {
             Change::Pad(p) => self.pad = p,
             Change::PadSide(s) => self.pad_side = s,
             Change::KbLayout(d) => {
-                use crate::layouts::ALL;
-                let i = ALL.iter().position(|&l| l == self.kb_layout).unwrap_or(0) as i32;
-                let n = ALL.len() as i32;
-                self.kb_layout = ALL[(i + i32::from(d)).rem_euclid(n) as usize];
+                let all = self.layouts();
+                let i = all.iter().position(|&l| l == self.kb_layout).unwrap_or(0) as i32;
+                let n = all.len() as i32;
+                self.kb_layout = all[(i + i32::from(d)).rem_euclid(n) as usize];
             }
+            Change::Experimental(on) => {
+                self.experimental = on;
+                if !on && self.kb_layout.experimental() {
+                    self.kb_layout = crate::layouts::KeyLayout::Us;
+                }
+            }
+            Change::Backlight(_) => {}
             Change::KbAuto(on) => {
                 self.kb_size = if on { 0 } else { self.keyboard_scale() };
             }
@@ -656,6 +677,7 @@ impl Settings {
                 "ink_boxes" => s.ink_boxes = b().unwrap_or(s.ink_boxes),
                 "ui_lang_override" => s.lang_override = b().unwrap_or(s.lang_override),
                 "ui_lang" => s.ui_lang = UiLang::from_code(v).unwrap_or(s.ui_lang),
+                "experimental" => s.experimental = b().unwrap_or(s.experimental),
                 _ => {}
             }
         }
@@ -667,8 +689,39 @@ impl Settings {
         {
             s.orientation = Orientation::Auto;
         }
+        // Files before v1.12 have no experimental= line: whoever already
+        // uses an experimental feature keeps it (the switch starts on).
+        if !text.lines().any(|l| l.starts_with("experimental=")) {
+            s.experimental = s.ink_a2 || s.ink_words || s.kb_layout.experimental();
+        }
+        if !s.experimental && s.kb_layout.experimental() {
+            s.kb_layout = crate::layouts::KeyLayout::Us;
+        }
         s.sync_rotation();
         s
+    }
+
+    /// The layouts the list offers: the experimental ones only while
+    /// Settings → Experimental features is on.
+    #[must_use]
+    pub fn layouts(&self) -> Vec<crate::layouts::KeyLayout> {
+        crate::layouts::ALL
+            .iter()
+            .copied()
+            .filter(|l| self.experimental || !l.experimental())
+            .collect()
+    }
+
+    /// Word mode as it is in force: an experimental feature.
+    #[must_use]
+    pub fn word_mode(&self) -> bool {
+        self.experimental && self.ink_words
+    }
+
+    /// Fast ink (A2) as it is in force: an experimental feature.
+    #[must_use]
+    pub fn fast_ink(&self) -> bool {
+        self.experimental && self.ink_a2
     }
 
     /// The keyboard's scale in percent (v1.4.3): Auto follows the UI scale
@@ -693,7 +746,7 @@ impl Settings {
         format!(
             "keyboard={}\npaper={}\ntype={}\nline={}\nline_words={}\nsize={}\nleading={}\nmargin={}\n\
              tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\nusb={}\nscroll={}\norientation={}\n\
-             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\nink_words={}\nink_boxes={}\nui_lang_override={}\nui_lang={}\n",
+             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\nink_words={}\nink_boxes={}\nui_lang_override={}\nui_lang={}\nexperimental={}\n",
             self.keyboard.name(),
             match self.paper {
                 Paper::Day => "day",
@@ -751,6 +804,7 @@ impl Settings {
             on(self.ink_boxes),
             on(self.lang_override),
             self.ui_lang.code(),
+            on(self.experimental),
         )
     }
 }

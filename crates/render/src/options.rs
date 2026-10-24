@@ -241,6 +241,14 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
             ],
         },
         OptRow {
+            label: "Experimental features",
+            hint: "Asian and right-to-left layouts, Word mode, Fast ink",
+            cells: vec![
+                choice("Off", Change::Experimental(false), !s.experimental),
+                choice("On", Change::Experimental(true), s.experimental),
+            ],
+        },
+        OptRow {
             label: "Letter boxes",
             hint: "One character per box instead of free writing",
             cells: vec![
@@ -371,7 +379,7 @@ pub enum SettingsPage {
 /// A section: heading and row labels.
 pub type Section = (&'static str, &'static [&'static str]);
 
-pub const CATEGORIES: [(&str, &[Section]); 6] = [
+pub const CATEGORIES: [(&str, &[Section]); 7] = [
     (
         "Writing",
         &[
@@ -384,6 +392,7 @@ pub const CATEGORIES: [(&str, &[Section]); 6] = [
         "Display",
         &[
             ("Page", &["Paper", "UI scale", "Drawer"]),
+            ("Light", &["Backlight"]),
             ("Orientation", &["Orientation", "Upside down"]),
         ],
     ),
@@ -417,6 +426,10 @@ pub const CATEGORIES: [(&str, &[Section]); 6] = [
     (
         "USB & devices",
         &[("USB keyboard & mouse", &["USB keyboard & mouse", "Scroll"])],
+    ),
+    (
+        "Experimental features",
+        &[("Not fully tested yet", &["Experimental features"])],
     ),
     (
         "Help & about",
@@ -479,6 +492,9 @@ pub struct OptionsModel<'a> {
     pub focus: Option<&'static str>,
     /// Enrolled handwriting samples (v1.5.2).
     pub hw_samples: usize,
+    /// The front light's step when the device has one (v1.12); `None`
+    /// hides Display → Backlight.
+    pub light: Option<u8>,
 }
 
 /// One drawn line of a page: a section band or a row.
@@ -501,6 +517,9 @@ pub struct OptionsLayout {
     /// "Page i of n" (tap: next page), when there is more than one.
     pub pager: Option<Rect>,
     pub pages: usize,
+    /// The scroll bar over the sub-pages (v1.12): track strip and thumb,
+    /// when there is more than one page. Display only.
+    pub bar: Option<(Rect, Rect)>,
     /// Big page title baseline.
     pub heading_y: i32,
     /// Items on the current sub-page: the item, its band, its controls.
@@ -547,6 +566,10 @@ fn row_kind(r: &OptRow) -> Kind {
 /// The rows of every category, by label.
 #[must_use]
 pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
+    // Experimental features hide their own switches until they are on.
+    if matches!(label, "Fast ink (A2)" | "Word mode (experimental)") && !m.settings.experimental {
+        return None;
+    }
     let rows = option_rows(m.settings);
     let kind = match label {
         "Line" => {
@@ -571,6 +594,25 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
                     .iter()
                     .map(|&v| choice("", Change::SizeTo(v), v == cur))
                     .collect(),
+                enabled: true,
+            }
+        }
+        // v1.12: nine steps from off to full; only on a Kobo with a light.
+        "Backlight" => {
+            let n = m.light?;
+            let stops: Vec<Cell> = (0..=sigma_core::settings::BACKLIGHT_MAX)
+                .map(|i| {
+                    let text = match i {
+                        0 => tr("Off").into_owned(),
+                        sigma_core::settings::BACKLIGHT_MAX => tr("Full").into_owned(),
+                        _ => String::new(),
+                    };
+                    choice(&text, Change::Backlight(i), i == n)
+                })
+                .collect();
+            Kind::Slider {
+                value: usize::from(n),
+                stops,
                 enabled: true,
             }
         }
@@ -614,9 +656,9 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
 #[must_use]
 pub fn choices(s: &Settings, label: &str) -> Vec<(String, Change, bool)> {
     if label == "Layout" {
-        use sigma_core::layouts::ALL;
-        let cur = ALL.iter().position(|&l| l == s.kb_layout).unwrap_or(0) as i32;
-        return ALL
+        let all = s.layouts();
+        let cur = all.iter().position(|&l| l == s.kb_layout).unwrap_or(0) as i32;
+        return all
             .iter()
             .enumerate()
             .map(|(i, l)| {
@@ -670,6 +712,7 @@ fn summary(m: &OptionsModel<'_>, cat: usize) -> String {
         ),
         3 => m.language.to_owned(),
         4 => on_off(s.usb),
+        5 => on_off(s.experimental),
         _ => m.version.to_owned(),
     }
 }
@@ -684,12 +727,13 @@ pub fn page_items(m: &OptionsModel<'_>) -> Vec<Item> {
         SettingsPage::Category(c) => {
             let mut out = Vec::new();
             for (band, rows) in CATEGORIES[c.min(CATEGORIES.len() - 1)].1 {
-                out.push(Item::Band(band));
-                for r in *rows {
-                    if let Some(d) = display_row(m, r) {
-                        out.push(Item::Row(d));
-                    }
+                // A band with no row to show (no front light, say) is left out.
+                let shown: Vec<DRow> = rows.iter().filter_map(|r| display_row(m, r)).collect();
+                if shown.is_empty() {
+                    continue;
                 }
+                out.push(Item::Band(band));
+                out.extend(shown.into_iter().map(Item::Row));
             }
             out
         }
@@ -943,12 +987,18 @@ impl EditorScreen {
                 as i32;
             Rect::new(w - pad - pw, heading_y - s.px(30.0), pw, s.px(44.0))
         });
+        let bar = (n > 1).then(|| {
+            let page = Rect::new(0, top, w, bottom - top);
+            let strip = crate::scrollbar::strip(page, s.px(12.0).max(8), s.px(4.0), 0);
+            (strip, crate::scrollbar::thumb(strip, n, 1, sub, s.px(40.0)))
+        });
         OptionsLayout {
             close: base.close_button,
             base,
             back,
             pager,
             pages: n,
+            bar,
             heading_y,
             items,
         }
@@ -1203,6 +1253,9 @@ impl EditorScreen {
                 t.ink,
             );
         }
+        if let Some((strip, thumb)) = l.bar {
+            crate::scrollbar::draw(c, strip, thumb, t.ink, t.paper, s.px(2.0).max(2));
+        }
         let n = l.items.len();
         for (k, (it, band, cells)) in l.items.iter().enumerate() {
             let mid = band.y as f32 + band.h as f32 / 2.0;
@@ -1383,6 +1436,7 @@ mod tests {
             version: "1.4.2",
             focus: None,
             hw_samples: 0,
+            light: None,
         }
     }
 
@@ -1445,7 +1499,12 @@ mod tests {
         assert!(matches!(kind("Size"), Kind::Slider { .. }));
         assert!(matches!(kind("Orientation"), Kind::Inline(_)));
         assert!(matches!(kind("Layout"), Kind::Pick(_)));
-        assert_eq!(choices(&st, "Layout").len(), sigma_core::layouts::ALL.len());
+        assert!(choices(&st, "Layout").len() < sigma_core::layouts::ALL.len());
+        let on = Settings {
+            experimental: true,
+            ..st
+        };
+        assert_eq!(choices(&on, "Layout").len(), sigma_core::layouts::ALL.len());
     }
 
     #[test]
