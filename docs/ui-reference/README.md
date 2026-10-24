@@ -44,7 +44,7 @@ Photos are 1000 px wide greyscale (`photo-*`); web captures keep their own size 
 | `photo-keyboard-symbols.jpg` | `#&+` layer: `# £ € $ % ^ & * ( )`, `! ¡ ? ¿ < > [ ] = +`, `| \ / « » : ; ' " @`, `~ ¢ ¥ • ° - _ , . ⌫`; the bottom keys become `ABC` and `ÉÀÇ`. |
 | `photo-keyboard-accents-upper.jpg`, `…-lower.jpg` | `ÉÀÇ` layer, four rows of accented letters (`Ý Ÿ Š Ž Æ Œ Þ ß IJ Ŀ`, `À Á Â Ä Ã Å È É Ê Ë`, `Ò Ó Ô Ö Õ Ø Ì Í Î Ï`, `⇧ Ù Ú Û Ü Ñ Ç Đ Ł ⌫`); Shift switches upper and lower case; the bottom keys become `#&+` and `ABC`. |
 
-What it means for Sigma Scribe: the Kobo keyboard is a **five-row phone-style board** with three layers (letters, symbols, accents), a context key (Join, Enter) and no modifier keys. Our **Compact** board is the nearest relative (letters, `123`, Shift, Back, Space, Return); our **Full** board is a PC board (Ctrl, Alt, Tab, Esc, arrows, PgUp/PgDn, Home/End). A "Kobo style" option would be a third keyboard style, built on the Compact one: number row on top, an accent layer instead of long-press, and the underline-bracket space bar. Not built; see `plan.md` (proposal).
+What it means for Sigma Scribe: the Kobo keyboard is a **five-row phone-style board** with three layers (letters, symbols, accents), a context key (Join, Enter) and no modifier keys. Our **Compact** board is the nearest relative (letters, `123`, Shift, Back, Space, Return); our **Full** board is a PC board (Ctrl, Alt, Tab, Esc, arrows, PgUp/PgDn, Home/End). The "Kobo style" option (Settings → Enhanced keyboard off, v1.13) is a keyboard style of its own: number row on top, an accent layer instead of long-press, the underline-bracket space bar, a dark Return key, and nothing else on the board.
 
 ## First run, loading and the tour (the Kobo's dialogs and text buttons)
 
@@ -79,6 +79,6 @@ What it means for Sigma Scribe: the Kobo keyboard is a **five-row phone-style bo
 | Drop-down row ("value ⌄") | `Kind::Pick`, opens a choice page |
 | Grey wash button with an italic label (Continue, Cancel, Done) | not yet; our dialogs use filled/outlined cells. A candidate for confirmations. |
 | Progress bar (dark part, light remainder) | not yet |
-| On-screen keyboard (5 rows, three layers) | Compact board is the nearest; a Kobo-style option is proposed |
+| On-screen keyboard (5 rows, three layers) | `Style::Kobo` in `crates/core/src/keyboard.rs`, drawn by `draw_kobo_keys` (Settings → Enhanced keyboard off) |
 
 New images go in `images/` with a `photo-` or `web-` prefix and a row in the matching table.

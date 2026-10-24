@@ -830,3 +830,5 @@ Backlight
 = Retroil·luminació
 Light
 = Llum
+Enhanced keyboard
+= Teclat avançat

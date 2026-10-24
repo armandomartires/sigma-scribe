@@ -20,6 +20,18 @@ pub enum Layer {
     #[default]
     Letters,
     Symbols,
+    /// Accented letters (the Kobo style board, v1.13).
+    Accents,
+}
+
+/// Which board the on-screen keyboard is (Settings → Enhanced keyboard).
+/// **Enhanced** is the Compact / Full pair; **Kobo** is the stock Kobo
+/// reader's board (v1.13): five rows, three layers, no other options.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Style {
+    #[default]
+    Enhanced,
+    Kobo,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -68,6 +80,8 @@ pub enum Key {
     Return,
     /// `123` on letters, `ABC` on symbols (Compact).
     SwapLayer,
+    /// Go to a layer: `#&+`, `ÉÀÇ` or `ABC` (Kobo style board).
+    Layer(Layer),
     /// Switch Full ⇄ Compact.
     SwitchLayout,
     Esc,
@@ -111,10 +125,19 @@ pub enum KeyAction {
 
 const SYMBOLS: [&str; 3] = ["1234567890", "#*-[]()`/", ".,!?:|~>"];
 
+/// The Kobo board's symbols layer (v1.13); Back follows the last row.
+const KOBO_SYMBOLS: [&str; 4] = ["#£€$%^&*()", "!¡?¿<>[]=+", "|\\/«»:;'\"@", "~¢¥•°-_,."];
+
+/// The Kobo board's accents layer; Shift picks the case (v1.13).
+const KOBO_ACCENTS_UPPER: [&str; 4] = ["ÝŸŠŽÆŒÞßĲĿ", "ÀÁÂÄÃÅÈÉÊË", "ÒÓÔÖÕØÌÍÎÏ", "ÙÚÛÜÑÇĐŁ"];
+const KOBO_ACCENTS_LOWER: [&str; 4] = ["ýÿšžæœþßĳŀ", "àáâäãåèéêë", "òóôöõøìíîï", "ùúûüñçđł"];
+
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Keyboard {
     pub layer: Layer,
     pub layout: Layout,
+    /// Enhanced (Compact / Full) or the Kobo style board (v1.13).
+    pub style: Style,
     /// One-shot Shift (or locked when `shift_lock`).
     pub shift: bool,
     pub shift_lock: bool,
@@ -187,11 +210,14 @@ impl Keyboard {
     /// Rows of keys for the current layout and layer, top to bottom.
     #[must_use]
     pub fn rows(&self) -> Vec<Vec<Key>> {
+        if self.style == Style::Kobo {
+            return self.kobo_rows();
+        }
         match self.layout {
             Layout::Full => self.full_rows(),
             Layout::Compact => {
                 let src = match self.layer {
-                    Layer::Letters => self.lang.compact_letters(),
+                    Layer::Letters | Layer::Accents => self.lang.compact_letters(),
                     Layer::Symbols => SYMBOLS,
                 };
                 let mut third = vec![Key::Shift];
@@ -211,6 +237,99 @@ impl Keyboard {
                     ],
                 ]
             }
+        }
+    }
+
+    /// The Kobo style board (v1.13), after the stock reader's: a number row,
+    /// three letter rows with Shift and Back, and a bottom row with the other
+    /// two layers, Space, ← →, Return. The symbols layer and the accents
+    /// layer have four rows above the same bottom row.
+    fn kobo_rows(&self) -> Vec<Vec<Key>> {
+        let bottom = |a: Layer, b: Layer| {
+            vec![
+                Key::Layer(a),
+                Key::Layer(b),
+                Key::Space,
+                Key::Arrow(Dir::Left),
+                Key::Arrow(Dir::Right),
+                Key::Return,
+            ]
+        };
+        let with_back = |src: &str| {
+            let mut r = chars(src);
+            r.push(Key::Back);
+            r
+        };
+        match self.layer {
+            Layer::Letters => {
+                let src = self.lang.compact_letters();
+                let mut mid = chars(src[1]);
+                if mid.len() < 10 {
+                    mid.push(Key::Char('@'));
+                }
+                let mut low = vec![Key::Shift];
+                low.extend(chars(src[2]));
+                if src[2].chars().count() < 8 {
+                    low.push(Key::Char('.'));
+                }
+                low.push(Key::Back);
+                vec![
+                    chars("1234567890"),
+                    chars(src[0]),
+                    mid,
+                    low,
+                    bottom(Layer::Symbols, Layer::Accents),
+                ]
+            }
+            Layer::Symbols => vec![
+                chars(KOBO_SYMBOLS[0]),
+                chars(KOBO_SYMBOLS[1]),
+                chars(KOBO_SYMBOLS[2]),
+                with_back(KOBO_SYMBOLS[3]),
+                bottom(Layer::Letters, Layer::Accents),
+            ],
+            Layer::Accents => {
+                let a = if self.shift_on() {
+                    KOBO_ACCENTS_UPPER
+                } else {
+                    KOBO_ACCENTS_LOWER
+                };
+                let mut low = vec![Key::Shift];
+                low.extend(chars(a[3]));
+                low.push(Key::Back);
+                vec![
+                    chars(a[0]),
+                    chars(a[1]),
+                    chars(a[2]),
+                    low,
+                    bottom(Layer::Symbols, Layer::Letters),
+                ]
+            }
+        }
+    }
+
+    /// Key widths of the Kobo board: every row adds up to ten units.
+    fn kobo_units(&self, key: Key, row: usize) -> f32 {
+        match key {
+            Key::Layer(_) => return 1.5,
+            Key::Space => return 3.0,
+            Key::Arrow(_) => return 1.0,
+            Key::Return => return 2.0,
+            _ => {}
+        }
+        let rows = self.rows();
+        let Some(r) = rows.get(row) else { return 1.0 };
+        let n = r.iter().filter(|k| matches!(k, Key::Char(_))).count() as f32;
+        let s = r
+            .iter()
+            .filter(|k| matches!(k, Key::Shift | Key::Back))
+            .count() as f32;
+        // Rows with more letters than fit (Cyrillic) share the row.
+        let cw = ((10.0 - s) / n.max(1.0)).min(1.0);
+        match key {
+            Key::Char(_) => cw,
+            _ if s > 0.0 => (10.0 - n * cw) / s,
+            _ => 1.0,
         }
     }
 
@@ -250,6 +369,9 @@ impl Keyboard {
     /// Row width in units (every row adds up to this).
     #[must_use]
     pub fn grid_units(&self) -> f32 {
+        if self.style == Style::Kobo {
+            return 10.0;
+        }
         match self.layout {
             Layout::Compact => 10.0,
             Layout::Full => 16.0,
@@ -259,6 +381,9 @@ impl Keyboard {
     /// Width of a key in grid units; `col` disambiguates the two Shifts.
     #[must_use]
     pub fn units(&self, key: Key, row: usize, col: usize) -> f32 {
+        if self.style == Style::Kobo {
+            return self.kobo_units(key, row);
+        }
         match self.layout {
             Layout::Compact => match key {
                 Key::Shift | Key::Back => 1.5,
@@ -301,7 +426,18 @@ impl Keyboard {
 
     #[must_use]
     pub fn label(&self, key: Key) -> String {
+        if self.style == Style::Kobo {
+            match key {
+                Key::Char(c) => return self.char_for(c).to_string(),
+                Key::Layer(Layer::Letters) => return "ABC".into(),
+                Key::Layer(Layer::Symbols) => return "#&+".into(),
+                Key::Layer(Layer::Accents) => return "ÉÀÇ".into(),
+                Key::Return => return "Return".into(),
+                _ => {}
+            }
+        }
         match key {
+            Key::Layer(_) => String::new(),
             Key::Char(c) if self.layout == Layout::Full => {
                 let ch = self.char_for(c);
                 if ch == '半' {
@@ -333,7 +469,7 @@ impl Keyboard {
             Key::Return if self.layout == Layout::Full => "Enter".into(),
             Key::Return => "Return".into(),
             Key::SwapLayer => match self.layer {
-                Layer::Letters => "123".into(),
+                Layer::Letters | Layer::Accents => "123".into(),
                 Layer::Symbols => "ABC".into(),
             },
             Key::SwitchLayout => match self.layout {
@@ -382,6 +518,15 @@ impl Keyboard {
     /// The character a Full key types now: its layout position with
     /// Shift / Caps, or the AltGr character while Alt is on (v1.3).
     fn char_for(&self, c: char) -> char {
+        if self.style == Style::Kobo {
+            // Shift changes letters only; the accents layer already shows
+            // the case it types.
+            return if self.layer == Layer::Letters && c.is_alphabetic() && self.shift_on() {
+                shifted(c)
+            } else {
+                c
+            };
+        }
         match self.layout {
             Layout::Full => {
                 // Only a key's own base character is remapped; anything
@@ -438,7 +583,13 @@ impl Keyboard {
         if self.composer.pending.is_some()
             && !matches!(
                 key,
-                Key::Char(_) | Key::Space | Key::Shift | Key::Caps | Key::Alt | Key::SwapLayer
+                Key::Char(_)
+                    | Key::Space
+                    | Key::Shift
+                    | Key::Caps
+                    | Key::Alt
+                    | Key::SwapLayer
+                    | Key::Layer(_)
             )
         {
             let t = self.composer.flush();
@@ -461,6 +612,7 @@ impl Keyboard {
                     | Key::Caps
                     | Key::Alt
                     | Key::SwapLayer
+                    | Key::Layer(_)
                     | Key::Back
                     | Key::Return
                     | Key::Esc
@@ -498,10 +650,16 @@ impl Keyboard {
             }
             Key::SwapLayer => {
                 self.layer = match self.layer {
-                    Layer::Letters => Layer::Symbols,
+                    Layer::Letters | Layer::Accents => Layer::Symbols,
                     Layer::Symbols => Layer::Letters,
                 };
                 self.shift = false;
+                return KeyAction::Relabelled;
+            }
+            Key::Layer(l) => {
+                self.layer = l;
+                self.shift = false;
+                self.shift_lock = false;
                 return KeyAction::Relabelled;
             }
             Key::SwitchLayout if !self.lang.has_compact() => return KeyAction::Ignored,

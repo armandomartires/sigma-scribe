@@ -29,6 +29,8 @@ pub enum Icon {
     PrevPage,
     NextPage,
     Space,
+    /// Shift on the Kobo style keyboard (v1.13).
+    Shift,
 }
 
 impl Icon {
@@ -53,6 +55,7 @@ impl Icon {
             Self::PrevPage => "chevron-left",
             Self::NextPage => "chevron-right",
             Self::Space => "space",
+            Self::Shift => "arrow-big-up",
         }
     }
 }

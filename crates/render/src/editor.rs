@@ -377,9 +377,12 @@ impl EditorScreen {
         let rows = keyboard.rows();
         // v1.1: the keyboard takes at most 42 % (portrait) / 45 % (landscape)
         // of the height, so the page keeps room at 200 %.
+        // The Kobo style board has no landscape bar (v1.13): nothing on it
+        // but keys.
+        let kobo = keyboard.style == sigma_core::keyboard::Style::Kobo;
         let key_h = {
             let n = rows.len().max(1) as i32;
-            let bar = if self.landscape() {
+            let bar = if self.landscape() && !kobo {
                 self.kpx(44.0) + gap
             } else {
                 0
@@ -389,7 +392,7 @@ impl EditorScreen {
             self.kpx(58.0).min(fit).max(self.page_s.px(44.0))
         };
         // Landscape adds the Split · Full · Centre bar above the keys.
-        let bar_h = if self.landscape() {
+        let bar_h = if self.landscape() && !kobo {
             self.kpx(44.0) + gap
         } else {
             0
@@ -535,7 +538,8 @@ impl EditorScreen {
         let land = self.landscape();
         let rows = keyboard.rows();
         let grid = keyboard.grid_units();
-        let mode = if land {
+        let kobo = keyboard.style == sigma_core::keyboard::Style::Kobo;
+        let mode = if land && !kobo {
             self.cfg.land_keys
         } else {
             LandKeys::Centre
@@ -653,7 +657,7 @@ impl EditorScreen {
             }
         }
         let mut buttons = Vec::new();
-        if land {
+        if land && !kobo {
             let bh = self.kpx(44.0);
             let by = kb.y + pad;
             let bw = self.kpx(110.0);
@@ -1522,6 +1526,10 @@ impl EditorScreen {
         c.fill(Rect::new(0, l.keyboard.y, l.keyboard.w, 1), t.rule);
         let ks = 20.0 * self.k.0;
         let ui = 17.0 * self.k.0;
+        if keyboard.style == sigma_core::keyboard::Style::Kobo {
+            self.draw_kobo_keys(c, l, keyboard, t);
+            return;
+        }
         for &(r, b) in &l.kb_buttons {
             let active = matches!(b, KbButton::Mode(m) if m == self.cfg.land_keys);
             let (bg, fg) = if active {
@@ -1590,6 +1598,86 @@ impl EditorScreen {
                 (Face::Atkinson, ks * 1.15)
             } else {
                 (Face::AtkinsonBold, ks * 0.85)
+            };
+            let lw = self.fonts.width(face, size, &label);
+            let by = r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(face, size) / 2.6;
+            self.fonts.draw(
+                c,
+                face,
+                size,
+                r.x as f32 + (r.w as f32 - lw) / 2.0,
+                by,
+                &label,
+                fg,
+            );
+        }
+    }
+}
+
+impl EditorScreen {
+    /// The Kobo style board (v1.13): flat keys, no outlines, plain glyphs
+    /// in the sans, Shift and Back as icons, Space as a thin bracket, ← → as
+    /// arrows, and Return as the one dark key (the stock reader's action
+    /// key). A key that is on (Shift) is inverted.
+    fn draw_kobo_keys(&self, c: &mut Canvas, l: &Layout, keyboard: &Keyboard, t: Theme) {
+        use crate::icons::{draw_icon, Icon};
+        let ks = 20.0 * self.k.0;
+        for &(r, k) in &l.keys {
+            let on = keyboard.is_active(k) || k == Key::Return;
+            let (bg, fg) = if on {
+                (t.ink, t.paper)
+            } else {
+                (t.paper, t.ink)
+            };
+            if on {
+                c.fill(r, bg);
+            }
+            match k {
+                Key::Arrow(d) => {
+                    draw_arrow(c, r, d, self.k, fg);
+                    continue;
+                }
+                Key::Back => {
+                    draw_icon(c, Icon::Backspace, r, fg);
+                    continue;
+                }
+                Key::Shift => {
+                    draw_icon(c, Icon::Shift, r, fg);
+                    if keyboard.shift_lock {
+                        c.fill(
+                            Rect::new(
+                                r.x + r.w / 4,
+                                r.y + r.h - self.kpx(10.0),
+                                r.w / 2,
+                                self.kpx(3.0),
+                            ),
+                            fg,
+                        );
+                    }
+                    continue;
+                }
+                Key::Space => {
+                    // A thin bracket: a line with a short tick at each end.
+                    let line = self.kpx(2.0).max(2);
+                    let tick = self.kpx(10.0);
+                    let y = r.y + r.h * 11 / 20;
+                    let (x0, x1) = (r.x + r.w / 8, r.x + r.w * 7 / 8);
+                    c.fill(Rect::new(x0, y, x1 - x0, line), fg);
+                    c.fill(Rect::new(x0, y - tick, line, tick + line), fg);
+                    c.fill(Rect::new(x1 - line, y - tick, line, tick + line), fg);
+                    continue;
+                }
+                _ => {}
+            }
+            let label = keyboard.label(k);
+            let label = if matches!(k, Key::Char(_) | Key::Layer(_)) {
+                label
+            } else {
+                tr(&label).into_owned()
+            };
+            let (face, size) = match k {
+                Key::Char(_) => (Face::Atkinson, ks * 1.3),
+                _ => (Face::AtkinsonBold, ks * 0.85),
             };
             let lw = self.fonts.width(face, size, &label);
             let by = r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(face, size) / 2.6;

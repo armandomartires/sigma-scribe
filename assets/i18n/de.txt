@@ -830,3 +830,5 @@ Backlight
 = Hintergrundbeleuchtung
 Light
 = Licht
+Enhanced keyboard
+= Erweiterte Tastatur

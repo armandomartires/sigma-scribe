@@ -830,3 +830,5 @@ Backlight
 = Achtergrondverlichting
 Light
 = Licht
+Enhanced keyboard
+= Uitgebreid toetsenbord

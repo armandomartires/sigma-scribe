@@ -831,3 +831,5 @@ Backlight
 = Rétroéclairage
 Light
 = Lumière
+Enhanced keyboard
+= Clavier amélioré

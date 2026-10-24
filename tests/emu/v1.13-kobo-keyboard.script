@@ -1,0 +1,38 @@
+# v1.13: Settings -> Keyboard & input -> Enhanced keyboard off = the Kobo style board.
+copy-notes tests/test-notes/_test
+tap-on Options
+tap-on Keyboard & input
+shot v1.13-settings-enhanced-on
+tap-on Enhanced keyboard/Off
+expect-setting enhanced_keyboard=off
+shot v1.13-settings-enhanced-off
+esc
+esc
+shot v1.13-kobo-letters
+type hello world
+expect hello world
+key Shift
+shot v1.13-kobo-shift
+key H
+expect worldH
+key #&+
+shot v1.13-kobo-symbols
+key €
+key ?
+key ÉÀÇ
+shot v1.13-kobo-accents-lower
+key Shift
+shot v1.13-kobo-accents-upper
+key É
+key ABC
+key ←
+key →
+key Return
+shot v1.13-kobo-back-on-letters
+tap-on Options
+tap-on Keyboard & input
+tap-on Enhanced keyboard/On
+expect-setting enhanced_keyboard=on
+esc
+esc
+shot v1.13-enhanced-again
