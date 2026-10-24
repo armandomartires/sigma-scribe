@@ -136,6 +136,11 @@ Package: CI artifact `sigma-scribe-1.4.6-probe-kobo` from release.yml run 397641
 
 **Afterwards:** either keep 1.4.6-probe (behaves like 1.4.6) or put the 1.4.6 binary back (same procedure, 1.4.6 hash). The log decides the 0x19 / 0x1a mapping; turning `ENABLED` on is a separate change and approval.
 
+## Upgrade main 99d6887 (1.11.1) → PR 47 build 65ed5c6 (run 2026-10-24, user-approved)
+CI package from the PR 47 branch (release run 40098145210, head 65ed5c6; `test` and `package` passed): tarball `746e62b6ceb3c8f0322668391dc4e7ea2a9976108a2dea60bad805eeed18b9aa`, binary sha256 `83800eb5af8c6f7b72da8806048426629a5bf260421bc6f2feed7077033c0623`. Adds the write-panel keys and Insert/overwrite (PR 45), the Kobo-style scroll bar, Experimental features and Backlight (PR 46) and the Kobo style keyboard (PR 47). Rollback: the 99d6887 binary (`44295142…11b2a`) from the backup.
+
+Run log: Forma found as `/dev/sdc` (serial N7828B0052845), mounted alone; sdb untouched. Only the binary differed from the package (`launch.sh`, `dict/`, notices and the NickelMenu entry identical). Backup `~/backups/kobo-forma-N7828B0052845/2026-10-24-pre-pr47` (352 files), `diff -r` clean, `SHA256SUMS` written. Binary copied as `.new`, synced, hash-checked, renamed; device sha256 matches. Unmounted and powered off. App not yet started on this build. Look for `light:` lines in `sigma-scribe.log` after the first run (which backlight device was found and used).
+
 ## Upgrade (unknown earlier main build) → main 99d6887 = 1.11.1 (run 2026-10-23, user-approved; user present)
 CI package from main (release run 40012285280, head 99d6887, merge of PR #43; `ci` passed): tarball `75fdd3e368613ea0697618968ea810845fc12c0a33ca6418ff7048505f70f6e7`, binary sha256 `442951422e5f54775f1079a4423b4f2c62c912e3ca3d995ccd1e815796711b2a` (6,189,336 bytes). Adds everything from 1.7.0 to 1.11.1 (Vietnamese, Korean, RTL, Indic and Thai, Japanese, Chinese pinyin, files kept out of the Kobo library) plus Auto orientation from the accelerometer, the corner-report filter, the Size slider and the Orientation buttons. Rollback: the previous binary (`aa6d68fc…c9ec9d3`) from the backup.
 
