@@ -1,6 +1,6 @@
 [package]
 name = "sigma-hwr"
-description = "Offline per-character handwriting recognition for Sigma Scribe (no dependencies)."
+description = "Offline per-character handwriting recognition for Σscribe (no dependencies)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

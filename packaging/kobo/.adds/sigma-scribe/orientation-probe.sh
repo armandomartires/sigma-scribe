@@ -1,5 +1,5 @@
 #!/bin/sh
-# Sigma Scribe g-sensor probe (S12 device check, read-only).
+# Σscribe g-sensor probe (S12 device check, read-only).
 # Leaves Nickel running and the app untouched. Copies the input device list
 # and records the raw bytes of every /dev/input/event* node for 60 s, so the
 # PC can decode which node reports MSC_RAW and which code each way of holding

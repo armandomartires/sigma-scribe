@@ -1,4 +1,4 @@
-# Sigma Scribe — Nederlands. machine-drafted, best effort; needs a native review.
+# Σscribe — Nederlands. machine-drafted, best effort; needs a native review.
 # Format: English text, then "= " and the translation. See crates/render/src/i18n.rs.
 
 Files
@@ -481,8 +481,8 @@ Options → Layout sets the keyboard: US, UK, French, German, Spanish, Portugues
 Export
 = Exporteren
 
-Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
-= Je notities zijn gewone .md-bestanden. Sluit de Kobo via USB aan op een computer (sluit eerst Sigma Scribe), kies Verbinden en kopieer de map sigma-scribe/notes. Meer is niet nodig; synchronisatie (bv. Syncthing) kan later komen.
+Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Σscribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
+= Je notities zijn gewone .md-bestanden. Sluit de Kobo via USB aan op een computer (sluit eerst Σscribe), kies Verbinden en kopieer de map sigma-scribe/notes. Meer is niet nodig; synchronisatie (bv. Syncthing) kan later komen.
 
 If nothing happens
 = Als er niets gebeurt
@@ -556,8 +556,8 @@ Link to a note
 The note name, or a name and the words to show. A dashed link creates the note. Links are what the graph draws.
 = De notitienaam, of een naam en de te tonen woorden. Een gestippelde link maakt de notitie aan. Links zijn wat de graaf tekent.
 
-Sigma Scribe
-= Sigma Scribe
+Σscribe
+= Σscribe
 
 Version {n} A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.
 = Versie {n} Een notitieboek voor de Kobo Forma: gewone Markdown-bestanden op een e-inkpagina, getypt op het glas.
@@ -571,8 +571,8 @@ AGPL-{n}-only. The source is on GitHub: armandomartires/sigma-scribe.
 Author
 = Auteur
 
-Sigma Recon.
-= Sigma Recon.
+SIGMArecon.
+= SIGMArecon.
 
 Your notes
 = Je notities

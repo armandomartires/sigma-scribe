@@ -29,7 +29,7 @@ Notes are plain `.md` files in `/mnt/onboard/sigma-scribe/notes` (shown as `sigm
 ## Comparison with KOReader's ExternalKeyboard plugin (checked 2026-10-21, koreader master 24cf0b3)
 KOReader: `plugins/externalkeyboard.koplugin/main.lua` + `frontend/device/kobo/device.lua` (`setupDebugFS`, `getOTGRole`, `setOTGRole`).
 
-| Step | KOReader | Sigma Scribe | Difference |
+| Step | KOReader | Σscribe | Difference |
 |---|---|---|---|
 | Role file | `/sys/kernel/debug/ci_hdrc.0/role` (Chipidea; sunxi path for Elipsa/Sage) | same Chipidea path | none for the Forma |
 | debugfs | if `/sys/kernel/debug` exists: check `/proc/mounts`, if not mounted and root, `mount -t debugfs none /sys/kernel/debug` | if the role file is missing: `mount -t debugfs none /sys/kernel/debug` (no `/proc/mounts` or uid check) | equivalent result; ours may run a redundant `mount` that fails harmlessly |

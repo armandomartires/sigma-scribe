@@ -55,20 +55,17 @@ fn stepper(v: String, minus: Change, plus: Change) -> Vec<Cell> {
 
 /// The Size slider stop nearest to `v`: its index and value.
 fn size_stop(v: f32) -> (usize, f32) {
-    sigma_core::settings::SIZE_STOPS
+    nearest_stop(&sigma_core::settings::SIZE_STOPS, v)
+}
+
+/// The stop of `stops` nearest to `v`: its index and value.
+fn nearest_stop(stops: &[f32], v: f32) -> (usize, f32) {
+    stops
         .iter()
         .copied()
         .enumerate()
         .min_by(|a, b| (a.1 - v).abs().total_cmp(&(b.1 - v).abs()))
         .unwrap_or((0, v))
-}
-
-fn num(v: f32) -> String {
-    if (v - v.round()).abs() < 0.05 {
-        format!("{}", v.round() as i32)
-    } else {
-        format!("{v:.1}")
-    }
 }
 
 /// The rows, in the brief's order, plus Keyboard layout and Orientation.
@@ -141,16 +138,30 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
         OptRow {
             label: "Leading",
             hint: "Space between lines",
-            cells: stepper(
-                format!("{:.1}", s.leading),
-                Change::Leading(-1),
-                Change::Leading(1),
-            ),
+            cells: sigma_core::settings::LEADING_STOPS
+                .iter()
+                .map(|&v| {
+                    choice(
+                        "",
+                        Change::LeadingTo(v),
+                        v == nearest_stop(&sigma_core::settings::LEADING_STOPS, s.leading).1,
+                    )
+                })
+                .collect(),
         },
         OptRow {
             label: "Margin",
             hint: "Room for a thumb",
-            cells: stepper(num(s.margin), Change::Margin(-1), Change::Margin(1)),
+            cells: sigma_core::settings::MARGIN_STOPS
+                .iter()
+                .map(|&v| {
+                    choice(
+                        "",
+                        Change::MarginTo(v),
+                        v == nearest_stop(&sigma_core::settings::MARGIN_STOPS, s.margin).1,
+                    )
+                })
+                .collect(),
         },
         OptRow {
             label: "Tab key",
@@ -371,6 +382,14 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
             ],
         },
     ]
+}
+
+/// The page's side padding: at least wide enough that the scroll bar
+/// (a handle width, one and a half handle widths from the edge) never
+/// runs over a row.
+fn side_pad(s: crate::theme::Scale, page: crate::theme::Scale) -> i32 {
+    s.px(20.0)
+        .max(crate::scrollbar::Metrics::new(page).clearance() + s.px(4.0))
 }
 
 /// Where Settings is: the category list, one category, or a choice list.
@@ -606,6 +625,31 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
                     .iter()
                     .map(|&v| choice("", Change::SizeTo(v), v == cur))
                     .collect(),
+                enabled: true,
+            }
+        }
+        // Leading and Margin are sliders like Size: stops, no numbers.
+        "Leading" | "Margin" => {
+            let (stops, cur): (&[f32], f32) = if label == "Leading" {
+                (&sigma_core::settings::LEADING_STOPS, m.settings.leading)
+            } else {
+                (&sigma_core::settings::MARGIN_STOPS, m.settings.margin)
+            };
+            let (value, near) = nearest_stop(stops, cur);
+            let cells = stops
+                .iter()
+                .map(|&v| {
+                    let change = if label == "Leading" {
+                        Change::LeadingTo(v)
+                    } else {
+                        Change::MarginTo(v)
+                    };
+                    choice("", change, v == near)
+                })
+                .collect();
+            Kind::Slider {
+                value,
+                stops: cells,
                 enabled: true,
             }
         }
@@ -909,7 +953,7 @@ impl EditorScreen {
         let base = self.layout(false, m.keyboard);
         let s = self.scale();
         let w = self.width as i32;
-        let pad = s.px(20.0);
+        let pad = side_pad(s, self.page_scale());
         let back = (m.page != SettingsPage::Root).then(|| {
             Rect::new(
                 s.px(4.0),
@@ -1007,11 +1051,12 @@ impl EditorScreen {
                 as i32;
             Rect::new(w - pad - pw, heading_y - s.px(30.0), pw, s.px(44.0))
         });
-        let bar = (n > 1).then(|| {
-            let page = Rect::new(0, top, w, bottom - top);
-            let strip = crate::scrollbar::strip(page, s.px(12.0).max(8), s.px(4.0), 0);
-            (strip, crate::scrollbar::thumb(strip, n, 1, sub, s.px(40.0)))
-        });
+        let bar = (n > 1)
+            .then(|| {
+                let page = Rect::new(0, top, w, bottom - top);
+                crate::scrollbar::bar(self.page_scale(), page, n, 1, sub)
+            })
+            .flatten();
         OptionsLayout {
             close: base.close_button,
             base,
@@ -1245,7 +1290,7 @@ impl EditorScreen {
         if let Some(b) = l.back {
             crate::icons::draw_icon(c, crate::icons::Icon::Back, b, t.ink);
         }
-        let pad = s.px(20.0) as f32;
+        let pad = side_pad(s, self.page_scale()) as f32;
         self.fonts.draw(
             c,
             Face::Literata,
@@ -1273,8 +1318,8 @@ impl EditorScreen {
                 t.ink,
             );
         }
-        if let Some((strip, thumb)) = l.bar {
-            crate::scrollbar::draw(c, strip, thumb, t.ink, t.paper, s.px(2.0).max(2));
+        if let Some(b) = l.bar {
+            crate::scrollbar::draw_bar(c, self.page_scale(), b, t, t.paper);
         }
         let n = l.items.len();
         for (k, (it, band, cells)) in l.items.iter().enumerate() {
@@ -1457,6 +1502,30 @@ mod tests {
             focus: None,
             hw_samples: 0,
             light: None,
+        }
+    }
+
+    /// One bar everywhere: Settings, the editor and Preview draw the same
+    /// handle width whatever the UI scale.
+    #[test]
+    fn the_scroll_bar_is_the_same_size_at_every_ui_scale() {
+        let mut want = None;
+        for ui in [100, 125, 150, 175, 200] {
+            let mut e = EditorScreen::new(1440, 1920);
+            let mut st = Settings {
+                ui_scale: ui,
+                ..Settings::default()
+            };
+            e.configure(&mut st, None);
+            let k = Keyboard::default();
+            // Writing has few rows; at big UI scales Settings pages split.
+            let l = e.options_layout(&model(&st, &k, SettingsPage::Category(0), 0));
+            let page = Rect::new(0, 100, 1440, 1000);
+            let (strip, _) = e.scroll_bar(page, 400, 40).unwrap();
+            if let Some((s, _)) = l.bar {
+                assert_eq!(s.w, strip.w, "Settings vs editor at {ui}%");
+            }
+            assert_eq!(*want.get_or_insert(strip.w), strip.w, "editor at {ui}%");
         }
     }
 

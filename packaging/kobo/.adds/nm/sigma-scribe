@@ -1,3 +1,3 @@
-# Sigma Scribe (AGPL-3.0, Sigma Recon). Launches over the stock reader;
+# Σscribe (AGPL-3.0, SIGMArecon). Launches over the stock reader;
 # leaving the app reboots the Kobo back into the stock reader.
-menu_item:main:Sigma Scribe:cmd_spawn:quiet:exec /mnt/onboard/.adds/sigma-scribe/launch.sh
+menu_item:main:Σscribe:cmd_spawn:quiet:exec /mnt/onboard/.adds/sigma-scribe/launch.sh

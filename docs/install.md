@@ -10,12 +10,12 @@ Tested on: **Kobo Forma, firmware 4.38.23697**. Other Kobo models are untested.
 1. Check the download: `sha256sum -c sigma-scribe-<ver>-kobo.tar.gz.sha256`.
 2. Connect the Kobo over USB and tap *Connect*.
 3. Unpack onto the root of the KOBOeReader drive: `tar -xzf sigma-scribe-<ver>-kobo.tar.gz -C /path/to/KOBOeReader` (this only adds `.adds/sigma-scribe/` and `.adds/nm/sigma-scribe`).
-4. Eject safely. The Kobo restarts its library; open NickelMenu → *Sigma Scribe*.
+4. Eject safely. The Kobo restarts its library; open NickelMenu → *Σscribe*.
 
 Leaving the app (power button) saves and restarts the Kobo back into the normal reader.
 
 ## Keeping the files out of the Kobo library
-Since firmware 4.17 the Kobo library also indexes hidden folders, so Sigma Scribe's `.txt` and `.svg` files would show up as books. The first time you start the app, `launch.sh` adds one line to the Kobo's own config (`.kobo/Kobo/Kobo eReader.conf`, section `[FeatureSettings]`, key `ExcludeSyncFolders`; the original is saved next to it as `Kobo eReader.conf.sigma-bak`). It does this only if you have not set that key yourself. The Kobo must be restarted for it to count (the app restarts it when you leave). Items the library already holds are not removed by the line: remove them in Nickel (Settings → Device information is not needed: long-press the item → Remove) or let a later cleanup delete them. A firmware update can reset the config; starting the app again re-adds the line. To undo: delete that line, or copy the `.sigma-bak` file back.
+Since firmware 4.17 the Kobo library also indexes hidden folders, so Σscribe's `.txt` and `.svg` files would show up as books. The first time you start the app, `launch.sh` adds one line to the Kobo's own config (`.kobo/Kobo/Kobo eReader.conf`, section `[FeatureSettings]`, key `ExcludeSyncFolders`; the original is saved next to it as `Kobo eReader.conf.sigma-bak`). It does this only if you have not set that key yourself. The Kobo must be restarted for it to count (the app restarts it when you leave). Items the library already holds are not removed by the line: remove them in Nickel (Settings → Device information is not needed: long-press the item → Remove) or let a later cleanup delete them. A firmware update can reset the config; starting the app again re-adds the line. To undo: delete that line, or copy the `.sigma-bak` file back.
 
 ## Update
 Same as install: unpacking over an older version replaces the program files only. Your notes in `sigma-scribe/notes/` (and the hidden settings and scratch files there) are not in the package and are kept. If you edited `.adds/sigma-scribe/touch.conf`, back it up first — the package contains the default.

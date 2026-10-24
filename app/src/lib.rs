@@ -1,4 +1,4 @@
-//! Sigma Scribe v0.2: a library of plain `.md` / `.txt` notes in folders,
+//! Σscribe v0.2: a library of plain `.md` / `.txt` notes in folders,
 //! the Files sheet, rename in place, and the v0.1 editor with on-screen
 //! keyboard and autosave. Generic over the device so the Forma, the desktop
 //! window and the headless emulator run the same code.
@@ -58,6 +58,8 @@ enum Drag {
     Handle { fixed: usize },
     /// Moving after a long-press on a word: extend word by word.
     Word { a: usize, b: usize },
+    /// Holding the scroll bar (v1.13.1): the thumb follows the finger.
+    Bar,
 }
 
 /// Pointer redraws at most this often (ms): e-ink friendly (v0.8.1).
@@ -2647,6 +2649,10 @@ impl App {
         use sigma_render::ink::{InkButton, InkMode};
         let mode = self.ink.as_ref()?.mode;
         match (mode, b) {
+            (InkMode::Draw, InkButton::Guide) => {
+                self.screen.sketch_guide = !self.screen.sketch_guide;
+                return Some(Refresh::Partial);
+            }
             (InkMode::Draw, InkButton::Mode) => {
                 let boxes = self.settings.ink_boxes;
                 let ink = self.ink.as_mut()?;
@@ -2732,6 +2738,18 @@ impl App {
                 return Some(Refresh::Partial);
             }
             (InkMode::Free, InkButton::Undo) => return self.ink_undo(true),
+            (InkMode::Letters | InkMode::Free, InkButton::Redo) => {
+                let _ = self.read_letter();
+                if !self.buffer.redo() {
+                    return None;
+                }
+                if let Some(ink) = &mut self.ink {
+                    ink.cands.clear();
+                    ink.replace_ok = false;
+                }
+                self.save();
+                return Some(Refresh::Partial);
+            }
             (
                 InkMode::Letters | InkMode::Free,
                 InkButton::Home | InkButton::End | InkButton::PgUp | InkButton::PgDn,
@@ -3225,6 +3243,10 @@ impl App {
             Gesture::Press { x, y } => {
                 self.drag = None;
                 self.map_drag = None;
+                if self.on_scroll_bar(x, y) {
+                    self.drag = Some(Drag::Bar);
+                    return None;
+                }
                 if self.in_editor() && self.sel_ui.is_some() {
                     if let (Hit::Handle(i), Some((a, b))) =
                         (self.editor_hit(x, y), self.buffer.selection())
@@ -3239,9 +3261,13 @@ impl App {
                 None
             }
             Gesture::Tap { x, y } => {
-                if self.drag.take().is_some() {
-                    self.sel_ui = Some(SelUi { bar: true });
-                    return Some(Refresh::Fast);
+                if let Some(d) = self.drag.take() {
+                    // A tap on the scroll bar goes on below; a handle or
+                    // word drag ends with its selection bar.
+                    if d != Drag::Bar {
+                        self.sel_ui = Some(SelUi { bar: true });
+                        return Some(Refresh::Fast);
+                    }
                 }
                 self.handle(Event::Tap { x, y })
             }
@@ -3266,6 +3292,11 @@ impl App {
             }
             // A held key or row still counts as one tap.
             Gesture::LongPress { x, y } => self.handle(Event::Tap { x, y }),
+            Gesture::Drag { y, .. } if self.drag == Some(Drag::Bar) => {
+                let page = self.page_rect();
+                self.screen.scroll_bar_to(&mut self.buffer, page, y);
+                Some(Refresh::Fast)
+            }
             Gesture::Drag { x, y, .. } => {
                 let drag = self.drag?;
                 let o = |app: &Self, yy: i32| app.screen.offset_at_point(&app.buffer, page, x, yy);
@@ -3280,6 +3311,7 @@ impl App {
                             self.buffer.select(fixed, at);
                         }
                     }
+                    Drag::Bar => return None,
                     Drag::Word { a, b } => {
                         let at = o(self, y);
                         let (s0, e0) = if at >= b {
@@ -3299,6 +3331,12 @@ impl App {
                 self.sel_ui = Some(SelUi { bar: false });
                 Some(Refresh::Fast)
             }
+            Gesture::Release { y, .. } if self.drag == Some(Drag::Bar) => {
+                self.drag = None;
+                let page = self.page_rect();
+                self.screen.scroll_bar_to(&mut self.buffer, page, y);
+                Some(Refresh::Partial)
+            }
             Gesture::Release { x, y, held } => {
                 // Throttled drags: the lift position is always applied.
                 if self.drag.is_some() {
@@ -3316,6 +3354,18 @@ impl App {
                 }
             }
         }
+    }
+
+    /// Is (x, y) on the editor's scroll bar (v1.13.1)?
+    fn on_scroll_bar(&self, x: i32, y: i32) -> bool {
+        self.in_editor()
+            && self.ink.is_none()
+            && !self.options
+            && !self.in_drawer(x, y)
+            && self
+                .screen
+                .scroll_bar_zone(&self.buffer, self.page_rect())
+                .is_some_and(|(z, _)| z.contains(x, y))
     }
 
     fn editor_hit(&self, x: i32, y: i32) -> Hit {
@@ -3681,6 +3731,11 @@ impl App {
                         None
                     },
                 };
+                if self.on_scroll_bar(x, y) {
+                    let page = self.page_rect();
+                    self.screen.scroll_bar_step(&mut self.buffer, page, y);
+                    return Some(Refresh::Partial);
+                }
                 let hit = self.screen.hit(&model, x, y);
                 if !matches!(hit, Hit::Bar(_) | Hit::Handle(_)) {
                     // Tapping elsewhere dismisses the selection chrome.
@@ -3892,11 +3947,15 @@ impl App {
             }
             let want = match label {
                 "Undo" => InkButton::Undo,
+                "Line" | "Guide" => InkButton::Guide,
+                "Redo" => InkButton::Redo,
                 "Clear" => InkButton::Clear,
                 "Pen" => InkButton::Pen,
                 "Cancel" | "Done" => InkButton::Cancel,
                 "Insert" => InkButton::Insert,
-                "Letters" | "Draw" | "Words" | "Mode" | "Swap" => InkButton::Mode,
+                "Letters" | "Draw" | "Words" | "Sketch" | "Write" | "Mode" | "Swap" => {
+                    InkButton::Mode
+                }
                 "Prev" => InkButton::Prev,
                 "Next" => InkButton::Next,
                 "Close" | "×" => InkButton::Cancel,
@@ -4793,7 +4852,7 @@ impl App {
         };
         let rows: Vec<(String, String)> = vec![
             (
-                "Sigma Scribe".into(),
+                "Σscribe".into(),
                 format!(
                     "Version {}. A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.",
                     env!("CARGO_PKG_VERSION")
@@ -4803,7 +4862,7 @@ impl App {
                 "License".into(),
                 "AGPL-3.0-only. The source is on GitHub: armandomartires/sigma-scribe.".into(),
             ),
-            ("Author".into(), "Sigma Recon.".into()),
+            ("Author".into(), "SIGMArecon.".into()),
             (
                 "Your notes".into(),
                 tr_name(

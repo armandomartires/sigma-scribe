@@ -81,7 +81,7 @@ def t2s(s):
 def write(name, conv):
     n = 0
     with open(os.path.join(out, name), "w", encoding="utf-8") as f:
-        f.write("# Sigma Scribe pinyin dictionary (%s), built by tools/zh-dict.py from Rime luna-pinyin\n"
+        f.write("# Σscribe pinyin dictionary (%s), built by tools/zh-dict.py from Rime luna-pinyin\n"
                 "# and essay (LGPL-3.0; see PINYIN-NOTICE.txt). key<TAB>word weight<TAB>word weight...\n" % name)
         for key in sorted(table):
             seen, items = set(), []

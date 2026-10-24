@@ -79,7 +79,7 @@ pub const KEYBOARD_HELP: [(&str, &str, &str); 7] = [
     ),
     (
         "Export",
-        "Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.",
+        "Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Σscribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.",
         "",
     ),
     (
@@ -365,6 +365,10 @@ impl EditorScreen {
                 preview::draw_page(c, &self.fonts, l.area, &doc.lines, range.clone(), t, s);
             }
             let n = doc.pages.len();
+            let page = Rect::new(0, l.area.y, c.width as i32, l.area.h);
+            if let Some(b) = crate::scrollbar::bar(self.page_scale(), page, n, 1, at) {
+                crate::scrollbar::draw_bar(c, self.page_scale(), b, t, t.paper);
+            }
             if n > 1 {
                 let label =
                     tr(&format!("page {} of {n} \u{b7} page buttons turn", at + 1)).into_owned();

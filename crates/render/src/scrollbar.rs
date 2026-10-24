@@ -17,6 +17,83 @@ pub fn strip(page: Rect, w: i32, margin: i32, inset: i32) -> Rect {
     )
 }
 
+/// Every size of the bar, in one place: change a number here and the
+/// editor, Preview, Help and Settings all change with it. Brief units,
+/// scaled by the *page* scale (never the UI scale), so the bar is the same
+/// size on every screen.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Metrics {
+    /// Handle width.
+    pub w: i32,
+    /// Gap between the handle and the screen edge (1.5 handle widths).
+    pub margin: i32,
+    /// Gap above and below the track.
+    pub inset: i32,
+    /// The shortest the thumb gets.
+    pub min_thumb: i32,
+    /// Outline of the thumb.
+    pub line: i32,
+}
+
+impl Metrics {
+    const WIDTH: f32 = 17.0;
+    const INSET: f32 = 8.0;
+    const MIN_THUMB: f32 = 40.0;
+    const LINE: f32 = 2.5;
+
+    #[must_use]
+    pub fn new(page_scale: crate::theme::Scale) -> Self {
+        let w = page_scale.px(Self::WIDTH).max(8);
+        Self {
+            w,
+            margin: w * 3 / 2,
+            inset: page_scale.px(Self::INSET),
+            min_thumb: page_scale.px(Self::MIN_THUMB),
+            line: page_scale.px(Self::LINE).max(2),
+        }
+    }
+
+    /// How far in from the screen edge the bar's inner side is: pages keep
+    /// their content clear of this.
+    #[must_use]
+    pub fn clearance(self) -> i32 {
+        self.w + self.margin
+    }
+}
+
+/// The one bar every screen uses (editor, preview, Help, Settings): the
+/// strip and the thumb for a view of `visible` of `total` units that starts
+/// at `at`, in `page`'s right margin. `None` when everything fits.
+#[must_use]
+pub fn bar(
+    s: crate::theme::Scale,
+    page: Rect,
+    total: usize,
+    visible: usize,
+    at: usize,
+) -> Option<(Rect, Rect)> {
+    if total <= visible || page.h <= 0 {
+        return None;
+    }
+    let m = Metrics::new(s);
+    let strip = strip(page, m.w, m.margin, m.inset);
+    Some((strip, thumb(strip, total, visible, at, m.min_thumb)))
+}
+
+/// Draws [`bar`] on `bg` (the paper, or a margin's tone) in the theme's ink:
+/// the bar itself is only black and white, night inverted.
+pub fn draw_bar(
+    c: &mut Canvas,
+    s: crate::theme::Scale,
+    (strip, thumb): (Rect, Rect),
+    t: crate::theme::Theme,
+    bg: u8,
+) {
+    let ink = if t.paper < 128 { 0xFF } else { 0x00 };
+    c.fill(strip, bg);
+    draw(c, strip, thumb, ink, bg, Metrics::new(s).line);
+}
+
 /// The thumb on `strip` for a view of `visible` of `total` units that starts
 /// at unit `at`. At least `min_h` tall, never taller than the strip.
 #[must_use]

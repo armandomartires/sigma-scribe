@@ -1,6 +1,6 @@
 # UI rulebook
 
-The rules every screen, control and change to Sigma Scribe's interface follows. They come from `design-brief.md` (the page), the Kobo's own interface (`docs/ui-reference/README.md`, the chrome) and what the device taught us (`plan.md` decisions, `docs/device-checklist-prerelease.md`). When a rule here conflicts with a mock, **the rule wins for behaviour and the Kobo reference wins for chrome**; the page itself follows the design brief. A change that breaks a rule says so in its sprint note and in the changelog.
+The rules every screen, control and change to Σscribe's interface follows. They come from `design-brief.md` (the page), the Kobo's own interface (`docs/ui-reference/README.md`, the chrome) and what the device taught us (`plan.md` decisions, `docs/device-checklist-prerelease.md`). When a rule here conflicts with a mock, **the rule wins for behaviour and the Kobo reference wins for chrome**; the page itself follows the design brief. A change that breaks a rule says so in its sprint note and in the changelog.
 
 Numbers in "px" are **brief px** (a 1264 px wide page) unless marked *device px*; the renderer scales them (`Scale::px`, 1440 px wide Forma = ×1.139) and multiplies chrome by the UI scale (100–200 %, default 200 %).
 

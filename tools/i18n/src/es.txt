@@ -158,7 +158,7 @@ Ratón y touchpad
 Un ratón o touchpad USB (también el touchpad de un teclado como el Logitech K{n} Plus) muestra una pequeña flecha. Clic = tocar; arrastrar en la nota selecciona; doble clic selecciona una palabra; la rueda o el desplazamiento con dos dedos mueve la nota y pasa páginas en la vista previa y las listas. La flecha se oculta tras {m} segundos quieta y al escribir. El clic derecho no hace nada.
 Opciones → Distribución fija el teclado: EE. UU., R. U., francés, alemán, español, portugués o italiano. Esc cierra Buscar, hojas y selecciones.
 Exportar
-Tus notas son archivos .md sencillos. Conecta el Kobo a un ordenador por USB (sal antes de Sigma Scribe), elige Conectar y copia la carpeta sigma-scribe/notes. No hace falta nada más; la sincronización (p. ej. Syncthing) puede llegar más adelante.
+Tus notas son archivos .md sencillos. Conecta el Kobo a un ordenador por USB (sal antes de Σscribe), elige Conectar y copia la carpeta sigma-scribe/notes. No hace falta nada más; la sincronización (p. ej. Syncthing) puede llegar más adelante.
 Si no pasa nada
 Comprueba la alimentación del hub, prueba otro teclado (los sencillos con cable funcionan mejor) y luego sal y vuelve a abrir la app. El registro .adds/sigma-scribe/sigma-scribe.log anota cada teclado encontrado.
 Encabezado
@@ -183,12 +183,12 @@ Tachado
 Dos virgulillas a cada lado.
 Enlace a una nota
 El nombre de la nota, o un nombre y las palabras a mostrar. Un enlace discontinuo crea la nota. Los enlaces son lo que dibuja el grafo.
-Sigma Scribe
+Σscribe
 Versión {n} Un cuaderno para el Kobo Forma: archivos Markdown sencillos en una página de tinta electrónica, escritos sobre el cristal.
 Licencia
 Solo AGPL-{n}. El código está en GitHub: armandomartires/sigma-scribe.
 Autor
-Sigma Recon.
+SIGMArecon.
 Tus notas
 Archivos .md y .txt sencillos en {name}. Conecta el Kobo por USB para copiarlos. El borrador es el archivo oculto .scratchpad.md.
 Botones

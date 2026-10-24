@@ -1,6 +1,6 @@
 [package]
 name = "sigma-core"
-description = "Platform-independent editor core for Sigma Scribe (no Cobalt dependency)."
+description = "Platform-independent editor core for Σscribe (no Cobalt dependency)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

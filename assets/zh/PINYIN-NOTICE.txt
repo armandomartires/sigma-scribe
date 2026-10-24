@@ -20,7 +20,7 @@ least 500 times in essay.txt, at most 12 words per pinyin key, weights are
 the essay frequencies (times the reading's share for characters with several
 readings).
 
-Sigma Scribe is AGPL-3.0; this data stays under the LGPL-3.0 and may be
+Σscribe is AGPL-3.0; this data stays under the LGPL-3.0 and may be
 replaced by any file in the same format (docs/chinese.md).
 sha256 of the sources used:
   luna_pinyin.dict.yaml 75bcf6eb3ff62b129882ed89cc22b2d80a5347aa72bcfa2ccc839bac298e7314

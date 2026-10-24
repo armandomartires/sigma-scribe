@@ -309,16 +309,19 @@ fn letter_boxes_put_words_left_train_done_right_keys_centre() {
     );
     assert!(mode.x < 100 && done.x + done.w > l.panel.w - 100);
     assert!(train.x > l.panel.w / 2 && done.x > train.x);
-    let mid: Vec<_> = [
+    let keys = [
         InkButton::Undo,
-        InkButton::Space,
+        InkButton::Redo,
         InkButton::Back,
         InkButton::Enter,
-    ]
-    .iter()
-    .map(|b| at(*b))
-    .collect();
-    let (lo, hi) = (mid[0].x, mid[3].x + mid[3].w);
+        InkButton::Space,
+    ];
+    let mid: Vec<_> = keys.iter().map(|b| at(*b)).collect();
+    assert!(
+        mid.windows(2).all(|p| p[0].x < p[1].x),
+        "Undo, Redo, Erase, Return order"
+    );
+    let (lo, hi) = (mid[0].x, mid[4].x + mid[4].w);
     assert!(lo > mode.x + mode.w && hi < train.x);
     assert!(((lo + hi) / 2 - l.panel.w / 2).abs() < 80, "centred");
 }

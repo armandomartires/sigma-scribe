@@ -1,4 +1,4 @@
-# Sigma Scribe — Català. machine-drafted, best effort; needs a native review.
+# Σscribe — Català. machine-drafted, best effort; needs a native review.
 # Format: English text, then "= " and the translation. See crates/render/src/i18n.rs.
 
 Files
@@ -481,8 +481,8 @@ Options → Layout sets the keyboard: US, UK, French, German, Spanish, Portugues
 Export
 = Exporta
 
-Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
-= Les teves notes són fitxers .md senzills. Connecta el Kobo a un ordinador per USB (surt abans de Sigma Scribe), tria Connecta i copia la carpeta sigma-scribe/notes. No cal res més; la sincronització (p. ex. Syncthing) pot arribar més endavant.
+Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Σscribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
+= Les teves notes són fitxers .md senzills. Connecta el Kobo a un ordinador per USB (surt abans de Σscribe), tria Connecta i copia la carpeta sigma-scribe/notes. No cal res més; la sincronització (p. ex. Syncthing) pot arribar més endavant.
 
 If nothing happens
 = Si no passa res
@@ -556,8 +556,8 @@ Link to a note
 The note name, or a name and the words to show. A dashed link creates the note. Links are what the graph draws.
 = El nom de la nota, o un nom i les paraules a mostrar. Un enllaç discontinu crea la nota. Els enllaços són el que dibuixa el graf.
 
-Sigma Scribe
-= Sigma Scribe
+Σscribe
+= Σscribe
 
 Version {n} A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.
 = Versió {n} Un quadern per al Kobo Forma: fitxers Markdown senzills en una pàgina de tinta electrònica, escrits sobre el vidre.
@@ -571,8 +571,8 @@ AGPL-{n}-only. The source is on GitHub: armandomartires/sigma-scribe.
 Author
 = Autor
 
-Sigma Recon.
-= Sigma Recon.
+SIGMArecon.
+= SIGMArecon.
 
 Your notes
 = Les teves notes

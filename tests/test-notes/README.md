@@ -1,4 +1,4 @@
-# Sigma Scribe test notes pack (v1.0)
+# Σscribe test notes pack (v1.0)
 
 Copy the `_test` folder into `sigma-scribe/notes/` on the Kobo (USB, from the PC) so it lands at `sigma-scribe/notes/_test/`. Your own notes are not touched. Remove the folder to uninstall. Installing it on the device needs separate approval.
 

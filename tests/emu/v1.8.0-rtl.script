@@ -15,7 +15,7 @@ usb-type  مرحبا بالعالم
 expect مرحبا بالعالم
 shot v1.8.0-arabic
 # Mixed with Latin: the Latin keeps its order inside the right-to-left row.
-usb-type  Sigma Scribe
+usb-type  Σscribe
 shot v1.8.0-arabic-mixed
 usb-key Left
 usb-key Left

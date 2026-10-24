@@ -158,7 +158,7 @@ Mus og touchpad
 En USB-mus eller touchpad (også touchpad'en på et tastatur som Logitech K{n} Plus) viser en lille pil. Klik = tryk; træk i noten markerer; dobbeltklik markerer et ord; hjulet eller rulning med to fingre flytter noten og bladrer i forhåndsvisning og lister. Pilen skjules efter {m} sekunder i ro og når du skriver. Højreklik gør intet.
 Indstillinger → Layout vælger tastaturet: US, UK, fransk, tysk, spansk, portugisisk eller italiensk. Esc lukker Søg, ark og markeringer.
 Eksport
-Dine noter er almindelige .md-filer. Slut Kobo'en til en computer via USB (luk Sigma Scribe først), vælg Tilslut, og kopiér mappen sigma-scribe/notes. Der skal ikke mere til; synkronisering (f.eks. Syncthing) kan komme senere.
+Dine noter er almindelige .md-filer. Slut Kobo'en til en computer via USB (luk Σscribe først), vælg Tilslut, og kopiér mappen sigma-scribe/notes. Der skal ikke mere til; synkronisering (f.eks. Syncthing) kan komme senere.
 Hvis intet sker
 Tjek hubbens strøm, prøv et andet tastatur (simple kablede virker bedst), og luk og åbn appen igen. Loggen .adds/sigma-scribe/sigma-scribe.log noterer hvert fundet tastatur.
 Overskrift
@@ -183,12 +183,12 @@ Gennemstreget
 To tilder på hver side.
 Link til en note
 Notens navn, eller et navn og de ord der skal vises. Et stiplet link opretter noten. Links er det, grafen tegner.
-Sigma Scribe
+Σscribe
 Version {n} En notesbog til Kobo Forma: almindelige Markdown-filer på en e-ink-side, skrevet på glasset.
 Licens
 Kun AGPL-{n}. Koden ligger på GitHub: armandomartires/sigma-scribe.
 Forfatter
-Sigma Recon.
+SIGMArecon.
 Dine noter
 Almindelige .md- og .txt-filer i {name}. Slut Kobo'en til via USB for at kopiere dem. Kladden er den skjulte fil .scratchpad.md.
 Knapper

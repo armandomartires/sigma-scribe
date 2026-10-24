@@ -1,4 +1,4 @@
-# Sigma Scribe — Français. machine-drafted, best effort; needs a native review.
+# Σscribe — Français. machine-drafted, best effort; needs a native review.
 # Format: English text, then "= " and the translation. See crates/render/src/i18n.rs.
 
 Files
@@ -481,8 +481,8 @@ Options → Layout sets the keyboard: US, UK, French, German, Spanish, Portugues
 Export
 = Export
 
-Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
-= Vos notes sont de simples fichiers .md. Reliez la Kobo à un ordinateur en USB (quittez d'abord Sigma Scribe), choisissez Connecter, et copiez le dossier sigma-scribe/notes. Rien d'autre n'est nécessaire ; une synchronisation (par ex. Syncthing) viendra peut-être plus tard.
+Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Σscribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
+= Vos notes sont de simples fichiers .md. Reliez la Kobo à un ordinateur en USB (quittez d'abord Σscribe), choisissez Connecter, et copiez le dossier sigma-scribe/notes. Rien d'autre n'est nécessaire ; une synchronisation (par ex. Syncthing) viendra peut-être plus tard.
 
 If nothing happens
 = Si rien ne se passe
@@ -556,8 +556,8 @@ Link to a note
 The note name, or a name and the words to show. A dashed link creates the note. Links are what the graph draws.
 = Le nom de la note, ou un nom et les mots à afficher. Un lien en pointillés crée la note. Les liens sont ce que dessine le graphe.
 
-Sigma Scribe
-= Sigma Scribe
+Σscribe
+= Σscribe
 
 Version {n} A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.
 = Version {n} Un carnet pour la Kobo Forma : de simples fichiers Markdown sur une page à encre électronique, tapés sur l'écran.
@@ -571,8 +571,8 @@ AGPL-{n}-only. The source is on GitHub: armandomartires/sigma-scribe.
 Author
 = Auteur
 
-Sigma Recon.
-= Sigma Recon.
+SIGMArecon.
+= SIGMArecon.
 
 Your notes
 = Vos notes

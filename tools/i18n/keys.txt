@@ -158,7 +158,7 @@ Mouse and touchpad
 A USB mouse or touchpad (also the touchpad of a keyboard such as the Logitech K{n} Plus) shows a small arrow. Click = tap; drag on the note selects; double-click selects a word; the wheel or two-finger scroll moves the note and turns pages in preview and lists. The arrow hides after {m} seconds still and when you type. Right click does nothing.
 Options → Layout sets the keyboard: US, UK, French, German, Spanish, Portuguese or Italian. Esc closes Find, sheets and selections.
 Export
-Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
+Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Σscribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
 If nothing happens
 Check the hub's power, try another keyboard (simple wired ones work best), then leave and reopen the app. The device log .adds/sigma-scribe/sigma-scribe.log notes each keyboard found.
 Heading
@@ -183,12 +183,12 @@ Strike
 Two tildes on each side.
 Link to a note
 The note name, or a name and the words to show. A dashed link creates the note. Links are what the graph draws.
-Sigma Scribe
+Σscribe
 Version {n} A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.
 License
 AGPL-{n}-only. The source is on GitHub: armandomartires/sigma-scribe.
 Author
-Sigma Recon.
+SIGMArecon.
 Your notes
 Plain .md and .txt files in {name}. Connect the Kobo over USB to copy them. The scratch pad is the hidden file .scratchpad.md.
 Buttons

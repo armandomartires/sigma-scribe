@@ -1,6 +1,6 @@
 [package]
 name = "sigma-device"
-description = "Device layer for Sigma Scribe: trait, desktop PNG emulator, Kobo FBInk + evdev backend."
+description = "Device layer for Σscribe: trait, desktop PNG emulator, Kobo FBInk + evdev backend."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

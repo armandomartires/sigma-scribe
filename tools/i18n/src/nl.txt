@@ -158,7 +158,7 @@ Muis en touchpad
 Een USB-muis of touchpad (ook het touchpad van een toetsenbord zoals de Logitech K{n} Plus) toont een kleine pijl. Klik = tik; slepen in de notitie selecteert; dubbelklik selecteert een woord; het wiel of scrollen met twee vingers beweegt de notitie en slaat pagina's om in voorbeeld en lijsten. De pijl verdwijnt na {m} seconden stilstand en tijdens het typen. Rechtsklikken doet niets.
 Opties → Indeling stelt het toetsenbord in: VS, VK, Frans, Duits, Spaans, Portugees of Italiaans. Esc sluit Zoeken, panelen en selecties.
 Exporteren
-Je notities zijn gewone .md-bestanden. Sluit de Kobo via USB aan op een computer (sluit eerst Sigma Scribe), kies Verbinden en kopieer de map sigma-scribe/notes. Meer is niet nodig; synchronisatie (bv. Syncthing) kan later komen.
+Je notities zijn gewone .md-bestanden. Sluit de Kobo via USB aan op een computer (sluit eerst Σscribe), kies Verbinden en kopieer de map sigma-scribe/notes. Meer is niet nodig; synchronisatie (bv. Syncthing) kan later komen.
 Als er niets gebeurt
 Controleer de voeding van de hub, probeer een ander toetsenbord (eenvoudige bedrade werken het best) en sluit en open de app opnieuw. Het logboek .adds/sigma-scribe/sigma-scribe.log noteert elk gevonden toetsenbord.
 Kop
@@ -183,12 +183,12 @@ Doorhalen
 Twee tildes aan elke kant.
 Link naar een notitie
 De notitienaam, of een naam en de te tonen woorden. Een gestippelde link maakt de notitie aan. Links zijn wat de graaf tekent.
-Sigma Scribe
+Σscribe
 Versie {n} Een notitieboek voor de Kobo Forma: gewone Markdown-bestanden op een e-inkpagina, getypt op het glas.
 Licentie
 Alleen AGPL-{n}. De broncode staat op GitHub: armandomartires/sigma-scribe.
 Auteur
-Sigma Recon.
+SIGMArecon.
 Je notities
 Gewone .md- en .txt-bestanden in {name}. Sluit de Kobo via USB aan om ze te kopiëren. Het kladblok is het verborgen bestand .scratchpad.md.
 Knoppen

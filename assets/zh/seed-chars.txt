@@ -1,4 +1,4 @@
-# Sigma Scribe seed: characters by pinyin syllable (Simplified), most common
+# Σscribe seed: characters by pinyin syllable (Simplified), most common
 # first. Written for this project (AGPL-3.0-only). ü is typed v.
 a 啊阿
 ai 爱艾哀矮埃

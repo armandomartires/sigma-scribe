@@ -1,4 +1,4 @@
-# Install plan — NickelMenu + Sigma Scribe v0.1 on the Kobo Forma
+# Install plan — NickelMenu + Σscribe v0.1 on the Kobo Forma
 
 **Status:** PLAN ONLY — nothing has been written to the Kobo. Run it with Armando holding the device.
 Device: Kobo Forma N782 (code 377), serial <FORMA-SERIAL>, firmware **4.38.23697**. Backup: `~/backups/kobo-forma-<FORMA-SERIAL>/2026-10-20/` (verified against `2026-10-20.device.sha256`).
@@ -7,7 +7,7 @@ Device: Kobo Forma N782 (code 377), serial <FORMA-SERIAL>, firmware **4.38.23697
 | Path on the Kobo | From | Purpose |
 |---|---|---|
 | `.kobo/KoboRoot.tgz` (consumed and deleted by the Kobo at boot) | NickelMenu v0.6.0 release, sha256 `322ff9aa863860e8f5f7e0b55cae561c54bf95983b9bce1d19819d1225d064af` | installs `/usr/local/Kobo/imageformats/libnm.so` + `.adds/nm/doc` |
-| `.adds/nm/sigma-scribe` | `packaging/kobo` | menu entry: `menu_item:main:Sigma Scribe:cmd_spawn:quiet:exec /mnt/onboard/.adds/sigma-scribe/launch.sh` |
+| `.adds/nm/sigma-scribe` | `packaging/kobo` | menu entry: `menu_item:main:Σscribe:cmd_spawn:quiet:exec /mnt/onboard/.adds/sigma-scribe/launch.sh` |
 | `.adds/sigma-scribe/` (`sigma-scribe`, `launch.sh`, `touch.conf`, `LICENSE`, `OFL-*.txt`) | `scripts/package-kobo.sh` → `dist/sigma-scribe-0.1.0-kobo/` | static ARMv7 binary (FBInk inside) + launcher |
 | `sigma-scribe/notes/field-notes.md` (created by the app) | app | your note, plain Markdown |
 
@@ -52,8 +52,8 @@ The Forma shows "Updating…" (installs NickelMenu) and restarts. **Leave it on 
 | # | Do | Expect | Result |
 |---|---|---|---|
 | 1 | After the update reboot, look at the home screen | Normal Kobo home; books intact | |
-| 2 | Open the main menu (☰, top left on 4.38) | New entry **Sigma Scribe** (NickelMenu) | |
-| 3 | Tap **Sigma Scribe** | Within ~5 s a full flash, then the page: title `field-notes.md`, seeded note, status `… words · line N   Paper · saved  [Keys]`, keyboard at the bottom | |
+| 2 | Open the main menu (☰, top left on 4.38) | New entry **Σscribe** (NickelMenu) | |
+| 3 | Tap **Σscribe** | Within ~5 s a full flash, then the page: title `field-notes.md`, seeded note, status `… words · line N   Paper · saved  [Keys]`, keyboard at the bottom | |
 | 4 | Display: compare with `docs/screenshots/v0.1/v0.1-start.png` | Same layout, crisp Literata text, no rotated or mirrored image | |
 | 5 | Touch accuracy: tap `q`, `p`, `Shift`, `Return`, `Space`, and the middle of the page | Each key types what it shows; page tap moves the caret there. If taps land mirrored/rotated, note where, edit `.adds/sigma-scribe/touch.conf` (try `swap,mirror_y`, `swap`, `mirror_x`) and retest | |
 | 6 | Type a sentence quickly (~20 keys) | No missed or doubled keys; status returns to `saved` | |
@@ -126,7 +126,7 @@ Package: CI artifact `sigma-scribe-1.4.6-probe-kobo` from release.yml run 397641
 3. Copy **only** `.adds/sigma-scribe/sigma-scribe` from the probe package (via `.new` + sync + hash check + rename) and check the binary sha256 above on the device. Nothing else changes (add `THIRD-PARTY.txt` as in the 1.4.6 plan if it is not there yet). Sync, unmount, eject.
 
 **Collect** (the user, on the Forma):
-1. Open Sigma Scribe from NickelMenu as usual; the probe starts with it.
+1. Open Σscribe from NickelMenu as usual; the probe starts with it.
 2. Hold the Forma upright (page buttons on the right) for ~5 s.
 3. Turn it a quarter **clockwise** and hold ~5 s; then **upside down** ~5 s; then a quarter **counter-clockwise** from upright ~5 s; then back upright ~5 s.
 4. Lay it **face up** on a table ~5 s, then hold it up again.
@@ -441,6 +441,6 @@ On-device checklist — v1.0 Graph map (S9.1):
 On-device checklist — v1.0 (release; S9 definition of done):
 - Help → App info shows **Version 1.0.0**.
 - **Update keeps notes**: after the upgrade above, every note, folder, the scratch pad and the settings from 0.4.0 are still there.
-- **Fresh install from the release tarball** *(needs its own approval: it deletes the app folder on the device after a verified backup)*: with notes backed up, remove `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`, unpack the CI tarball (sha256 `edba7f6fb63d0147f0464addb8249ecb1946da4514e0823ac9cf6575e07b8c58`) onto the drive root, eject; NickelMenu shows *Sigma Scribe*; first launch creates `sigma-scribe/notes` if missing; `THIRD-PARTY.txt` is present.
+- **Fresh install from the release tarball** *(needs its own approval: it deletes the app folder on the device after a verified backup)*: with notes backed up, remove `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`, unpack the CI tarball (sha256 `edba7f6fb63d0147f0464addb8249ecb1946da4514e0823ac9cf6575e07b8c58`) onto the drive root, eject; NickelMenu shows *Σscribe*; first launch creates `sigma-scribe/notes` if missing; `THIRD-PARTY.txt` is present.
 - **Uninstall clean** *(needs its own approval)*: delete `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`; NickelMenu no longer lists it; the stock reader works; `sigma-scribe/notes` is untouched. Then re-install for daily use.
 - No regressions anywhere; the log shows exit 0, no refresh failures, and the `perf:` line with p95 < 150 ms (record it).

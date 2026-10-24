@@ -1,4 +1,4 @@
-# Sigma Scribe — Italiano. machine-drafted, best effort; needs a native review.
+# Σscribe — Italiano. machine-drafted, best effort; needs a native review.
 # Format: English text, then "= " and the translation. See crates/render/src/i18n.rs.
 
 Files
@@ -481,8 +481,8 @@ Options → Layout sets the keyboard: US, UK, French, German, Spanish, Portugues
 Export
 = Esporta
 
-Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
-= Le tue note sono semplici file .md. Collega il Kobo a un computer via USB (esci prima da Sigma Scribe), scegli Connetti e copia la cartella sigma-scribe/notes. Non serve altro; la sincronizzazione (ad es. Syncthing) potrà arrivare più avanti.
+Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Σscribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
+= Le tue note sono semplici file .md. Collega il Kobo a un computer via USB (esci prima da Σscribe), scegli Connetti e copia la cartella sigma-scribe/notes. Non serve altro; la sincronizzazione (ad es. Syncthing) potrà arrivare più avanti.
 
 If nothing happens
 = Se non succede nulla
@@ -556,8 +556,8 @@ Link to a note
 The note name, or a name and the words to show. A dashed link creates the note. Links are what the graph draws.
 = Il nome della nota, o un nome e le parole da mostrare. Un link tratteggiato crea la nota. I link sono ciò che disegna il grafo.
 
-Sigma Scribe
-= Sigma Scribe
+Σscribe
+= Σscribe
 
 Version {n} A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.
 = Versione {n} Un quaderno per il Kobo Forma: semplici file Markdown su una pagina e-ink, scritti sul vetro.
@@ -571,8 +571,8 @@ AGPL-{n}-only. The source is on GitHub: armandomartires/sigma-scribe.
 Author
 = Autore
 
-Sigma Recon.
-= Sigma Recon.
+SIGMArecon.
+= SIGMArecon.
 
 Your notes
 = Le tue note

@@ -8,7 +8,7 @@ Package and publish v1.0.0 for Kobo Forma (firmware 4.x) users.
 ## Scope
 - Final regression on the Forma; release workflow on tags (build ARM + FBInk, tarball, sha256, source)
 - README + screenshots (public screenshots allowed), install/uninstall docs
-- GitHub Release `v1.0.0` (AGPL-3.0, Sigma Recon); MobileRead thread draft (post only with approval)
+- GitHub Release `v1.0.0` (AGPL-3.0, SIGMArecon); MobileRead thread draft (post only with approval)
 
 ## Deliverables
 - `sigma-scribe-1.0.0-kobo.tar.gz` + `.sha256` + release notes

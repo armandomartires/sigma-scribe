@@ -54,7 +54,7 @@ impl WindowDevice {
             (height as f32 * scale) as usize,
         );
         let mut window = Window::new(
-            "Sigma Scribe — Kobo Forma 1440×1920",
+            "Σscribe — Kobo Forma 1440×1920",
             out_w,
             out_h,
             WindowOptions::default(),
