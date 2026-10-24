@@ -22,6 +22,8 @@ pub struct Slider {
     /// Index of the thumb.
     pub value: usize,
     pub enabled: bool,
+    /// Label the two ends as well as the value over the thumb.
+    pub ends: bool,
     pub focused: bool,
 }
 
@@ -162,7 +164,7 @@ pub fn draw(
     // End labels on the same line as the value, above the track's ends.
     let line_y = (g.track_y - lift) as f32;
     for i in [0, sl.stops.len().saturating_sub(1)] {
-        if i == sl.value {
+        if !sl.ends || i == sl.value {
             continue;
         }
         let (Some(lab), Some(&x)) = (sl.stops.get(i), g.xs.get(i)) else {
@@ -247,6 +249,7 @@ mod tests {
                         stops: vec!["100%".into(), "125%".into(), "150%".into()],
                         value: 2,
                         enabled,
+                        ends: true,
                         focused,
                     };
                     draw(&mut c, &g, &sl, &fonts, 17.0, Scale(1.0), (ink, paper));
@@ -280,6 +283,7 @@ mod tests {
             stops: vec!["a".into(), "b".into(), "c".into()],
             value: 1,
             enabled: true,
+            ends: true,
             focused: false,
         };
         let mut a = Canvas::new(300, 100, 0xFF);
@@ -302,6 +306,7 @@ mod tests {
             stops: vec!["a".into(), "b".into(), "c".into()],
             value: 1,
             enabled: true,
+            ends: true,
             focused: false,
         };
         let mut a = Canvas::new(300, 100, 0xFF);

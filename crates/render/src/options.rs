@@ -53,6 +53,15 @@ fn stepper(v: String, minus: Change, plus: Change) -> Vec<Cell> {
     ]
 }
 
+/// A slider value as text: whole numbers plain, else one decimal.
+fn num(v: f32) -> String {
+    if (v - v.round()).abs() < 0.05 {
+        format!("{}", v.round() as i32)
+    } else {
+        format!("{v:.1}")
+    }
+}
+
 /// The Size slider stop nearest to `v`: its index and value.
 fn size_stop(v: f32) -> (usize, f32) {
     nearest_stop(&sigma_core::settings::SIZE_STOPS, v)
@@ -84,11 +93,10 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
         OptRow {
             label: "UI scale",
             hint: "Buttons, menus and keys; the note keeps its Size",
-            cells: stepper(
-                format!("{} %", s.ui_scale),
-                Change::UiScale(-1),
-                Change::UiScale(1),
-            ),
+            cells: sigma_core::settings::UI_SCALES
+                .iter()
+                .map(|&v| choice(&format!("{v} %"), Change::UiScaleTo(v), v == s.ui_scale))
+                .collect(),
         },
         OptRow {
             label: "Dark mode",
@@ -504,6 +512,8 @@ pub enum Kind {
         stops: Vec<Cell>,
         value: usize,
         enabled: bool,
+        /// Also label the two ends (Backlight, Keyboard size, UI scale).
+        ends: bool,
     },
 }
 
@@ -640,9 +650,10 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
                 value,
                 stops: sigma_core::settings::SIZE_STOPS
                     .iter()
-                    .map(|&v| choice("", Change::SizeTo(v), v == cur))
+                    .map(|&v| choice(&num(v), Change::SizeTo(v), v == cur))
                     .collect(),
                 enabled: true,
+                ends: false,
             }
         }
         // Leading and Margin are sliders like Size: stops, no numbers.
@@ -661,13 +672,19 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
                     } else {
                         Change::MarginTo(v)
                     };
-                    choice("", change, v == near)
+                    let text = if label == "Leading" {
+                        format!("{v:.1}")
+                    } else {
+                        num(v)
+                    };
+                    choice(&text, change, v == near)
                 })
                 .collect();
             Kind::Slider {
                 value,
                 stops: cells,
                 enabled: true,
+                ends: false,
             }
         }
         // v1.12: nine steps from off to full; only on a Kobo with a light.
@@ -678,7 +695,10 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
                     let text = match i {
                         0 => tr("Off").into_owned(),
                         sigma_core::settings::BACKLIGHT_MAX => tr("Full").into_owned(),
-                        _ => String::new(),
+                        i => format!(
+                            "{} %",
+                            usize::from(i) * 100 / usize::from(sigma_core::settings::BACKLIGHT_MAX)
+                        ),
                     };
                     choice(&text, Change::Backlight(i), i == n)
                 })
@@ -687,6 +707,25 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
                 value: usize::from(n),
                 stops,
                 enabled: true,
+                ends: true,
+            }
+        }
+        "UI scale" => {
+            let stops: Vec<Cell> = sigma_core::settings::UI_SCALES
+                .iter()
+                .map(|&v| {
+                    choice(
+                        &format!("{v} %"),
+                        Change::UiScaleTo(v),
+                        v == m.settings.ui_scale,
+                    )
+                })
+                .collect();
+            Kind::Slider {
+                value: stops.iter().position(|c| c.active).unwrap_or(0),
+                stops,
+                enabled: true,
+                ends: true,
             }
         }
         "Keyboard size" => {
@@ -699,6 +738,7 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
                 value: stops.iter().position(|c| c.active).unwrap_or(0),
                 stops,
                 enabled: m.settings.kb_size != 0,
+                ends: true,
             }
         }
         // v1.6.3: three buttons in the row, like Paper and Drawer (no list).
@@ -906,6 +946,7 @@ impl EditorScreen {
                             stops,
                             value,
                             enabled,
+                            ..
                         },
                     ..
                 }) => Some((
@@ -1482,12 +1523,14 @@ impl EditorScreen {
                             stops,
                             value,
                             enabled,
+                            ends,
                         } => {
                             let g = self.slider_geom(*band, stops.len());
                             let sl = crate::slider::Slider {
                                 stops: stops.iter().map(|x| tr(&x.label).into_owned()).collect(),
                                 value: *value,
                                 enabled: *enabled,
+                                ends: *ends,
                                 focused: m.focus == Some(d.label),
                             };
                             let ink = if t.paper < 128 { 0xFF } else { 0x00 };

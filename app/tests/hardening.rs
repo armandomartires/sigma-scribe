@@ -72,7 +72,9 @@ fn walk(app: &mut App, tag: &str, bad: &mut Vec<String>) {
     tap_on(app, "Graph");
     audit(app, &format!("{tag} graph"), bad);
     tap_on(app, "Close");
-    tap_on(app, "Help");
+    // Help has no title-bar icon; it opens from Settings → Help & about.
+    app.open_help();
+    app.settle();
     audit(app, &format!("{tag} help"), bad);
     tap_on(app, "Markdown reference");
     audit(app, &format!("{tag} help page"), bad);

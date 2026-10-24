@@ -365,6 +365,8 @@ pub enum Change {
     PadSide(Side),
     /// One UI-scale step up (+1) or down (-1).
     UiScale(i8),
+    /// UI scale to a value (the slider's stops, `UI_SCALES`).
+    UiScaleTo(u16),
     /// One step through the keyboard layouts (v1.3).
     KbLayout(i8),
     /// Experimental features on / off (v1.12). Turning them off puts an
@@ -533,6 +535,14 @@ impl Settings {
                 if KB_SIZES.contains(&v) {
                     self.kb_size = v;
                 }
+            }
+            Change::UiScaleTo(v) => {
+                let near = UI_SCALES
+                    .iter()
+                    .copied()
+                    .min_by_key(|&s| s.abs_diff(v))
+                    .unwrap_or(200);
+                self.ui_scale = near;
             }
             Change::UiScale(d) => {
                 let i = UI_SCALES

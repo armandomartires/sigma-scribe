@@ -119,6 +119,16 @@ fn main() -> ExitCode {
             "tap-on" => {
                 // v1.4.2: Settings controls on another page are reached
                 // through the pages (Display -> Orientation -> Landscape).
+                // v1.13.1: Help has no title-bar icon; it opens from Settings →
+                // Help & about. Scripts keep `tap-on Help` for "open Help".
+                if arg == "Help" && app.control_centre(arg).is_none() {
+                    if app.preview.is_some() {
+                        app.exit_preview();
+                    }
+                    app.open_help();
+                    let _ = app.render(&mut dev, sigma_device::Refresh::Full);
+                    continue;
+                }
                 reach(&mut app, &mut dev, arg);
                 match app.control_centre(arg) {
                     Some((x, y)) => events.push(Event::Tap { x, y }),

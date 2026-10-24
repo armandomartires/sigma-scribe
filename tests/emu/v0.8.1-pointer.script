@@ -14,10 +14,10 @@ expect-pointer visible
 type a
 expect-pointer hidden
 key Back
-# Click = tap: the Help button, then Close.
-pointer-to-control Help
+# Click = tap: the Graph button, then Close.
+pointer-to-control Graph
 click
-expect-mode help
+expect-mode graph
 pointer-to-control Close
 click
 expect-mode write
@@ -55,8 +55,7 @@ expect-page 1
 pointer-to-control Preview
 click
 expect-mode write
-pointer-to-control Help
-click
+tap-on Help
 pointer-to-control Markdown reference
 click
 wheel -1

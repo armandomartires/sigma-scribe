@@ -1336,6 +1336,9 @@ impl App {
                 Some(match ch {
                     Some(Change::KbSize(v)) if v == self.settings.kb_size => None,
                     Some(Change::SizeTo(v)) if (v - self.settings.size).abs() < 0.05 => None,
+                    Some(Change::LeadingTo(v)) if (v - self.settings.leading).abs() < 0.05 => None,
+                    Some(Change::MarginTo(v)) if (v - self.settings.margin).abs() < 0.05 => None,
+                    Some(Change::UiScaleTo(v)) if v == self.settings.ui_scale => None,
                     Some(c) => Some(self.change(c)),
                     None => None,
                 })
@@ -1868,11 +1871,6 @@ impl App {
                 Hit::Graph => {
                     self.exit_preview();
                     self.open_graph();
-                    Some(Refresh::Full)
-                }
-                Hit::Help => {
-                    self.exit_preview();
-                    self.open_help();
                     Some(Refresh::Full)
                 }
                 _ => {
@@ -2471,7 +2469,6 @@ impl App {
             | Hit::Options
             | Hit::Find
             | Hit::Graph
-            | Hit::Help
             | Hit::Drawer(_) => {
                 let _ = self.read_letter();
                 self.ink = None;
@@ -3869,10 +3866,6 @@ impl App {
                         self.open_graph();
                         Some(Refresh::Full)
                     }
-                    Hit::Help => {
-                        self.open_help();
-                        Some(Refresh::Full)
-                    }
                     Hit::Drawer(p) => Some(self.toggle_pane(p)),
                     Hit::Candidate(i) => {
                         self.keyboard.composer.pick(&mut self.buffer, i);
@@ -4177,7 +4170,6 @@ impl App {
             "Scratch" => Some(centre(l.scratch_button)),
             "Find" => Some(centre(l.find_button)),
             "Graph" => Some(centre(l.graph_button)),
-            "Help" => Some(centre(l.help_button)),
             "FindField" | "ReplaceField" | "FindClose" | "Prev" | "Next" | "Replace" | "All"
             | "Aa" => self.screen.find_control(&l, label),
             s if s.starts_with("Heading:")
@@ -5272,7 +5264,6 @@ impl App {
         add("Find", l.find_button);
         add("Graph", l.graph_button);
         add("Options", l.options_button);
-        add("Help", l.help_button);
         if self.preview.is_some() {
             return out;
         }

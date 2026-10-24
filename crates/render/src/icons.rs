@@ -40,6 +40,8 @@ pub enum Icon {
     PageUp,
     PageDown,
     Tab,
+    /// The Settings button in the title bar (v1.13.1).
+    Settings,
 }
 
 impl Icon {
@@ -72,6 +74,7 @@ impl Icon {
             Self::PageUp => "chevrons-up",
             Self::PageDown => "chevrons-down",
             Self::Tab => "indent-increase",
+            Self::Settings => "settings",
         }
     }
 }
@@ -179,6 +182,7 @@ mod tests {
             Icon::PageUp,
             Icon::PageDown,
             Icon::Tab,
+            Icon::Settings,
         ] {
             for &s in SIZES {
                 let m = ICONS

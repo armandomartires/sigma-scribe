@@ -91,8 +91,6 @@ pub enum Hit {
     Find,
     /// Connected nodes: the Graph sheet (v0.6).
     Graph,
-    /// Question mark: the Help sheet (v0.7).
-    Help,
     /// Contents / To-dos / Scratch icon: toggle that drawer pane (v0.5).
     Drawer(crate::drawer::Pane),
     /// Landscape keyboard bar: Split / Full / Centre, pad toggles (v0.4).
@@ -127,20 +125,20 @@ pub struct Layout {
     pub keys: Vec<(Rect, Key)>,
     /// Title-bar icons, v1.0 (S9.2): twice the brief's size, in the
     /// mockup's order left to right after the title: Files, Preview, Find,
-    /// Scratch, To-dos, Contents, Graph, Options, Help.
+    /// Scratch, To-dos, Contents, Graph, Settings.
     pub files_button: Rect,
     /// Back arrow (v1.0.2), the slot left of Files; drawn and hit only
     /// while `EditorScreen::back_on`.
     pub back_button: Rect,
     /// Eye / pencil, right of the folder.
     pub preview_button: Rect,
-    /// Close X of the sheets (Files, Graph, Help, Options): the rightmost
-    /// slot, where Help sits in write mode.
+    /// Close X of the sheets (Files, Graph, Help, Settings): the rightmost
+    /// slot, where the Settings button sits in write mode.
     pub close_button: Rect,
     pub name_rect: Rect,
     pub ok_rect: Rect,
     pub cancel_rect: Rect,
-    /// "Aa" Options button, between Graph and Help.
+    /// The Settings (gear) button, the rightmost icon.
     pub options_button: Rect,
     /// Drawer pane icons after Find: Scratch, To-dos, Contents.
     pub scratch_button: Rect,
@@ -152,8 +150,6 @@ pub struct Layout {
     pub graph_button: Rect,
     /// The Find bar under the title bar when open (zero height otherwise).
     pub find_bar: Rect,
-    /// Help, the rightmost icon (mockup order, S9.2).
-    pub help_button: Rect,
     /// The text column inside the page: the page itself, or the locked
     /// portrait-width column (Line on, landscape) with gutters beside it.
     pub column: Rect,
@@ -162,7 +158,7 @@ pub struct Layout {
 
 /// Icon slots in the title bar (S9.2; v1.0.2 adds Back before Files, so
 /// sizing always reserves room for it).
-pub const TITLE_ICONS: i32 = 10;
+pub const TITLE_ICONS: i32 = 9;
 
 pub struct EditorScreen {
     pub width: u32,
@@ -443,8 +439,9 @@ impl EditorScreen {
         let contents_button = slot(6);
         let graph_button = slot(7);
         let options_button = slot(8);
-        let help_button = slot(9);
-        let close_button = help_button;
+        // Help opens from Settings → Help & about; the far-right slot is the
+        // Settings button, and Close takes its place on the other screens.
+        let close_button = options_button;
         let first = if self.back_on {
             back_button
         } else {
@@ -484,7 +481,6 @@ impl EditorScreen {
             find_button,
             graph_button,
             find_bar,
-            help_button,
             column,
             kb_buttons,
         }
@@ -1120,9 +1116,6 @@ impl EditorScreen {
         if l.graph_button.inset(-self.px(4.0)).contains(x, y) {
             return Hit::Graph;
         }
-        if l.help_button.inset(-self.px(4.0)).contains(x, y) {
-            return Hit::Help;
-        }
         for (r, p) in [
             (l.contents_button, crate::drawer::Pane::Contents),
             (l.todos_button, crate::drawer::Pane::Todos),
@@ -1184,7 +1177,6 @@ impl EditorScreen {
             }
             crate::icons::draw_icon(c, crate::icons::Icon::Search, l.find_button, t.ink);
             crate::icons::draw_icon(c, crate::icons::Icon::Graph, l.graph_button, t.ink);
-            crate::icons::draw_icon(c, crate::icons::Icon::Help, l.help_button, t.ink);
             for (i, r) in [l.contents_button, l.todos_button, l.scratch_button]
                 .into_iter()
                 .enumerate()
@@ -1466,19 +1458,7 @@ impl EditorScreen {
 
     /// "Aa" in a 44 px target: the Options sheet.
     pub fn draw_options_icon(&self, c: &mut Canvas, r: Rect, t: Theme) {
-        let size = self.ui_px() * 1.1 * r.w as f32 / self.px(44.0) as f32;
-        let w = self.fonts.width(Face::AtkinsonBold, size, "Aa");
-        let base =
-            r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(Face::AtkinsonBold, size) / 2.6;
-        self.fonts.draw(
-            c,
-            Face::AtkinsonBold,
-            size,
-            r.x as f32 + (r.w as f32 - w) / 2.0,
-            base,
-            "Aa",
-            t.ink,
-        );
+        crate::icons::draw_icon(c, crate::icons::Icon::Settings, r, t.ink);
     }
 
     #[must_use]
@@ -2098,8 +2078,6 @@ impl EditorScreen {
             Hit::Find
         } else if l.graph_button.inset(-self.px(4.0)).contains(x, y) {
             Hit::Graph
-        } else if l.help_button.inset(-self.px(4.0)).contains(x, y) {
-            Hit::Help
         } else if l.contents_button.inset(-self.px(4.0)).contains(x, y) {
             // v1.0.3: the drawer panes open in preview too.
             Hit::Drawer(crate::drawer::Pane::Contents)
@@ -2136,8 +2114,6 @@ impl EditorScreen {
         self.draw_options_icon(c, l.options_button, t);
         crate::icons::draw_icon(c, crate::icons::Icon::Search, l.find_button, t.ink);
         crate::icons::draw_icon(c, crate::icons::Icon::Graph, l.graph_button, t.ink);
-        // Help was tappable but not drawn in preview before S9.2.
-        crate::icons::draw_icon(c, crate::icons::Icon::Help, l.help_button, t.ink);
         // v1.0.3: the drawer pane buttons, active while open (as in write).
         for (i, r) in [l.contents_button, l.todos_button, l.scratch_button]
             .into_iter()
@@ -2435,7 +2411,6 @@ mod tests {
                 l.contents_button,
                 l.graph_button,
                 l.options_button,
-                l.help_button,
             ];
             for r in order {
                 assert_eq!(
@@ -2448,8 +2423,8 @@ mod tests {
             for p in order.windows(2) {
                 assert!(p[0].x + p[0].w < p[1].x, "left to right, no overlap");
             }
-            assert_eq!(l.close_button, l.help_button);
-            assert!(l.help_button.x + l.help_button.w <= w as i32 - s.px(12.0));
+            assert_eq!(l.close_button, l.options_button);
+            assert!(l.options_button.x + l.options_button.w <= w as i32 - s.px(12.0));
             assert!(l.name_rect.w >= s.px(100.0), "{w}: title keeps room");
             assert!(l.title.h >= s.px(44.0) && l.page.y >= l.title.h);
             // Every icon hits itself in write and preview mode.
@@ -2465,7 +2440,6 @@ mod tests {
                 Hit::Drawer(crate::drawer::Pane::Contents),
                 Hit::Graph,
                 Hit::Options,
-                Hit::Help,
             ];
             for (r, h) in order.iter().zip(want) {
                 let (x, y) = (r.x + r.w / 2, r.y + r.h / 2);
