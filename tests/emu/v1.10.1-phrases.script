@@ -1,5 +1,6 @@
 # v1.10.1 (S20.1): Japanese phrases: Left/Right choose, Space cycles, Shift+arrows move the boundary.
 copy-notes tests/test-notes/_test
+experimental on
 usb plug
 tap-on Options
 tap-on Keyboard & input

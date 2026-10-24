@@ -1,0 +1,30 @@
+# v1.12: Kobo-style scroll bar (editor and Settings), Experimental features, Backlight slider.
+copy-notes tests/test-notes/_test
+light 4
+tap-on Options
+tap-on Display
+shot v1.12-display-backlight
+tap-on Backlight/Full
+expect-light 8
+tap-on Backlight/Off
+expect-light 0
+tap-on Back
+tap-on Keyboard & input
+shot v1.12-keyboard-input-plain
+tap-on Layout
+shot v1.12-layouts-plain-scrollbar
+tap-on Back
+tap-on Back
+tap-on Experimental features
+shot v1.12-experimental-off
+tap-on Experimental features/On
+expect-setting experimental=on
+shot v1.12-experimental-on
+tap-on Back
+tap-on Keyboard & input
+shot v1.12-keyboard-input-experimental
+tap-on Layout
+shot v1.12-layouts-with-experimental
+esc
+esc
+esc

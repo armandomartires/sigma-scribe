@@ -20,6 +20,8 @@ pub struct DesktopDevice {
     pub usb_host: Vec<bool>,
     /// Pretend an accelerometer is present (v1.2 emulator `sensor on`).
     pub gsensor: bool,
+    /// Pretend a front light is present at this step (v1.12). `None`: none.
+    pub light: Option<u8>,
 }
 
 impl DesktopDevice {
@@ -32,6 +34,7 @@ impl DesktopDevice {
             refreshes: Vec::new(),
             usb_host: Vec::new(),
             gsensor: false,
+            light: None,
         }
     }
 
@@ -108,6 +111,17 @@ impl Device for DesktopDevice {
 
     fn usb_host(&mut self, on: bool) -> io::Result<()> {
         self.usb_host.push(on);
+        Ok(())
+    }
+
+    fn light_step(&mut self) -> Option<u8> {
+        self.light
+    }
+
+    fn set_light(&mut self, step: u8) -> io::Result<()> {
+        if self.light.is_some() {
+            self.light = Some(step);
+        }
         Ok(())
     }
 }

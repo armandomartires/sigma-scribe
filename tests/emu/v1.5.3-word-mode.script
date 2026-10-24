@@ -1,6 +1,7 @@
 # v1.5.3 (S15.3): Boox-style handwriting panel (decision 55): candidate bar, 3x4 keys, free writing area.
 # Word mode stays experimental and off by default (decision 54).
 copy-notes tests/test-notes/_test
+experimental on
 tap-on Options
 tap-on Keyboard & input
 shot v1.5.3-settings-handwriting

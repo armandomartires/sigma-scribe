@@ -458,6 +458,13 @@ pub struct App {
     pub usb_live: bool,
     /// The USB host-mode state last asked of the device (v0.8).
     pub usb_host: bool,
+    /// The front light (v1.12): whether the device has one and where it
+    /// stands (read at start, then what Display → Backlight set), and a
+    /// step still to send.
+    light_have: bool,
+    light_step: u8,
+    light_want: Option<u8>,
+    light_probed: bool,
     /// USB mouse / touchpad (v0.8.1).
     pub pointer: PointerState,
     /// The ink panel (v1.5.0); `Some` while open.
@@ -555,6 +562,10 @@ impl App {
             read_only: unreadable,
             usb_live: false,
             usb_host: false,
+            light_have: false,
+            light_step: 0,
+            light_want: None,
+            light_probed: false,
             pointer: PointerState::default(),
             ink: None,
             hwr: Hwr::default(),
@@ -685,8 +696,14 @@ impl App {
             self.hwr = Hwr::default();
             return Refresh::Partial;
         }
+        if let Change::Backlight(n) = c {
+            // Not a saved setting: the front light keeps its level.
+            self.light_step = n.min(sigma_core::settings::BACKLIGHT_MAX);
+            self.light_want = Some(self.light_step);
+            return Refresh::Partial;
+        }
         self.settings.apply(c);
-        self.screen.ink_words = self.settings.ink_words;
+        self.screen.ink_words = self.settings.word_mode();
         if c == Change::LangOverride(true) {
             // Start from the language in use, so turning it on changes nothing.
             use sigma_core::settings::UiLang;
@@ -1126,6 +1143,7 @@ impl App {
             version: env!("CARGO_PKG_VERSION"),
             focus: self.settings_focus,
             hw_samples: self.hwr.samples,
+            light: self.light_have.then_some(self.light_step),
         }
     }
 
@@ -2086,7 +2104,7 @@ impl App {
     /// Opens the writing panel (v1.5.0).
     pub fn open_ink(&mut self) {
         self.sel_ui = None;
-        self.screen.ink_words = self.settings.ink_words;
+        self.screen.ink_words = self.settings.word_mode();
         // v1.5.3 (decision 55): the free writing area is the main input;
         // boxes only with Settings → Letter boxes; Draw is one ⇄ away.
         self.ink = Some(InkState {
@@ -2102,7 +2120,7 @@ impl App {
     /// The live-ink refresh: DU, or A2 when Settings → Fast ink is on.
     #[must_use]
     pub fn ink_refresh(&self) -> Refresh {
-        if self.settings.ink_a2 {
+        if self.settings.fast_ink() {
             Refresh::InkA2
         } else {
             Refresh::Ink
@@ -2467,7 +2485,7 @@ impl App {
         let allow = sigma_hwr::free::allow_lang(rec, ink.lang, ink.digits);
         // Word mode (experimental) reads every word with the lexicon;
         // otherwise only touching letters do.
-        let wide = if self.settings.ink_words {
+        let wide = if self.settings.word_mode() {
             0.0
         } else {
             sigma_hwr::free::WIDE
@@ -3677,6 +3695,23 @@ impl App {
         }
     }
 
+    /// Reads the front light once, then sends the step Display → Backlight
+    /// asked for (v1.12). A failure is logged; the slider keeps its place.
+    pub fn sync_light(&mut self, dev: &mut dyn Device) {
+        if !self.light_probed {
+            self.light_probed = true;
+            if let Some(n) = dev.light_step() {
+                self.light_have = true;
+                self.light_step = n;
+            }
+        }
+        if let Some(n) = self.light_want.take() {
+            if let Err(e) = dev.set_light(n) {
+                eprintln!("light: {e}");
+            }
+        }
+    }
+
     /// Main loop until power/quit or end of input.
     ///
     /// # Errors
@@ -3687,6 +3722,7 @@ impl App {
         self.render(dev, Refresh::Full)?;
         while self.running {
             self.sync_usb_host(dev);
+            self.sync_light(dev);
             let Some(e) = dev.next_event() else { break };
             let t0 = std::time::Instant::now();
             let e = self.to_logical(e);

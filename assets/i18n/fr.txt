@@ -823,3 +823,11 @@ Chinese Traditional (pinyin)
 
 Machine-drafted translation, best effort; a native review is needed. Follows the Kobo's language.
 = Traduction rédigée par machine, au mieux ; une relecture native est nécessaire. Suit la langue du Kobo.
+Experimental features
+= Fonctions expérimentales
+Not fully tested yet
+= Pas encore entièrement testées
+Backlight
+= Rétroéclairage
+Light
+= Lumière

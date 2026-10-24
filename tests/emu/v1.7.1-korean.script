@@ -1,5 +1,6 @@
 # v1.7.1 (S17.1): Korean, Dubeolsik jamo composed into syllables; AltGr = US keys.
 copy-notes tests/test-notes/_test
+experimental on
 usb plug
 tap-on Options
 tap-on Keyboard & input

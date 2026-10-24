@@ -16,6 +16,8 @@ fn fresh(tag: &str) -> std::path::PathBuf {
 fn app_with(tag: &str, l: KeyLayout) -> (App, std::path::PathBuf) {
     let dir = fresh(tag);
     let mut app = App::new(1440, 1920, &dir);
+    // Asian and right-to-left layouts show only with Experimental features on.
+    app.change(Change::Experimental(true));
     while app.settings.kb_layout != l {
         app.change(Change::KbLayout(1));
     }
@@ -32,7 +34,12 @@ fn tap(app: &mut App, label: &str) {
 
 #[test]
 fn setting_steps_wraps_and_round_trips() {
-    let mut s = Settings::default();
+    // Experimental features on: every layout is in the list (off, the
+    // Asian and right-to-left ones are hidden: app/tests/experimental.rs).
+    let mut s = Settings {
+        experimental: true,
+        ..Settings::default()
+    };
     assert_eq!(s.kb_layout, KeyLayout::Us);
     s.apply(Change::KbLayout(-1));
     assert_eq!(s.kb_layout, ALL[ALL.len() - 1], "wraps");

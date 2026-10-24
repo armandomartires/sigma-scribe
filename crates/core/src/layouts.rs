@@ -1063,6 +1063,28 @@ impl KeyLayout {
         }
     }
 
+    /// Layouts that are not fully tested yet (v1.12): Asian scripts and
+    /// right-to-left ones. They show only while Settings → Experimental
+    /// features is on.
+    #[must_use]
+    pub fn experimental(self) -> bool {
+        matches!(
+            self,
+            Self::Ko
+                | Self::Ja
+                | Self::ZhHans
+                | Self::ZhHant
+                | Self::Ar
+                | Self::Fa
+                | Self::Ur
+                | Self::He
+                | Self::Deva
+                | Self::Bn
+                | Self::Ta
+                | Self::Th
+        )
+    }
+
     /// The compact board has room for the letters of this layout (v1.9):
     /// the Indic and Thai layouts have too many keys, so they use the Full
     /// board only.
