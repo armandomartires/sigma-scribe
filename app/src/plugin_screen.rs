@@ -11,6 +11,7 @@ use sigma_device::Refresh;
 use sigma_plugin_api::{Action, Event as PEvent, Frame, Note, Phase as PPhase, Redraw, Scene};
 use sigma_plugin_host::{DirCache, Env, Limits, Plugin};
 use sigma_render::i18n::tr;
+use sigma_render::options::PluginRow;
 use sigma_render::plugin_screen::face;
 use sigma_render::Fonts;
 
@@ -88,6 +89,47 @@ impl App {
         self.plugins_root = root.into();
         self.plugin_failed = false;
         self.plugin_idle = None;
+    }
+
+    /// Reads the installed plugins for Settings → Plugins.
+    pub(crate) fn refresh_plugin_list(&mut self) {
+        let app = plugins::Version::parse(env!("CARGO_PKG_VERSION")).unwrap_or_default();
+        self.plugin_list = plugins::list_in(&self.plugins_root)
+            .into_iter()
+            .map(|l| PluginRow {
+                compatible: l.manifest.compatible_with(app),
+                restart: l.manifest.kind != plugins::PluginKind::Screen,
+                kind: l.manifest.kind.label(),
+                version: l.manifest.version.to_string(),
+                id: l.manifest.id,
+                name: l.manifest.name,
+                enabled: l.enabled,
+            })
+            .collect();
+    }
+
+    /// Settings → Plugins: turns plugin number `i` of the list on or off.
+    /// Screen plugins take effect the next time their screen opens; data
+    /// packs when the app next starts.
+    pub(crate) fn set_plugin(&mut self, i: usize, on: bool) -> Refresh {
+        // The switch means the plugin the page showed at that place, even if
+        // the folder changed since.
+        let id = self.plugin_list.get(i).map(|p| p.id.clone());
+        if let Some(id) = &id {
+            match plugins::set_enabled_in(&self.plugins_root, id, on) {
+                Ok(()) => {
+                    if !on {
+                        // A switched-off plugin need not stay in memory.
+                        self.plugin_idle = None;
+                    }
+                    // A plugin that failed earlier gets another chance.
+                    self.plugin_failed = false;
+                }
+                Err(e) => eprintln!("sigma-scribe: plugin {id}: {e}"),
+            }
+        }
+        self.refresh_plugin_list();
+        Refresh::Full
     }
 
     /// Closes the Graph screen, built-in or plugin.

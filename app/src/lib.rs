@@ -432,6 +432,9 @@ pub struct App {
     plugin_screen: Option<PluginScreen>,
     /// A loaded plugin kept for the next open.
     plugin_idle: Option<IdlePlugin>,
+    /// The installed plugins, as Settings → Plugins lists them (refreshed
+    /// whenever Settings opens or a switch is flipped).
+    plugin_list: Vec<sigma_render::options::PluginRow>,
     /// Where plugins are installed.
     plugins_root: PathBuf,
     /// A plugin failed: the built-in Graph serves the rest of the session.
@@ -557,6 +560,7 @@ impl App {
             map_cache: None,
             plugin_screen: None,
             plugin_idle: None,
+            plugin_list: Vec::new(),
             plugins_root: sigma_core::plugins::plugins_root(),
             plugin_failed: false,
             preview: None,
@@ -725,6 +729,9 @@ impl App {
     /// re-lays out (and resizes on rotation), saves the settings file.
     /// Paper and orientation need a full (flashing) refresh.
     pub fn change(&mut self, c: Change) -> Refresh {
+        if let Change::Plugin(i, on) = c {
+            return self.set_plugin(i, on);
+        }
         if c == Change::TrainSamples {
             self.options = false;
             self.open_ink();
@@ -1181,6 +1188,7 @@ impl App {
         self.settings_page = sigma_render::SettingsPage::Root;
         self.settings_sub = 0;
         self.settings_focus = None;
+        self.refresh_plugin_list();
     }
 
     pub fn options_model(&self) -> OptionsModel<'_> {
@@ -1199,6 +1207,7 @@ impl App {
             hw_samples: self.hwr.samples,
             light: self.light_have.then_some(self.light_step),
             ui_scale_pending: self.ui_scale_drag,
+            plugins: &self.plugin_list,
         }
     }
 
