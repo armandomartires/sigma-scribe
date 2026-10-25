@@ -462,11 +462,18 @@ fn dict() -> &'static RwLock<Dict> {
         d.load_seed();
         // A fuller SKK dictionary, when one is installed (docs/japanese.md).
         let extra = std::env::var("SIGMA_SKK_DICT").ok();
-        for path in extra.iter().map(String::as_str).chain([
-            "/mnt/onboard/.adds/sigma-scribe/dict/skk-jisyo.txt",
-            // A development checkout (the emulator runs from its root).
-            "assets/ja/skk-jisyo.txt",
-        ]) {
+        // The env override first, then enabled plugins, then the loose files.
+        let plugins = crate::plugins::enabled_files("dict/skk-jisyo.txt");
+        let paths = extra
+            .iter()
+            .map(std::path::PathBuf::from)
+            .chain(plugins)
+            .chain([
+                "/mnt/onboard/.adds/sigma-scribe/dict/skk-jisyo.txt".into(),
+                // A development checkout (the emulator runs from its root).
+                "assets/ja/skk-jisyo.txt".into(),
+            ]);
+        for path in paths {
             if let Ok(text) = std::fs::read_to_string(path) {
                 d.load_skk(&text);
                 break;

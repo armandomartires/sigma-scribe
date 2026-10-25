@@ -19,6 +19,7 @@ pub mod links;
 pub mod locale;
 pub mod markdown;
 pub mod outline;
+pub mod plugins;
 pub mod settings;
 pub mod store;
 pub mod text;
