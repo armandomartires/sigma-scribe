@@ -11,37 +11,51 @@ use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
+/// A Markdown heading of a note, as found by [`headings`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Heading {
+    /// Number of `#`s, 1 to 6.
     pub level: u8,
+    /// The heading text, without the hashes (leading or closing).
     pub text: String,
+    /// 0-based logical line it is on.
     pub line: usize,
 }
 
+/// A checkbox list item of a note, as found by [`todos`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Todo {
+    /// 0-based logical line it is on.
     pub line: usize,
+    /// Whether the box is checked.
     pub done: bool,
+    /// The item text after the box.
     pub text: String,
 }
 
 /// A to-do and the note it lives in.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TodoItem {
+    /// The note the to-do is in.
     pub note: NotePath,
+    /// The to-do itself.
     pub todo: Todo,
 }
 
 /// To-dos pane filter: the button cycles All → Open → Done.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Filter {
+    /// Every to-do.
     #[default]
     All,
+    /// Unchecked to-dos only.
     Open,
+    /// Checked to-dos only.
     Done,
 }
 
 impl Filter {
+    /// The filter the button moves to next.
     #[must_use]
     pub fn next(self) -> Self {
         match self {
@@ -51,6 +65,7 @@ impl Filter {
         }
     }
 
+    /// The button label.
     #[must_use]
     pub fn label(self) -> &'static str {
         match self {
@@ -60,6 +75,7 @@ impl Filter {
         }
     }
 
+    /// Whether a to-do with this `done` state is shown.
     #[must_use]
     pub fn keeps(self, done: bool) -> bool {
         match self {
@@ -193,6 +209,10 @@ impl Default for Indexer {
 }
 
 impl Indexer {
+    /// Starts the worker thread. No scan runs until [`Indexer::request`].
+    ///
+    /// # Panics
+    /// If the OS cannot create the thread (from [`std::thread::spawn`]).
     #[must_use]
     pub fn new() -> Self {
         let (tx, jobs) = channel::<(u64, PathBuf)>();
@@ -217,11 +237,14 @@ impl Indexer {
         }
     }
 
+    /// Asks for a scan of the library at `root`. Requests that pile up
+    /// before the worker gets to them are merged into the newest one.
     pub fn request(&mut self, root: PathBuf) {
         self.asked += 1;
         let _ = self.tx.send((self.asked, root));
     }
 
+    /// Whether the newest request has not been answered yet.
     #[must_use]
     pub fn pending(&self) -> bool {
         self.got < self.asked

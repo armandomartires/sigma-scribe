@@ -13,16 +13,22 @@
 /// Inline style of a run of text.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Style {
+    /// `**strong**` or `__strong__`.
     pub strong: bool,
+    /// `*em*` or `_em_`.
     pub em: bool,
+    /// `~~strike~~`.
     pub strike: bool,
+    /// `` `code` ``, or a line of a fenced code block.
     pub code: bool,
     /// Part of a `[label](url)` or `[[wiki]]` link, or an image's alt text.
     pub link: Option<LinkKind>,
 }
 
+/// What a link run points at.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LinkKind {
+    /// `[label](url)`: a web link.
     Web,
     /// `[[note]]`: shown in v0.3; navigation, backlinks and the graph are S6.
     Wiki,
@@ -30,34 +36,48 @@ pub enum LinkKind {
     Image,
 }
 
+/// A run of text in one [`Style`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Run {
+    /// The text, with the Markdown syntax removed.
     pub text: String,
+    /// How the text is styled.
     pub style: Style,
     /// URL for web links and images, note name for wiki links.
     pub target: Option<String>,
 }
 
+/// What a [`Block`] is.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum BlockKind {
+    /// An ATX heading, with its level (1 to 6).
     Heading(u8),
+    /// A paragraph; soft-wrapped lines are joined with a space.
     Paragraph,
     /// A list item. `marker` is `None` for bullets, the number for ordered
     /// items; `task` is `Some(done)` for `- [ ]` / `- [x]`.
     Item {
+        /// Nesting level: the item's indent over 2 (a tab counts 4), at most 6.
         depth: u8,
+        /// The item's number, or `None` for a bullet.
         marker: Option<u32>,
+        /// `Some(done)` for a task item, `None` otherwise.
         task: Option<bool>,
     },
+    /// A `>` quote; nested `>>` is shown as one level.
     Quote,
     /// Fenced code: `runs` holds one plain run per source line.
     Code,
+    /// A thematic break, such as `---`, `***` or `___`.
     Rule,
 }
 
+/// One block of a parsed note.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Block {
+    /// What the block is.
     pub kind: BlockKind,
+    /// The block's text as styled runs (empty for a rule).
     pub runs: Vec<Run>,
     /// 0-based source line where the block starts (keeps the position when
     /// switching between write and preview).

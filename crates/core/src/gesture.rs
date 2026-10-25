@@ -7,13 +7,22 @@
 //! Drag updates are throttled to one per [`Config::drag_every_ms`] so the
 //! e-ink panel is not flooded; the release always reports the final point.
 
+/// Timing and distance thresholds for a [`Recognizer`].
+///
+/// The [`Default`] values are tuned for the Kobo Forma (300 dpi).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Config {
+    /// Time in ms a press must last to become a [`Gesture::LongPress`].
     pub hold_ms: u64,
     /// Movement tolerance in px before a press becomes a drag.
     pub slop: i32,
+    /// Most time in ms between the releases of two taps for them to make a
+    /// [`Gesture::DoubleTap`].
     pub double_tap_ms: u64,
+    /// Most distance in px, on each axis, between the press points of two
+    /// taps for them to make a [`Gesture::DoubleTap`].
     pub double_tap_slop: i32,
+    /// Least time in ms between two reported [`Gesture::Drag`]s.
     pub drag_every_ms: u64,
 }
 
@@ -30,35 +39,54 @@ impl Default for Config {
     }
 }
 
+/// A gesture reported by a [`Recognizer`]. Positions are in px.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Gesture {
     /// Finger down (the app can check for a selection handle here).
     Press {
+        /// Where the finger went down.
         x: i32,
+        /// Where the finger went down.
         y: i32,
     },
+    /// A short press released within the slop, not close enough to the
+    /// previous tap to be a double tap.
     Tap {
+        /// Where the press started.
         x: i32,
+        /// Where the press started.
         y: i32,
     },
+    /// A second tap close in time and place to the previous one.
     DoubleTap {
+        /// Where the second press started.
         x: i32,
+        /// Where the second press started.
         y: i32,
     },
+    /// A press held within the slop for [`Config::hold_ms`].
     LongPress {
+        /// Where the press started.
         x: i32,
+        /// Where the press started.
         y: i32,
     },
     /// Movement after a long-press (`held`) or beyond the slop.
     Drag {
+        /// The latest finger position.
         x: i32,
+        /// The latest finger position.
         y: i32,
+        /// Whether the drag started from a long-press.
         held: bool,
     },
     /// Finger up after a drag or long-press.
     Release {
+        /// Where the finger went up.
         x: i32,
+        /// Where the finger went up.
         y: i32,
+        /// Whether the press had become a long-press.
         held: bool,
     },
 }
@@ -71,8 +99,14 @@ enum State {
     Dragging { held: bool },
 }
 
+/// One-finger gesture recognizer: turns touch events into [`Gesture`]s.
+///
+/// Feed it [`down`](Self::down), [`moved`](Self::moved) and
+/// [`up`](Self::up), and call [`tick`](Self::tick) while a finger rests.
+/// Each call returns the gestures it produced, possibly none.
 #[derive(Clone, Debug)]
 pub struct Recognizer {
+    /// The thresholds in use.
     pub cfg: Config,
     state: State,
     last: (i32, i32),
@@ -88,6 +122,7 @@ impl Default for Recognizer {
 }
 
 impl Recognizer {
+    /// Creates an idle recognizer with the given thresholds.
     #[must_use]
     pub fn new(cfg: Config) -> Self {
         Self {
@@ -100,11 +135,15 @@ impl Recognizer {
         }
     }
 
+    /// Whether a finger is currently down.
     #[must_use]
     pub fn finger_down(&self) -> bool {
         self.state != State::Idle
     }
 
+    /// Handles a finger going down at `(x, y)` at time `t` (ms).
+    ///
+    /// Starts a new press and returns a [`Gesture::Press`].
     pub fn down(&mut self, x: i32, y: i32, t: u64) -> Vec<Gesture> {
         self.state = State::Pressed {
             x0: x,
@@ -116,6 +155,11 @@ impl Recognizer {
         vec![Gesture::Press { x, y }]
     }
 
+    /// Handles the finger moving to `(x, y)` at time `t` (ms).
+    ///
+    /// May return a [`Gesture::LongPress`] that came due, and a
+    /// [`Gesture::Drag`] once the press has left the slop or was held.
+    /// Drags after the first are throttled by [`Config::drag_every_ms`].
     pub fn moved(&mut self, x: i32, y: i32, t: u64) -> Vec<Gesture> {
         self.last = (x, y);
         let mut out = self.tick(t);
@@ -154,7 +198,11 @@ impl Recognizer {
         }
     }
 
+    /// Advances the clock to `t` (ms) without new input.
+    ///
     /// Call periodically (e.g. every 50 ms) while a finger may be down.
+    /// Returns a [`Gesture::LongPress`] when the hold time has passed, or a
+    /// throttled [`Gesture::Drag`] that is now due.
     pub fn tick(&mut self, t: u64) -> Vec<Gesture> {
         match self.state {
             State::Pressed { x0, y0, t0 } if t.saturating_sub(t0) >= self.cfg.hold_ms => {
@@ -172,6 +220,12 @@ impl Recognizer {
         }
     }
 
+    /// Handles the finger going up at `(x, y)` at time `t` (ms).
+    ///
+    /// Returns a [`Gesture::Tap`] or [`Gesture::DoubleTap`] for a short
+    /// press, or a [`Gesture::Release`] after a long-press or drag. A hold
+    /// that expired without a [`tick`](Self::tick) is reported as a
+    /// [`Gesture::LongPress`] first.
     pub fn up(&mut self, x: i32, y: i32, t: u64) -> Vec<Gesture> {
         self.last = (x, y);
         // A hold that expired without a tick still counts.

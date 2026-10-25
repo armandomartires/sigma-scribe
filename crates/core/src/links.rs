@@ -152,14 +152,20 @@ pub fn new_note_place(lib: &Library, from: &NotePath, target: &str) -> (NotePath
 /// One outgoing link: its target text and the note it reaches.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Link {
+    /// The target as written in the note.
     pub target: String,
+    /// Index into [`Graph::notes`] of the note it reaches; `None` when no
+    /// note matches (a broken link).
     pub to: Option<usize>,
 }
 
 /// Every note and its outgoing links.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Graph {
+    /// Every note, in library order.
     pub notes: Vec<NotePath>,
+    /// Outgoing links of each note, by the note's index in `notes`. Links
+    /// from a note to itself are left out.
     pub out: Vec<Vec<Link>>,
 }
 
@@ -178,6 +184,8 @@ impl Graph {
         Self::from_texts(notes, &texts)
     }
 
+    /// Builds the graph from notes and their texts (`texts[i]` is the text
+    /// of `notes[i]`), without touching the disk.
     #[must_use]
     pub fn from_texts(notes: Vec<NotePath>, texts: &[String]) -> Self {
         let out = texts
@@ -200,6 +208,7 @@ impl Graph {
         Self { notes, out }
     }
 
+    /// Position of `p` in [`Graph::notes`].
     #[must_use]
     pub fn index(&self, p: &NotePath) -> Option<usize> {
         self.notes.iter().position(|n| n == p)

@@ -28,15 +28,21 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 /// Severity, with Python's numbers (`logging.DEBUG` is 10, and so on).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Level {
+    /// 10: detail for tracing a problem.
     Debug = 10,
+    /// 20: normal events; the default.
     #[default]
     Info = 20,
+    /// 30: something unexpected that the app recovered from.
     Warning = 30,
+    /// 40: something failed.
     Error = 40,
+    /// 50: the most severe level.
     Critical = 50,
 }
 
 impl Level {
+    /// Every level, lowest first.
     pub const ALL: [Level; 5] = [
         Level::Debug,
         Level::Info,
@@ -102,7 +108,9 @@ pub const MAX_FILE: u64 = 512 * 1024;
 /// Where one line goes.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Route {
+    /// The line goes to the log file.
     pub file: bool,
+    /// The line goes to stderr.
     pub stderr: bool,
 }
 
@@ -138,6 +146,8 @@ impl Logger {
         Self::with_max(MAX_FILE)
     }
 
+    /// A logger that is off and rotates its file once a line would take it
+    /// past `max` bytes, instead of [`MAX_FILE`].
     #[must_use]
     pub fn with_max(max: u64) -> Self {
         Self {

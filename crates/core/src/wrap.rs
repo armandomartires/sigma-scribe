@@ -6,6 +6,7 @@
 
 /// Width of a run of text in the front end's unit (pixels or grid cells).
 pub trait TextMeasure {
+    /// Width of `text` laid out on one line.
     fn width(&self, text: &str) -> u32;
 
     /// x of the caret at byte `at` of a row, from the row's left end. A
@@ -29,6 +30,7 @@ pub trait TextMeasure {
 /// Every char is one cell wide; tabs expand to `tab` cells.
 #[derive(Clone, Copy, Debug)]
 pub struct MonoMeasure {
+    /// Width of a tab, in cells (4 by default).
     pub tab: u32,
 }
 
@@ -49,7 +51,9 @@ impl TextMeasure for MonoMeasure {
 /// One drawn row: a byte range of the source text (without the `\n`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct VisualLine {
+    /// Byte offset of the row's first character.
     pub start: usize,
+    /// Byte offset just past the row's last character.
     pub end: usize,
 }
 

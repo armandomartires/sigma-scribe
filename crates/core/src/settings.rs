@@ -7,17 +7,23 @@
 use crate::buffer::TabKind;
 use crate::keyboard::Layout;
 
+/// The page theme: Day, or Night when Dark mode is on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Paper {
+    /// Dark mode off (the default).
     #[default]
     Day,
+    /// Dark mode on.
     Night,
 }
 
+/// The typeface of the text.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Typeface {
+    /// Literata (the default).
     #[default]
     Literata,
+    /// Atkinson.
     Atkinson,
 }
 
@@ -25,9 +31,12 @@ pub enum Typeface {
 /// always night.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum KeyTone {
+    /// Follow the page: night colours on [`Paper::Night`] (the default).
     #[default]
     Theme,
+    /// Always paper colours.
     Light,
+    /// Always night colours.
     Dark,
 }
 
@@ -35,9 +44,11 @@ pub enum KeyTone {
 /// page to 50 % (the middle of the screen at most): 20, 27.5, 35, 42.5, 50.
 /// The widest is the default.
 pub const DRAWER_WIDTH_STOPS: u8 = 5;
+/// The default Drawer width stop: the widest (50 %).
 pub const DRAWER_WIDTH_DEFAULT: u8 = DRAWER_WIDTH_STOPS - 1;
 
 /// The drawer's width at `stop`, in tenths of a percent of the page.
+/// A `stop` past the last one counts as the last.
 #[must_use]
 pub fn drawer_tenths(stop: u8) -> u16 {
     200 + 75 * u16::from(stop.min(DRAWER_WIDTH_DEFAULT))
@@ -49,20 +60,28 @@ pub fn drawer_share(stop: u8) -> f32 {
     f32::from(drawer_tenths(stop)) / 1000.0
 }
 
+/// A side of the screen: where the drawer opens, or where the landscape
+/// pad sits.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Side {
+    /// The left side.
     Left,
+    /// The right side (the default).
     #[default]
     Right,
 }
 
+/// The Options → Orientation choice: Auto, or a fixed orientation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Orientation {
     /// Follow the accelerometer (v1.2 default); without a sensor the last
     /// applied rotation stays.
     #[default]
     Auto,
+    /// Always portrait ([`Rotation::R0`], or [`Rotation::R180`] upside down).
     Portrait,
+    /// Always landscape ([`Rotation::R90`], or [`Rotation::R270`] upside
+    /// down).
     Landscape,
 }
 
@@ -71,19 +90,26 @@ pub enum Orientation {
 /// landscape inverted.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Rotation {
+    /// Portrait (the default).
     #[default]
     R0,
+    /// Landscape.
     R90,
+    /// Portrait inverted.
     R180,
+    /// Landscape inverted.
     R270,
 }
 
 impl Rotation {
+    /// Whether the screen is landscape ([`Rotation::R90`] or [`Rotation::R270`]).
     #[must_use]
     pub fn is_landscape(self) -> bool {
         matches!(self, Self::R90 | Self::R270)
     }
 
+    /// Whether the screen is upside down ([`Rotation::R180`] or
+    /// [`Rotation::R270`]).
     #[must_use]
     pub fn is_inverted(self) -> bool {
         matches!(self, Self::R180 | Self::R270)
@@ -101,6 +127,7 @@ impl Rotation {
         })
     }
 
+    /// The rotation's label in Settings, as [`Words::label`] gives it.
     #[must_use]
     pub fn name(self) -> &'static str {
         self.label()
@@ -109,6 +136,7 @@ impl Rotation {
 
 /// Landscape keyboard arrangement (brief §7).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[allow(missing_docs)] // Named after the arrangements they are; Centre is the default.
 pub enum LandKeys {
     #[default]
     Centre,
@@ -119,15 +147,22 @@ pub enum LandKeys {
 /// The pad beside the board in landscape Full.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Pad {
+    /// Number keys (the default).
     #[default]
     Numbers,
+    /// Arrow keys.
     Arrows,
 }
 
+/// The smallest and largest text size, in brief px.
 pub const SIZE_RANGE: (f32, f32) = (14.0, 40.0);
+/// The smallest and largest leading (line spacing factor).
 pub const LEADING_RANGE: (f32, f32) = (1.2, 2.0);
+/// The smallest and largest margin, in brief px.
 pub const MARGIN_RANGE: (f32, f32) = (8.0, 400.0);
+/// The fewest and most words per line in Line mode.
 pub const WORDS_RANGE: (u8, u8) = (8, 16);
+/// One step of the Size stepper, in brief px.
 pub const SIZE_STEP: f32 = 1.0;
 /// Stops of the Size slider (no unit is shown); the default 20 is one.
 pub const SIZE_STOPS: [f32; 9] = [14.0, 17.0, 20.0, 23.0, 26.0, 29.0, 32.0, 35.0, 38.0];
@@ -137,28 +172,44 @@ pub const LEADING_STOPS: [f32; 9] = [1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0
 pub const MARGIN_STOPS: [f32; 10] = [
     8.0, 16.0, 28.0, 40.0, 56.0, 80.0, 120.0, 180.0, 260.0, 400.0,
 ];
+/// One step of the Leading stepper.
 pub const LEADING_STEP: f32 = 0.1;
+/// One step of the Margin stepper, in brief px.
 pub const MARGIN_STEP: f32 = 4.0;
 
 /// Every setting. Sizes are in brief px (a 1264 px wide page); the renderer
 /// scales them to the panel.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Settings {
+    /// Dark mode: the page theme. `paper=`.
     pub paper: Paper,
+    /// The typeface. `type=`.
     pub face: Typeface,
+    /// Line mode on / off (size and margin refit to
+    /// [`Settings::line_words`]). `line=`.
     pub line_on: bool,
+    /// Words per line in Line mode, within [`WORDS_RANGE`]. `line_words=`.
     pub line_words: u8,
+    /// Text size in brief px, within [`SIZE_RANGE`]. `size=`.
     pub size: f32,
+    /// Leading (line spacing factor), within [`LEADING_RANGE`]. `leading=`.
     pub leading: f32,
+    /// Margin in brief px, within [`MARGIN_RANGE`]. `margin=`.
     pub margin: f32,
     /// Tab key inserts spaces (Markdown default) or a tab character.
     pub tab_spaces: bool,
+    /// Spaces a Tab inserts when [`Settings::tab_spaces`] is on: 2, 4 or 8.
+    /// `tab_width=`.
     pub tab_width: u8,
+    /// The on-screen keyboard board. `keyboard=`.
     pub keyboard: Layout,
+    /// The keyboard's colours. `key_tone=`.
     pub key_tone: KeyTone,
+    /// The side the drawer opens on. `drawer=`.
     pub drawer: Side,
     /// The drawer's width as a slider stop, `0..DRAWER_WIDTH_STOPS`.
     pub drawer_width: u8,
+    /// USB keyboard & mouse on / off. `usb=`.
     pub usb: bool,
     /// Reverse scroll (v1.0.1): wheel / two-finger notches move content the
     /// other way ("natural", like a touch screen). Default off = 1.0.
@@ -170,8 +221,11 @@ pub struct Settings {
     /// The rotation in force: the manual choice, or the last one Auto
     /// applied (kept when there is no sensor).
     pub rotation: Rotation,
+    /// The landscape keyboard arrangement. `landscape_keys=`.
     pub land_keys: LandKeys,
+    /// The pad beside the board in landscape Full. `pad=`.
     pub pad: Pad,
+    /// The side the landscape pad sits on. `pad_side=`.
     pub pad_side: Side,
     /// UI scale in percent (v1.1): 100, 125, 150, 175 or 200 (default).
     /// Scales the interface; the note text Size stays separate.
@@ -220,6 +274,7 @@ pub const BACKLIGHT_MAX: u8 = 8;
 
 /// An interface language the user can pick (v1.5.5).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[allow(missing_docs)] // Named after their language codes; English is the default.
 pub enum UiLang {
     #[default]
     En,
@@ -235,6 +290,7 @@ pub enum UiLang {
 }
 
 impl UiLang {
+    /// Every language, in the order Settings lists them.
     pub const ALL: [UiLang; 10] = [
         UiLang::En,
         UiLang::Fr,
@@ -248,6 +304,7 @@ impl UiLang {
         UiLang::Sv,
     ];
 
+    /// The language's two-letter code, as `ui_lang=` saves it.
     #[must_use]
     pub fn code(self) -> &'static str {
         match self {
@@ -264,6 +321,7 @@ impl UiLang {
         }
     }
 
+    /// The language with this code, if any.
     #[must_use]
     pub fn from_code(v: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|l| l.code() == v)
@@ -339,36 +397,53 @@ impl Default for Settings {
 /// One change from the Options sheet or the landscape keyboard bar.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Change {
+    /// Dark mode: the page theme.
     Paper(Paper),
+    /// The typeface.
     Face(Typeface),
+    /// Line mode on / off.
     LineOn(bool),
     /// +1 / -1 word.
     LineWords(i8),
     /// +1 / -1 step.
     Size(i8),
-    /// Size to a value (the slider's stops, `SIZE_STOPS`).
+    /// Size to a value (the slider's stops, [`SIZE_STOPS`]).
     SizeTo(f32),
+    /// +1 / -1 step.
     Leading(i8),
-    /// Leading to a value (the slider's stops, `LEADING_STOPS`).
+    /// Leading to a value (the slider's stops, [`LEADING_STOPS`]).
     LeadingTo(f32),
+    /// +1 / -1 step.
     Margin(i8),
-    /// Margin to a value (the slider's stops, `MARGIN_STOPS`).
+    /// Margin to a value (the slider's stops, [`MARGIN_STOPS`]).
     MarginTo(f32),
+    /// Tab inserts spaces (on) or a tab character (off).
     TabSpaces(bool),
+    /// Tab width: 2, 4 or 8 (other values are ignored).
     TabWidth(u8),
+    /// The on-screen keyboard board.
     Keyboard(Layout),
+    /// The keyboard's colours.
     KeyTone(KeyTone),
+    /// The side the drawer opens on.
     Drawer(Side),
     /// The drawer's width, as a slider stop.
     DrawerWidth(u8),
+    /// USB keyboard & mouse on / off.
     Usb(bool),
+    /// Reverse scroll on / off.
     NaturalScroll(bool),
+    /// The orientation choice.
     Orientation(Orientation),
+    /// Upside down on / off.
     UpsideDown(bool),
     /// Auto applied a sensor reading (v1.2).
     Rotate(Rotation),
+    /// The landscape keyboard arrangement.
     LandKeys(LandKeys),
+    /// The pad beside the board in landscape Full.
     Pad(Pad),
+    /// The side the landscape pad sits on.
     PadSide(Side),
     /// One UI-scale step up (+1) or down (-1).
     UiScale(i8),
@@ -469,7 +544,8 @@ fn tenth(v: f32) -> f32 {
 }
 
 impl Settings {
-    /// Applies a change, clamping every value to its range.
+    /// Applies a change, clamping every value to its range. Changes that
+    /// are not saved settings (see [`Change`]) leave it as it is.
     pub fn apply(&mut self, c: Change) {
         match c {
             Change::Paper(p) => self.paper = p,
@@ -694,6 +770,8 @@ impl Settings {
 /// settings file and its label in Settings (English; translated when drawn).
 /// The one place a value's spelling lives.
 pub trait Words: Copy + PartialEq + Sized + 'static {
+    /// Each value with its word in the settings file and its label in
+    /// Settings.
     const WORDS: &'static [(Self, &'static str, &'static str)];
 
     /// The value as the settings file writes it.
@@ -785,8 +863,11 @@ impl Words for crate::ink::Pen {
 /// One line of the settings file: its key, how a value is read (a bad value
 /// leaves the setting as it was), and how it is written.
 pub struct Field {
+    /// The key before the `=`.
     pub key: &'static str,
+    /// Sets the setting from a value; a bad value changes nothing.
     pub read: fn(&mut Settings, &str),
+    /// The setting's value as the file writes it.
     pub write: fn(&Settings) -> String,
 }
 

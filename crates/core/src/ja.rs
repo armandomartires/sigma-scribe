@@ -728,7 +728,9 @@ pub fn convert(reading: &str) -> Vec<String> {
 /// candidates, best first.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Phrase {
+    /// The phrase's reading (kana).
     pub reading: String,
+    /// Conversion candidates for the reading, best first.
     pub cands: Vec<String>,
 }
 

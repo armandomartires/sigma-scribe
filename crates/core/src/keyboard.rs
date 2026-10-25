@@ -15,10 +15,13 @@
 use crate::buffer::{Buffer, TabKind};
 use crate::layouts::{self, Composer, KeyLayout};
 
+/// Which set of characters the keyboard shows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Layer {
+    /// The letters of the current [`KeyLayout`].
     #[default]
     Letters,
+    /// Digits and punctuation.
     Symbols,
     /// Accented letters (the Kobo style board, v1.13).
     Accents,
@@ -29,13 +32,17 @@ pub enum Layer {
 /// reader's board (v1.13): five rows, three layers, no other options.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Style {
+    /// The Compact / Full pair, chosen by [`Layout`].
     #[default]
     Enhanced,
+    /// The stock Kobo reader's board.
     Kobo,
 }
 
+/// The shape of the Enhanced board.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Layout {
+    /// Four rows with a symbol layer.
     Compact,
     /// Default since v0.2.1 (user decision 2026-10-21).
     #[default]
@@ -43,6 +50,7 @@ pub enum Layout {
 }
 
 impl Layout {
+    /// The layout's name as stored in settings: `"compact"` or `"full"`.
     #[must_use]
     pub fn name(self) -> &'static str {
         match self {
@@ -51,6 +59,8 @@ impl Layout {
         }
     }
 
+    /// Parses a name written by [`name`](Self::name), ignoring surrounding
+    /// whitespace. Returns `None` for anything else.
     #[must_use]
     pub fn parse(s: &str) -> Option<Self> {
         match s.trim() {
@@ -61,6 +71,8 @@ impl Layout {
     }
 }
 
+/// The direction of an arrow key.
+#[allow(missing_docs)] // Named after the directions they are.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Dir {
     Left,
@@ -69,14 +81,24 @@ pub enum Dir {
     Down,
 }
 
+/// A key on the on-screen keyboard.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Key {
+    /// A character key, holding its unshifted character. What it types and
+    /// shows depends on the modifiers, layer and layout.
     Char(char),
+    /// Shift: one-shot, a second press locks it, a third releases it.
     Shift,
+    /// Backspace.
     Back,
+    /// Delete forward; with Shift on the Compact layout, Backspace.
     Del,
+    /// Inserts a tab or indent, as the tab kind passed to
+    /// [`Keyboard::press`] says.
     Tab,
+    /// Space bar.
     Space,
+    /// Return / Enter: a new line, unless the composer uses it.
     Return,
     /// `123` on letters, `ABC` on symbols (Compact).
     SwapLayer,
@@ -84,14 +106,23 @@ pub enum Key {
     Layer(Layer),
     /// Switch Full ⇄ Compact.
     SwitchLayout,
+    /// Escape.
     Esc,
+    /// Caps Lock: letters type in upper case (Full layout).
     Caps,
+    /// Ctrl: one-shot modifier for shortcuts.
     Ctrl,
+    /// Alt: one-shot modifier for the AltGr characters.
     Alt,
+    /// An arrow key.
     Arrow(Dir),
+    /// Start of line; with Ctrl, start of the text.
     Home,
+    /// End of line; with Ctrl, end of the text.
     End,
+    /// Page up: one screen back.
     PgUp,
+    /// Page down: one screen forward.
     PgDn,
 }
 
@@ -106,16 +137,21 @@ pub enum KeyAction {
     Moved,
     /// Needs the screen (visual rows): move one row; `extend` = Shift.
     Vertical {
+        /// Move down (Down arrow) rather than up.
         down: bool,
+        /// Extend the selection (Shift was on).
         extend: bool,
     },
     /// PgUp / PgDn: one screen.
     Page {
+        /// Move forward (PgDn) rather than back.
         forward: bool,
+        /// Extend the selection (Shift was on).
         extend: bool,
     },
     /// Layout switched: re-layout and remember the choice.
     Relayout,
+    /// Esc with nothing to cancel in the composer; the app handles it.
     Escape,
     /// Ctrl+F: open the Find bar (v0.6).
     Find,
@@ -132,17 +168,27 @@ const KOBO_SYMBOLS: [&str; 4] = ["#£€$%^&*()", "!¡?¿<>[]=+", "|\\/«»:;'\"
 const KOBO_ACCENTS_UPPER: [&str; 4] = ["ÝŸŠŽÆŒÞßĲĿ", "ÀÁÂÄÃÅÈÉÊË", "ÒÓÔÖÕØÌÍÎÏ", "ÙÚÛÜÑÇĐŁ"];
 const KOBO_ACCENTS_LOWER: [&str; 4] = ["ýÿšžæœþßĳŀ", "àáâäãåèéêë", "òóôöõøìíîï", "ùúûüñçđł"];
 
+/// The on-screen keyboard's state: board, layer, modifiers and clipboard.
+///
+/// [`rows`](Self::rows) gives the keys to draw and [`press`](Self::press)
+/// applies a key to a [`Buffer`].
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Keyboard {
+    /// The layer shown.
     pub layer: Layer,
+    /// Compact or Full (Enhanced style only).
     pub layout: Layout,
     /// Enhanced (Compact / Full) or the Kobo style board (v1.13).
     pub style: Style,
     /// One-shot Shift (or locked when `shift_lock`).
     pub shift: bool,
+    /// Shift is locked on.
     pub shift_lock: bool,
+    /// Caps Lock is on.
     pub caps: bool,
+    /// One-shot Ctrl is on.
     pub ctrl: bool,
+    /// One-shot Alt is on.
     pub alt: bool,
     /// Internal clipboard for Ctrl+C / X / V.
     pub clipboard: String,
@@ -199,6 +245,7 @@ fn chars(s: &str) -> Vec<Key> {
 }
 
 impl Keyboard {
+    /// A default keyboard with the given layout.
     #[must_use]
     pub fn with_layout(layout: Layout) -> Self {
         Self {
@@ -424,6 +471,7 @@ impl Keyboard {
         self.shift || self.shift_lock
     }
 
+    /// The text drawn on a key now, given the layer, layout and modifiers.
     #[must_use]
     pub fn label(&self, key: Key) -> String {
         if self.style == Style::Kobo {

@@ -9,12 +9,16 @@
 pub const ITERATIONS: usize = 160;
 /// Radius of the orphan ring; linked notes stay inside `INNER`.
 pub const RING: f64 = 1.0;
+/// Radius of the disc that linked notes are scaled into (also the ring
+/// radius when no note is linked).
 pub const INNER: f64 = 0.8;
 
+/// Result of [`layout`]: one position and one orphan flag per note, by index.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MapLayout {
     /// Unit-space position of every note (x right, y down).
     pub pos: Vec<(f64, f64)>,
+    /// Whether each note has no links (and so sits on the orphan ring).
     pub orphan: Vec<bool>,
 }
 
