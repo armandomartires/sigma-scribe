@@ -98,7 +98,15 @@ impl App {
             }
             HelpHit::Back => self.help_back(),
             HelpHit::Open(page) => {
+                let started = std::time::Instant::now();
                 let doc = self.screen.build_help(&self.keyboard, page, &self.about());
+                sigma_core::debug!(
+                    "ui",
+                    "open help page {page:?} at {x},{y}: {} pages, {} lines, built in {} ms",
+                    doc.pages.len(),
+                    doc.lines.len(),
+                    started.elapsed().as_millis()
+                );
                 self.help = Some(HelpState {
                     page,
                     doc: Some(doc),
@@ -116,6 +124,7 @@ impl App {
         if h.page == HelpPage::Menu {
             self.help = None;
         } else {
+            sigma_core::debug!("ui", "help back from {:?}", h.page);
             h.page = HelpPage::Menu;
             h.doc = None;
             h.at = 0;

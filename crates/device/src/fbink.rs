@@ -30,6 +30,9 @@ extern "C" {
 
 pub struct KoboDevice {
     pointer_updates: u64,
+    /// When the last full (flashing) refresh was submitted, for the Debug
+    /// log: what else reaches the panel while it may still be flashing.
+    last_full: Option<Instant>,
     width: u32,
     height: u32,
     events: Receiver<Event>,
@@ -38,6 +41,45 @@ pub struct KoboDevice {
     gsensor: bool,
     /// The front light (v1.12), when sysfs shows one.
     light: Option<crate::light::Light>,
+}
+
+impl KoboDevice {
+    /// Debug log: every full refresh (its submit time and the gap since the
+    /// previous one), and any other update sent soon after one, which could
+    /// land on the panel while the full refresh is still flashing.
+    fn log_near_full(&mut self, refresh: Refresh, r: Rect, rc: i32, started: Instant) {
+        if !sigma_core::log::would_log(sigma_core::log::Level::Debug) {
+            return;
+        }
+        let now = Instant::now();
+        let since = self.last_full.map(|t| now.duration_since(t).as_millis());
+        if refresh == Refresh::Full {
+            sigma_core::debug!(
+                "fbink",
+                "full {}x{}@{},{} rc {rc}, submit {} ms, {}",
+                r.w,
+                r.h,
+                r.x,
+                r.y,
+                started.elapsed().as_millis(),
+                since.map_or_else(
+                    || "first full refresh".to_owned(),
+                    |ms| format!("{ms} ms since the last full")
+                )
+            );
+            self.last_full = Some(now);
+        } else if let Some(ms) = since.filter(|&ms| ms < 1500) {
+            sigma_core::debug!(
+                "fbink",
+                "{} {}x{}@{},{} rc {rc}, {ms} ms after a full refresh",
+                refresh.perf_name(),
+                r.w,
+                r.h,
+                r.x,
+                r.y
+            );
+        }
+    }
 }
 
 impl KoboDevice {
@@ -126,6 +168,7 @@ impl KoboDevice {
             events: rx,
             epoch,
             pointer_updates: 0,
+            last_full: None,
             gsensor,
             light: open_light(),
         })
@@ -178,6 +221,7 @@ impl Device for KoboDevice {
                 r.y
             );
         }
+        self.log_near_full(refresh, r, rc, started);
         // v1.0.3 (S10.3-D2): never wait for completion here; this runs on
         // the input loop. Log the submit time: every 20th pointer move and
         // every cleanup pass.
