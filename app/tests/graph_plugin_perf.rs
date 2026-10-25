@@ -61,7 +61,7 @@ fn open_cold_cached_and_warm() {
         std::fs::copy(from, plugins.join(f)).unwrap();
     }
     std::fs::write(d.join("plugins/plugins.state"), "graph-map=1.0.0,enabled\n").unwrap();
-    for count in [100, 309] {
+    for count in [100, 150, 309, 600, 1000] {
         let _ = std::fs::remove_dir_all(plugins.join(".cache"));
         for f in std::fs::read_dir(&notes).unwrap().flatten() {
             let _ = std::fs::remove_file(f.path());

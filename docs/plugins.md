@@ -35,17 +35,36 @@ and overflowed the stack in some build configurations, which is not
 acceptable on a device we cannot debug. The cost is about 45x native
 (tail-call dispatch is about 16x).
 
-The Graph layout is therefore cached through the host: an exact hit costs one
-read, and a changed library warm-starts from the last picture (30 iterations
-instead of 160). Desktop timings (`app/tests/graph_plugin_perf.rs`, release):
+The Graph is therefore made cheap in four ways:
+
+- **The plugin stays loaded** between opens (the app keeps the instance while
+  the module file is unchanged, and drops it after any failure), so starting
+  wasmi and validating the module is paid once per session.
+- **The layout is cached** through the host: an exact hit costs one read, and
+  a changed library warm-starts from the last picture (30 iterations instead
+  of 160).
+- **Up to 150 linked notes** the layout is the built-in algorithm unchanged,
+  bit for bit, so small libraries draw exactly what the built-in Graph draws.
+- **Above 150 linked notes** the all-pairs repulsion (quadratic) is replaced by
+  a Barnes-Hut quadtree (opening angle 1.2, mean force error under 5%), and a
+  cold layout uses fewer iterations as the library grows (160 down to 60).
+  Pictures of large libraries therefore differ from the built-in ones; they
+  have the same character (checked in the plugin's tests) and are stable once
+  cached. A warm picture depends on history, not only on names and links.
+
+Desktop timings (`app/tests/graph_plugin_perf.rs`, release; first open runs
+the layout, the other two show the cache and the warm start):
 
 | Notes | First open | Unchanged | After one new note |
 |---|---|---|---|
-| 100 | 277 ms | 92 ms | 150 ms |
-| 309 | 1173 ms | 111 ms | 339 ms |
+| 100 | 282 ms | 10 ms | 65 ms |
+| 150 | 406 ms | 16 ms | 90 ms |
+| 309 | 525 ms | 27 ms | 172 ms |
+| 600 | 877 ms | 66 ms | 364 ms |
+| 1000 | 1217 ms | 148 ms | 650 ms |
 
-Expect roughly 8 to 10 times that on the Forma (docs/perf.md). A warm picture
-depends on history, not only on names and links; once cached it is stable.
+Expect roughly 8 to 10 times that on the Forma (docs/perf.md); these numbers
+are not measured on the device yet.
 
 ### Tests
 
@@ -54,7 +73,8 @@ depends on history, not only on names and links; once cached it is stable.
 - `app/tests/graph_plugin_equivalence.rs`: the real `graph-map` module and the
   built-in Graph draw identical pixels, refresh classes and states across
   zoom, selection, pan, list paging, the mouse path, Night, three screen sizes
-  and 1 to 160 notes.
+  and 1 to 150 notes. For a library of 320 notes (approximate map layout) the
+  list view, refresh classes and states are compared.
 - The module is `app/tests/fixtures/graph-map/graph.wasm`, built from the
   plugins repo. Refresh it with `scripts/update-graph-plugin-fixture.sh`
   (it records the plugin commit and a sha256 in `SOURCE.txt`).

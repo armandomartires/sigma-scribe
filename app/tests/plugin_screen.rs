@@ -198,6 +198,13 @@ impl Rig {
             .map(|b| PEvent::decode(&b).unwrap())
             .collect()
     }
+    /// Whether the plugin has saved the event with this number (the guest
+    /// numbers its events from 1000 per instance).
+    fn saved(&self, n: u64) -> bool {
+        self.plugins
+            .join(format!("graph-map/.cache/{:016x}", 1000 + n))
+            .exists()
+    }
     fn note_index(&self, name: &str) -> u32 {
         let g = self.app.link_graph();
         g.notes.iter().position(|n| n.as_str() == name).unwrap() as u32
@@ -392,4 +399,63 @@ fn a_plugin_that_traps_is_dropped_for_the_session() {
     r.send(Event::Key(sigma_device::HwKey::Escape));
     r.tap_on("Graph");
     assert!(r.app.graph.is_some() && !r.app.plugin_screen_open());
+}
+
+#[test]
+fn a_loaded_plugin_is_kept_between_opens() {
+    let mut r = Rig::on("keep", frames(vec![]));
+    r.tap_on("Graph");
+    r.tap_on("Close");
+    r.tap_on("Graph");
+    assert!(r.app.plugin_screen_open());
+    // One instance served both opens: its event counter went on (1001).
+    assert!(r.saved(0) && r.saved(1), "two Open events in one instance");
+    let got = r.received();
+    assert!(
+        got.len() == 2 && got.iter().all(|e| matches!(e, PEvent::Open(_))),
+        "{got:?}"
+    );
+}
+
+#[test]
+fn a_changed_module_is_loaded_afresh() {
+    let mut r = Rig::on("fresh", frames(vec![]));
+    r.tap_on("Graph");
+    r.tap_on("Close");
+    // Forget what the first instance saved, then replace the module.
+    std::fs::remove_dir_all(r.plugins.join("graph-map/.cache")).unwrap();
+    std::fs::write(
+        r.plugins.join("graph-map/graph.wasm"),
+        guest(&frames(vec![Action::Close]), false),
+    )
+    .unwrap();
+    r.tap_on("Graph");
+    assert!(r.app.plugin_screen_open());
+    // A new instance numbers its events from 1000 again; a kept one would
+    // have written 1001.
+    assert!(r.saved(0) && !r.saved(1));
+}
+
+#[test]
+fn a_plugin_that_failed_is_not_kept() {
+    let w = guest(&frames(vec![]), true);
+    let mut r = Rig::new("nokeep", Some(w), "graph-map=1.0.0,enabled\n");
+    r.send(Event::PointerPlug(true));
+    r.tap_on("Graph");
+    let mut dec = PointerDecoder::default();
+    for raw in raw_wheel(1) {
+        r.t += 20;
+        for e in dec.feed(raw, r.t) {
+            r.send(e);
+        }
+    }
+    assert!(
+        !r.app.plugin_screen_open() && r.app.graph.is_some(),
+        "fell back"
+    );
+    r.send(Event::Key(sigma_device::HwKey::Escape));
+    // Setting the plugin root again clears the failure and any kept instance.
+    r.app.set_plugins_root(r.plugins.clone());
+    r.tap_on("Graph");
+    assert!(r.app.plugin_screen_open(), "a fresh instance opened");
 }

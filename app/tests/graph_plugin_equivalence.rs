@@ -217,6 +217,22 @@ fn feed(r: &mut Rig, raws: Vec<sigma_device::evdev::RawEvent>) -> Option<Refresh
 /// Runs `steps` on a built-in app and a plugin app and compares them after
 /// every step.
 fn equivalent(tag: &str, w: u32, h: u32, count: usize, night: bool, steps: &[Step]) {
+    equivalent_from(tag, w, h, count, night, 0, steps);
+}
+
+/// [`equivalent`], comparing pixels and refresh regions only from step
+/// `exact_from` on (step 0 opens the Graph). Large libraries use an
+/// approximate map layout, so their map pictures differ by design; the list
+/// does not depend on the layout and must still match.
+fn equivalent_from(
+    tag: &str,
+    w: u32,
+    h: u32,
+    count: usize,
+    night: bool,
+    exact_from: usize,
+    steps: &[Step],
+) {
     let mut builtin = Rig::new(&format!("{tag}-b"), false, w, h, count, night);
     let mut plugin = Rig::new(&format!("{tag}-p"), true, w, h, count, night);
     for r in [&mut builtin, &mut plugin] {
@@ -233,11 +249,14 @@ fn equivalent(tag: &str, w: u32, h: u32, count: usize, night: bool, steps: &[Ste
                 "{ctx}: the plugin is what opened"
             );
         }
-        assert_eq!(rb, rp, "{ctx}: refresh class");
-        assert_eq!(
-            builtin.dev.refreshes, plugin.dev.refreshes,
-            "{ctx}: refresh regions"
-        );
+        let exact = n >= exact_from;
+        if exact {
+            assert_eq!(rb, rp, "{ctx}: refresh class");
+            assert_eq!(
+                builtin.dev.refreshes, plugin.dev.refreshes,
+                "{ctx}: refresh regions"
+            );
+        }
         assert_eq!(
             builtin.app.current, plugin.app.current,
             "{ctx}: current note"
@@ -258,7 +277,7 @@ fn equivalent(tag: &str, w: u32, h: u32, count: usize, night: bool, steps: &[Ste
             "{ctx}: history"
         );
         let (cb, cp) = (&builtin.app.canvas, &plugin.app.canvas);
-        if cb.pixels != cp.pixels {
+        if exact && cb.pixels != cp.pixels {
             let differing = cb
                 .pixels
                 .iter()
@@ -401,7 +420,7 @@ fn small_and_busy_libraries() {
         "busy",
         FORMA.0,
         FORMA.1,
-        160,
+        150,
         false,
         &[
             Tap("Zoom+"),
@@ -412,4 +431,19 @@ fn small_and_busy_libraries() {
             PageTurn(true),
         ],
     );
+}
+
+#[test]
+fn large_libraries_use_the_approximate_layout_but_the_list_still_matches() {
+    // 320 notes, more than 150 of them linked: the map is laid out by the
+    // quadtree, so its pictures differ by design. Everything else matches.
+    let steps = [
+        Tap("List"),
+        PageTurn(true),
+        PageTurn(true),
+        PageTurn(false),
+        Wheel(-1),
+        TapVisible("Graph:", 3),
+    ];
+    equivalent_from("large", FORMA.0, FORMA.1, 320, false, 2, &steps);
 }
