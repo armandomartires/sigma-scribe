@@ -953,3 +953,6 @@ Critical
 Log file
 = Protokolldatei
 
+Drawer width
+= Breite der Seitenleiste
+

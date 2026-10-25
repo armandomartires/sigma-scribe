@@ -273,6 +273,7 @@ fn a_problem_in_a_plugin_is_logged_as_an_error() {
     // Break the module: it no longer loads, and the app falls back.
     std::fs::write(r.plugins.join("graph-map/graph.wasm"), b"not wasm").unwrap();
     r.app.set_builtin_graph(true);
+    r.app.set_builtin_panes(true);
     r.tap_on("Graph");
     r.app.plugin_settle(&mut r.dev);
     let text = r.text();

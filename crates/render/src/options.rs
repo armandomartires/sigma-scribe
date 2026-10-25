@@ -449,7 +449,7 @@ pub const CATEGORIES: [(&str, &[Section]); 9] = [
     (
         "Display",
         &[
-            ("Page", &["Dark mode", "UI scale", "Drawer"]),
+            ("Page", &["Dark mode", "UI scale", "Drawer", "Drawer width"]),
             ("Light", &["Backlight"]),
             ("Orientation", &["Orientation", "Upside down"]),
         ],
@@ -802,6 +802,27 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
                 stops,
                 enabled: true,
                 ends: true,
+            }
+        }
+        // Five stops from a narrow drawer to half the page.
+        "Drawer width" => {
+            use sigma_core::settings::{drawer_tenths, DRAWER_WIDTH_STOPS};
+            let stops: Vec<Cell> = (0..DRAWER_WIDTH_STOPS)
+                .map(|i| {
+                    let t = drawer_tenths(i);
+                    let text = if t % 10 == 0 {
+                        format!("{} %", t / 10)
+                    } else {
+                        format!("{}.{} %", t / 10, t % 10)
+                    };
+                    choice(&text, Change::DrawerWidth(i), i == m.settings.drawer_width)
+                })
+                .collect();
+            Kind::Slider {
+                value: usize::from(m.settings.drawer_width),
+                stops,
+                enabled: true,
+                ends: false,
             }
         }
         "Keyboard size" => {

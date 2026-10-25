@@ -31,6 +31,24 @@ pub enum KeyTone {
     Dark,
 }
 
+/// The Drawer width slider has five stops, evenly spaced from 20 % of the
+/// page to 50 % (the middle of the screen at most): 20, 27.5, 35, 42.5, 50.
+/// The widest is the default.
+pub const DRAWER_WIDTH_STOPS: u8 = 5;
+pub const DRAWER_WIDTH_DEFAULT: u8 = DRAWER_WIDTH_STOPS - 1;
+
+/// The drawer's width at `stop`, in tenths of a percent of the page.
+#[must_use]
+pub fn drawer_tenths(stop: u8) -> u16 {
+    200 + 75 * u16::from(stop.min(DRAWER_WIDTH_DEFAULT))
+}
+
+/// The drawer's share of the page at `stop`.
+#[must_use]
+pub fn drawer_share(stop: u8) -> f32 {
+    f32::from(drawer_tenths(stop)) / 1000.0
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Side {
     Left,
@@ -163,6 +181,8 @@ pub struct Settings {
     pub keyboard: Layout,
     pub key_tone: KeyTone,
     pub drawer: Side,
+    /// The drawer's width as a slider stop, `0..DRAWER_WIDTH_STOPS`.
+    pub drawer_width: u8,
     pub usb: bool,
     /// Reverse scroll (v1.0.1): wheel / two-finger notches move content the
     /// other way ("natural", like a touch screen). Default off = 1.0.
@@ -314,6 +334,7 @@ impl Default for Settings {
             keyboard: Layout::Full,
             key_tone: KeyTone::Theme,
             drawer: Side::Right,
+            drawer_width: DRAWER_WIDTH_DEFAULT,
             usb: false,
             natural_scroll: false,
             orientation: Orientation::Auto,
@@ -362,6 +383,8 @@ pub enum Change {
     Keyboard(Layout),
     KeyTone(KeyTone),
     Drawer(Side),
+    /// The drawer's width, as a slider stop.
+    DrawerWidth(u8),
     Usb(bool),
     NaturalScroll(bool),
     Orientation(Orientation),
@@ -508,6 +531,7 @@ impl Settings {
             Change::Keyboard(l) => self.keyboard = l,
             Change::KeyTone(t) => self.key_tone = t,
             Change::Drawer(s) => self.drawer = s,
+            Change::DrawerWidth(w) => self.drawer_width = w.min(DRAWER_WIDTH_DEFAULT),
             Change::Usb(on) => self.usb = on,
             Change::NaturalScroll(on) => self.natural_scroll = on,
             Change::InkPen(p) => self.ink_pen = p,
@@ -668,6 +692,17 @@ impl Settings {
                     }
                 }
                 "drawer" => s.drawer = parse_side(v).unwrap_or(s.drawer),
+                "drawer_width" => {
+                    // Words from the first builds of this setting still read.
+                    s.drawer_width = match v {
+                        "narrow" => 1,
+                        "medium" => 2,
+                        "wide" => DRAWER_WIDTH_DEFAULT,
+                        n => n
+                            .parse::<u8>()
+                            .map_or(s.drawer_width, |n| n.min(DRAWER_WIDTH_DEFAULT)),
+                    };
+                }
                 "usb" => s.usb = b().unwrap_or(s.usb),
                 "ui_scale" => {
                     if let Ok(n) = v.parse::<u16>() {
@@ -809,7 +844,7 @@ impl Settings {
         let on = |b: bool| if b { "on" } else { "off" };
         format!(
             "keyboard={}\npaper={}\ntype={}\nline={}\nline_words={}\nsize={}\nleading={}\nmargin={}\n\
-             tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\nusb={}\nscroll={}\norientation={}\n\
+             tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\ndrawer_width={}\nusb={}\nscroll={}\norientation={}\n\
              upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\nink_words={}\nink_boxes={}\nui_lang_override={}\nui_lang={}\nexperimental={}\nenhanced_keyboard={}\nlog={}\nlog_level={}\n",
             self.keyboard.name(),
             match self.paper {
@@ -833,6 +868,7 @@ impl Settings {
                 KeyTone::Dark => "dark",
             },
             side(self.drawer),
+            self.drawer_width,
             on(self.usb),
             if self.natural_scroll { "natural" } else { "traditional" },
             match self.orientation {
@@ -914,6 +950,7 @@ mod tests {
             Change::Keyboard(Layout::Compact),
             Change::KeyTone(KeyTone::Light),
             Change::Drawer(Side::Left),
+            Change::DrawerWidth(1),
             Change::Usb(true),
             Change::Orientation(Orientation::Landscape),
             Change::LandKeys(LandKeys::Split),
@@ -1014,5 +1051,30 @@ mod tests {
         s.apply(Change::Paper(Paper::Day));
         s.apply(Change::KeyTone(KeyTone::Dark));
         assert!(s.keys_dark());
+    }
+
+    #[test]
+    fn drawer_width_has_five_even_stops_reads_old_words_and_clamps() {
+        assert_eq!(Settings::default().drawer_width, DRAWER_WIDTH_DEFAULT);
+        let tenths: Vec<u16> = (0..DRAWER_WIDTH_STOPS).map(drawer_tenths).collect();
+        assert_eq!(tenths, [200, 275, 350, 425, 500]);
+        assert_eq!(drawer_share(DRAWER_WIDTH_DEFAULT), 0.5);
+        let mut s = Settings::default();
+        s.apply(Change::DrawerWidth(1));
+        assert_eq!(Settings::parse(&s.serialize()).drawer_width, 1);
+        s.apply(Change::DrawerWidth(200));
+        assert_eq!(s.drawer_width, DRAWER_WIDTH_DEFAULT);
+        for (v, want) in [
+            ("narrow", 1),
+            ("medium", 2),
+            ("wide", 4),
+            ("3", 3),
+            ("99", 4),
+        ] {
+            let g = Settings::parse(&format!("drawer_width={v}\n"));
+            assert_eq!(g.drawer_width, want, "{v}");
+        }
+        let g = Settings::parse("drawer_width=sideways\n");
+        assert_eq!(g.drawer_width, DRAWER_WIDTH_DEFAULT);
     }
 }

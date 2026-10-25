@@ -953,3 +953,6 @@ Critical
 Log file
 = Logfil
 
+Drawer width
+= Skuffens bredde
+

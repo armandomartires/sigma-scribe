@@ -17,6 +17,7 @@ impl Rig {
         let _ = std::fs::remove_dir_all(&d);
         let mut app = App::new(1440, 1920, d.clone());
         app.set_builtin_graph(true); // the Graph icon is part of the sheet check
+        app.set_builtin_panes(true);
         let mut body = String::from("# Top\n\n- [ ] first task\n- [x] done task\n\n");
         for i in 0..60 {
             body.push_str(&format!("Paragraph {i} with enough words in it to wrap onto a second line when the drawer narrows the preview page beside it, and a third. More filler text here so that each paragraph is long enough to need several rows at either width, with more.\n\n"));

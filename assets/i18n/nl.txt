@@ -953,3 +953,6 @@ Critical
 Log file
 = Logbestand
 
+Drawer width
+= Breedte van de lade
+

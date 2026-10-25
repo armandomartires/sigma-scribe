@@ -49,6 +49,9 @@ folder to `.adds/sigma-scribe/plugins/<id>/`.
   relative paths as the loose files (`fonts/cjk.ttf`, `dict/skk-jisyo.txt`).
 - **Screen plugins** (`kind=screen`, `entry=<module>.wasm`): a WebAssembly
   module that owns a full-screen body. Today: `graph-map`, the Graph screen.
+- **Pane plugins** (`kind=pane`, `slot=contents|todos|scratch`,
+  `entry=<module>.wasm`): a WebAssembly module that draws one pane of the side
+  drawer. Today: `contents-pane`, `todo-pane` and `scratch-pane`.
 
 ## Screen plugins
 
@@ -64,6 +67,36 @@ The module runs in wasmi (`crates/plugin-host`) with only seven imports:
 network. Every call gets a fuel budget and the memory has a ceiling; after any
 failure the plugin is dropped and the built-in Graph serves the rest of the
 session.
+
+## Pane plugins
+
+The side drawer (a panel beside the page, about 48% wide) holds up to three
+panes, top to bottom: Contents, To-dos, Scratch. Each is drawn by the enabled
+plugin whose manifest says `kind=pane` and its `slot`. The title-bar icon of a
+pane is shown only while its plugin is on (the other icons close up), and
+switching a plugin off closes its pane. The built-in panes stay in the app as
+the test reference and the fallback: a plugin that fails to load or fails
+while running is dropped for the session and the built-in pane draws instead.
+
+The wire format is the screen's (API 4), with these differences:
+
+- `Scene` carries the pane's rectangle (`left`, `top`, `width`, `bottom`), the
+  open note's `headings` and the live `todos` list (every box in the library,
+  the open note and the scratch pad taken from their buffers). The host sends
+  it again whenever it, or the pane's place, changes; the plugin keeps its own
+  state (the To-dos filter) across those.
+- The plugin draws the whole pane, header included, and nothing outside it
+  (the host clips); the host keeps the drawer's background, edge and rules.
+- Only taps are sent (`Tap`), and a frame's actions all apply, in order, with
+  the pane staying open: `ToggleTodo(n)`, `GotoTodo(n)`, `GotoHeading(n)`
+  (indexes into the scene's lists). Hit regions name the emulator's controls
+  (`Heading:TEXT`, `Todo:TEXT`, `TodoBox:TEXT`, `Filter`).
+- Scratch is a text field the **host** owns: a frame's `field` places it and
+  gives the placeholder. Typing, the on-screen keyboard, handwriting and
+  saving `.scratchpad.md` stay in the host. Plugins never touch files.
+
+The plugins repo has a small `sigma-plugin-sdk` crate (host imports, the three
+exports, the header, hint and "N more" drawing every pane shares).
 
 ### Loading and progress
 
@@ -123,11 +156,16 @@ are not measured on the device yet.
 
 - `app/tests/plugin_screen.rs`: a tiny WAT plugin records every event, so the
   host's side of the protocol is checked.
+- `app/tests/pane_plugin_equivalence.rs`: the real pane modules and the
+  built-in panes draw identical pixels, refresh classes and states: Contents
+  jumps, the To-dos filter, check boxes and opening, Scratch typing, all three
+  panes together, rows that do not fit, empty panes, preview and a smaller
+  screen. `app/tests/plugin_pane.rs` covers the host's side (icons, switching
+  off, a module that does not load, one that traps).
 - `app/tests/graph_plugin_equivalence.rs`: the real `graph-map` module and the
   built-in Graph draw identical pixels, refresh classes and states across
   zoom, selection, pan, list paging, the mouse path, Night, three screen sizes
   and 1 to 150 notes. For a library of 320 notes (approximate map layout) the
   list view, refresh classes and states are compared.
-- The module is `app/tests/fixtures/graph-map/graph.wasm`, built from the
-  plugins repo. Refresh it with `scripts/update-graph-plugin-fixture.sh`
+- The modules are `app/tests/fixtures/<id>/`, built from the plugins repo. Refresh it with `scripts/update-plugin-fixtures.sh`
   (it records the plugin commit and a sha256 in `SOURCE.txt`).

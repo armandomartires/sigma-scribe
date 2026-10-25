@@ -953,3 +953,6 @@ Critical
 Log file
 = File di registro
 
+Drawer width
+= Larghezza del pannello
+

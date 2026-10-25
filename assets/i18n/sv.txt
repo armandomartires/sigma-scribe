@@ -953,3 +953,6 @@ Critical
 Log file
 = Loggfil
 
+Drawer width
+= Lådans bredd
+

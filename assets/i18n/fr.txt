@@ -954,3 +954,6 @@ Critical
 Log file
 = Fichier journal
 
+Drawer width
+= Largeur du panneau
+

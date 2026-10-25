@@ -953,3 +953,6 @@ Critical
 Log file
 = Fitxer de registre
 
+Drawer width
+= Amplada del calaix
+

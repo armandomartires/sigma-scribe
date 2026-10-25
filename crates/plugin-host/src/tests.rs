@@ -83,6 +83,7 @@ fn a_frame_is_decoded() {
         actions: vec![Action::OpenNote(2)],
         redraw: Redraw::Partial,
         pending: true,
+        field: None,
     };
     let bytes = frame.encode();
     let esc: String = bytes.iter().map(|b| format!("\\{b:02x}")).collect();

@@ -954,3 +954,6 @@ Critical
 Log file
 = Ficheiro de registo
 
+Drawer width
+= Largura do painel
+

@@ -35,6 +35,7 @@ fn ui_scale_round_trips_and_rejects_junk() {
 fn every_scale_fits_in_both_orientations() {
     let dir = fresh("fit");
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     for _ in 0..UI_SCALES.len() {
         app.change(Change::UiScale(-1));
     }
@@ -70,6 +71,7 @@ fn every_scale_fits_in_both_orientations() {
 fn ui_scale_grows_chrome_but_not_the_note_text() {
     let dir = fresh("grow");
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     let big = app.screen.layout(true, &app.keyboard);
     let body_big = app.screen.page_scale();
     for _ in 0..4 {

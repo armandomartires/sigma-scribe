@@ -108,6 +108,23 @@ impl Canvas {
         self.pixels[i] = ((u32::from(v) * a32 + bg * (255 - a32)) / 255) as u8;
     }
 
+    /// Copies `src` onto this canvas with its top-left corner at `(x, y)`,
+    /// cut at this canvas's edges.
+    pub fn blit(&mut self, src: &Canvas, x: i32, y: i32) {
+        let Some((x0, y0, x1, y1)) =
+            self.clip(Rect::new(x, y, src.width as i32, src.height as i32))
+        else {
+            return;
+        };
+        let (dw, sw) = (self.width as usize, src.width as usize);
+        for row in y0..y1 {
+            let sy = (row as i32 - y) as usize;
+            let sx = (x0 as i32 - x) as usize;
+            self.pixels[row * dw + x0..row * dw + x1]
+                .copy_from_slice(&src.pixels[sy * sw + sx..sy * sw + sx + (x1 - x0)]);
+        }
+    }
+
     /// Copies a sub-rectangle out (for partial-refresh blits).
     #[must_use]
     pub fn crop(&self, r: Rect) -> (Rect, Vec<u8>) {
