@@ -172,7 +172,7 @@ fn killed_during_save_leaves_a_whole_note() {
         let b = "b".repeat(150_000);
         let mut i = 0u64;
         loop {
-            let body = if i % 2 == 0 { &a } else { &b };
+            let body = if i.is_multiple_of(2) { &a } else { &b };
             sigma_core::store::write_atomic(std::path::Path::new(&path), body).unwrap();
             i += 1;
         }

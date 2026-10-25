@@ -22,6 +22,8 @@
 //! - `log_level() -> i32`: the lowest level the host would keep (100: none),
 //!   so a plugin can skip building a message nobody will read.
 
+#![warn(missing_docs)]
+
 mod cache;
 
 pub use cache::DirCache;
@@ -32,9 +34,17 @@ use wasmi::{
 };
 
 /// What the host provides to a plugin: text metrics and translation.
+///
+/// The host app implements it with its real fonts and translations; tests
+/// use a fixed stand-in. Calls come from inside a plugin call, so they must
+/// not block.
 pub trait Env {
+    /// Advance width in pixels of `s` set in `face` at `size` pixels.
     fn text_width(&self, face: Face, size: f32, s: &str) -> f32;
+    /// Ascent in pixels of `face` at `size` pixels.
     fn ascent(&self, face: Face, size: f32) -> f32;
+    /// `s` translated into the reader's interface language, or `s` itself
+    /// when there is no translation.
     fn tr(&self, s: &str) -> String;
     /// A line from the plugin, at a Python-style level number.
     fn log(&self, _level: i32, _msg: &str) {}
@@ -44,6 +54,8 @@ pub trait Env {
     }
 }
 
+/// Resource ceilings for one plugin instance. A plugin that exceeds one
+/// fails its call with [`Error::Trap`] or [`Error::Bounds`].
 #[derive(Clone, Copy, Debug)]
 pub struct Limits {
     /// Fuel per call (about one unit per executed instruction).
@@ -64,6 +76,7 @@ impl Default for Limits {
     }
 }
 
+/// Why loading or calling a plugin failed.
 #[derive(Debug)]
 pub enum Error {
     /// Not valid WASM, wrong imports, or missing exports.
@@ -101,6 +114,8 @@ struct State {
     limits: StoreLimits,
 }
 
+/// A loaded plugin instance: one WASM module with its own memory, store
+/// and cache. Not reused after a failure (see [`Plugin::is_poisoned`]).
 pub struct Plugin {
     store: Store<State>,
     memory: Memory,

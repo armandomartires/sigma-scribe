@@ -293,7 +293,13 @@ impl Raster {
             tiny_skia::Transform::from_scale(k, k),
             &mut pm.as_mut(),
         );
-        let on = pm.data().chunks_exact(4).map(|p| p[3] >= 128).collect();
+        let on = pm
+            .data()
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|p| p[3] >= 128)
+            .collect();
         Some(Self { w, h, on })
     }
 

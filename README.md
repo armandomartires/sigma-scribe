@@ -6,7 +6,7 @@ Licence: **AGPL-3.0-only** (`LICENSE`) · Author: **SIGMArecon** · Statically l
 
 > This repository's git history was cleaned for publication (author identities unified; machine names removed). Device serial numbers are masked as `<FORMA-SERIAL>` in the docs.
 
-Status: **v1.0.0 release candidate — not yet tested on the device and not released.** The last version that passed on the Forma is v0.4.0. Tested model/firmware: Kobo Forma, 4.38.23697.
+Status: the workspace is at **1.11.1, built but not tagged**. The latest tagged release is **v1.0.2**. `CHANGELOG.md` says for each version whether it was tested on the Forma. Tested model/firmware: Kobo Forma, 4.38.23697.
 
 | Write | Preview | Drawer | Night | Landscape |
 |---|---|---|---|---|
@@ -36,5 +36,8 @@ Window controls: mouse = touch, PageUp/PageDown = page-turn buttons, keyboard = 
 ## Build for the Kobo
 `scripts/package-kobo.sh` → `dist/sigma-scribe-<ver>-kobo/` + reproducible `.tar.gz` + `.sha256`, checked by `scripts/check-package.sh`. Release packages are built by `.github/workflows/release.yml` (pinned FBInk); see `docs/release/checklist.md`.
 
+## Develop
+Rust edition 2021, minimum Rust version in `Cargo.toml` (`rust-version`). Targets: desktop Linux for development and tests, and `armv7-unknown-linux-musleabihf` for the Kobo. Build, check and code conventions are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## Docs
-`plan.md` · `design-brief.md` · `CHANGELOG.md` · `docs/install.md` · `docs/install-plan-forma.md` · `docs/testing.md` · `docs/usb-keyboard.md` · `docs/perf.md` · `docs/publishing.md` · `docs/release/` · `sprints/` · `tasks/`
+`CONTRIBUTING.md` · `plan.md` · `design-brief.md` · `CHANGELOG.md` · `docs/install.md` · `docs/install-plan-forma.md` · `docs/testing.md` · `docs/usb-keyboard.md` · `docs/perf.md` · `docs/publishing.md` · `docs/release/` · `sprints/` · `tasks/`

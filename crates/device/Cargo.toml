@@ -18,5 +18,11 @@ png.workspace = true
 cc = "1"
 
 # FFI to FBInk needs `unsafe`; it is confined to src/fbink.rs.
+# A package `[lints]` table cannot both inherit the workspace table and
+# override it, so this crate restates the workspace lints. Keep the clippy
+# table in step with `[workspace.lints.clippy]` in the root Cargo.toml.
 [lints.rust]
 unsafe_code = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }

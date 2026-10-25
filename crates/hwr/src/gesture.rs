@@ -86,7 +86,11 @@ mod tests {
             .map(|k| {
                 let t = k as f32 / 8.0;
                 let f = t.fract();
-                let x = if (t as usize) % 2 == 0 { f } else { 1.0 - f };
+                let x = if (t as usize).is_multiple_of(2) {
+                    f
+                } else {
+                    1.0 - f
+                };
                 (100.0 + x * w, 100.0 + h * t / n as f32)
             })
             .collect()

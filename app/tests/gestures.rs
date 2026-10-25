@@ -86,7 +86,11 @@ fn zigzag(x: f32, y: f32, w: f32, h: f32) -> Vec<(f32, f32)> {
         .map(|k| {
             let t = k as f32 / 8.0;
             let f = t.fract();
-            let u = if (t as usize) % 2 == 0 { f } else { 1.0 - f };
+            let u = if (t as usize).is_multiple_of(2) {
+                f
+            } else {
+                1.0 - f
+            };
             (x + u * w, y + h * t / 6.0)
         })
         .collect()

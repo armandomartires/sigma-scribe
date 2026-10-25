@@ -9,6 +9,7 @@ use std::io;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
+/// A plugin's on-disk key/value cache, bounded by entry count and bytes.
 pub struct DirCache {
     dir: PathBuf,
     max_entries: usize,
@@ -16,6 +17,9 @@ pub struct DirCache {
 }
 
 impl DirCache {
+    /// A cache in `dir` holding at most `max_entries` values and
+    /// `max_bytes` in total. The folder is created on the first
+    /// [`DirCache::put`], not here.
     #[must_use]
     pub fn new(dir: PathBuf, max_entries: usize, max_bytes: u64) -> Self {
         Self {
@@ -29,6 +33,8 @@ impl DirCache {
         self.dir.join(format!("{key:016x}"))
     }
 
+    /// The value stored under `key`, or `None` when there is none or it
+    /// cannot be read.
     #[must_use]
     pub fn get(&self, key: u64) -> Option<Vec<u8>> {
         fs::read(self.path(key)).ok()
