@@ -386,7 +386,6 @@ impl Perf {
     }
 }
 
-/// Preview mode (v0.3): the laid-out note and the page shown. Read-only.
 /// Navigation history cap (v1.0.2).
 pub const HISTORY_CAP: usize = 50;
 
@@ -400,6 +399,7 @@ pub struct HistEntry {
     pub scroll: usize,
 }
 
+/// Preview mode (v0.3): the laid-out note and the page shown. Read-only.
 #[derive(Clone, Debug, Default)]
 pub struct PreviewState {
     pub doc: Doc,
@@ -3444,7 +3444,6 @@ impl App {
         Some(Refresh::Partial)
     }
 
-    /// Applies one event; returns the refresh it needs (or `None`).
     fn in_editor(&self) -> bool {
         self.files.is_none()
             && self.rename.is_none()
@@ -3690,6 +3689,7 @@ impl App {
         Some(Refresh::Fast)
     }
 
+    /// Applies one event; returns the refresh it needs (or `None`).
     pub fn handle(&mut self, e: Event) -> Option<Refresh> {
         self.sync_pane_plugins();
         match e {
@@ -4463,7 +4463,6 @@ fn load_settings(root: &std::path::Path) -> Settings {
         .unwrap_or_default()
 }
 
-/// Screen size for an orientation on a panel of `phys` size.
 /// The splash screen: drawn the moment the panel is open, before the
 /// library, dictionaries and settings are loaded, so the Forma shows the
 /// app while it starts. Follows the saved paper and rotation, and shows a
@@ -4588,6 +4587,7 @@ impl Splash {
     }
 }
 
+/// Screen size for an orientation on a panel of `phys` size.
 fn logical_size(phys: (u32, u32), r: Rotation) -> (u32, u32) {
     let (short, long) = (phys.0.min(phys.1), phys.0.max(phys.1));
     if r.is_landscape() {
