@@ -53,14 +53,14 @@ impl Env for ScreenEnv {
 /// Identifies a plugin module on disk, so a loaded instance is reused only
 /// while the file is unchanged.
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct Stamp {
+pub(crate) struct Stamp {
     path: std::path::PathBuf,
     modified: Option<std::time::SystemTime>,
     len: u64,
 }
 
 impl Stamp {
-    fn of(path: &std::path::Path) -> std::io::Result<Self> {
+    pub(crate) fn of(path: &std::path::Path) -> std::io::Result<Self> {
         let m = std::fs::metadata(path)?;
         Ok(Self {
             path: path.to_path_buf(),
@@ -110,7 +110,7 @@ impl App {
         self.plugins_root = root.into();
         self.plugin_failed = false;
         self.plugin_idle = None;
-        self.sync_graph_icon();
+        self.sync_plugin_icons();
     }
 
     /// Shows the Graph icon even with the Graph plugin off, opening the
@@ -118,14 +118,15 @@ impl App {
     /// emulator's Graph). Off in the app.
     pub fn set_builtin_graph(&mut self, on: bool) {
         self.graph_builtin = on;
-        self.sync_graph_icon();
+        self.sync_plugin_icons();
     }
 
     /// The Graph icon is in the title bar while the Graph plugin is on (or
     /// the built-in Graph is wanted), and gone while it is off.
-    pub(crate) fn sync_graph_icon(&mut self) {
+    pub(crate) fn sync_plugin_icons(&mut self) {
         self.screen.graph_on = self.graph_builtin
             || plugins::enabled_screen_in(&self.plugins_root, GRAPH_PLUGIN).is_some();
+        self.sync_pane_slots();
     }
 
     /// A plugin screen is loading or building: it wants `Tick`s to go on.
@@ -160,7 +161,10 @@ impl App {
                 let chosen = plugins::settings_in(&root, &l.manifest);
                 PluginRow {
                     compatible: l.manifest.compatible_with(app),
-                    restart: l.manifest.kind != plugins::PluginKind::Screen,
+                    restart: !matches!(
+                        l.manifest.kind,
+                        plugins::PluginKind::Screen | plugins::PluginKind::Pane
+                    ),
                     kind: l.manifest.kind.label(),
                     version: l.manifest.version.to_string(),
                     settings: l
@@ -199,12 +203,13 @@ impl App {
                     }
                     // A plugin that failed earlier gets another chance.
                     self.plugin_failed = false;
+                    self.pane_failed = [false; 3];
                 }
                 Err(e) => sigma_core::error!("plugin", "{id}: {e}"),
             }
         }
         self.refresh_plugin_list();
-        self.sync_graph_icon();
+        self.sync_plugin_icons();
         Refresh::Full
     }
 
@@ -357,11 +362,14 @@ impl App {
                 .zip(chosen)
                 .map(|(d, i)| (d.key.clone(), d.options[i].clone()))
                 .collect(),
+            left: 0,
+            todos: Vec::new(),
+            headings: Vec::new(),
         }
     }
 
     /// Loads the module (validating it) with its cache folder and fonts.
-    fn load_module(&self, id: &str, wasm: &std::path::Path) -> Result<Plugin, String> {
+    pub(crate) fn load_module(&self, id: &str, wasm: &std::path::Path) -> Result<Plugin, String> {
         let bytes = std::fs::read(wasm).map_err(|e| e.to_string())?;
         let cache = DirCache::new(
             self.plugins_root.join(id).join(".cache"),
@@ -451,6 +459,8 @@ impl App {
                     .and_then(|p| p.notes.get(n as usize).cloned())
             };
             match *a {
+                // Pane actions mean nothing on a screen.
+                Action::ToggleTodo(_) | Action::GotoTodo(_) | Action::GotoHeading(_) => {}
                 Action::Close => {
                     self.close_graph();
                     return Some(Refresh::Full);

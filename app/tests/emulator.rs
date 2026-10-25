@@ -20,6 +20,7 @@ fn typing_on_osk_autosaves_to_a_plain_md_file_and_survives_restart() {
     let _ = std::fs::remove_dir_all(&dir);
     let mut dev = DesktopDevice::new(1440, 1920);
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     app.render(&mut dev, Refresh::Full).unwrap();
     assert!(
         dir.join("field-notes.md").exists(),
@@ -51,6 +52,7 @@ fn typing_on_osk_autosaves_to_a_plain_md_file_and_survives_restart() {
 fn power_button_saves_and_stops() {
     let dir = std::env::temp_dir().join(format!("sigma-emu-p-{}", std::process::id()));
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     app.handle(Event::Power);
     assert!(!app.running);
     let _ = std::fs::remove_dir_all(dir);
@@ -73,6 +75,7 @@ fn tap_on(app: &mut App, label: &str) {
 fn seeds_library_and_restores_last_opened_note() {
     let dir = fresh("restore");
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     assert_eq!(app.current.as_str(), "field-notes.md");
     assert!(
         dir.join("drafts/chapter-01.md").exists()
@@ -105,6 +108,7 @@ fn seeds_library_and_restores_last_opened_note() {
 fn deleting_the_open_note_needs_two_taps_and_opens_another() {
     let dir = fresh("delete");
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     tap_on(&mut app, "Files");
     tap_on(&mut app, "More:field-notes.md");
     tap_on(&mut app, "Delete");
@@ -123,6 +127,7 @@ fn deleting_the_open_note_needs_two_taps_and_opens_another() {
 fn rename_from_title_bar_keeps_edits_and_cancel_changes_nothing() {
     let dir = fresh("rename");
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     app.handle(Event::Key(HwKey::Char('Z')));
     tap_on(&mut app, "Title");
     assert!(app.is_renaming());
@@ -154,6 +159,7 @@ fn keyboard_defaults_to_full_and_compact_choice_is_remembered() {
     use sigma_core::keyboard::Layout;
     let dir = fresh("layout");
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     assert_eq!(
         app.keyboard.layout,
         Layout::Full,
@@ -167,6 +173,7 @@ fn keyboard_defaults_to_full_and_compact_choice_is_remembered() {
     assert_eq!(app.keyboard.layout, Layout::Compact);
     drop(app);
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     assert_eq!(
         app.keyboard.layout,
         Layout::Compact,
@@ -192,6 +199,7 @@ fn touch_typing_still_types_every_tap_including_fast_doubles_and_holds() {
     use sigma_device::Phase;
     let dir = fresh("touchtype");
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     let start = app.buffer.text().len();
     let (x, y) = app.key_centre("a").unwrap();
     let mut t = 1000;
@@ -245,6 +253,7 @@ fn preview_toggle_is_read_only_and_uses_a_full_refresh() {
     let dir = fresh("preview");
     let mut dev = DesktopDevice::new(1440, 1920);
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     app.render(&mut dev, Refresh::Full).unwrap();
     let before = app.buffer.text().to_owned();
     let caret = app.buffer.caret();
@@ -315,6 +324,7 @@ fn page_turns_page_the_preview_with_partial_refreshes() {
     std::fs::write(dir.join("long.md"), &long).unwrap();
     let mut dev = DesktopDevice::new(1440, 1920);
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     app.open(&sigma_core::NotePath::parse("long.md").unwrap());
     app.buffer.set_caret(0);
     app.render(&mut dev, Refresh::Full).unwrap();
@@ -362,6 +372,7 @@ fn files_from_preview_leaves_preview() {
     let dir = fresh("pfiles");
     let mut dev = DesktopDevice::new(1440, 1920);
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     app.render(&mut dev, Refresh::Full).unwrap();
     tap_control(&mut app, &mut dev, "Eye");
     tap_control(&mut app, &mut dev, "Files");
@@ -385,6 +396,7 @@ mod v04 {
         let dir = fresh("persist");
         let mut dev = DesktopDevice::new(1440, 1920);
         let mut app = App::new(1440, 1920, &dir);
+        app.set_builtin_panes(true);
         app.render(&mut dev, Refresh::Full).unwrap();
         assert_eq!(app.change(Change::Paper(Paper::Night)), Refresh::Full);
         assert_eq!(app.change(Change::LineOn(true)), Refresh::Partial);
@@ -415,6 +427,7 @@ mod v04 {
         let dir = fresh("rot");
         let mut dev = DesktopDevice::new(1440, 1920);
         let mut app = App::new(1440, 1920, &dir);
+        app.set_builtin_panes(true);
         app.render(&mut dev, Refresh::Full).unwrap();
         let r = app.change(Change::Orientation(Orientation::Landscape));
         assert_eq!(r, Refresh::Full);
@@ -446,6 +459,7 @@ mod v04 {
     fn tab_key_follows_options() {
         let dir = fresh("tab");
         let mut app = App::new(1440, 1920, &dir);
+        app.set_builtin_panes(true);
         app.change(Change::TabWidth(2));
         app.handle(Event::Key(HwKey::Tab));
         assert!(app.buffer.text().ends_with("  "));
@@ -466,6 +480,7 @@ fn checking_a_todo_in_another_note_rewrites_only_that_line() {
     let dir = fresh("todo");
     let mut dev = DesktopDevice::new(1440, 1920);
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     let _ = app.render(&mut dev, Refresh::Full);
     let before = std::fs::read_to_string(dir.join("drafts/chapter-01.md")).unwrap();
     dstep(&mut app, &mut dev, "To-dos");
@@ -488,6 +503,7 @@ fn scratch_persists_and_is_not_a_listed_note() {
     let dir = fresh("scratch");
     let mut dev = DesktopDevice::new(1440, 1920);
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     let _ = app.render(&mut dev, Refresh::Full);
     dstep(&mut app, &mut dev, "Scratch");
     dstep(&mut app, &mut dev, "ScratchPane");
@@ -510,6 +526,7 @@ fn drawer_refresh_regions_are_at_least_16px() {
     let dir = fresh("regions");
     let mut dev = DesktopDevice::new(1440, 1920);
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     let _ = app.render(&mut dev, Refresh::Full);
     for l in [
         "Contents",
@@ -541,6 +558,7 @@ fn replace_all_fifty_is_one_undo_step_and_saved() {
     std::fs::write(dir.join("cats.md"), "cat ".repeat(50)).unwrap();
     let mut dev = DesktopDevice::new(1440, 1920);
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     app.open(&sigma_core::NotePath::parse("cats.md").unwrap());
     let _ = app.render(&mut dev, Refresh::Full);
     dstep(&mut app, &mut dev, "Find");
@@ -580,6 +598,7 @@ fn missing_wiki_link_creates_the_note_and_backlinks_follow() {
     let dir = fresh("wiki");
     let mut dev = DesktopDevice::new(1440, 1920);
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     let _ = app.render(&mut dev, Refresh::Full);
     // field-notes links to chapter-01 and chapter-01 links back.
     let g = app.link_graph();

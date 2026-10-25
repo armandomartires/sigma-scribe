@@ -99,17 +99,9 @@ impl EditorScreen {
             .contains(x, y)
     }
 
-    /// Paints a plugin's frame, then the host's title bar over it.
-    pub fn draw_plugin_screen(
-        &self,
-        c: &mut Canvas,
-        frame: &Frame,
-        title: &str,
-        t: Theme,
-        keyboard: &Keyboard,
-    ) {
-        c.fill(c.bounds(), t.paper);
-        for op in &frame.ops {
+    /// Paints a draw list onto `c`.
+    fn paint_ops(&self, c: &mut Canvas, ops: &[Op], t: Theme) {
+        for op in ops {
             match op {
                 Op::Fill { r, c: tn } => c.fill(rect(*r), tone(t, *tn)),
                 Op::Stroke { r, t: th, c: tn } => c.stroke(rect(*r), *th, tone(t, *tn)),
@@ -127,6 +119,74 @@ impl EditorScreen {
                 }
             }
         }
+    }
+
+    /// Paints a pane plugin's frame inside `area` and nowhere else: the
+    /// plugin draws in screen coordinates, so a pane-sized canvas catches
+    /// the draw list (shifted to its corner) and is copied back.
+    pub fn draw_plugin_pane(&self, c: &mut Canvas, frame: &Frame, area: Rect, t: Theme) {
+        if area.w <= 0 || area.h <= 0 {
+            return;
+        }
+        let (dx, dy) = (area.x, area.y);
+        let shift =
+            |r: sigma_plugin_api::Rect| sigma_plugin_api::Rect::new(r.x - dx, r.y - dy, r.w, r.h);
+        let ops: Vec<Op> = frame
+            .ops
+            .iter()
+            .map(|op| match op {
+                Op::Fill { r, c } => Op::Fill {
+                    r: shift(*r),
+                    c: *c,
+                },
+                Op::Stroke { r, t, c } => Op::Stroke {
+                    r: shift(*r),
+                    t: *t,
+                    c: *c,
+                },
+                Op::Pill { r, c } => Op::Pill {
+                    r: shift(*r),
+                    c: *c,
+                },
+                Op::Line { a, b, w, c } => Op::Line {
+                    a: (a.0 - dx, a.1 - dy),
+                    b: (b.0 - dx, b.1 - dy),
+                    w: *w,
+                    c: *c,
+                },
+                Op::Text {
+                    face,
+                    size,
+                    x,
+                    y,
+                    s,
+                    c,
+                } => Op::Text {
+                    face: *face,
+                    size: *size,
+                    x: x - dx as f32,
+                    y: y - dy as f32,
+                    s: s.clone(),
+                    c: *c,
+                },
+            })
+            .collect();
+        let mut pane = Canvas::new(area.w as u32, area.h as u32, t.paper);
+        self.paint_ops(&mut pane, &ops, t);
+        c.blit(&pane, dx, dy);
+    }
+
+    /// Paints a plugin's frame, then the host's title bar over it.
+    pub fn draw_plugin_screen(
+        &self,
+        c: &mut Canvas,
+        frame: &Frame,
+        title: &str,
+        t: Theme,
+        keyboard: &Keyboard,
+    ) {
+        c.fill(c.bounds(), t.paper);
+        self.paint_ops(c, &frame.ops, t);
         let base = self.layout(false, keyboard);
         self.draw_title(c, &base, title, None, t, false);
         crate::icons::draw_icon(c, crate::icons::Icon::Close, base.close_button, t.ink);

@@ -63,6 +63,7 @@ fn auto_follows_ui_scale_up_to_150() {
 fn keyboard_at_200_ui_is_no_bigger_than_at_150() {
     let dir = fresh("cap");
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
     for o in [Orientation::Portrait, Orientation::Landscape] {
         app.change(Change::Orientation(o));
         set_ui(&mut app, 150);
@@ -81,6 +82,7 @@ fn every_size_fits_at_every_ui_scale_language_and_orientation() {
     for lang in [Lang::En, Lang::Fr, Lang::Pt, Lang::PseudoLong] {
         let dir = fresh(&format!("fit{lang:?}"));
         let mut app = App::new(1440, 1920, &dir);
+        app.set_builtin_panes(true);
         app.set_language(lang);
         for &ui in &UI_SCALES {
             set_ui(&mut app, ui);

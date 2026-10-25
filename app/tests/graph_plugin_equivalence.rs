@@ -5,7 +5,7 @@
 //! refresh regions and the app state must be identical.
 //!
 //! The module under test is app/tests/fixtures/graph-map/graph.wasm, built
-//! from the sigma-scribe-plugins repo (scripts/update-graph-plugin-fixture.sh).
+//! from the sigma-scribe-plugins repo (scripts/update-plugin-fixtures.sh).
 
 use sigma_core::settings::Paper;
 use sigma_core::{Change, NotePath};

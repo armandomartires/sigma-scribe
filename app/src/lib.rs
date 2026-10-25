@@ -26,6 +26,7 @@ use sigma_render::{
 };
 use std::path::PathBuf;
 
+mod plugin_pane;
 mod plugin_screen;
 pub use plugin_screen::{IdlePlugin, PluginScreen, GRAPH_PLUGIN};
 
@@ -454,6 +455,16 @@ pub struct App {
     plugins_root: PathBuf,
     /// A plugin failed: the built-in Graph serves the rest of the session.
     plugin_failed: bool,
+    /// The pane plugins of the side drawer (Contents, To-dos, Scratch): the
+    /// enabled one for each, the loaded module, and whether it failed (the
+    /// built-in pane then draws for the session).
+    pane_slots: [Option<plugin_pane::PaneSlotPlugin>; 3],
+    pane_plugins: [Option<plugin_pane::PanePlugin>; 3],
+    pane_failed: [bool; 3],
+    /// Show the drawer icons and draw the built-in panes with the pane
+    /// plugins off (the reference the plugins are tested against, and the
+    /// emulator's drawer). Off in the app.
+    panes_builtin: bool,
     /// Where the log file goes while Settings → Logging is on.
     log_dir: PathBuf,
     /// Show the Graph icon even with the Graph plugin off, and open the
@@ -584,6 +595,10 @@ impl App {
             plugin_list: Vec::new(),
             plugins_root: sigma_core::plugins::plugins_root(),
             plugin_failed: false,
+            pane_slots: [None, None, None],
+            pane_plugins: [None, None, None],
+            pane_failed: [false; 3],
+            panes_builtin: false,
             log_dir: log_dir(),
             graph_builtin: false,
             preview: None,
@@ -633,7 +648,7 @@ impl App {
         };
         app.set_gsensor(false);
         app.sync_keyboard_style();
-        app.sync_graph_icon();
+        app.sync_plugin_icons();
         app.apply_logging();
         sigma_core::info!(
             "app",
@@ -975,7 +990,9 @@ impl App {
             cur.extend(out);
             out = cur;
         }
-        out.extend(live(&scratch, self.scratch.text()));
+        if self.screen.scratch_on {
+            out.extend(live(&scratch, self.scratch.text()));
+        }
         out
     }
 
@@ -985,6 +1002,7 @@ impl App {
             contents: self.drawer[0].then_some(hs),
             todos: self.drawer[1].then_some((todos, self.filter)),
             scratch: self.drawer[2].then_some((&self.scratch, self.scratch_focused())),
+            plugin: [0, 1, 2].map(|i| self.pane_frame(i)),
             theme: self.theme(),
         }
     }
@@ -1084,75 +1102,79 @@ impl App {
         Some(Refresh::Partial)
     }
 
+    /// Contents: jumps to the heading at source line `line`.
+    pub(crate) fn drawer_heading(&mut self, line: usize) -> Option<Refresh> {
+        self.push_history();
+        self.scratch_focus = false;
+        if let Some(p) = self.preview.as_mut() {
+            p.page = p.doc.page_of_line(line);
+        } else {
+            let page = self.page_rect();
+            self.screen.jump_to_line(&mut self.buffer, page, line);
+        }
+        Some(Refresh::Partial)
+    }
+
+    /// To-dos: checks or unchecks to-do number `i` of the list.
+    pub(crate) fn drawer_todo_box(&mut self, i: usize) -> Option<Refresh> {
+        let it = self.todo_list().get(i)?.clone();
+        let r = self.toggle_todo(&it);
+        if self.preview.is_some() {
+            self.rebuild_preview();
+        }
+        r
+    }
+
+    /// To-dos: opens to-do number `i` of the list at its line.
+    pub(crate) fn drawer_todo_open(&mut self, i: usize) -> Option<Refresh> {
+        let it = self.todo_list().get(i)?.clone();
+        if it.note.as_str() == SCRATCH {
+            self.drawer[2] = true;
+            self.scratch_focus = true;
+            if let Some(f) = &mut self.find {
+                f.focus = None;
+            }
+            let at = outline::line_range(self.scratch.text(), it.todo.line).map_or(0, |r| r.1);
+            self.scratch.set_caret(at);
+            return Some(Refresh::Partial);
+        }
+        let full = it.note != self.current;
+        self.push_history();
+        if full {
+            self.open(&it.note);
+        }
+        if self.preview.is_some() {
+            self.scratch_focus = false;
+            if full {
+                self.enter_preview();
+            }
+            let p = self.preview.as_mut()?;
+            p.page = p.doc.page_of_line(it.todo.line);
+            return Some(if full {
+                Refresh::Full
+            } else {
+                Refresh::Partial
+            });
+        }
+        self.scratch_focus = false;
+        let page = self.page_rect();
+        self.screen
+            .jump_to_line(&mut self.buffer, page, it.todo.line);
+        Some(if full {
+            Refresh::Full
+        } else {
+            Refresh::Partial
+        })
+    }
+
     fn drawer_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
         let hit = self.drawer_hit_at(x, y);
         self.sel_ui = None;
-        let page = self.page_rect();
         match hit {
-            DrawerHit::Heading(line) if self.preview.is_some() => {
-                self.push_history();
-                self.scratch_focus = false;
-                let p = self.preview.as_mut()?;
-                p.page = p.doc.page_of_line(line);
-                Some(Refresh::Partial)
-            }
-            DrawerHit::TodoBox(i) if self.preview.is_some() => {
-                let it = self.todo_list().get(i)?.clone();
-                let r = self.toggle_todo(&it);
-                self.rebuild_preview();
-                r
-            }
-            DrawerHit::Heading(line) => {
-                self.push_history();
-                self.scratch_focus = false;
-                self.screen.jump_to_line(&mut self.buffer, page, line);
-                Some(Refresh::Partial)
-            }
-            DrawerHit::TodoBox(i) => {
-                let it = self.todo_list().get(i)?.clone();
-                self.toggle_todo(&it)
-            }
-            DrawerHit::TodoOpen(i) => {
-                let it = self.todo_list().get(i)?.clone();
-                if it.note.as_str() == SCRATCH {
-                    self.drawer[2] = true;
-                    self.scratch_focus = true;
-                    if let Some(f) = &mut self.find {
-                        f.focus = None;
-                    }
-                    let at =
-                        outline::line_range(self.scratch.text(), it.todo.line).map_or(0, |r| r.1);
-                    self.scratch.set_caret(at);
-                    return Some(Refresh::Partial);
-                }
-                let full = it.note != self.current;
-                self.push_history();
-                if full {
-                    self.open(&it.note);
-                }
-                if self.preview.is_some() {
-                    self.scratch_focus = false;
-                    if full {
-                        self.enter_preview();
-                    }
-                    let p = self.preview.as_mut()?;
-                    p.page = p.doc.page_of_line(it.todo.line);
-                    return Some(if full {
-                        Refresh::Full
-                    } else {
-                        Refresh::Partial
-                    });
-                }
-                self.scratch_focus = false;
-                let page = self.page_rect();
-                self.screen
-                    .jump_to_line(&mut self.buffer, page, it.todo.line);
-                Some(if full {
-                    Refresh::Full
-                } else {
-                    Refresh::Partial
-                })
-            }
+            DrawerHit::Heading(line) => self.drawer_heading(line),
+            DrawerHit::TodoBox(i) => self.drawer_todo_box(i),
+            DrawerHit::TodoOpen(i) => self.drawer_todo_open(i),
+            DrawerHit::Plugin(p) => self.pane_plugin_tap(p, x, y),
             DrawerHit::Filter => {
                 self.filter = self.filter.next();
                 Some(Refresh::Partial)
@@ -2130,6 +2152,7 @@ impl App {
     /// # Errors
     /// The device could not present the frame.
     pub fn render(&mut self, dev: &mut dyn Device, refresh: Refresh) -> std::io::Result<()> {
+        self.sync_pane_plugins();
         self.screen.overwrite = self.buffer.overwrite();
         if refresh == Refresh::Pointer
             && std::mem::take(&mut self.pointer_fast)
@@ -3668,6 +3691,7 @@ impl App {
     }
 
     pub fn handle(&mut self, e: Event) -> Option<Refresh> {
+        self.sync_pane_plugins();
         match e {
             Event::Tilt { tilt, t } => {
                 self.now = self.now.max(t);
@@ -4329,9 +4353,9 @@ impl App {
             "Keys" => Some(centre(l.keys_button)),
             "Write" => Some(centre(l.ink_button)),
             "Options" => Some(centre(l.options_button)),
-            "Contents" => Some(centre(l.contents_button)),
-            "To-dos" => Some(centre(l.todos_button)),
-            "Scratch" => Some(centre(l.scratch_button)),
+            "Contents" if self.screen.contents_on => Some(centre(l.contents_button)),
+            "To-dos" if self.screen.todos_on => Some(centre(l.todos_button)),
+            "Scratch" if self.screen.scratch_on => Some(centre(l.scratch_button)),
             "Find" => Some(centre(l.find_button)),
             "Graph" if self.screen.graph_on => Some(centre(l.graph_button)),
             "FindField" | "ReplaceField" | "FindClose" | "Prev" | "Next" | "Replace" | "All"
@@ -4596,6 +4620,9 @@ impl App {
         let l = self
             .screen
             .drawer_layout(&base, &self.drawer_model(&hs, &todos));
+        if let Some((_, r)) = self.pane_hits().iter().find(|(label, _)| label == name) {
+            return Some(centre(*r));
+        }
         if name == "Filter" {
             return l.filter.map(centre);
         }
@@ -5439,9 +5466,15 @@ impl App {
         if self.preview.is_some() {
             return out;
         }
-        add("Scratch", l.scratch_button);
-        add("To-dos", l.todos_button);
-        add("Contents", l.contents_button);
+        for (on, name, r) in [
+            (self.screen.scratch_on, "Scratch", l.scratch_button),
+            (self.screen.todos_on, "To-dos", l.todos_button),
+            (self.screen.contents_on, "Contents", l.contents_button),
+        ] {
+            if on {
+                add(name, r);
+            }
+        }
         add("Keys", l.keys_button);
         for (r, k) in &l.keys {
             add(&format!("key {}", self.keyboard.label(*k)), *r);
@@ -5478,6 +5511,9 @@ impl App {
             }
             if let Some(f) = d.filter {
                 add("Filter", f);
+            }
+            for (label, r) in self.pane_hits() {
+                add(&label, r);
             }
         }
         out

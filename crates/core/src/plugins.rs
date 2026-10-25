@@ -43,6 +43,29 @@ pub enum PluginKind {
     Icons,
     /// A WASM screen plugin (`entry` names the module).
     Screen,
+    /// A WASM plugin that draws one pane of the side drawer (`entry` names
+    /// the module, `slot` the pane it replaces).
+    Pane,
+}
+
+/// The drawer pane a [`PluginKind::Pane`] plugin provides.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PaneSlot {
+    Contents,
+    Todos,
+    Scratch,
+}
+
+impl PaneSlot {
+    #[must_use]
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "contents" => Self::Contents,
+            "todos" => Self::Todos,
+            "scratch" => Self::Scratch,
+            _ => return None,
+        })
+    }
 }
 
 impl PluginKind {
@@ -58,6 +81,7 @@ impl PluginKind {
             "layout" => Self::Layout,
             "icons" => Self::Icons,
             "screen" => Self::Screen,
+            "pane" => Self::Pane,
             _ => return None,
         })
     }
@@ -75,6 +99,7 @@ impl PluginKind {
             Self::Layout => "Keyboard layout",
             Self::Icons => "Icons",
             Self::Screen => "Screen",
+            Self::Pane => "Drawer pane",
         }
     }
 
@@ -90,6 +115,7 @@ impl PluginKind {
             Self::Layout => "layout",
             Self::Icons => "icons",
             Self::Screen => "screen",
+            Self::Pane => "pane",
         }
     }
 }
@@ -158,6 +184,8 @@ pub struct Manifest {
     pub api: u32,
     /// The module of a [`PluginKind::Screen`] plugin, relative to its folder.
     pub entry: Option<String>,
+    /// The drawer pane of a [`PluginKind::Pane`] plugin.
+    pub slot: Option<PaneSlot>,
     /// The plugin's own settings (`setting=` lines), shown on its page in
     /// Settings → Plugins while it is on.
     pub settings: Vec<SettingDecl>,
@@ -242,10 +270,15 @@ impl Manifest {
         if entry.as_deref().is_some_and(|e| !safe_rel_path(e)) {
             return None;
         }
-        // A screen plugin without a module is not a plugin.
-        if kind == PluginKind::Screen && entry.is_none() {
+        // A screen or pane plugin without a module is not a plugin.
+        if matches!(kind, PluginKind::Screen | PluginKind::Pane) && entry.is_none() {
             return None;
         }
+        let slot = match (kind, f.get("slot")) {
+            (PluginKind::Pane, Some(v)) => Some(PaneSlot::parse(v)?),
+            (PluginKind::Pane, None) => return None,
+            _ => None,
+        };
         let mut settings: Vec<SettingDecl> = Vec::new();
         for d in text
             .lines()
@@ -259,6 +292,7 @@ impl Manifest {
         Some(Self {
             settings,
             entry,
+            slot,
             kind,
             name: f
                 .get("name")
@@ -474,6 +508,30 @@ pub fn enabled_screen_in(
     }
     let wasm = root.join(id).join(m.entry.as_deref()?);
     wasm.is_file().then_some((m, wasm))
+}
+
+/// The enabled pane plugin for `slot` under `root`: its manifest and module
+/// path. `None` when none is installed and enabled with its module present.
+/// If several qualify, the first by id wins.
+#[must_use]
+pub fn enabled_pane_in(
+    root: &std::path::Path,
+    slot: PaneSlot,
+) -> Option<(Manifest, std::path::PathBuf)> {
+    let state = State::parse(&std::fs::read_to_string(root.join("plugins.state")).ok()?);
+    let mut ids: Vec<&str> = state.enabled().map(|p| p.id.as_str()).collect();
+    ids.sort_unstable();
+    ids.into_iter().find_map(|id| {
+        if !valid_id(id) {
+            return None;
+        }
+        let m = Manifest::parse(&std::fs::read_to_string(root.join(id).join("plugin.conf")).ok()?)?;
+        if m.id != id || m.kind != PluginKind::Pane || m.slot != Some(slot) {
+            return None;
+        }
+        let wasm = root.join(id).join(m.entry.as_deref()?);
+        wasm.is_file().then_some((m, wasm))
+    })
 }
 
 /// The file holding a plugin's setting values.
@@ -784,6 +842,64 @@ mod tests {
         assert!(Manifest::parse("id=g\nversion=1\nkind=font\nentry=/etc/x").is_none());
         // Data plugins need no entry.
         assert_eq!(Manifest::parse(&manifest("")).unwrap().entry, None);
+    }
+
+    #[test]
+    fn pane_plugins_need_a_slot_and_a_safe_entry() {
+        let ok = Manifest::parse("id=t\nversion=1\nkind=pane\nentry=t.wasm\nslot=todos").unwrap();
+        assert_eq!(ok.kind, PluginKind::Pane);
+        assert_eq!(ok.slot, Some(PaneSlot::Todos));
+        assert_eq!(PluginKind::Pane.as_str(), "pane");
+        assert!(Manifest::parse("id=t\nversion=1\nkind=pane\nentry=t.wasm").is_none());
+        assert!(Manifest::parse("id=t\nversion=1\nkind=pane\nentry=t.wasm\nslot=x").is_none());
+        assert!(Manifest::parse("id=t\nversion=1\nkind=pane\nslot=todos").is_none());
+        assert!(Manifest::parse("id=t\nversion=1\nkind=pane\nentry=../t\nslot=todos").is_none());
+        // Other kinds ignore a stray slot.
+        assert_eq!(
+            Manifest::parse("id=t\nversion=1\nkind=font\nslot=todos")
+                .unwrap()
+                .slot,
+            None
+        );
+    }
+
+    #[test]
+    fn enabled_pane_finds_the_enabled_plugin_for_the_slot() {
+        let root = std::env::temp_dir().join(format!("sigma-panes-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let conf = |id: &str, slot: &str, wasm: bool| {
+            std::fs::create_dir_all(root.join(id)).unwrap();
+            std::fs::write(
+                root.join(id).join("plugin.conf"),
+                format!("id={id}\nversion=1\nkind=pane\nentry=m.wasm\nslot={slot}"),
+            )
+            .unwrap();
+            if wasm {
+                std::fs::write(root.join(id).join("m.wasm"), b"\0asm").unwrap();
+            }
+        };
+        conf("todo-pane", "todos", true);
+        conf("scratch-pane", "scratch", true);
+        conf("off-todos", "todos", true);
+        conf("nomod", "todos", false);
+        std::fs::write(
+            root.join("plugins.state"),
+            "todo-pane=1.0.0,enabled\nscratch-pane=1.0.0,enabled\noff-todos=1.0.0,disabled\nnomod=1.0.0,enabled\n",
+        )
+        .unwrap();
+        let (m, wasm) = enabled_pane_in(&root, PaneSlot::Todos).unwrap();
+        assert_eq!(
+            (m.id.as_str(), wasm),
+            ("todo-pane", root.join("todo-pane/m.wasm"))
+        );
+        assert_eq!(
+            enabled_pane_in(&root, PaneSlot::Scratch).unwrap().0.id,
+            "scratch-pane"
+        );
+        std::fs::write(root.join("plugins.state"), "todo-pane=1.0.0,disabled\n").unwrap();
+        assert!(enabled_pane_in(&root, PaneSlot::Todos).is_none());
+        assert!(enabled_pane_in(&root.join("nope"), PaneSlot::Todos).is_none());
+        std::fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]

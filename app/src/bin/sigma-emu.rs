@@ -86,6 +86,7 @@ fn main() -> ExitCode {
     // Scripts tap "Graph": with no Graph plugin in $SIGMA_PLUGINS the
     // emulator shows the built-in one (the app itself hides the icon).
     app.set_builtin_graph(true);
+    app.set_builtin_panes(true);
     if let Err(e) = app.render(&mut dev, sigma_device::Refresh::Full) {
         eprintln!("sigma-emu: {e}");
         return ExitCode::FAILURE;
@@ -863,6 +864,7 @@ fn main() -> ExitCode {
                 app.handle(Event::Power);
                 app = App::new(size.0, size.1, root.clone());
                 app.set_builtin_graph(true);
+                app.set_builtin_panes(true);
                 app.set_gsensor(dev.gsensor);
                 if let Err(e) = app.render(&mut dev, sigma_device::Refresh::Full) {
                     return fail(e.to_string());

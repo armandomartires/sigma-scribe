@@ -1,0 +1,4 @@
+Built from sigma-scribe-plugins commit beda3f367a55d4100cf554d00a70575cd25cf989
+with scripts/build-plugin.sh scratch-pane (rustc 1.99.1).
+Refresh with scripts/update-plugin-fixtures.sh.
+28c1217fd30796d6b548cb774d75e58e45911212c9fbdd4e54ef7551e59a7735  pane.wasm
