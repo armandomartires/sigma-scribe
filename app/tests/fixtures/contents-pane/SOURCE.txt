@@ -1,4 +1,4 @@
-Built from sigma-scribe-plugins commit beda3f367a55d4100cf554d00a70575cd25cf989
+Built from sigma-scribe-plugins commit a044e3f8d65611ec1e7dff0075530ce33d310184
 with scripts/build-plugin.sh contents-pane (rustc 1.99.1).
 Refresh with scripts/update-plugin-fixtures.sh.
-4fc550990f2bc0d8b79c2dfd76ccc2144d50d0983f638cd39e75857ab5f194e6  pane.wasm
+31d636d0f691eaef338931971656213b60e324ec2354750cccc8f58bdd088d3a  pane.wasm
