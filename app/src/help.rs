@@ -98,24 +98,31 @@ impl App {
             }
             HelpHit::Back => self.help_back(),
             HelpHit::Open(page) => {
-                let started = std::time::Instant::now();
-                let doc = self.screen.build_help(&self.keyboard, page, &self.about());
-                sigma_core::debug!(
-                    "ui",
-                    "open help page {page:?} at {x},{y}: {} pages, {} lines, built in {} ms",
-                    doc.pages.len(),
-                    doc.lines.len(),
-                    started.elapsed().as_millis()
-                );
-                self.help = Some(HelpState {
-                    page,
-                    doc: Some(doc),
-                    at: 0,
-                });
+                self.show_help_page(page, "the Help menu");
                 Some(Refresh::Full)
             }
             HelpHit::Nothing => None,
         }
+    }
+
+    /// Shows Help sub-page `page` with its document laid out. Every way into
+    /// a sub-page goes through here: a sub-page without its document draws
+    /// an empty body (the blank page reached from Settings → Help & about).
+    pub(crate) fn show_help_page(&mut self, page: HelpPage, from: &str) {
+        let started = std::time::Instant::now();
+        let doc = self.screen.build_help(&self.keyboard, page, &self.about());
+        sigma_core::debug!(
+            "ui",
+            "open help page {page:?} from {from}: {} pages, {} lines, built in {} ms",
+            doc.pages.len(),
+            doc.lines.len(),
+            started.elapsed().as_millis()
+        );
+        self.help = Some(HelpState {
+            page,
+            doc: Some(doc),
+            at: 0,
+        });
     }
 
     /// Escape / Back: a sub-page goes back to the menu, the menu closes.

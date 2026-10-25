@@ -312,9 +312,7 @@ impl App {
             OptionsHit::Help(i) => {
                 self.options = false;
                 self.open_help();
-                if let Some(h) = self.help.as_mut() {
-                    h.page = sigma_render::help::MENU[i].2;
-                }
+                self.show_help_page(sigma_render::help::MENU[i].2, "Settings");
                 Some(Refresh::Full)
             }
             OptionsHit::Nothing => None,
