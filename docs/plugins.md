@@ -58,8 +58,9 @@ actions (close, open a note, preview a note). The app draws the title bar and
 close button, owns the library data, and applies actions. A plugin keeps its
 own state (map or list, zoom, pan, selection, page).
 
-The module runs in wasmi (`crates/plugin-host`) with only five imports:
-`text_width`, `ascent`, `tr`, `cache_get`, `cache_put`. No filesystem or
+The module runs in wasmi (`crates/plugin-host`) with only seven imports:
+`text_width`, `ascent`, `tr`, `cache_get`, `cache_put`, `log` and `log_level`
+(see logging.md). No filesystem or
 network. Every call gets a fuel budget and the memory has a ceiling; after any
 failure the plugin is dropped and the built-in Graph serves the rest of the
 session.

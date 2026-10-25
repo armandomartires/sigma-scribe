@@ -454,6 +454,8 @@ pub struct App {
     plugins_root: PathBuf,
     /// A plugin failed: the built-in Graph serves the rest of the session.
     plugin_failed: bool,
+    /// Where the log file goes while Settings → Logging is on.
+    log_dir: PathBuf,
     /// Show the Graph icon even with the Graph plugin off, and open the
     /// built-in Graph (the reference the plugin is tested against, and the
     /// emulator's Graph). Off in the app.
@@ -582,6 +584,7 @@ impl App {
             plugin_list: Vec::new(),
             plugins_root: sigma_core::plugins::plugins_root(),
             plugin_failed: false,
+            log_dir: log_dir(),
             graph_builtin: false,
             preview: None,
             canvas: Canvas::new(lw, lh, 255),
@@ -644,7 +647,17 @@ impl App {
 
     /// Applies Settings → Logging: the log file on or off, and its level.
     fn apply_logging(&self) {
-        sigma_core::log::configure(self.settings.log, self.settings.log_level, Some(log_dir()));
+        sigma_core::log::configure(
+            self.settings.log,
+            self.settings.log_level,
+            Some(self.log_dir.clone()),
+        );
+    }
+
+    /// Where the log file goes (tests point this at a temp folder).
+    pub fn set_log_dir(&mut self, dir: impl Into<PathBuf>) {
+        self.log_dir = dir.into();
+        self.apply_logging();
     }
 
     /// The Kobo style board while Enhanced keyboard is off (v1.13); back to
