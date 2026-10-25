@@ -9,6 +9,7 @@ fn app(tag: &str) -> App {
     let d = std::env::temp_dir().join(format!("sigma-usb-{tag}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&d);
     let mut a = App::new(1440, 1920, d);
+    a.set_builtin_panes(true);
     a.buffer.select_all();
     a.buffer.backspace();
     a

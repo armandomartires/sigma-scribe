@@ -862,3 +862,97 @@ Turn off Auto keyboard size
 
 Dark mode
 = Mørk tilstand
+
+# Settings → Plugins
+Plugins
+= Plugins
+
+Installed
+= Installeret
+
+No plugins installed
+= Ingen plugins installeret
+
+Put plugins in .adds/sigma-scribe/plugins
+= Læg plugins i .adds/sigma-scribe/plugins
+
+Screen
+= Skærm
+
+Font
+= Skrifttype
+
+Dictionary
+= Ordbog
+
+Handwriting model
+= Håndskriftsmodel
+
+Word list
+= Ordliste
+
+Translation
+= Oversættelse
+
+Keyboard layout
+= Tastaturlayout
+
+Icons
+= Ikoner
+
+restart to apply
+= genstart for at anvende
+
+Needs a newer app
+= Kræver en nyere version af appen
+
+# Graph plugin: loading, progress and its settings
+Quick
+= Hurtig
+
+Best
+= Bedste
+
+Labels
+= Etiketter
+
+Start on
+= Start med
+
+Turn the plugin on first
+= Slå pluginet til først
+
+Opening the graph…
+= Åbner grafen…
+
+Building the graph…
+= Bygger grafen…
+
+# Settings → Logging
+Logging
+= Logning
+
+Level
+= Niveau
+
+Debug
+= Fejlsøgning
+
+Info
+= Info
+
+Warning
+= Advarsel
+
+Error
+= Fejl
+
+Critical
+= Kritisk
+
+Log file
+= Logfil
+
+Drawer width
+= Skuffens bredde
+

@@ -1,0 +1,22 @@
+# Settings → Logging: the switch, the level row that appears with it, the
+# choice page, and the settings file (Forma 1440x1920).
+tap-on Options
+shot v1.14-logging-root
+tap-on Logging
+shot v1.14-logging-off
+tap-on Logging/On
+expect-setting log=on
+expect-setting log_level=info
+shot v1.14-logging-on
+tap-on Level
+shot v1.14-logging-levels
+tap-on Level/Debug
+expect-setting log_level=debug
+tap-on Level
+tap-on Level/Critical
+expect-setting log_level=critical
+tap-on Back
+tap-on Logging/Off
+expect-setting log=off
+tap-on Back
+tap-on Close

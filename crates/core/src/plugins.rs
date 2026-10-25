@@ -43,6 +43,29 @@ pub enum PluginKind {
     Icons,
     /// A WASM screen plugin (`entry` names the module).
     Screen,
+    /// A WASM plugin that draws one pane of the side drawer (`entry` names
+    /// the module, `slot` the pane it replaces).
+    Pane,
+}
+
+/// The drawer pane a [`PluginKind::Pane`] plugin provides.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PaneSlot {
+    Contents,
+    Todos,
+    Scratch,
+}
+
+impl PaneSlot {
+    #[must_use]
+    pub fn parse(s: &str) -> Option<Self> {
+        Some(match s {
+            "contents" => Self::Contents,
+            "todos" => Self::Todos,
+            "scratch" => Self::Scratch,
+            _ => return None,
+        })
+    }
 }
 
 impl PluginKind {
@@ -58,8 +81,26 @@ impl PluginKind {
             "layout" => Self::Layout,
             "icons" => Self::Icons,
             "screen" => Self::Screen,
+            "pane" => Self::Pane,
             _ => return None,
         })
+    }
+
+    /// The kind in English, for the Settings list.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Font => "Font",
+            Self::Dictionary => "Dictionary",
+            Self::HwrModel => "Handwriting model",
+            Self::WordList => "Word list",
+            Self::Theme => "Theme",
+            Self::Translation => "Translation",
+            Self::Layout => "Keyboard layout",
+            Self::Icons => "Icons",
+            Self::Screen => "Screen",
+            Self::Pane => "Drawer pane",
+        }
     }
 
     #[must_use]
@@ -74,6 +115,7 @@ impl PluginKind {
             Self::Layout => "layout",
             Self::Icons => "icons",
             Self::Screen => "screen",
+            Self::Pane => "pane",
         }
     }
 }
@@ -94,6 +136,12 @@ impl Version {
         };
         let v = Self(part()?, part()?, part()?);
         it.next().is_none().then_some(v)
+    }
+}
+
+impl std::fmt::Display for Version {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}.{}", self.0, self.1, self.2)
     }
 }
 
@@ -136,6 +184,58 @@ pub struct Manifest {
     pub api: u32,
     /// The module of a [`PluginKind::Screen`] plugin, relative to its folder.
     pub entry: Option<String>,
+    /// The drawer pane of a [`PluginKind::Pane`] plugin.
+    pub slot: Option<PaneSlot>,
+    /// The plugin's own settings (`setting=` lines), shown on its page in
+    /// Settings → Plugins while it is on.
+    pub settings: Vec<SettingDecl>,
+}
+
+/// A setting a plugin declares in `plugin.conf`:
+/// `setting=key|Label|Option A,Option B|Default`. A choice between two to
+/// four options; the host draws it and keeps the value.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SettingDecl {
+    pub key: String,
+    pub label: String,
+    pub options: Vec<String>,
+    /// Index into `options`.
+    pub default: usize,
+}
+
+/// Most settings a plugin may declare.
+pub const MAX_PLUGIN_SETTINGS: usize = 8;
+
+impl SettingDecl {
+    /// Parses the value of one `setting=` line; `None` when it is not valid.
+    #[must_use]
+    pub fn parse(v: &str) -> Option<Self> {
+        let mut it = v.split('|').map(str::trim);
+        let (key, label, opts, default) = (it.next()?, it.next()?, it.next()?, it.next()?);
+        if it.next().is_some()
+            || key.is_empty()
+            || key.len() > 24
+            || !key
+                .bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+            || label.is_empty()
+            || label.len() > 40
+        {
+            return None;
+        }
+        let options: Vec<String> = opts.split(',').map(|o| o.trim().to_owned()).collect();
+        if !(2..=4).contains(&options.len()) || options.iter().any(|o| o.is_empty() || o.len() > 24)
+        {
+            return None;
+        }
+        let default = options.iter().position(|o| o == default).unwrap_or(0);
+        Some(Self {
+            key: key.to_owned(),
+            label: label.to_owned(),
+            options,
+            default,
+        })
+    }
 }
 
 fn fields(text: &str) -> BTreeMap<&str, &str> {
@@ -170,12 +270,29 @@ impl Manifest {
         if entry.as_deref().is_some_and(|e| !safe_rel_path(e)) {
             return None;
         }
-        // A screen plugin without a module is not a plugin.
-        if kind == PluginKind::Screen && entry.is_none() {
+        // A screen or pane plugin without a module is not a plugin.
+        if matches!(kind, PluginKind::Screen | PluginKind::Pane) && entry.is_none() {
             return None;
         }
+        let slot = match (kind, f.get("slot")) {
+            (PluginKind::Pane, Some(v)) => Some(PaneSlot::parse(v)?),
+            (PluginKind::Pane, None) => return None,
+            _ => None,
+        };
+        let mut settings: Vec<SettingDecl> = Vec::new();
+        for d in text
+            .lines()
+            .filter_map(|l| l.trim().strip_prefix("setting="))
+            .filter_map(SettingDecl::parse)
+        {
+            if settings.len() < MAX_PLUGIN_SETTINGS && settings.iter().all(|x| x.key != d.key) {
+                settings.push(d);
+            }
+        }
         Some(Self {
+            settings,
             entry,
+            slot,
             kind,
             name: f
                 .get("name")
@@ -393,6 +510,173 @@ pub fn enabled_screen_in(
     wasm.is_file().then_some((m, wasm))
 }
 
+/// The enabled pane plugin for `slot` under `root`: its manifest and module
+/// path. `None` when none is installed and enabled with its module present.
+/// If several qualify, the first by id wins.
+#[must_use]
+pub fn enabled_pane_in(
+    root: &std::path::Path,
+    slot: PaneSlot,
+) -> Option<(Manifest, std::path::PathBuf)> {
+    let state = State::parse(&std::fs::read_to_string(root.join("plugins.state")).ok()?);
+    let mut ids: Vec<&str> = state.enabled().map(|p| p.id.as_str()).collect();
+    ids.sort_unstable();
+    ids.into_iter().find_map(|id| {
+        if !valid_id(id) {
+            return None;
+        }
+        let m = Manifest::parse(&std::fs::read_to_string(root.join(id).join("plugin.conf")).ok()?)?;
+        if m.id != id || m.kind != PluginKind::Pane || m.slot != Some(slot) {
+            return None;
+        }
+        let wasm = root.join(id).join(m.entry.as_deref()?);
+        wasm.is_file().then_some((m, wasm))
+    })
+}
+
+/// The file holding a plugin's setting values.
+fn settings_path(root: &std::path::Path, id: &str) -> std::path::PathBuf {
+    root.join(id).join("settings")
+}
+
+/// The chosen option of each of `m`'s declared settings, as an index into
+/// its options: what `<root>/<id>/settings` says, else the default. Values
+/// that are not one of the options (an older or hand-edited file) count as
+/// the default.
+#[must_use]
+pub fn settings_in(root: &std::path::Path, m: &Manifest) -> Vec<usize> {
+    let text = valid_id(&m.id)
+        .then(|| std::fs::read_to_string(settings_path(root, &m.id)).ok())
+        .flatten()
+        .unwrap_or_default();
+    let saved = fields(&text);
+    m.settings
+        .iter()
+        .map(|d| {
+            saved
+                .get(d.key.as_str())
+                .and_then(|v| d.options.iter().position(|o| o == v))
+                .unwrap_or(d.default)
+        })
+        .collect()
+}
+
+/// Sets one declared setting of plugin `m` to option number `option`, keeping
+/// the file's other values. Written atomically.
+///
+/// # Errors
+/// `NotFound` for a setting the plugin did not declare, `InvalidInput` for an
+/// option out of range, or any filesystem error.
+pub fn set_setting_in(
+    root: &std::path::Path,
+    m: &Manifest,
+    key: &str,
+    option: usize,
+) -> std::io::Result<()> {
+    use std::io::{Error, ErrorKind};
+    let d = m
+        .settings
+        .iter()
+        .find(|d| d.key == key)
+        .ok_or_else(|| Error::new(ErrorKind::NotFound, "no such setting"))?;
+    let value = d
+        .options
+        .get(option)
+        .ok_or_else(|| Error::new(ErrorKind::InvalidInput, "no such option"))?;
+    if !valid_id(&m.id) {
+        return Err(Error::new(ErrorKind::NotFound, "no such plugin"));
+    }
+    let path = settings_path(root, &m.id);
+    let old = std::fs::read_to_string(&path).unwrap_or_default();
+    let mut lines: Vec<String> = old
+        .lines()
+        .filter(|l| l.split_once('=').is_none_or(|(k, _)| k.trim() != key))
+        .map(str::to_owned)
+        .collect();
+    lines.push(format!("{key}={value}"));
+    crate::store::write_atomic(&path, &(lines.join("\n") + "\n"))
+}
+
+/// The manifest of plugin `id` under `root`, when there is a valid one.
+#[must_use]
+pub fn manifest_in(root: &std::path::Path, id: &str) -> Option<Manifest> {
+    valid_id(id)
+        .then(|| std::fs::read_to_string(root.join(id).join("plugin.conf")).ok())
+        .flatten()
+        .and_then(|t| Manifest::parse(&t))
+        .filter(|m| m.id == id)
+}
+
+/// A plugin found on disk, for the Settings list.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Listed {
+    pub manifest: Manifest,
+    /// On in `plugins.state`. A plugin the file does not mention is off.
+    pub enabled: bool,
+}
+
+/// The plugins installed under `root`: every folder with a valid
+/// `plugin.conf` whose id is the folder's name, sorted by name.
+#[must_use]
+pub fn list_in(root: &std::path::Path) -> Vec<Listed> {
+    let state = std::fs::read_to_string(root.join("plugins.state"))
+        .map(|t| State::parse(&t))
+        .unwrap_or_default();
+    let Ok(dir) = std::fs::read_dir(root) else {
+        return Vec::new();
+    };
+    let mut out: Vec<Listed> = dir
+        .filter_map(Result::ok)
+        .filter_map(|e| {
+            let id = e.file_name().into_string().ok()?;
+            let m = Manifest::parse(&std::fs::read_to_string(e.path().join("plugin.conf")).ok()?)?;
+            (m.id == id).then(|| Listed {
+                enabled: state.get(&id).is_some_and(|p| p.enabled),
+                manifest: m,
+            })
+        })
+        .collect();
+    out.sort_by(|a, b| {
+        a.manifest
+            .name
+            .to_lowercase()
+            .cmp(&b.manifest.name.to_lowercase())
+            .then_with(|| a.manifest.id.cmp(&b.manifest.id))
+    });
+    out
+}
+
+/// [`list_in`] for the installed plugins folder.
+#[must_use]
+pub fn list() -> Vec<Listed> {
+    list_in(&plugins_root())
+}
+
+/// Turns plugin `id` on or off in `plugins.state`, atomically. A plugin that
+/// is on disk but not yet in the file is added.
+///
+/// # Errors
+/// `NotFound` when there is no valid plugin of that id under `root`, or any
+/// filesystem error (the old file is left intact).
+pub fn set_enabled_in(root: &std::path::Path, id: &str, enabled: bool) -> std::io::Result<()> {
+    use std::io::{Error, ErrorKind};
+    let manifest = valid_id(id)
+        .then(|| std::fs::read_to_string(root.join(id).join("plugin.conf")).ok())
+        .flatten()
+        .and_then(|t| Manifest::parse(&t))
+        .filter(|m| m.id == id)
+        .ok_or_else(|| Error::new(ErrorKind::NotFound, "no such plugin"))?;
+    let path = root.join("plugins.state");
+    let mut state = std::fs::read_to_string(&path)
+        .map(|t| State::parse(&t))
+        .unwrap_or_default();
+    if state.get(id).is_none() {
+        state.install(id, manifest.version);
+    }
+    state.set_enabled(id, enabled);
+    crate::store::write_atomic(&path, &state.serialize())
+}
+
 /// [`enabled_files_in`] for the installed plugins folder.
 #[must_use]
 pub fn enabled_files(rel: &str) -> Vec<std::path::PathBuf> {
@@ -561,6 +845,64 @@ mod tests {
     }
 
     #[test]
+    fn pane_plugins_need_a_slot_and_a_safe_entry() {
+        let ok = Manifest::parse("id=t\nversion=1\nkind=pane\nentry=t.wasm\nslot=todos").unwrap();
+        assert_eq!(ok.kind, PluginKind::Pane);
+        assert_eq!(ok.slot, Some(PaneSlot::Todos));
+        assert_eq!(PluginKind::Pane.as_str(), "pane");
+        assert!(Manifest::parse("id=t\nversion=1\nkind=pane\nentry=t.wasm").is_none());
+        assert!(Manifest::parse("id=t\nversion=1\nkind=pane\nentry=t.wasm\nslot=x").is_none());
+        assert!(Manifest::parse("id=t\nversion=1\nkind=pane\nslot=todos").is_none());
+        assert!(Manifest::parse("id=t\nversion=1\nkind=pane\nentry=../t\nslot=todos").is_none());
+        // Other kinds ignore a stray slot.
+        assert_eq!(
+            Manifest::parse("id=t\nversion=1\nkind=font\nslot=todos")
+                .unwrap()
+                .slot,
+            None
+        );
+    }
+
+    #[test]
+    fn enabled_pane_finds_the_enabled_plugin_for_the_slot() {
+        let root = std::env::temp_dir().join(format!("sigma-panes-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let conf = |id: &str, slot: &str, wasm: bool| {
+            std::fs::create_dir_all(root.join(id)).unwrap();
+            std::fs::write(
+                root.join(id).join("plugin.conf"),
+                format!("id={id}\nversion=1\nkind=pane\nentry=m.wasm\nslot={slot}"),
+            )
+            .unwrap();
+            if wasm {
+                std::fs::write(root.join(id).join("m.wasm"), b"\0asm").unwrap();
+            }
+        };
+        conf("todo-pane", "todos", true);
+        conf("scratch-pane", "scratch", true);
+        conf("off-todos", "todos", true);
+        conf("nomod", "todos", false);
+        std::fs::write(
+            root.join("plugins.state"),
+            "todo-pane=1.0.0,enabled\nscratch-pane=1.0.0,enabled\noff-todos=1.0.0,disabled\nnomod=1.0.0,enabled\n",
+        )
+        .unwrap();
+        let (m, wasm) = enabled_pane_in(&root, PaneSlot::Todos).unwrap();
+        assert_eq!(
+            (m.id.as_str(), wasm),
+            ("todo-pane", root.join("todo-pane/m.wasm"))
+        );
+        assert_eq!(
+            enabled_pane_in(&root, PaneSlot::Scratch).unwrap().0.id,
+            "scratch-pane"
+        );
+        std::fs::write(root.join("plugins.state"), "todo-pane=1.0.0,disabled\n").unwrap();
+        assert!(enabled_pane_in(&root, PaneSlot::Todos).is_none());
+        assert!(enabled_pane_in(&root.join("nope"), PaneSlot::Todos).is_none());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
     fn enabled_screen_finds_only_enabled_screen_plugins_with_a_module() {
         let root = std::env::temp_dir().join(format!("sigma-screens-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
@@ -599,6 +941,176 @@ mod tests {
             assert!(enabled_screen_in(&root, id).is_none(), "{id}");
         }
         assert!(enabled_screen_in(&root.join("nope"), "graph-map").is_none());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    fn plugin_folder(root: &std::path::Path, id: &str, name: &str, kind: &str) {
+        std::fs::create_dir_all(root.join(id)).unwrap();
+        std::fs::write(
+            root.join(id).join("plugin.conf"),
+            format!("id={id}\nname={name}\nversion=1.2.0\nkind={kind}\nentry=m.wasm\n"),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn list_in_finds_valid_folders_sorted_with_their_state() {
+        let root = std::env::temp_dir().join(format!("sigma-list-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        plugin_folder(&root, "zeta", "Zeta pack", "font");
+        plugin_folder(&root, "graph-map", "Graph", "screen");
+        plugin_folder(&root, "off", "alpha", "theme");
+        // Not plugins: a folder without a manifest, one whose id differs from
+        // its name, a stray file.
+        std::fs::create_dir_all(root.join("empty")).unwrap();
+        plugin_folder(&root, "liar", "Liar", "font");
+        std::fs::write(
+            root.join("liar/plugin.conf"),
+            "id=other\nversion=1\nkind=font",
+        )
+        .unwrap();
+        std::fs::write(root.join("notes.txt"), "x").unwrap();
+        std::fs::write(
+            root.join("plugins.state"),
+            "graph-map=1.0.0,enabled\noff=1.0.0,disabled\n",
+        )
+        .unwrap();
+        let got: Vec<(String, bool)> = list_in(&root)
+            .into_iter()
+            .map(|l| (l.manifest.id, l.enabled))
+            .collect();
+        assert_eq!(
+            got,
+            vec![
+                ("off".to_string(), false), // "alpha"
+                ("graph-map".to_string(), true),
+                ("zeta".to_string(), false), // on disk, not in the file
+            ]
+        );
+        assert!(list_in(&root.join("nope")).is_empty());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn set_enabled_in_writes_the_state_file() {
+        let root = std::env::temp_dir().join(format!("sigma-toggle-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        plugin_folder(&root, "graph-map", "Graph", "screen");
+        plugin_folder(&root, "other", "Other", "font");
+        // Not in the file yet: turning it on adds it.
+        set_enabled_in(&root, "graph-map", true).unwrap();
+        assert!(list_in(&root)
+            .iter()
+            .any(|l| l.manifest.id == "graph-map" && l.enabled));
+        assert!(
+            enabled_screen_in(&root, "graph-map").is_none(),
+            "no module file yet"
+        );
+        std::fs::write(root.join("graph-map/m.wasm"), b"\0asm").unwrap();
+        assert!(enabled_screen_in(&root, "graph-map").is_some());
+        // Off and on again; other plugins and versions are left alone.
+        set_enabled_in(&root, "other", true).unwrap();
+        set_enabled_in(&root, "graph-map", false).unwrap();
+        assert!(enabled_screen_in(&root, "graph-map").is_none());
+        let state = State::parse(&std::fs::read_to_string(root.join("plugins.state")).unwrap());
+        assert!(state.get("other").unwrap().enabled);
+        assert!(!state.get("graph-map").unwrap().enabled);
+        assert_eq!(state.get("graph-map").unwrap().version, Version(1, 2, 0));
+        // Unknown, unsafe or manifest-less ids are errors and change nothing.
+        let before = std::fs::read_to_string(root.join("plugins.state")).unwrap();
+        for id in ["missing", "../x", "", "Graph-Map"] {
+            assert!(set_enabled_in(&root, id, true).is_err(), "{id:?}");
+        }
+        assert_eq!(
+            std::fs::read_to_string(root.join("plugins.state")).unwrap(),
+            before
+        );
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    fn declared(extra: &str) -> Manifest {
+        Manifest::parse(&format!(
+            "id=graph-map\nversion=1\nkind=screen\nentry=g.wasm\n{extra}"
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn settings_are_declared_in_plugin_conf() {
+        let m =
+            declared("setting=view|Start on|Map,List|Map\nsetting=labels|Labels|Auto, All|All\n");
+        assert_eq!(m.settings.len(), 2);
+        assert_eq!(m.settings[0].key, "view");
+        assert_eq!(m.settings[0].label, "Start on");
+        assert_eq!(m.settings[0].options, ["Map", "List"]);
+        assert_eq!(m.settings[0].default, 0);
+        assert_eq!(
+            m.settings[1].options,
+            ["Auto", "All"],
+            "options are trimmed"
+        );
+        assert_eq!(m.settings[1].default, 1, "the default names an option");
+        assert!(declared("").settings.is_empty());
+    }
+
+    #[test]
+    fn bad_setting_lines_are_skipped_not_fatal() {
+        let m = declared(
+            "setting=Bad Key|L|a,b|a\n\
+             setting=one|L|only|only\n\
+             setting=five|L|a,b,c,d,e|a\n\
+             setting=empty|L|a,|a\n\
+             setting=nolabel||a,b|a\n\
+             setting=extra|L|a,b|a|x\n\
+             setting=ok|Fine|a,b|zzz\n\
+             setting=ok|Again|c,d|c\n",
+        );
+        assert_eq!(m.settings.len(), 1, "{:?}", m.settings);
+        assert_eq!(
+            m.settings[0].label, "Fine",
+            "the first of a repeated key wins"
+        );
+        assert_eq!(
+            m.settings[0].default, 0,
+            "an unknown default is the first option"
+        );
+        // At most eight.
+        let many: String = (0..12).map(|i| format!("setting=k{i}|L|a,b|a\n")).collect();
+        assert_eq!(declared(&many).settings.len(), MAX_PLUGIN_SETTINGS);
+    }
+
+    #[test]
+    fn setting_values_default_save_and_ignore_junk() {
+        let root = std::env::temp_dir().join(format!("sigma-setvals-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let m =
+            declared("setting=view|Start on|Map,List|Map\nsetting=labels|Labels|Auto,All|Auto\n");
+        // Nothing saved: the defaults.
+        assert_eq!(settings_in(&root, &m), [0, 0]);
+        std::fs::create_dir_all(root.join("graph-map")).unwrap();
+        set_setting_in(&root, &m, "view", 1).unwrap();
+        assert_eq!(settings_in(&root, &m), [1, 0]);
+        set_setting_in(&root, &m, "labels", 1).unwrap();
+        set_setting_in(&root, &m, "view", 0).unwrap();
+        assert_eq!(settings_in(&root, &m), [0, 1], "the other value is kept");
+        let text = std::fs::read_to_string(root.join("graph-map/settings")).unwrap();
+        assert_eq!(text.lines().count(), 2, "one line per key: {text:?}");
+        // A value that is not an option, and a key that is not declared, are
+        // ignored when reading.
+        std::fs::write(
+            root.join("graph-map/settings"),
+            "view=Sideways\nlabels=All\nold=1\n",
+        )
+        .unwrap();
+        assert_eq!(settings_in(&root, &m), [0, 1]);
+        // Writing refuses what was not declared or is out of range.
+        assert!(set_setting_in(&root, &m, "nope", 0).is_err());
+        assert!(set_setting_in(&root, &m, "view", 2).is_err());
+        assert_eq!(
+            settings_in(&root, &m),
+            [0, 1],
+            "failed writes change nothing"
+        );
         std::fs::remove_dir_all(&root).unwrap();
     }
 

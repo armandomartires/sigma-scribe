@@ -31,6 +31,24 @@ pub enum KeyTone {
     Dark,
 }
 
+/// The Drawer width slider has five stops, evenly spaced from 20 % of the
+/// page to 50 % (the middle of the screen at most): 20, 27.5, 35, 42.5, 50.
+/// The widest is the default.
+pub const DRAWER_WIDTH_STOPS: u8 = 5;
+pub const DRAWER_WIDTH_DEFAULT: u8 = DRAWER_WIDTH_STOPS - 1;
+
+/// The drawer's width at `stop`, in tenths of a percent of the page.
+#[must_use]
+pub fn drawer_tenths(stop: u8) -> u16 {
+    200 + 75 * u16::from(stop.min(DRAWER_WIDTH_DEFAULT))
+}
+
+/// The drawer's share of the page at `stop`.
+#[must_use]
+pub fn drawer_share(stop: u8) -> f32 {
+    f32::from(drawer_tenths(stop)) / 1000.0
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Side {
     Left,
@@ -163,6 +181,8 @@ pub struct Settings {
     pub keyboard: Layout,
     pub key_tone: KeyTone,
     pub drawer: Side,
+    /// The drawer's width as a slider stop, `0..DRAWER_WIDTH_STOPS`.
+    pub drawer_width: u8,
     pub usb: bool,
     /// Reverse scroll (v1.0.1): wheel / two-finger notches move content the
     /// other way ("natural", like a touch screen). Default off = 1.0.
@@ -211,6 +231,12 @@ pub struct Settings {
     /// the keyboard itself (layouts that do not fit it keep the Full board).
     /// `enhanced_keyboard=`.
     pub enhanced_keyboard: bool,
+    /// Settings → Logging: write the log file (the app and its plugins).
+    /// Global, off by default. `log=`.
+    pub log: bool,
+    /// The lowest level the log file records, from DEBUG to CRITICAL (the
+    /// levels of Python's logging). `log_level=`.
+    pub log_level: crate::log::Level,
 }
 
 /// Backlight steps above off: nine stops, 0 to 8 (Display → Backlight).
@@ -308,6 +334,7 @@ impl Default for Settings {
             keyboard: Layout::Full,
             key_tone: KeyTone::Theme,
             drawer: Side::Right,
+            drawer_width: DRAWER_WIDTH_DEFAULT,
             usb: false,
             natural_scroll: false,
             orientation: Orientation::Auto,
@@ -327,6 +354,8 @@ impl Default for Settings {
             ui_lang: UiLang::En,
             experimental: false,
             enhanced_keyboard: true,
+            log: false,
+            log_level: crate::log::Level::Info,
         }
     }
 }
@@ -354,6 +383,8 @@ pub enum Change {
     Keyboard(Layout),
     KeyTone(KeyTone),
     Drawer(Side),
+    /// The drawer's width, as a slider stop.
+    DrawerWidth(u8),
     Usb(bool),
     NaturalScroll(bool),
     Orientation(Orientation),
@@ -377,6 +408,18 @@ pub enum Change {
     /// The backlight step, 0 to [`BACKLIGHT_MAX`] (v1.12). Not a saved
     /// setting: the app sends it to the front light, which keeps it.
     Backlight(u8),
+    /// Turn plugin number `.0` (its place in the Settings → Plugins list) on
+    /// or off. Kept in `plugins.state`, not in the settings file, so
+    /// `Settings` ignores it and the app applies it.
+    Plugin(usize, bool),
+    /// Settings → Logging: the log file on or off (applied at once).
+    Log(bool),
+    /// Settings → Logging → Level.
+    LogLevel(crate::log::Level),
+    /// Set a setting of a plugin: plugin number, the setting's place in its
+    /// declared list, and the chosen option's place. Kept in the plugin's own
+    /// `settings` file, so `Settings` ignores it and the app applies it.
+    PluginSetting(u8, u8, u8),
     /// Keyboard size (v1.4.3): 0 = Auto, or a percentage from `KB_SIZES`.
     KbSize(u16),
     /// Keyboard size Auto on / off (v1.4.4). Off keeps the size Auto was
@@ -488,6 +531,7 @@ impl Settings {
             Change::Keyboard(l) => self.keyboard = l,
             Change::KeyTone(t) => self.key_tone = t,
             Change::Drawer(s) => self.drawer = s,
+            Change::DrawerWidth(w) => self.drawer_width = w.min(DRAWER_WIDTH_DEFAULT),
             Change::Usb(on) => self.usb = on,
             Change::NaturalScroll(on) => self.natural_scroll = on,
             Change::InkPen(p) => self.ink_pen = p,
@@ -527,7 +571,9 @@ impl Settings {
                 }
             }
             Change::EnhancedKeyboard(on) => self.enhanced_keyboard = on,
-            Change::Backlight(_) => {}
+            Change::Log(on) => self.log = on,
+            Change::LogLevel(l) => self.log_level = l,
+            Change::Backlight(_) | Change::Plugin(..) | Change::PluginSetting(..) => {}
             Change::KbAuto(on) => {
                 self.kb_size = if on { 0 } else { self.keyboard_scale() };
             }
@@ -646,6 +692,17 @@ impl Settings {
                     }
                 }
                 "drawer" => s.drawer = parse_side(v).unwrap_or(s.drawer),
+                "drawer_width" => {
+                    // Words from the first builds of this setting still read.
+                    s.drawer_width = match v {
+                        "narrow" => 1,
+                        "medium" => 2,
+                        "wide" => DRAWER_WIDTH_DEFAULT,
+                        n => n
+                            .parse::<u8>()
+                            .map_or(s.drawer_width, |n| n.min(DRAWER_WIDTH_DEFAULT)),
+                    };
+                }
                 "usb" => s.usb = b().unwrap_or(s.usb),
                 "ui_scale" => {
                     if let Ok(n) = v.parse::<u16>() {
@@ -710,6 +767,8 @@ impl Settings {
                 "ui_lang" => s.ui_lang = UiLang::from_code(v).unwrap_or(s.ui_lang),
                 "experimental" => s.experimental = b().unwrap_or(s.experimental),
                 "enhanced_keyboard" => s.enhanced_keyboard = b().unwrap_or(s.enhanced_keyboard),
+                "log" => s.log = b().unwrap_or(s.log),
+                "log_level" => s.log_level = crate::log::Level::parse(v).unwrap_or(s.log_level),
                 _ => {}
             }
         }
@@ -785,8 +844,8 @@ impl Settings {
         let on = |b: bool| if b { "on" } else { "off" };
         format!(
             "keyboard={}\npaper={}\ntype={}\nline={}\nline_words={}\nsize={}\nleading={}\nmargin={}\n\
-             tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\nusb={}\nscroll={}\norientation={}\n\
-             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\nink_words={}\nink_boxes={}\nui_lang_override={}\nui_lang={}\nexperimental={}\nenhanced_keyboard={}\n",
+             tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\ndrawer_width={}\nusb={}\nscroll={}\norientation={}\n\
+             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\nink_words={}\nink_boxes={}\nui_lang_override={}\nui_lang={}\nexperimental={}\nenhanced_keyboard={}\nlog={}\nlog_level={}\n",
             self.keyboard.name(),
             match self.paper {
                 Paper::Day => "day",
@@ -809,6 +868,7 @@ impl Settings {
                 KeyTone::Dark => "dark",
             },
             side(self.drawer),
+            self.drawer_width,
             on(self.usb),
             if self.natural_scroll { "natural" } else { "traditional" },
             match self.orientation {
@@ -846,6 +906,8 @@ impl Settings {
             self.ui_lang.code(),
             on(self.experimental),
             on(self.enhanced_keyboard),
+            on(self.log),
+            self.log_level.key(),
         )
     }
 }
@@ -888,19 +950,52 @@ mod tests {
             Change::Keyboard(Layout::Compact),
             Change::KeyTone(KeyTone::Light),
             Change::Drawer(Side::Left),
+            Change::DrawerWidth(1),
             Change::Usb(true),
             Change::Orientation(Orientation::Landscape),
             Change::LandKeys(LandKeys::Split),
             Change::Pad(Pad::Arrows),
             Change::PadSide(Side::Left),
+            Change::Log(true),
+            Change::LogLevel(crate::log::Level::Error),
         ] {
             s.apply(c);
         }
         assert_eq!(Settings::parse(&s.serialize()), s);
+        assert!(s.log && s.log_level == crate::log::Level::Error);
         assert_eq!(s.tab_kind(), TabKind::Tab);
         assert_eq!(
             (s.size, s.leading, s.margin, s.line_words),
             (22.0, 1.4, 48.0, 15)
+        );
+    }
+
+    #[test]
+    fn logging_is_off_at_info_by_default_and_every_level_round_trips() {
+        use crate::log::Level;
+        let d = Settings::default();
+        assert!(!d.log && d.log_level == Level::Info);
+        for l in Level::ALL {
+            let mut s = Settings::default();
+            s.apply(Change::Log(true));
+            s.apply(Change::LogLevel(l));
+            let text = s.serialize();
+            assert!(
+                text.contains(&format!("log=on\nlog_level={}\n", l.key())),
+                "{text}"
+            );
+            assert_eq!(Settings::parse(&text), s, "{l:?}");
+        }
+        // A file from before logging has neither key: off, INFO.
+        let old = Settings::parse("keyboard=compact\nusb=on\n");
+        assert!(!old.log && old.log_level == Level::Info);
+        // Garbage keeps the default (or what was there), in any case.
+        let g = Settings::parse("log=maybe\nlog_level=LOUD\n");
+        assert!(!g.log && g.log_level == Level::Info);
+        let g = Settings::parse("log=on\nlog_level=WARNING\n");
+        assert!(
+            g.log && g.log_level == Level::Warning,
+            "names are case-insensitive"
         );
     }
 
@@ -956,5 +1051,30 @@ mod tests {
         s.apply(Change::Paper(Paper::Day));
         s.apply(Change::KeyTone(KeyTone::Dark));
         assert!(s.keys_dark());
+    }
+
+    #[test]
+    fn drawer_width_has_five_even_stops_reads_old_words_and_clamps() {
+        assert_eq!(Settings::default().drawer_width, DRAWER_WIDTH_DEFAULT);
+        let tenths: Vec<u16> = (0..DRAWER_WIDTH_STOPS).map(drawer_tenths).collect();
+        assert_eq!(tenths, [200, 275, 350, 425, 500]);
+        assert_eq!(drawer_share(DRAWER_WIDTH_DEFAULT), 0.5);
+        let mut s = Settings::default();
+        s.apply(Change::DrawerWidth(1));
+        assert_eq!(Settings::parse(&s.serialize()).drawer_width, 1);
+        s.apply(Change::DrawerWidth(200));
+        assert_eq!(s.drawer_width, DRAWER_WIDTH_DEFAULT);
+        for (v, want) in [
+            ("narrow", 1),
+            ("medium", 2),
+            ("wide", 4),
+            ("3", 3),
+            ("99", 4),
+        ] {
+            let g = Settings::parse(&format!("drawer_width={v}\n"));
+            assert_eq!(g.drawer_width, want, "{v}");
+        }
+        let g = Settings::parse("drawer_width=sideways\n");
+        assert_eq!(g.drawer_width, DRAWER_WIDTH_DEFAULT);
     }
 }

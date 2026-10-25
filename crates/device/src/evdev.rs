@@ -101,12 +101,12 @@ impl Transform {
 /// not report it. One touchscreen per process, so one value.
 static CONTACT_MAJOR: std::sync::atomic::AtomicI32 = std::sync::atomic::AtomicI32::new(-1);
 
-/// Odd touch input goes to stderr (the device log) so a stray-line report
-/// can be traced; capped so a noisy panel cannot fill the log.
+/// Odd touch input goes to the log (WARNING) so a stray-line report can be
+/// traced; capped so a noisy panel cannot fill it.
 pub fn log_anomaly(msg: std::fmt::Arguments) {
     static N: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
     if N.fetch_add(1, std::sync::atomic::Ordering::Relaxed) < 400 {
-        eprintln!("touch: {msg}");
+        sigma_core::warn!("touch", "{msg}");
     }
 }
 
@@ -115,8 +115,8 @@ pub fn log_anomaly(msg: std::fmt::Arguments) {
 fn log_ghost(msg: std::fmt::Arguments) {
     static N: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
     match N.fetch_add(1, std::sync::atomic::Ordering::Relaxed) {
-        0..=99 => eprintln!("touch: {msg}"),
-        100 => eprintln!("touch: more corner reports ignored (not logged)"),
+        0..=99 => sigma_core::warn!("touch", "{msg}"),
+        100 => sigma_core::warn!("touch", "more corner reports ignored (not logged)"),
         _ => {}
     }
 }

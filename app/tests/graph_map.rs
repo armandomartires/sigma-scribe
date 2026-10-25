@@ -17,6 +17,7 @@ impl Rig {
         let d = std::env::temp_dir().join(format!("sigma-map-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
         let mut app = App::new(1440, 1920, d.clone());
+        app.set_builtin_graph(true); // this tests the built-in Graph
         for (n, body) in [
             ("a.md", "[[b]] [[c]]"),
             ("b.md", "[[c]]"),

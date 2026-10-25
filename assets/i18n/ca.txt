@@ -862,3 +862,97 @@ Turn off Auto keyboard size
 
 Dark mode
 = Mode fosc
+
+# Settings → Plugins
+Plugins
+= Complements
+
+Installed
+= Instal·lats
+
+No plugins installed
+= No hi ha cap complement instal·lat
+
+Put plugins in .adds/sigma-scribe/plugins
+= Posa els complements a .adds/sigma-scribe/plugins
+
+Screen
+= Pantalla
+
+Font
+= Tipus de lletra
+
+Dictionary
+= Diccionari
+
+Handwriting model
+= Model d'escriptura manual
+
+Word list
+= Llista de paraules
+
+Translation
+= Traducció
+
+Keyboard layout
+= Disposició del teclat
+
+Icons
+= Icones
+
+restart to apply
+= reinicia per aplicar
+
+Needs a newer app
+= Cal una versió més recent de l'aplicació
+
+# Graph plugin: loading, progress and its settings
+Quick
+= Ràpid
+
+Best
+= Millor
+
+Labels
+= Etiquetes
+
+Start on
+= Comença a
+
+Turn the plugin on first
+= Activa primer el complement
+
+Opening the graph…
+= S'està obrint el graf…
+
+Building the graph…
+= S'està construint el graf…
+
+# Settings → Logging
+Logging
+= Registre
+
+Level
+= Nivell
+
+Debug
+= Depuració
+
+Info
+= Info
+
+Warning
+= Advertència
+
+Error
+= Error
+
+Critical
+= Crític
+
+Log file
+= Fitxer de registre
+
+Drawer width
+= Amplada del calaix
+

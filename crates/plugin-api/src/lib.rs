@@ -1,6 +1,7 @@
-//! Wire format between Sigma Scribe and its WASM screen plugins.
+//! Wire format between Sigma Scribe and its WASM plugins.
 //!
-//! A screen plugin owns a full-screen body. The host sends it [`Event`]s
+//! A screen plugin owns a full-screen body; a pane plugin owns the body of
+//! one side-drawer pane (Contents, To-dos, Scratch) and draws it beside the page. The host sends it [`Event`]s
 //! and the plugin answers each with a [`Frame`]: a draw list, a hit list
 //! and actions. Everything is little-endian bytes, versioned by [`ABI`],
 //! and decoding is bounds-checked and size-limited, so a broken plugin or
@@ -14,10 +15,10 @@
 //!   next call.
 //!
 //! The host provides (module `sigma`): `text_width`, `ascent`, `tr`,
-//! `cache_get` and `cache_put` (see `sigma-plugin-host`).
+//! `cache_get`, `cache_put`, `log` and `log_level` (see `sigma-plugin-host`).
 
 /// Wire format version. Bumped on any incompatible change.
-pub const ABI: u32 = 1;
+pub const ABI: u32 = 4;
 
 /// Decoding limits.
 pub const MAX_OPS: usize = 200_000;
@@ -25,6 +26,9 @@ pub const MAX_HITS: usize = 50_000;
 pub const MAX_NOTES: usize = 50_000;
 pub const MAX_EDGES: usize = 500_000;
 pub const MAX_STR: usize = 8 * 1024;
+pub const MAX_SETTINGS: usize = 64;
+pub const MAX_TODOS: usize = 20_000;
+pub const MAX_HEADINGS: usize = 5_000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DecodeError;
@@ -240,6 +244,14 @@ pub enum Action {
     OpenNote(u32),
     /// Open note number `n` in preview (what tapping a map node twice does).
     PreviewNote(u32),
+    /// Pane plugins: check or uncheck to-do number `n` (index into
+    /// [`Scene::todos`]). The pane stays open.
+    ToggleTodo(u32),
+    /// Pane plugins: open the note of to-do `n` at its line.
+    GotoTodo(u32),
+    /// Pane plugins: jump to heading `n` (index into [`Scene::headings`]) of
+    /// the open note.
+    GotoHeading(u32),
 }
 
 /// How much of the screen the host should refresh.
@@ -259,9 +271,25 @@ pub enum Redraw {
 pub struct Frame {
     pub ops: Vec<Op>,
     pub hits: Vec<Hit>,
-    /// Every action leaves the screen, so the host applies only the first.
+    /// A screen's actions all leave it, so the host applies only the first;
+    /// a pane stays open, so the host applies every action in order.
     pub actions: Vec<Action>,
     pub redraw: Redraw,
+    /// The plugin has more to do (building a layout, say): the host shows
+    /// this frame and, when idle, sends [`Event::Step`] for the next one.
+    /// The frame is the progress picture meanwhile.
+    pub pending: bool,
+    /// Panes: where the host draws its text field (the Scratch pad), with
+    /// the placeholder shown while the field is empty. The host owns the
+    /// text, the keyboard, handwriting and saving; the plugin only places it.
+    pub field: Option<Field>,
+}
+
+/// A text field the host draws and edits inside a pane.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Field {
+    pub rect: Rect,
+    pub placeholder: String,
 }
 
 impl Frame {
@@ -330,9 +358,30 @@ impl Frame {
                     w.u8(2);
                     w.u32(*n);
                 }
+                Action::ToggleTodo(n) => {
+                    w.u8(3);
+                    w.u32(*n);
+                }
+                Action::GotoTodo(n) => {
+                    w.u8(4);
+                    w.u32(*n);
+                }
+                Action::GotoHeading(n) => {
+                    w.u8(5);
+                    w.u32(*n);
+                }
             }
         }
         w.u8(self.redraw as u8);
+        w.u8(u8::from(self.pending));
+        match &self.field {
+            Some(f) => {
+                w.u8(1);
+                f.rect.put(&mut w);
+                w.str(&f.placeholder);
+            }
+            None => w.u8(0),
+        }
         w.0
     }
 
@@ -385,6 +434,9 @@ impl Frame {
                 0 => Action::Close,
                 1 => Action::OpenNote(r.u32()?),
                 2 => Action::PreviewNote(r.u32()?),
+                3 => Action::ToggleTodo(r.u32()?),
+                4 => Action::GotoTodo(r.u32()?),
+                5 => Action::GotoHeading(r.u32()?),
                 _ => return Err(DecodeError),
             });
         }
@@ -393,6 +445,19 @@ impl Frame {
             1 => Redraw::Partial,
             2 => Redraw::Clean,
             3 => Redraw::Full,
+            _ => return Err(DecodeError),
+        };
+        f.pending = match r.u8()? {
+            0 => false,
+            1 => true,
+            _ => return Err(DecodeError),
+        };
+        f.field = match r.u8()? {
+            0 => None,
+            1 => Some(Field {
+                rect: Rect::get(&mut r)?,
+                placeholder: r.str()?,
+            }),
             _ => return Err(DecodeError),
         };
         r.finish()?;
@@ -426,6 +491,37 @@ pub struct Scene {
     /// How many links reach a note (what footers say), which counts
     /// repeated links that `edges` lists once.
     pub links: u32,
+    /// The plugin's own settings as the reader set them, by key: the chosen
+    /// option's text as the plugin declared it ("List", "All", ...). Every
+    /// declared setting is present.
+    pub settings: Vec<(String, String)>,
+    /// Panes: the pane's left edge and the host's live to-do list (every
+    /// box in the library, the open note and the scratch pad taken from
+    /// their buffers). Empty for a screen.
+    pub left: i32,
+    pub todos: Vec<TodoRow>,
+    /// Panes: the headings of the open note, in order.
+    pub headings: Vec<HeadingRow>,
+}
+
+/// One heading of the open note.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HeadingRow {
+    /// 1 for `#` up to 6.
+    pub level: u8,
+    /// The line it starts on (0-based).
+    pub line: u32,
+    pub text: String,
+}
+
+/// One to-do as the host lists it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TodoRow {
+    /// Index into [`Scene::notes`].
+    pub note: u32,
+    pub line: u32,
+    pub done: bool,
+    pub text: String,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -460,6 +556,8 @@ pub enum Event {
         forward: bool,
     },
     Back,
+    /// The host is idle and the last frame was `pending`: do the next piece.
+    Step,
 }
 
 impl Event {
@@ -486,6 +584,25 @@ impl Event {
                     w.u32(b);
                 }
                 w.u32(s.links);
+                w.u32(s.settings.len() as u32);
+                for (k, v) in &s.settings {
+                    w.str(k);
+                    w.str(v);
+                }
+                w.i32(s.left);
+                w.u32(s.todos.len() as u32);
+                for t in &s.todos {
+                    w.u32(t.note);
+                    w.u32(t.line);
+                    w.u8(u8::from(t.done));
+                    w.str(&t.text);
+                }
+                w.u32(s.headings.len() as u32);
+                for h in &s.headings {
+                    w.u8(h.level);
+                    w.u32(h.line);
+                    w.str(&h.text);
+                }
             }
             Event::Tap { x, y } => {
                 w.u8(1);
@@ -509,6 +626,7 @@ impl Event {
                 w.u8(u8::from(*forward));
             }
             Event::Back => w.u8(5),
+            Event::Step => w.u8(6),
         }
         w.0
     }
@@ -534,6 +652,32 @@ impl Event {
                     edges.push((r.u32()?, r.u32()?));
                 }
                 let links = r.u32()?;
+                let mut settings = Vec::new();
+                for _ in 0..r.count(MAX_SETTINGS, 8)? {
+                    settings.push((r.str()?, r.str()?));
+                }
+                let left = r.i32()?;
+                let mut todos = Vec::new();
+                for _ in 0..r.count(MAX_TODOS, 13)? {
+                    todos.push(TodoRow {
+                        note: r.u32()?,
+                        line: r.u32()?,
+                        done: match r.u8()? {
+                            0 => false,
+                            1 => true,
+                            _ => return Err(DecodeError),
+                        },
+                        text: r.str()?,
+                    });
+                }
+                let mut headings = Vec::new();
+                for _ in 0..r.count(MAX_HEADINGS, 9)? {
+                    headings.push(HeadingRow {
+                        level: r.u8()?,
+                        line: r.u32()?,
+                        text: r.str()?,
+                    });
+                }
                 Event::Open(Scene {
                     width,
                     height,
@@ -544,6 +688,10 @@ impl Event {
                     notes,
                     edges,
                     links,
+                    settings,
+                    left,
+                    todos,
+                    headings,
                 })
             }
             1 => Event::Tap {
@@ -569,6 +717,7 @@ impl Event {
                 forward: r.u8()? != 0,
             },
             5 => Event::Back,
+            6 => Event::Step,
             _ => return Err(DecodeError),
         };
         r.finish()?;
@@ -616,8 +765,20 @@ mod tests {
                 rect: Rect::new(1, 1, 44, 44),
                 label: "Node:a.md".into(),
             }],
-            actions: vec![Action::OpenNote(3), Action::PreviewNote(1), Action::Close],
+            actions: vec![
+                Action::OpenNote(3),
+                Action::PreviewNote(1),
+                Action::ToggleTodo(2),
+                Action::GotoTodo(0),
+                Action::GotoHeading(0),
+                Action::Close,
+            ],
             redraw: Redraw::Clean,
+            pending: true,
+            field: Some(Field {
+                rect: Rect::new(4, 60, 300, 500),
+                placeholder: "A side note.".into(),
+            }),
         }
     }
 
@@ -643,6 +804,30 @@ mod tests {
             ],
             edges: vec![(0, 1), (1, 0)],
             links: 3,
+            settings: vec![
+                ("view".into(), "List".into()),
+                ("labels".into(), "All".into()),
+            ],
+            left: 640,
+            todos: vec![
+                TodoRow {
+                    note: 1,
+                    line: 4,
+                    done: false,
+                    text: "call Ana".into(),
+                },
+                TodoRow {
+                    note: 0,
+                    line: 0,
+                    done: true,
+                    text: "ship 日本".into(),
+                },
+            ],
+            headings: vec![HeadingRow {
+                level: 2,
+                line: 7,
+                text: "Part two".into(),
+            }],
         }
     }
 
@@ -673,6 +858,7 @@ mod tests {
             },
             Event::PageTurn { forward: true },
             Event::Back,
+            Event::Step,
         ] {
             assert_eq!(Event::decode(&e.encode()), Ok(e));
         }
@@ -710,6 +896,36 @@ mod tests {
         w.f32(1.0);
         w.f32(1.0);
         w.u32(MAX_NOTES as u32 + 1);
+        assert!(Event::decode(&w.0).is_err());
+        // An Open event claiming MAX_TODOS + 1 to-dos.
+        let mut w = Writer::default();
+        w.u8(0);
+        for _ in 0..4 {
+            w.i32(0);
+        }
+        w.f32(1.0);
+        w.f32(1.0);
+        w.u32(0); // notes
+        w.u32(0); // edges
+        w.u32(0); // links
+        w.u32(0); // settings
+        w.i32(0); // left
+        w.u32(MAX_TODOS as u32 + 1);
+        assert!(Event::decode(&w.0).is_err());
+        // An Open event claiming MAX_HEADINGS + 1 headings.
+        let mut w = Writer::default();
+        w.u8(0);
+        for _ in 0..4 {
+            w.i32(0);
+        }
+        w.f32(1.0);
+        w.f32(1.0);
+        for _ in 0..4 {
+            w.u32(0); // notes, edges, links, settings
+        }
+        w.i32(0); // left
+        w.u32(0); // todos
+        w.u32(MAX_HEADINGS as u32 + 1);
         assert!(Event::decode(&w.0).is_err());
     }
 

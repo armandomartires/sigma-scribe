@@ -7,10 +7,11 @@
 use crate::{merge, App, GraphRow};
 use sigma_core::plugins;
 use sigma_core::NotePath;
-use sigma_device::Refresh;
+use sigma_device::{Device, Event, Refresh};
 use sigma_plugin_api::{Action, Event as PEvent, Frame, Note, Phase as PPhase, Redraw, Scene};
 use sigma_plugin_host::{DirCache, Env, Limits, Plugin};
 use sigma_render::i18n::tr;
+use sigma_render::options::{PluginRow, PluginSetting};
 use sigma_render::plugin_screen::face;
 use sigma_render::Fonts;
 
@@ -22,7 +23,10 @@ const CACHE_ENTRIES: usize = 16;
 const CACHE_BYTES: u64 = 1 << 20;
 
 struct ScreenEnv {
-    fonts: Fonts,
+    /// The app's own fonts, shared: parsing them costs about a second.
+    fonts: std::rc::Rc<Fonts>,
+    /// The plugin's id, which tags its log lines (`plugin/graph-map`).
+    id: String,
 }
 
 impl Env for ScreenEnv {
@@ -35,19 +39,29 @@ impl Env for ScreenEnv {
     fn tr(&self, s: &str) -> String {
         tr(s).into_owned()
     }
+    fn log(&self, level: i32, msg: &str) {
+        sigma_core::log::log(
+            sigma_core::log::Level::from_number(level),
+            &format!("plugin/{}", self.id),
+            format_args!("{msg}"),
+        );
+    }
+    fn log_floor(&self) -> i32 {
+        sigma_core::log::floor() as i32
+    }
 }
 
 /// Identifies a plugin module on disk, so a loaded instance is reused only
 /// while the file is unchanged.
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct Stamp {
+pub(crate) struct Stamp {
     path: std::path::PathBuf,
     modified: Option<std::time::SystemTime>,
     len: u64,
 }
 
 impl Stamp {
-    fn of(path: &std::path::Path) -> std::io::Result<Self> {
+    pub(crate) fn of(path: &std::path::Path) -> std::io::Result<Self> {
         let m = std::fs::metadata(path)?;
         Ok(Self {
             path: path.to_path_buf(),
@@ -64,10 +78,19 @@ pub struct IdlePlugin {
     stamp: Stamp,
 }
 
+/// The module still to load and the `Open` event still to send.
+struct Opening {
+    id: String,
+    wasm: std::path::PathBuf,
+    scene: Scene,
+}
+
 /// A plugin screen that is open.
 pub struct PluginScreen {
-    plugin: Plugin,
+    /// `None` while the module loads (the screen shows a loading picture).
+    plugin: Option<Plugin>,
     stamp: Stamp,
+    opening: Option<Opening>,
     frame: Frame,
     /// The notes the plugin was given, so actions can name them.
     notes: Vec<NotePath>,
@@ -88,6 +111,135 @@ impl App {
         self.plugins_root = root.into();
         self.plugin_failed = false;
         self.plugin_idle = None;
+        self.sync_plugin_icons();
+    }
+
+    /// Shows the Graph icon even with the Graph plugin off, opening the
+    /// built-in Graph (the reference the plugin is tested against, and the
+    /// emulator's Graph). Off in the app.
+    pub fn set_builtin_graph(&mut self, on: bool) {
+        self.graph_builtin = on;
+        self.sync_plugin_icons();
+    }
+
+    /// The Graph icon is in the title bar while the Graph plugin is on (or
+    /// the built-in Graph is wanted), and gone while it is off.
+    pub(crate) fn sync_plugin_icons(&mut self) {
+        self.screen.graph_on = self.graph_builtin
+            || plugins::enabled_screen_in(&self.plugins_root, GRAPH_PLUGIN).is_some();
+        self.sync_pane_slots();
+    }
+
+    /// A plugin screen is loading or building: it wants `Tick`s to go on.
+    #[must_use]
+    pub fn plugin_busy(&self) -> bool {
+        self.plugin_screen
+            .as_ref()
+            .is_some_and(|p| p.opening.is_some() || p.frame.pending)
+    }
+
+    /// Runs idle ticks, rendering each, until the plugin screen is done
+    /// loading and building (what the main loop does between events).
+    pub fn plugin_settle(&mut self, dev: &mut dyn Device) {
+        for _ in 0..10_000 {
+            if !self.plugin_busy() {
+                return;
+            }
+            let t = self.now + 50;
+            if let Some(r) = self.handle(Event::Tick { t }) {
+                let _ = self.render(dev, r);
+            }
+        }
+    }
+
+    /// Reads the installed plugins for Settings → Plugins.
+    pub(crate) fn refresh_plugin_list(&mut self) {
+        let app = plugins::Version::parse(env!("CARGO_PKG_VERSION")).unwrap_or_default();
+        let root = self.plugins_root.clone();
+        self.plugin_list = plugins::list_in(&root)
+            .into_iter()
+            .map(|l| {
+                let chosen = plugins::settings_in(&root, &l.manifest);
+                PluginRow {
+                    compatible: l.manifest.compatible_with(app),
+                    restart: !matches!(
+                        l.manifest.kind,
+                        plugins::PluginKind::Screen | plugins::PluginKind::Pane
+                    ),
+                    kind: l.manifest.kind.label(),
+                    version: l.manifest.version.to_string(),
+                    settings: l
+                        .manifest
+                        .settings
+                        .iter()
+                        .zip(chosen)
+                        .map(|(d, selected)| PluginSetting {
+                            label: d.label.clone(),
+                            options: d.options.clone(),
+                            selected,
+                        })
+                        .collect(),
+                    id: l.manifest.id,
+                    name: l.manifest.name,
+                    enabled: l.enabled,
+                }
+            })
+            .collect();
+    }
+
+    /// Settings → Plugins: turns plugin number `i` of the list on or off.
+    /// Screen plugins take effect the next time their screen opens; data
+    /// packs when the app next starts.
+    pub(crate) fn set_plugin(&mut self, i: usize, on: bool) -> Refresh {
+        // The switch means the plugin the page showed at that place, even if
+        // the folder changed since.
+        let id = self.plugin_list.get(i).map(|p| p.id.clone());
+        if let Some(id) = &id {
+            match plugins::set_enabled_in(&self.plugins_root, id, on) {
+                Ok(()) => {
+                    sigma_core::info!("plugin", "{id}: switched {}", if on { "on" } else { "off" });
+                    if !on {
+                        // A switched-off plugin need not stay in memory.
+                        self.plugin_idle = None;
+                    }
+                    // A plugin that failed earlier gets another chance.
+                    self.plugin_failed = false;
+                    self.pane_failed = [false; 3];
+                }
+                Err(e) => sigma_core::error!("plugin", "{id}: {e}"),
+            }
+        }
+        self.refresh_plugin_list();
+        self.sync_plugin_icons();
+        Refresh::Full
+    }
+
+    /// Settings → Plugins → a plugin's page: sets one of its settings. The
+    /// plugin reads them when its screen next opens.
+    pub(crate) fn set_plugin_setting(
+        &mut self,
+        plugin: usize,
+        setting: usize,
+        option: usize,
+    ) -> Refresh {
+        // The plugin the page showed, by id, even if the folder changed since.
+        let id = self.plugin_list.get(plugin).map(|p| p.id.clone());
+        if let Some(id) = id {
+            let key = plugins::manifest_in(&self.plugins_root, &id)
+                .and_then(|m| m.settings.get(setting).map(|d| (m.clone(), d.key.clone())));
+            if let Some((manifest, key)) = key {
+                match plugins::set_setting_in(&self.plugins_root, &manifest, &key, option) {
+                    Ok(()) => sigma_core::info!(
+                        "plugin",
+                        "{id}: {key} = {}",
+                        manifest.settings[setting].options[option]
+                    ),
+                    Err(e) => sigma_core::error!("plugin", "{id}: {e}"),
+                }
+            }
+        }
+        self.refresh_plugin_list();
+        Refresh::Partial
     }
 
     /// Closes the Graph screen, built-in or plugin.
@@ -96,9 +248,9 @@ impl App {
         self.map_drag = None;
         // Keep a healthy plugin loaded for the next open.
         if let Some(ps) = self.plugin_screen.take() {
-            if !ps.plugin.is_poisoned() {
+            if let Some(plugin) = ps.plugin.filter(|p| !p.is_poisoned()) {
                 self.plugin_idle = Some(IdlePlugin {
-                    plugin: ps.plugin,
+                    plugin,
                     stamp: ps.stamp,
                 });
             }
@@ -107,6 +259,10 @@ impl App {
 
     /// Tries to open the Graph as a plugin screen. False when no usable
     /// plugin is enabled, so the caller opens the built-in one.
+    ///
+    /// A plugin that is already loaded opens at once. Otherwise the screen
+    /// appears with a loading picture and the module loads on the next idle
+    /// tick, so the reader sees something happen.
     pub(crate) fn open_plugin_graph(
         &mut self,
         notes: &[NotePath],
@@ -121,52 +277,70 @@ impl App {
         else {
             return false;
         };
-        match self.load_plugin(&manifest.id, &wasm, rows, links, link_count) {
-            Ok((plugin, frame, stamp)) => {
-                self.plugin_screen = Some(PluginScreen {
-                    plugin,
-                    stamp,
-                    frame,
-                    notes: notes.to_vec(),
-                    title: manifest.name,
-                    drag: None,
-                });
-                true
-            }
+        let stamp = match Stamp::of(&wasm) {
+            Ok(s) => s,
             Err(e) => {
-                eprintln!("sigma-scribe: plugin {GRAPH_PLUGIN}: {e}");
+                sigma_core::error!("plugin", "{GRAPH_PLUGIN}: {e}");
                 self.plugin_failed = true;
-                false
+                return false;
+            }
+        };
+        let scene = self.plugin_scene(&manifest, rows, links, link_count);
+        let mut ps = PluginScreen {
+            plugin: None,
+            stamp: stamp.clone(),
+            opening: None,
+            frame: Frame::default(),
+            notes: notes.to_vec(),
+            title: manifest.name.clone(),
+            drag: None,
+        };
+        match self.plugin_idle.take().filter(|i| i.stamp == stamp) {
+            Some(i) => {
+                let mut plugin = i.plugin;
+                let t0 = std::time::Instant::now();
+                match plugin.call(&PEvent::Open(scene)) {
+                    Ok(frame) => {
+                        sigma_core::debug!(
+                            "plugin",
+                            "{GRAPH_PLUGIN}: opened in {} ms (kept loaded{})",
+                            t0.elapsed().as_millis(),
+                            if frame.pending { ", building" } else { "" }
+                        );
+                        ps.frame = frame;
+                        ps.plugin = Some(plugin);
+                    }
+                    Err(e) => {
+                        sigma_core::error!("plugin", "{GRAPH_PLUGIN}: {e}");
+                        self.plugin_failed = true;
+                        return false;
+                    }
+                }
+            }
+            None => {
+                ps.frame = self.screen.plugin_loading_frame(&self.keyboard);
+                ps.opening = Some(Opening {
+                    id: manifest.id,
+                    wasm,
+                    scene,
+                });
             }
         }
+        self.plugin_screen = Some(ps);
+        true
     }
 
-    fn load_plugin(
-        &mut self,
-        id: &str,
-        wasm: &std::path::Path,
+    /// What the plugin is told when its screen opens: the library, the
+    /// layout of the page, and the reader's settings for this plugin.
+    fn plugin_scene(
+        &self,
+        manifest: &plugins::Manifest,
         rows: &[GraphRow],
         links: &[(usize, usize)],
         link_count: usize,
-    ) -> Result<(Plugin, Frame, Stamp), String> {
-        let stamp = Stamp::of(wasm).map_err(|e| e.to_string())?;
-        let idle = self.plugin_idle.take().filter(|i| i.stamp == stamp);
-        let mut plugin = match idle {
-            Some(i) => i.plugin,
-            None => {
-                let bytes = std::fs::read(wasm).map_err(|e| e.to_string())?;
-                let cache = DirCache::new(
-                    self.plugins_root.join(id).join(".cache"),
-                    CACHE_ENTRIES,
-                    CACHE_BYTES,
-                );
-                let env = Box::new(ScreenEnv {
-                    fonts: Fonts::new(),
-                });
-                Plugin::load(&bytes, env, cache, Limits::default()).map_err(|e| e.to_string())?
-            }
-        };
-        let scene = Scene {
+    ) -> Scene {
+        let chosen = plugins::settings_in(&self.plugins_root, manifest);
+        Scene {
             width: self.screen.width as i32,
             height: self.screen.height as i32,
             scale: self.screen.scale().0,
@@ -183,29 +357,97 @@ impl App {
                 .collect(),
             edges: links.iter().map(|&(a, b)| (a as u32, b as u32)).collect(),
             links: link_count as u32,
-        };
-        let frame = plugin
-            .call(&PEvent::Open(scene))
-            .map_err(|e| e.to_string())?;
-        Ok((plugin, frame, stamp))
+            settings: manifest
+                .settings
+                .iter()
+                .zip(chosen)
+                .map(|(d, i)| (d.key.clone(), d.options[i].clone()))
+                .collect(),
+            left: 0,
+            todos: Vec::new(),
+            headings: Vec::new(),
+        }
+    }
+
+    /// Loads the module (validating it) with its cache folder and fonts.
+    pub(crate) fn load_module(&self, id: &str, wasm: &std::path::Path) -> Result<Plugin, String> {
+        let bytes = std::fs::read(wasm).map_err(|e| e.to_string())?;
+        let cache = DirCache::new(
+            self.plugins_root.join(id).join(".cache"),
+            CACHE_ENTRIES,
+            CACHE_BYTES,
+        );
+        let env = Box::new(ScreenEnv {
+            fonts: self.screen.fonts.clone(),
+            id: id.to_owned(),
+        });
+        Plugin::load(&bytes, env, cache, Limits::default()).map_err(|e| e.to_string())
+    }
+
+    /// The next piece of a plugin screen's work, on an idle tick: load the
+    /// module and send `Open`, or send `Step` while the plugin says it has
+    /// more to do (a layout being built, which shows its own progress).
+    pub(crate) fn plugin_step(&mut self) -> Option<Refresh> {
+        let ps = self.plugin_screen.as_mut()?;
+        if let Some(job) = ps.opening.take() {
+            let t0 = std::time::Instant::now();
+            let id = job.id.clone();
+            let opened = self.load_module(&job.id, &job.wasm).and_then(|mut p| {
+                let loaded = t0.elapsed();
+                let f = p
+                    .call(&PEvent::Open(job.scene))
+                    .map_err(|e| e.to_string())?;
+                Ok((p, f, loaded, t0.elapsed() - loaded))
+            });
+            return match opened {
+                Ok((plugin, frame, loaded, opened)) => {
+                    sigma_core::info!(
+                        "plugin",
+                        "{id}: loaded in {} ms, opened in {} ms{}",
+                        loaded.as_millis(),
+                        opened.as_millis(),
+                        if frame.pending { " (building)" } else { "" }
+                    );
+                    let ps = self.plugin_screen.as_mut()?;
+                    ps.plugin = Some(plugin);
+                    ps.frame = frame.clone();
+                    self.plugin_apply(&frame)
+                }
+                Err(e) => Some(self.plugin_failed_over(&e)),
+            };
+        }
+        if ps.frame.pending {
+            let t0 = std::time::Instant::now();
+            let r = self.plugin_event(&PEvent::Step);
+            sigma_core::debug!("plugin", "step took {} ms", t0.elapsed().as_millis());
+            return r;
+        }
+        None
+    }
+
+    /// A plugin failed: drop it and open the built-in Graph instead.
+    fn plugin_failed_over(&mut self, why: &str) -> Refresh {
+        sigma_core::error!(
+            "plugin",
+            "{GRAPH_PLUGIN}: {why}; the built-in Graph opens instead"
+        );
+        self.plugin_failed = true;
+        self.plugin_screen = None;
+        self.open_graph();
+        Refresh::Full
     }
 
     /// Sends an event to the open plugin and applies its answer. A failing
-    /// plugin is dropped and the built-in Graph opens instead.
+    /// plugin is dropped and the built-in Graph opens instead. While the
+    /// module is still loading there is nobody to send to.
     fn plugin_event(&mut self, ev: &PEvent) -> Option<Refresh> {
         let ps = self.plugin_screen.as_mut()?;
-        match ps.plugin.call(ev) {
+        match ps.plugin.as_mut()?.call(ev) {
             Ok(frame) => {
                 ps.frame = frame.clone();
                 self.plugin_apply(&frame)
             }
-            Err(e) => {
-                eprintln!("sigma-scribe: plugin {GRAPH_PLUGIN}: {e}");
-                self.plugin_failed = true;
-                self.plugin_screen = None;
-                self.open_graph();
-                Some(Refresh::Full)
-            }
+            Err(e) => Some(self.plugin_failed_over(&e.to_string())),
         }
     }
 
@@ -218,6 +460,8 @@ impl App {
                     .and_then(|p| p.notes.get(n as usize).cloned())
             };
             match *a {
+                // Pane actions mean nothing on a screen.
+                Action::ToggleTodo(_) | Action::GotoTodo(_) | Action::GotoHeading(_) => {}
                 Action::Close => {
                     self.close_graph();
                     return Some(Refresh::Full);

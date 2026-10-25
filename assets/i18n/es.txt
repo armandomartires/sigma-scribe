@@ -862,3 +862,97 @@ Turn off Auto keyboard size
 
 Dark mode
 = Modo oscuro
+
+# Settings → Plugins
+Plugins
+= Complementos
+
+Installed
+= Instalados
+
+No plugins installed
+= No hay complementos instalados
+
+Put plugins in .adds/sigma-scribe/plugins
+= Coloca los complementos en .adds/sigma-scribe/plugins
+
+Screen
+= Pantalla
+
+Font
+= Fuente
+
+Dictionary
+= Diccionario
+
+Handwriting model
+= Modelo de escritura a mano
+
+Word list
+= Lista de palabras
+
+Translation
+= Traducción
+
+Keyboard layout
+= Distribución del teclado
+
+Icons
+= Iconos
+
+restart to apply
+= reinicia para aplicar
+
+Needs a newer app
+= Requiere una versión más reciente de la app
+
+# Graph plugin: loading, progress and its settings
+Quick
+= Rápido
+
+Best
+= Mejor
+
+Labels
+= Etiquetas
+
+Start on
+= Empezar en
+
+Turn the plugin on first
+= Activa primero el complemento
+
+Opening the graph…
+= Abriendo el grafo…
+
+Building the graph…
+= Construyendo el grafo…
+
+# Settings → Logging
+Logging
+= Registro
+
+Level
+= Nivel
+
+Debug
+= Depuración
+
+Info
+= Info
+
+Warning
+= Advertencia
+
+Error
+= Error
+
+Critical
+= Crítico
+
+Log file
+= Archivo de registro
+
+Drawer width
+= Ancho del panel
+

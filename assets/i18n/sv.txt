@@ -862,3 +862,97 @@ Turn off Auto keyboard size
 
 Dark mode
 = Mörkt läge
+
+# Settings → Plugins
+Plugins
+= Tillägg
+
+Installed
+= Installerade
+
+No plugins installed
+= Inga tillägg installerade
+
+Put plugins in .adds/sigma-scribe/plugins
+= Lägg tilläggen i .adds/sigma-scribe/plugins
+
+Screen
+= Skärm
+
+Font
+= Teckensnitt
+
+Dictionary
+= Ordbok
+
+Handwriting model
+= Modell för handskrift
+
+Word list
+= Ordlista
+
+Translation
+= Översättning
+
+Keyboard layout
+= Tangentbordslayout
+
+Icons
+= Ikoner
+
+restart to apply
+= starta om för att tillämpa
+
+Needs a newer app
+= Kräver en nyare version av appen
+
+# Graph plugin: loading, progress and its settings
+Quick
+= Snabb
+
+Best
+= Bäst
+
+Labels
+= Etiketter
+
+Start on
+= Starta med
+
+Turn the plugin on first
+= Slå på tillägget först
+
+Opening the graph…
+= Öppnar grafen…
+
+Building the graph…
+= Bygger grafen…
+
+# Settings → Logging
+Logging
+= Loggning
+
+Level
+= Nivå
+
+Debug
+= Felsökning
+
+Info
+= Info
+
+Warning
+= Varning
+
+Error
+= Fel
+
+Critical
+= Kritisk
+
+Log file
+= Loggfil
+
+Drawer width
+= Lådans bredd
+

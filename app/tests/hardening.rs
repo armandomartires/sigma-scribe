@@ -88,6 +88,8 @@ fn walk(app: &mut App, tag: &str, bad: &mut Vec<String>) {
 fn every_target_is_44px_and_on_screen_in_both_orientations() {
     let dir = fresh("targets");
     let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_graph(true); // audit the Graph sheet too
+    app.set_builtin_panes(true);
     let mut bad = Vec::new();
     walk(&mut app, "portrait", &mut bad);
     for keys in ["Split", "Full", "Centre"] {

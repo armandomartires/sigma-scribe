@@ -1,0 +1,4 @@
+Built from sigma-scribe-plugins commit beda3f367a55d4100cf554d00a70575cd25cf989
+with scripts/build-plugin.sh todo-pane (rustc 1.99.1).
+Refresh with scripts/update-plugin-fixtures.sh.
+cc7a52da6a5081f5c4785ea22a7938cef5a9a7f3680281cb3b71285195ac6954  pane.wasm

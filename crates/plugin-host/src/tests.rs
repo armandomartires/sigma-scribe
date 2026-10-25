@@ -32,11 +32,17 @@ fn plugin(wat: &str, name: &str) -> Plugin {
     plugin_with(wat, &dir(name), Limits::default()).unwrap()
 }
 
-const HEAD: &str = r#"
+/// Memory and the two entry points every module has; the ABI is the API's.
+fn head() -> String {
+    format!(
+        r#"
   (memory (export "memory") 2)
-  (func (export "sigma_abi") (result i32) i32.const 1)
+  (func (export "sigma_abi") (result i32) i32.const {})
   (func (export "sigma_alloc") (param i32) (result i32) i32.const 1024)
-"#;
+"#,
+        sigma_plugin_api::ABI
+    )
+}
 
 fn module(body: &str) -> String {
     module_with("", body)
@@ -44,7 +50,7 @@ fn module(body: &str) -> String {
 
 /// Imports must precede every function in WAT, so they come first.
 fn module_with(imports: &str, body: &str) -> String {
-    format!("(module {imports} {HEAD} {body})")
+    format!("(module {imports} {} {body})", head())
 }
 
 fn pack(ptr: &str, len: &str) -> String {
@@ -76,6 +82,8 @@ fn a_frame_is_decoded() {
         hits: vec![],
         actions: vec![Action::OpenNote(2)],
         redraw: Redraw::Partial,
+        pending: true,
+        field: None,
     };
     let bytes = frame.encode();
     let esc: String = bytes.iter().map(|b| format!("\\{b:02x}")).collect();
@@ -271,4 +279,75 @@ fn bad_modules_do_not_load() {
     ))
     .unwrap();
     assert!(matches!(load(&wat), Err(Error::Load(_))));
+}
+
+/// An environment that records the plugin's log lines and has a log floor.
+struct RecEnv {
+    lines: std::rc::Rc<std::cell::RefCell<Vec<(i32, String)>>>,
+    floor: i32,
+}
+impl Env for RecEnv {
+    fn text_width(&self, _: Face, _: f32, _: &str) -> f32 {
+        0.0
+    }
+    fn ascent(&self, _: Face, _: f32) -> f32 {
+        0.0
+    }
+    fn tr(&self, s: &str) -> String {
+        s.to_owned()
+    }
+    fn log(&self, level: i32, msg: &str) {
+        self.lines.borrow_mut().push((level, msg.to_owned()));
+    }
+    fn log_floor(&self) -> i32 {
+        self.floor
+    }
+}
+
+fn log_guest() -> String {
+    module_with(
+        r#"(import "sigma" "log" (func $log (param i32 i32 i32)))
+           (import "sigma" "log_level" (func $lvl (result i32)))"#,
+        &format!(
+            r#"(func (export "sigma_call") (param $p i32) (param $l i32) (result i64)
+                 (if (i32.eq (i32.load8_u (local.get $p)) (i32.const 108)) ;; 'l'
+                   (then
+                     (call $log (i32.const 30) (i32.add (local.get $p) (i32.const 1))
+                                (i32.sub (local.get $l) (i32.const 1)))
+                     (return (i64.const 0))))
+                 (if (i32.eq (i32.load8_u (local.get $p)) (i32.const 98)) ;; 'b'
+                   (then (call $log (i32.const 20) (i32.const 1000000) (i32.const 4))))
+                 (i32.store (i32.const 8192) (call $lvl))
+                 {})"#,
+            pack("(i32.const 8192)", "(i32.const 4)")
+        ),
+    )
+}
+
+#[test]
+fn a_plugin_can_log_and_ask_the_floor() {
+    let lines = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+    let env = RecEnv {
+        lines: lines.clone(),
+        floor: 30,
+    };
+    let wasm = wat::parse_str(log_guest()).unwrap();
+    let cache = DirCache::new(dir("log"), 1, 10);
+    let mut p = Plugin::load(&wasm, Box::new(env), cache, Limits::default()).unwrap();
+    assert_eq!(p.call_raw(b"lhello there").unwrap(), b"");
+    assert_eq!(*lines.borrow(), [(30, "hello there".to_owned())]);
+    // The floor is what the host says: here WARNING.
+    assert_eq!(p.call_raw(b"f").unwrap(), 30i32.to_le_bytes());
+    // A line from a bad pointer is a trap, not a crash.
+    assert!(matches!(p.call_raw(b"b"), Err(Error::Trap(_))));
+}
+
+#[test]
+fn an_environment_without_logging_ignores_lines_and_reports_no_floor() {
+    // TestEnv uses the defaults: lines are dropped and the floor is 100.
+    let wasm = wat::parse_str(log_guest()).unwrap();
+    let cache = DirCache::new(dir("nolog"), 1, 10);
+    let mut p = Plugin::load(&wasm, Box::new(TestEnv), cache, Limits::default()).unwrap();
+    assert_eq!(p.call_raw(b"lignored").unwrap(), b"");
+    assert_eq!(p.call_raw(b"f").unwrap(), 100i32.to_le_bytes());
 }

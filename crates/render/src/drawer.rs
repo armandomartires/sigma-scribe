@@ -13,6 +13,7 @@ use sigma_core::outline::{Filter, Heading, TodoItem};
 use sigma_core::settings::Side;
 use sigma_core::wrap::{caret_cell, offset_at, wrap, VisualLine};
 use sigma_core::Buffer;
+use sigma_plugin_api::Frame;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Pane {
@@ -43,7 +44,24 @@ pub struct DrawerModel<'a> {
     pub todos: Option<(&'a [TodoItem], Filter)>,
     /// The scratch buffer and whether it has the keyboard.
     pub scratch: Option<(&'a Buffer, bool)>,
+    /// Panes drawn by a plugin, indexed Contents, To-dos, Scratch: the
+    /// plugin's latest frame takes over the pane (header included) and the
+    /// host keeps the drawer's background, edge and rules. A Scratch frame
+    /// places the text field the host still draws and edits.
+    pub plugin: [Option<&'a Frame>; 3],
     pub theme: Theme,
+}
+
+impl Pane {
+    /// Position in [`DrawerModel::plugin`] and the title bar's pane list.
+    #[must_use]
+    pub fn index(self) -> usize {
+        match self {
+            Self::Contents => 0,
+            Self::Todos => 1,
+            Self::Scratch => 2,
+        }
+    }
 }
 
 impl DrawerModel<'_> {
@@ -77,6 +95,8 @@ pub struct DrawerLayout {
     pub hidden: [usize; 2],
     /// Scratch text area.
     pub scratch: Option<Rect>,
+    /// Panes a plugin draws, with their whole rectangle (header included).
+    pub plugin: Vec<(Pane, Rect)>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -87,6 +107,9 @@ pub enum DrawerHit {
     Filter,
     /// Byte offset in the scratch buffer.
     Scratch(usize),
+    /// A tap inside a pane a plugin draws (not in its Scratch field): the
+    /// plugin decides what it means.
+    Plugin(Pane),
     /// Inside the drawer but on nothing (swallowed, not the page's).
     Inside,
     Outside,
@@ -109,12 +132,39 @@ impl EditorScreen {
     #[must_use]
     pub fn drawer_rect(&self, base: &Layout, side: Side) -> Rect {
         let p = base.page;
-        let w = ((p.w as f32 * 0.48) as i32).min(self.d(320.0));
+        let share = sigma_core::settings::drawer_share(self.cfg.drawer_width);
+        let w = ((p.w as f32 * share) as i32).min(self.d(320.0 * share / 0.48));
         let x = match side {
             Side::Left => p.x,
             Side::Right => p.x + p.w - w,
         };
         Rect::new(x, p.y, w, p.h)
+    }
+
+    /// The whole rectangle of each open pane (header included), top to
+    /// bottom: what a pane plugin is told it may draw in.
+    #[must_use]
+    pub fn drawer_pane_rects(
+        &self,
+        base: &Layout,
+        side: Side,
+        open: [bool; 3],
+    ) -> Vec<(Pane, Rect)> {
+        let rect = self.drawer_rect(base, side);
+        let panes: Vec<Pane> = [Pane::Contents, Pane::Todos, Pane::Scratch]
+            .into_iter()
+            .filter(|p| open[p.index()])
+            .collect();
+        let n = panes.len() as i32;
+        panes
+            .into_iter()
+            .enumerate()
+            .map(|(i, p)| {
+                let y0 = rect.y + rect.h * i as i32 / n;
+                let y1 = rect.y + rect.h * (i as i32 + 1) / n;
+                (p, Rect::new(rect.x, y0, rect.w, y1 - y0))
+            })
+            .collect()
     }
 
     #[must_use]
@@ -142,6 +192,22 @@ impl EditorScreen {
                 y1 - y0 - head_h,
             );
             l.panes.push((*pane, header, body));
+            let frame = m.plugin[pane.index()];
+            if let Some(f) = frame {
+                let whole = Rect::new(rect.x, y0, rect.w, y1 - y0);
+                l.plugin.push((*pane, whole));
+                if *pane == Pane::Scratch {
+                    l.scratch = f
+                        .field
+                        .as_ref()
+                        .map(|fl| {
+                            let r = fl.rect;
+                            whole.intersect(&Rect::new(r.x, r.y, r.w, r.h))
+                        })
+                        .filter(|r| r.w > 0 && r.h > 0);
+                }
+                continue;
+            }
             match pane {
                 Pane::Contents => {
                     // 44 px rows: the touch-target minimum (S7 audit).
@@ -233,6 +299,9 @@ impl EditorScreen {
                 return DrawerHit::Scratch(at);
             }
         }
+        if let Some((p, _)) = l.plugin.iter().find(|(_, r)| r.contains(x, y)) {
+            return DrawerHit::Plugin(*p);
+        }
         DrawerHit::Inside
     }
 
@@ -253,6 +322,7 @@ impl EditorScreen {
             Side::Right => r.x,
         };
         c.fill(Rect::new(edge, r.y, 1, r.h), t.ink);
+        let edge_rect = Rect::new(edge, r.y, 1, r.h);
         let base_of = |rr: Rect, face: Face, size: f32| {
             rr.y as f32 + rr.h as f32 / 2.0 + self.fonts.ascent(face, size) / 2.6
         };
@@ -270,24 +340,39 @@ impl EditorScreen {
             if i > 0 {
                 c.fill(Rect::new(r.x, header.y, r.w, 1), t.ink);
             }
-            self.fonts.draw(
-                c,
-                Face::AtkinsonBold,
-                ui,
-                (r.x + self.d(12.0)) as f32,
-                base_of(*header, Face::AtkinsonBold, ui),
-                &tr(pane.title()),
-                t.ink,
-            );
-            c.fill(
-                Rect::new(
-                    r.x + self.d(12.0),
-                    header.y + header.h - 1,
-                    r.w - self.d(24.0),
-                    1,
-                ),
-                t.rule,
-            );
+            let plugin = l.plugin.iter().find(|(p, _)| p == pane).map(|(_, r)| *r);
+            let body = &match (plugin, pane) {
+                (Some(_), Pane::Scratch) => l.scratch.unwrap_or_default(),
+                _ => *body,
+            };
+            if let (Some(whole), Some(f)) = (plugin, m.plugin[pane.index()]) {
+                // The plugin draws the pane, header included, below the rule.
+                let rule = i32::from(i > 0);
+                let below = Rect::new(whole.x, whole.y + rule, whole.w, whole.h - rule);
+                self.draw_plugin_pane(c, f, below, t);
+                if *pane != Pane::Scratch || l.scratch.is_none() {
+                    continue;
+                }
+            } else {
+                self.fonts.draw(
+                    c,
+                    Face::AtkinsonBold,
+                    ui,
+                    (r.x + self.d(12.0)) as f32,
+                    base_of(*header, Face::AtkinsonBold, ui),
+                    &tr(pane.title()),
+                    t.ink,
+                );
+                c.fill(
+                    Rect::new(
+                        r.x + self.d(12.0),
+                        header.y + header.h - 1,
+                        r.w - self.d(24.0),
+                        1,
+                    ),
+                    t.rule,
+                );
+            }
             let empty = |c: &mut Canvas, text: &str| {
                 // Wrapped muted hint.
                 let m = Measure {
@@ -417,7 +502,10 @@ impl EditorScreen {
                     };
                     let lh = self.scratch_line_h();
                     if b.text().is_empty() {
-                        empty(c, SCRATCH_PLACEHOLDER);
+                        let own = m.plugin[2]
+                            .and_then(|f| f.field.as_ref())
+                            .map(|f| f.placeholder.as_str());
+                        empty(c, own.unwrap_or(SCRATCH_PLACEHOLDER));
                     }
                     let (rows, first) = self.scratch_rows(b, *body);
                     let fit = (body.h / lh).max(1) as usize;
@@ -453,6 +541,10 @@ impl EditorScreen {
                     }
                 }
             }
+        }
+        // A plugin's pane is painted over the whole width; the edge stays.
+        if !l.plugin.is_empty() {
+            c.fill(edge_rect, t.ink);
         }
         l
     }
@@ -502,6 +594,7 @@ mod tests {
             for mask in 1..8u8 {
                 for side in [Side::Left, Side::Right] {
                     let m = DrawerModel {
+                        plugin: [None; 3],
                         side,
                         contents: (mask & 1 != 0).then_some(hs.as_slice()),
                         todos: (mask & 2 != 0).then_some((it.as_slice(), Filter::All)),
@@ -511,7 +604,7 @@ mod tests {
                     let l = e.drawer_layout(&base, &m);
                     assert_eq!(
                         l.rect.w,
-                        ((base.page.w as f32 * 0.48) as i32).min(e.d(320.0))
+                        ((base.page.w as f32 * 0.50) as i32).min(e.d(320.0 * 0.50 / 0.48))
                     );
                     assert_eq!(l.rect.x == base.page.x, side == Side::Left);
                     let n = mask.count_ones() as i32;
@@ -559,6 +652,7 @@ mod tests {
         let base = e.layout(true, &Keyboard::default());
         let it = items();
         let m = |f| DrawerModel {
+            plugin: [None; 3],
             side: Side::Right,
             contents: None,
             todos: Some((it.as_slice(), f)),
@@ -582,6 +676,7 @@ mod tests {
         let base = e.layout(true, &Keyboard::default());
         let b = Buffer::new("one\ntwo");
         let m = DrawerModel {
+            plugin: [None; 3],
             side: Side::Left,
             contents: None,
             todos: None,

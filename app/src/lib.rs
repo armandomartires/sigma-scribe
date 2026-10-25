@@ -26,6 +26,7 @@ use sigma_render::{
 };
 use std::path::PathBuf;
 
+mod plugin_pane;
 mod plugin_screen;
 pub use plugin_screen::{IdlePlugin, PluginScreen, GRAPH_PLUGIN};
 
@@ -52,6 +53,21 @@ pub fn notes_dir() -> PathBuf {
         "/mnt/onboard/sigma-scribe/notes".into()
     } else {
         "target/emu-notes".into()
+    }
+}
+
+/// Where the log file goes (Settings → Logging): `SIGMA_LOG_DIR`, else
+/// `.adds/sigma-scribe/log` on the Kobo, else `./target/emu-log` on a
+/// desktop.
+#[must_use]
+pub fn log_dir() -> PathBuf {
+    if let Ok(p) = std::env::var("SIGMA_LOG_DIR") {
+        return p.into();
+    }
+    if cfg!(target_arch = "arm") {
+        "/mnt/onboard/.adds/sigma-scribe/log".into()
+    } else {
+        "target/emu-log".into()
     }
 }
 
@@ -432,10 +448,29 @@ pub struct App {
     plugin_screen: Option<PluginScreen>,
     /// A loaded plugin kept for the next open.
     plugin_idle: Option<IdlePlugin>,
+    /// The installed plugins, as Settings → Plugins lists them (refreshed
+    /// whenever Settings opens or a switch is flipped).
+    plugin_list: Vec<sigma_render::options::PluginRow>,
     /// Where plugins are installed.
     plugins_root: PathBuf,
     /// A plugin failed: the built-in Graph serves the rest of the session.
     plugin_failed: bool,
+    /// The pane plugins of the side drawer (Contents, To-dos, Scratch): the
+    /// enabled one for each, the loaded module, and whether it failed (the
+    /// built-in pane then draws for the session).
+    pane_slots: [Option<plugin_pane::PaneSlotPlugin>; 3],
+    pane_plugins: [Option<plugin_pane::PanePlugin>; 3],
+    pane_failed: [bool; 3],
+    /// Show the drawer icons and draw the built-in panes with the pane
+    /// plugins off (the reference the plugins are tested against, and the
+    /// emulator's drawer). Off in the app.
+    panes_builtin: bool,
+    /// Where the log file goes while Settings → Logging is on.
+    log_dir: PathBuf,
+    /// Show the Graph icon even with the Graph plugin off, and open the
+    /// built-in Graph (the reference the plugin is tested against, and the
+    /// emulator's Graph). Off in the app.
+    graph_builtin: bool,
     /// `Some` while the note is shown rendered (eye ↔ pencil).
     pub preview: Option<PreviewState>,
     /// Every Options setting (v0.4), kept in `notes/.sigma-settings`.
@@ -557,8 +592,15 @@ impl App {
             map_cache: None,
             plugin_screen: None,
             plugin_idle: None,
+            plugin_list: Vec::new(),
             plugins_root: sigma_core::plugins::plugins_root(),
             plugin_failed: false,
+            pane_slots: [None, None, None],
+            pane_plugins: [None, None, None],
+            pane_failed: [false; 3],
+            panes_builtin: false,
+            log_dir: log_dir(),
+            graph_builtin: false,
             preview: None,
             canvas: Canvas::new(lw, lh, 255),
             shown: Canvas::new(lw, lh, 0),
@@ -606,7 +648,31 @@ impl App {
         };
         app.set_gsensor(false);
         app.sync_keyboard_style();
+        app.sync_plugin_icons();
+        app.apply_logging();
+        sigma_core::info!(
+            "app",
+            "sigma-scribe {} started: screen {width}x{height}, notes {}, plugins {}",
+            env!("CARGO_PKG_VERSION"),
+            app.library.root().display(),
+            app.plugins_root.display()
+        );
         app
+    }
+
+    /// Applies Settings → Logging: the log file on or off, and its level.
+    fn apply_logging(&self) {
+        sigma_core::log::configure(
+            self.settings.log,
+            self.settings.log_level,
+            Some(self.log_dir.clone()),
+        );
+    }
+
+    /// Where the log file goes (tests point this at a temp folder).
+    pub fn set_log_dir(&mut self, dir: impl Into<PathBuf>) {
+        self.log_dir = dir.into();
+        self.apply_logging();
     }
 
     /// The Kobo style board while Enhanced keyboard is off (v1.13); back to
@@ -725,6 +791,12 @@ impl App {
     /// re-lays out (and resizes on rotation), saves the settings file.
     /// Paper and orientation need a full (flashing) refresh.
     pub fn change(&mut self, c: Change) -> Refresh {
+        if let Change::Plugin(i, on) = c {
+            return self.set_plugin(i, on);
+        }
+        if let Change::PluginSetting(p, s, o) = c {
+            return self.set_plugin_setting(usize::from(p), usize::from(s), usize::from(o));
+        }
         if c == Change::TrainSamples {
             self.options = false;
             self.open_ink();
@@ -737,7 +809,7 @@ impl App {
             let p = samples_path(self.library.root());
             if let Err(e) = std::fs::remove_file(&p) {
                 if e.kind() != std::io::ErrorKind::NotFound {
-                    eprintln!("sigma-scribe: delete samples: {e}");
+                    sigma_core::warn!("samples", "delete: {e}");
                 }
             }
             if let Some(d) = p.parent() {
@@ -753,6 +825,13 @@ impl App {
             return Refresh::Partial;
         }
         self.settings.apply(c);
+        if matches!(c, Change::Log(_) | Change::LogLevel(_)) {
+            self.apply_logging();
+            if self.settings.log {
+                sigma_core::info!("app", "logging level {}", self.settings.log_level.label());
+            }
+        }
+        sigma_core::debug!("settings", "{c:?}");
         self.screen.ink_words = self.settings.word_mode();
         if c == Change::LangOverride(true) {
             // Start from the language in use, so turning it on changes nothing.
@@ -911,7 +990,9 @@ impl App {
             cur.extend(out);
             out = cur;
         }
-        out.extend(live(&scratch, self.scratch.text()));
+        if self.screen.scratch_on {
+            out.extend(live(&scratch, self.scratch.text()));
+        }
         out
     }
 
@@ -921,6 +1002,7 @@ impl App {
             contents: self.drawer[0].then_some(hs),
             todos: self.drawer[1].then_some((todos, self.filter)),
             scratch: self.drawer[2].then_some((&self.scratch, self.scratch_focused())),
+            plugin: [0, 1, 2].map(|i| self.pane_frame(i)),
             theme: self.theme(),
         }
     }
@@ -1020,75 +1102,79 @@ impl App {
         Some(Refresh::Partial)
     }
 
+    /// Contents: jumps to the heading at source line `line`.
+    pub(crate) fn drawer_heading(&mut self, line: usize) -> Option<Refresh> {
+        self.push_history();
+        self.scratch_focus = false;
+        if let Some(p) = self.preview.as_mut() {
+            p.page = p.doc.page_of_line(line);
+        } else {
+            let page = self.page_rect();
+            self.screen.jump_to_line(&mut self.buffer, page, line);
+        }
+        Some(Refresh::Partial)
+    }
+
+    /// To-dos: checks or unchecks to-do number `i` of the list.
+    pub(crate) fn drawer_todo_box(&mut self, i: usize) -> Option<Refresh> {
+        let it = self.todo_list().get(i)?.clone();
+        let r = self.toggle_todo(&it);
+        if self.preview.is_some() {
+            self.rebuild_preview();
+        }
+        r
+    }
+
+    /// To-dos: opens to-do number `i` of the list at its line.
+    pub(crate) fn drawer_todo_open(&mut self, i: usize) -> Option<Refresh> {
+        let it = self.todo_list().get(i)?.clone();
+        if it.note.as_str() == SCRATCH {
+            self.drawer[2] = true;
+            self.scratch_focus = true;
+            if let Some(f) = &mut self.find {
+                f.focus = None;
+            }
+            let at = outline::line_range(self.scratch.text(), it.todo.line).map_or(0, |r| r.1);
+            self.scratch.set_caret(at);
+            return Some(Refresh::Partial);
+        }
+        let full = it.note != self.current;
+        self.push_history();
+        if full {
+            self.open(&it.note);
+        }
+        if self.preview.is_some() {
+            self.scratch_focus = false;
+            if full {
+                self.enter_preview();
+            }
+            let p = self.preview.as_mut()?;
+            p.page = p.doc.page_of_line(it.todo.line);
+            return Some(if full {
+                Refresh::Full
+            } else {
+                Refresh::Partial
+            });
+        }
+        self.scratch_focus = false;
+        let page = self.page_rect();
+        self.screen
+            .jump_to_line(&mut self.buffer, page, it.todo.line);
+        Some(if full {
+            Refresh::Full
+        } else {
+            Refresh::Partial
+        })
+    }
+
     fn drawer_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
         let hit = self.drawer_hit_at(x, y);
         self.sel_ui = None;
-        let page = self.page_rect();
         match hit {
-            DrawerHit::Heading(line) if self.preview.is_some() => {
-                self.push_history();
-                self.scratch_focus = false;
-                let p = self.preview.as_mut()?;
-                p.page = p.doc.page_of_line(line);
-                Some(Refresh::Partial)
-            }
-            DrawerHit::TodoBox(i) if self.preview.is_some() => {
-                let it = self.todo_list().get(i)?.clone();
-                let r = self.toggle_todo(&it);
-                self.rebuild_preview();
-                r
-            }
-            DrawerHit::Heading(line) => {
-                self.push_history();
-                self.scratch_focus = false;
-                self.screen.jump_to_line(&mut self.buffer, page, line);
-                Some(Refresh::Partial)
-            }
-            DrawerHit::TodoBox(i) => {
-                let it = self.todo_list().get(i)?.clone();
-                self.toggle_todo(&it)
-            }
-            DrawerHit::TodoOpen(i) => {
-                let it = self.todo_list().get(i)?.clone();
-                if it.note.as_str() == SCRATCH {
-                    self.drawer[2] = true;
-                    self.scratch_focus = true;
-                    if let Some(f) = &mut self.find {
-                        f.focus = None;
-                    }
-                    let at =
-                        outline::line_range(self.scratch.text(), it.todo.line).map_or(0, |r| r.1);
-                    self.scratch.set_caret(at);
-                    return Some(Refresh::Partial);
-                }
-                let full = it.note != self.current;
-                self.push_history();
-                if full {
-                    self.open(&it.note);
-                }
-                if self.preview.is_some() {
-                    self.scratch_focus = false;
-                    if full {
-                        self.enter_preview();
-                    }
-                    let p = self.preview.as_mut()?;
-                    p.page = p.doc.page_of_line(it.todo.line);
-                    return Some(if full {
-                        Refresh::Full
-                    } else {
-                        Refresh::Partial
-                    });
-                }
-                self.scratch_focus = false;
-                let page = self.page_rect();
-                self.screen
-                    .jump_to_line(&mut self.buffer, page, it.todo.line);
-                Some(if full {
-                    Refresh::Full
-                } else {
-                    Refresh::Partial
-                })
-            }
+            DrawerHit::Heading(line) => self.drawer_heading(line),
+            DrawerHit::TodoBox(i) => self.drawer_todo_box(i),
+            DrawerHit::TodoOpen(i) => self.drawer_todo_open(i),
+            DrawerHit::Plugin(p) => self.pane_plugin_tap(p, x, y),
             DrawerHit::Filter => {
                 self.filter = self.filter.next();
                 Some(Refresh::Partial)
@@ -1167,6 +1253,7 @@ impl App {
 
     /// Opens the Options sheet (closes preview and selection chrome).
     pub fn open_options(&mut self) {
+        sigma_core::debug!("ui", "open settings");
         self.help = None;
         self.close_find();
         self.close_graph();
@@ -1181,6 +1268,7 @@ impl App {
         self.settings_page = sigma_render::SettingsPage::Root;
         self.settings_sub = 0;
         self.settings_focus = None;
+        self.refresh_plugin_list();
     }
 
     pub fn options_model(&self) -> OptionsModel<'_> {
@@ -1199,6 +1287,7 @@ impl App {
             hw_samples: self.hwr.samples,
             light: self.light_have.then_some(self.light_step),
             ui_scale_pending: self.ui_scale_drag,
+            plugins: &self.plugin_list,
         }
     }
 
@@ -1808,6 +1897,7 @@ impl App {
 
     /// Saves the open note and opens another.
     pub fn open(&mut self, p: &NotePath) {
+        sigma_core::debug!("app", "open note {}", p.as_str());
         self.save();
         let (body, unreadable) = load_note(&self.store, p);
         self.current = p.clone();
@@ -2045,6 +2135,7 @@ impl App {
 
     /// Opens the Files sheet at the current note's folder.
     pub fn open_files(&mut self) {
+        sigma_core::debug!("ui", "open files");
         self.help = None;
         self.close_find();
         self.close_graph();
@@ -2061,6 +2152,7 @@ impl App {
     /// # Errors
     /// The device could not present the frame.
     pub fn render(&mut self, dev: &mut dyn Device, refresh: Refresh) -> std::io::Result<()> {
+        self.sync_pane_plugins();
         self.screen.overwrite = self.buffer.overwrite();
         if refresh == Refresh::Pointer
             && std::mem::take(&mut self.pointer_fast)
@@ -3086,7 +3178,7 @@ impl App {
             }
             Ok(None) => Refresh::Partial,
             Err(e) => {
-                eprintln!("sigma-scribe: ink save failed: {e}");
+                sigma_core::error!("ink", "save failed: {e}");
                 self.ink = Some(InkState {
                     error: Some(e.to_string()),
                     ..st
@@ -3599,6 +3691,7 @@ impl App {
     }
 
     pub fn handle(&mut self, e: Event) -> Option<Refresh> {
+        self.sync_pane_plugins();
         match e {
             Event::Tilt { tilt, t } => {
                 self.now = self.now.max(t);
@@ -3696,6 +3789,11 @@ impl App {
             }
             Event::Tick { t } => {
                 if let Some(r) = self.ink_tick(t) {
+                    return Some(r);
+                }
+                // A plugin screen with more to do (loading, or building a
+                // layout) takes its next step while the app is idle.
+                if let Some(r) = self.plugin_step() {
                     return Some(r);
                 }
                 if let Some(items) = self.indexer.poll() {
@@ -4017,7 +4115,7 @@ impl App {
         if self.settings.usb != self.usb_host {
             self.usb_host = self.settings.usb;
             if let Err(e) = dev.usb_host(self.usb_host) {
-                eprintln!("usb: {e}");
+                sigma_core::error!("usb", "{e}");
             }
         }
     }
@@ -4034,7 +4132,7 @@ impl App {
         }
         if let Some(n) = self.light_want.take() {
             if let Err(e) = dev.set_light(n) {
-                eprintln!("light: {e}");
+                sigma_core::error!("light", "{e}");
             }
         }
     }
@@ -4070,13 +4168,15 @@ impl App {
             self.usb_host = false;
         }
         if let Some((n, p50, p95, max)) = self.perf.summary() {
-            eprintln!(
-                "perf: {n} keystrokes, keystroke-to-refresh p50 {p50:.1} ms, p95 {p95:.1} ms, max {max:.1} ms"
+            sigma_core::info!(
+                "perf",
+                "{n} keystrokes, keystroke-to-refresh p50 {p50:.1} ms, p95 {p95:.1} ms, max {max:.1} ms"
             );
         }
         if let Some((n, p50, p95, max)) = self.perf.pointer_summary() {
-            eprintln!(
-                "perf pointer: {n} du updates, move-to-submit p50 {p50:.1} ms, p95 {p95:.1} ms, max {max:.1} ms"
+            sigma_core::info!(
+                "perf pointer",
+                "{n} du updates, move-to-submit p50 {p50:.1} ms, p95 {p95:.1} ms, max {max:.1} ms"
             );
         }
         Ok(())
@@ -4253,11 +4353,11 @@ impl App {
             "Keys" => Some(centre(l.keys_button)),
             "Write" => Some(centre(l.ink_button)),
             "Options" => Some(centre(l.options_button)),
-            "Contents" => Some(centre(l.contents_button)),
-            "To-dos" => Some(centre(l.todos_button)),
-            "Scratch" => Some(centre(l.scratch_button)),
+            "Contents" if self.screen.contents_on => Some(centre(l.contents_button)),
+            "To-dos" if self.screen.todos_on => Some(centre(l.todos_button)),
+            "Scratch" if self.screen.scratch_on => Some(centre(l.scratch_button)),
             "Find" => Some(centre(l.find_button)),
-            "Graph" => Some(centre(l.graph_button)),
+            "Graph" if self.screen.graph_on => Some(centre(l.graph_button)),
             "FindField" | "ReplaceField" | "FindClose" | "Prev" | "Next" | "Replace" | "All"
             | "Aa" => self.screen.find_control(&l, label),
             s if s.starts_with("Heading:")
@@ -4520,6 +4620,9 @@ impl App {
         let l = self
             .screen
             .drawer_layout(&base, &self.drawer_model(&hs, &todos));
+        if let Some((_, r)) = self.pane_hits().iter().find(|(label, _)| label == name) {
+            return Some(centre(*r));
+        }
         if name == "Filter" {
             return l.filter.map(centre);
         }
@@ -4814,6 +4917,7 @@ impl App {
 
     /// Opens the Graph sheet with fresh rows.
     pub fn open_graph(&mut self) {
+        sigma_core::debug!("ui", "open graph");
         self.help = None;
         self.close_find();
         self.save();
@@ -5211,6 +5315,7 @@ impl App {
     }
 
     pub fn open_help(&mut self) {
+        sigma_core::debug!("ui", "open help");
         self.close_find();
         self.close_graph();
         self.files = None;
@@ -5354,14 +5459,22 @@ impl App {
         add("Files", l.files_button);
         add("Preview", l.preview_button);
         add("Find", l.find_button);
-        add("Graph", l.graph_button);
+        if self.screen.graph_on {
+            add("Graph", l.graph_button);
+        }
         add("Options", l.options_button);
         if self.preview.is_some() {
             return out;
         }
-        add("Scratch", l.scratch_button);
-        add("To-dos", l.todos_button);
-        add("Contents", l.contents_button);
+        for (on, name, r) in [
+            (self.screen.scratch_on, "Scratch", l.scratch_button),
+            (self.screen.todos_on, "To-dos", l.todos_button),
+            (self.screen.contents_on, "Contents", l.contents_button),
+        ] {
+            if on {
+                add(name, r);
+            }
+        }
         add("Keys", l.keys_button);
         for (r, k) in &l.keys {
             add(&format!("key {}", self.keyboard.label(*k)), *r);
@@ -5398,6 +5511,9 @@ impl App {
             }
             if let Some(f) = d.filter {
                 add("Filter", f);
+            }
+            for (label, r) in self.pane_hits() {
+                add(&label, r);
             }
         }
         out
