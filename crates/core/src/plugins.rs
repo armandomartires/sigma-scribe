@@ -41,6 +41,8 @@ pub enum PluginKind {
     Translation,
     Layout,
     Icons,
+    /// A WASM screen plugin (`entry` names the module).
+    Screen,
 }
 
 impl PluginKind {
@@ -55,6 +57,7 @@ impl PluginKind {
             "translation" => Self::Translation,
             "layout" => Self::Layout,
             "icons" => Self::Icons,
+            "screen" => Self::Screen,
             _ => return None,
         })
     }
@@ -70,6 +73,7 @@ impl PluginKind {
             Self::Translation => "translation",
             Self::Layout => "layout",
             Self::Icons => "icons",
+            Self::Screen => "screen",
         }
     }
 }
@@ -130,6 +134,8 @@ pub struct Manifest {
     /// Oldest app version that can use it.
     pub min_app: Version,
     pub api: u32,
+    /// The module of a [`PluginKind::Screen`] plugin, relative to its folder.
+    pub entry: Option<String>,
 }
 
 fn fields(text: &str) -> BTreeMap<&str, &str> {
@@ -159,13 +165,23 @@ impl Manifest {
         if api > API_VERSION {
             return None;
         }
+        let kind = PluginKind::parse(f.get("kind")?)?;
+        let entry = f.get("entry").map(|e| (*e).to_string());
+        if entry.as_deref().is_some_and(|e| !safe_rel_path(e)) {
+            return None;
+        }
+        // A screen plugin without a module is not a plugin.
+        if kind == PluginKind::Screen && entry.is_none() {
+            return None;
+        }
         Some(Self {
+            entry,
+            kind,
             name: f
                 .get("name")
                 .map_or_else(|| id.clone(), |s| (*s).to_string()),
             id,
             version: Version::parse(f.get("version")?)?,
-            kind: PluginKind::parse(f.get("kind")?)?,
             description: f.get("description").unwrap_or(&"").to_string(),
             min_app: f
                 .get("min_app")
@@ -354,6 +370,29 @@ pub fn enabled_files_in(root: &std::path::Path, rel: &str) -> Vec<std::path::Pat
         .collect()
 }
 
+/// The module of the enabled screen plugin `id` under `root`: its folder,
+/// manifest and the module bytes' path. `None` when it is not installed,
+/// disabled, not a screen plugin, or its module file is missing.
+#[must_use]
+pub fn enabled_screen_in(
+    root: &std::path::Path,
+    id: &str,
+) -> Option<(Manifest, std::path::PathBuf)> {
+    if !valid_id(id) {
+        return None;
+    }
+    let state = State::parse(&std::fs::read_to_string(root.join("plugins.state")).ok()?);
+    if !state.get(id)?.enabled {
+        return None;
+    }
+    let m = Manifest::parse(&std::fs::read_to_string(root.join(id).join("plugin.conf")).ok()?)?;
+    if m.id != id || m.kind != PluginKind::Screen {
+        return None;
+    }
+    let wasm = root.join(id).join(m.entry.as_deref()?);
+    wasm.is_file().then_some((m, wasm))
+}
+
 /// [`enabled_files_in`] for the installed plugins folder.
 #[must_use]
 pub fn enabled_files(rel: &str) -> Vec<std::path::PathBuf> {
@@ -506,6 +545,60 @@ mod tests {
         assert_eq!(got, vec![root.join("a/fonts/cjk.ttf")]);
         assert!(enabled_files_in(&root, "../plugins.state").is_empty());
         assert!(enabled_files_in(&root.join("nope"), "fonts/cjk.ttf").is_empty());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn screen_plugins_need_a_safe_entry() {
+        let ok = Manifest::parse("id=graph-map\nversion=1\nkind=screen\nentry=graph.wasm").unwrap();
+        assert_eq!(ok.kind, PluginKind::Screen);
+        assert_eq!(ok.entry.as_deref(), Some("graph.wasm"));
+        assert!(Manifest::parse("id=g\nversion=1\nkind=screen").is_none());
+        assert!(Manifest::parse("id=g\nversion=1\nkind=screen\nentry=../x.wasm").is_none());
+        assert!(Manifest::parse("id=g\nversion=1\nkind=font\nentry=/etc/x").is_none());
+        // Data plugins need no entry.
+        assert_eq!(Manifest::parse(&manifest("")).unwrap().entry, None);
+    }
+
+    #[test]
+    fn enabled_screen_finds_only_enabled_screen_plugins_with_a_module() {
+        let root = std::env::temp_dir().join(format!("sigma-screens-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        for id in ["graph-map", "off", "font", "nomod", "other"] {
+            std::fs::create_dir_all(root.join(id)).unwrap();
+        }
+        let conf = |id: &str, kind: &str| {
+            std::fs::write(
+                root.join(id).join("plugin.conf"),
+                format!("id={id}\nversion=1.0.0\nkind={kind}\nentry=m.wasm\n"),
+            )
+            .unwrap();
+        };
+        conf("graph-map", "screen");
+        conf("off", "screen");
+        conf("font", "font");
+        conf("nomod", "screen");
+        // plugin.conf names a different id than its folder.
+        std::fs::write(
+            root.join("other/plugin.conf"),
+            "id=graph-map\nversion=1\nkind=screen\nentry=m.wasm",
+        )
+        .unwrap();
+        for id in ["graph-map", "off", "font", "other"] {
+            std::fs::write(root.join(id).join("m.wasm"), b"\0asm").unwrap();
+        }
+        std::fs::write(
+            root.join("plugins.state"),
+            "graph-map=1.0.0,enabled\noff=1.0.0,disabled\nfont=1.0.0,enabled\nnomod=1.0.0,enabled\nother=1.0.0,enabled\n",
+        )
+        .unwrap();
+        let (m, wasm) = enabled_screen_in(&root, "graph-map").unwrap();
+        assert_eq!(m.id, "graph-map");
+        assert_eq!(wasm, root.join("graph-map/m.wasm"));
+        for id in ["off", "font", "nomod", "other", "missing", "../x"] {
+            assert!(enabled_screen_in(&root, id).is_none(), "{id}");
+        }
+        assert!(enabled_screen_in(&root.join("nope"), "graph-map").is_none());
         std::fs::remove_dir_all(&root).unwrap();
     }
 

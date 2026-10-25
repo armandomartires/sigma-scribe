@@ -674,6 +674,7 @@ dependencies = [
  "rustybuzz",
  "sigma-core",
  "sigma-hwr",
+ "sigma-plugin-api",
  "unicode-bidi",
  "unicode-properties",
 ]
@@ -686,7 +687,10 @@ dependencies = [
  "sigma-core",
  "sigma-device",
  "sigma-hwr",
+ "sigma-plugin-api",
+ "sigma-plugin-host",
  "sigma-render",
+ "wat",
 ]
 
 [[package]]

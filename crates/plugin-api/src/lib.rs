@@ -238,6 +238,8 @@ pub enum Action {
     Close,
     /// Open note number `n` (index into [`Scene::notes`]) in the editor.
     OpenNote(u32),
+    /// Open note number `n` in preview (what tapping a map node twice does).
+    PreviewNote(u32),
 }
 
 /// How much of the screen the host should refresh.
@@ -249,12 +251,15 @@ pub enum Redraw {
     Partial,
     /// Repaint and clear pointer ghosts (a slower, cleaner refresh).
     Clean,
+    /// Repaint the whole screen (a flashing refresh): for big changes.
+    Full,
 }
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Frame {
     pub ops: Vec<Op>,
     pub hits: Vec<Hit>,
+    /// Every action leaves the screen, so the host applies only the first.
     pub actions: Vec<Action>,
     pub redraw: Redraw,
 }
@@ -321,6 +326,10 @@ impl Frame {
                     w.u8(1);
                     w.u32(*n);
                 }
+                Action::PreviewNote(n) => {
+                    w.u8(2);
+                    w.u32(*n);
+                }
             }
         }
         w.u8(self.redraw as u8);
@@ -375,6 +384,7 @@ impl Frame {
             f.actions.push(match r.u8()? {
                 0 => Action::Close,
                 1 => Action::OpenNote(r.u32()?),
+                2 => Action::PreviewNote(r.u32()?),
                 _ => return Err(DecodeError),
             });
         }
@@ -382,6 +392,7 @@ impl Frame {
             0 => Redraw::None,
             1 => Redraw::Partial,
             2 => Redraw::Clean,
+            3 => Redraw::Full,
             _ => return Err(DecodeError),
         };
         r.finish()?;
@@ -433,7 +444,9 @@ pub enum Event {
         x: i32,
         y: i32,
     },
-    /// Mouse wheel; positive `dy` scrolls down.
+    /// Mouse wheel notches, already adjusted for the reader's scroll
+    /// direction setting; positive is down. `x`, `y` is the pointer (the
+    /// screen centre when the host has no pointer position).
     Wheel {
         x: i32,
         y: i32,
@@ -596,7 +609,7 @@ mod tests {
                 rect: Rect::new(1, 1, 44, 44),
                 label: "Node:a.md".into(),
             }],
-            actions: vec![Action::OpenNote(3), Action::Close],
+            actions: vec![Action::OpenNote(3), Action::PreviewNote(1), Action::Close],
             redraw: Redraw::Clean,
         }
     }

@@ -11,6 +11,9 @@ This binary statically links:
 - rustybuzz (MIT, a Rust port of HarfBuzz) and unicode-bidi (MIT / Apache-2.0) and unicode-segmentation (MIT / Apache-2.0), with their
   dependencies (ttf-parser, unicode-script, unicode-properties, unicode-ccc, bitflags…),
   for Arabic-script and Hebrew shaping and right-to-left order.
+- wasmi (MIT / Apache-2.0, a WebAssembly interpreter) with its dependencies (wasmi_core,
+  wasmi_ir, wasmi_collections, wasmparser, spin, libm), which runs screen plugins such as the
+  Graph map in a sandbox. wasmparser: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT.
 - The Rust standard library and musl libc (MIT / Apache-2.0, MIT).
 
 Dictionary: SKK-JISYO.L, the large SKK dictionary (dict/skk-jisyo.txt, converted from

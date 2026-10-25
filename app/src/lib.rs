@@ -26,6 +26,9 @@ use sigma_render::{
 };
 use std::path::PathBuf;
 
+mod plugin_screen;
+pub use plugin_screen::{PluginScreen, GRAPH_PLUGIN};
+
 pub const NOTE: &str = "field-notes.md";
 pub const SEED: &str = include_str!("../seed/field-notes.md");
 pub const SEED_FILES: [(&str, &str); 4] = [
@@ -425,6 +428,12 @@ pub struct App {
     map_drag: Option<(i32, i32, bool)>,
     /// Map layout cache: key over names + links (v1.0).
     map_cache: Option<(u64, std::sync::Arc<MapLayout>)>,
+    /// The Graph as a WASM plugin, when one is installed and enabled.
+    plugin_screen: Option<PluginScreen>,
+    /// Where plugins are installed.
+    plugins_root: PathBuf,
+    /// A plugin failed: the built-in Graph serves the rest of the session.
+    plugin_failed: bool,
     /// `Some` while the note is shown rendered (eye ↔ pencil).
     pub preview: Option<PreviewState>,
     /// Every Options setting (v0.4), kept in `notes/.sigma-settings`.
@@ -544,6 +553,9 @@ impl App {
             drag: None,
             map_drag: None,
             map_cache: None,
+            plugin_screen: None,
+            plugins_root: sigma_core::plugins::plugins_root(),
+            plugin_failed: false,
             preview: None,
             canvas: Canvas::new(lw, lh, 255),
             shown: Canvas::new(lw, lh, 0),
@@ -805,6 +817,7 @@ impl App {
             && self.rename.is_none()
             && !self.options
             && self.graph.is_none()
+            && self.plugin_screen.is_none()
             && self.help.is_none()
     }
 
@@ -1153,7 +1166,7 @@ impl App {
     pub fn open_options(&mut self) {
         self.help = None;
         self.close_find();
-        self.graph = None;
+        self.close_graph();
         self.save();
         self.preview = None;
         self.sel_ui = None;
@@ -1238,7 +1251,7 @@ impl App {
             let b = self.screen.help_paged_bar(&self.help_model(h))?;
             return Some((PagedBar::Help, b));
         }
-        if self.files.is_some() || self.graph.is_some() {
+        if self.files.is_some() || self.graph.is_some() || self.plugin_screen.is_some() {
             return None;
         }
         let p = self.preview.as_ref()?;
@@ -1618,6 +1631,10 @@ impl App {
             return None;
         }
         let d = self.pointer.down.take()?;
+        if d.dragged && self.on_plugin_area(d.x, d.y) {
+            let r = self.plugin_mouse_drag((d.x, d.y), (x, y));
+            return merge(Some(Refresh::Fast), r);
+        }
         if d.dragged && self.on_map(d.x, d.y) {
             let r = self.graph_pan(x - d.x, y - d.y);
             return merge(Some(Refresh::Fast), r);
@@ -1645,6 +1662,9 @@ impl App {
             notches
         };
         let forward = notches < 0;
+        if self.plugin_screen.is_some() {
+            return self.plugin_wheel(notches);
+        }
         if self.graph.as_ref().is_some_and(|g| g.map) {
             return self.graph_zoom(notches > 0);
         }
@@ -1675,12 +1695,22 @@ impl App {
         let ctrl_f = mods.ctrl && key == HwKey::Char('f');
         // Alt+Left = Back (v1.0.2), in write mode and preview.
         if mods.alt && !mods.ctrl && key == HwKey::Left && !self.history.is_empty() {
-            if self.options || self.help.is_some() || self.graph.is_some() || self.files.is_some() {
+            if self.options
+                || self.help.is_some()
+                || self.graph.is_some()
+                || self.plugin_screen.is_some()
+                || self.files.is_some()
+            {
                 return None;
             }
             return self.go_back();
         }
-        if self.options || self.help.is_some() || self.graph.is_some() || self.files.is_some() {
+        if self.options
+            || self.help.is_some()
+            || self.graph.is_some()
+            || self.plugin_screen.is_some()
+            || self.files.is_some()
+        {
             return None;
         }
         if self.preview.is_some() {
@@ -1807,6 +1837,7 @@ impl App {
                 && self.preview.is_none()
                 && !self.options
                 && self.graph.is_none()
+                && self.plugin_screen.is_none()
                 && self.help.is_none()
                 && self.keys_on)
     }
@@ -2013,7 +2044,7 @@ impl App {
     pub fn open_files(&mut self) {
         self.help = None;
         self.close_find();
-        self.graph = None;
+        self.close_graph();
         self.save();
         self.files = Some(FilesState {
             folder: self.current.parent(),
@@ -2058,6 +2089,9 @@ impl App {
             self.screen.draw_options(&mut c, &self.options_model());
         } else if let Some(h) = &self.help {
             self.screen.draw_help(&mut c, &self.help_model(h));
+        } else if let Some((frame, title)) = self.plugin_drawable() {
+            self.screen
+                .draw_plugin_screen(&mut c, frame, title, self.theme(), &self.keyboard);
         } else if let Some(g) = &self.graph {
             self.screen.draw_graph(&mut c, &self.graph_model(g));
         } else if let Some(p) = &self.preview {
@@ -3322,6 +3356,7 @@ impl App {
             && self.preview.is_none()
             && !self.options
             && self.graph.is_none()
+            && self.plugin_screen.is_none()
             && self.help.is_none()
     }
 
@@ -3357,6 +3392,15 @@ impl App {
         let page = self.page_rect();
         let on_page = |x: i32, y: i32| page.contains(x, y);
         match g {
+            Gesture::Press { x, y } if self.on_plugin_area(x, y) => {
+                self.drag = None;
+                self.plugin_drag_start(x, y);
+                None
+            }
+            Gesture::Drag { x, y, .. } if self.plugin_drag_active() => self.plugin_drag_move(x, y),
+            Gesture::Release { x, y, .. } if self.plugin_dragging() => {
+                self.plugin_drag_end(x, y).or(Some(Refresh::Partial))
+            }
             Gesture::Press { x, y } if self.on_map(x, y) => {
                 self.drag = None;
                 self.map_drag = Some((x, y, false));
@@ -3729,6 +3773,15 @@ impl App {
             Event::PageTurn { forward } if self.help.is_some() => self.help_page(forward),
             Event::Key(HwKey::Escape) if self.help.is_some() => self.help_back(),
             Event::Key(_) if self.help.is_some() => None,
+            Event::Tap { x, y } if self.plugin_screen.is_some() => self.plugin_tap(x, y),
+            Event::PageTurn { forward } if self.plugin_screen.is_some() => {
+                self.plugin_page(forward)
+            }
+            Event::Key(HwKey::Escape) if self.plugin_screen.is_some() => {
+                self.close_graph();
+                Some(Refresh::Full)
+            }
+            Event::Key(_) if self.plugin_screen.is_some() => None,
             Event::Tap { x, y } if self.graph.is_some() => self.graph_tap(x, y),
             Event::PageTurn { forward } if self.graph.is_some() => self.graph_page(forward),
             Event::Key(HwKey::Escape) if self.graph.is_some() => {
@@ -4123,6 +4176,9 @@ impl App {
         }
         if let Some(h) = &self.help {
             return self.screen.help_control(&self.help_model(h), label);
+        }
+        if self.plugin_screen.is_some() {
+            return self.plugin_control(label);
         }
         if let Some(g) = &self.graph {
             let m = self.graph_model(g);
@@ -4762,7 +4818,7 @@ impl App {
         self.drag = None;
         let g = self.link_graph();
         let name = |i: usize| stem(g.notes[i].name()).to_owned();
-        let rows = (0..g.notes.len())
+        let rows: Vec<GraphRow> = (0..g.notes.len())
             .map(|i| {
                 let to: Vec<String> = g.out[i]
                     .iter()
@@ -4803,6 +4859,10 @@ impl App {
             .collect();
         links.sort_unstable();
         links.dedup();
+        if self.open_plugin_graph(&g.notes, &rows, &links) {
+            self.graph = None;
+            return;
+        }
         let names: Vec<String> = g.notes.iter().map(|n| n.as_str().to_owned()).collect();
         let key = graphmap::layout_key(&names, &links);
         let (layout, layout_us) = match &self.map_cache {
@@ -5018,7 +5078,7 @@ impl App {
     pub fn go_back(&mut self) -> Option<Refresh> {
         let e = self.history.pop()?;
         self.files = None;
-        self.graph = None;
+        self.close_graph();
         self.help = None;
         self.options = false;
         self.close_find();
@@ -5149,7 +5209,7 @@ impl App {
 
     pub fn open_help(&mut self) {
         self.close_find();
-        self.graph = None;
+        self.close_graph();
         self.files = None;
         self.options = false;
         self.save();
