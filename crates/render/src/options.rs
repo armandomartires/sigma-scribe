@@ -11,7 +11,7 @@ use crate::fonts::Face;
 use crate::i18n::tr;
 use crate::theme::Theme;
 use sigma_core::keyboard::Layout as KbLayout;
-use sigma_core::settings::{Change, KeyTone, Orientation, Paper, Settings, Side, Typeface};
+use sigma_core::settings::{Change, Orientation, Settings, Words};
 use sigma_core::Keyboard;
 use std::borrow::Cow;
 
@@ -36,6 +36,22 @@ fn choice(label: &str, change: Change, active: bool) -> Cell {
         change: Some(change),
         active,
     }
+}
+
+/// One cell per value of a [`Words`] setting, in the order of its words.
+fn word_cells<T: Words>(cur: T, change: fn(T) -> Change) -> Vec<Cell> {
+    T::WORDS
+        .iter()
+        .map(|&(v, _, label)| choice(label, change(v), v == cur))
+        .collect()
+}
+
+/// An Off / On switch.
+fn toggle(on: bool, change: fn(bool) -> Change) -> Vec<Cell> {
+    vec![
+        choice("Off", change(false), !on),
+        choice("On", change(true), on),
+    ]
 }
 
 fn value(label: String) -> Cell {
@@ -81,10 +97,7 @@ fn nearest_stop(stops: &[f32], v: f32) -> (usize, f32) {
 /// The rows, in the brief's order, plus Keyboard layout and Orientation.
 #[must_use]
 pub fn option_rows(s: &Settings) -> Vec<OptRow> {
-    let mut line = vec![
-        choice("Off", Change::LineOn(false), !s.line_on),
-        choice("On", Change::LineOn(true), s.line_on),
-    ];
+    let mut line = toggle(s.line_on, Change::LineOn);
     line.extend(stepper(
         format!("{} words", s.line_words),
         Change::LineWords(-1),
@@ -102,26 +115,12 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
         OptRow {
             label: "Dark mode",
             hint: "Night is the same page, inverted",
-            cells: vec![
-                choice("Off", Change::Paper(Paper::Day), s.paper == Paper::Day),
-                choice("On", Change::Paper(Paper::Night), s.paper == Paper::Night),
-            ],
+            cells: word_cells(s.paper, Change::Paper),
         },
         OptRow {
             label: "Type",
             hint: "Serif for reading, sans for the bus",
-            cells: vec![
-                choice(
-                    "Literata",
-                    Change::Face(Typeface::Literata),
-                    s.face == Typeface::Literata,
-                ),
-                choice(
-                    "Atkinson",
-                    Change::Face(Typeface::Atkinson),
-                    s.face == Typeface::Atkinson,
-                ),
-            ],
+            cells: word_cells(s.face, Change::Face),
         },
         OptRow {
             label: "Line",
@@ -212,10 +211,7 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
         OptRow {
             label: "Auto keyboard size",
             hint: "Follow UI scale, up to 150%",
-            cells: vec![
-                choice("Off", Change::KbAuto(false), s.kb_size != 0),
-                choice("On", Change::KbAuto(true), s.kb_size == 0),
-            ],
+            cells: toggle(s.kb_size == 0, Change::KbAuto),
         },
         OptRow {
             label: "Keyboard size",
@@ -235,42 +231,22 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
         OptRow {
             label: "Ink pen",
             hint: "Stroke width in the Write panel",
-            cells: vec![
-                choice(
-                    "Finger",
-                    Change::InkPen(sigma_core::ink::Pen::Finger),
-                    s.ink_pen == sigma_core::ink::Pen::Finger,
-                ),
-                choice(
-                    "Stylus",
-                    Change::InkPen(sigma_core::ink::Pen::Stylus),
-                    s.ink_pen == sigma_core::ink::Pen::Stylus,
-                ),
-            ],
+            cells: word_cells(s.ink_pen, Change::InkPen),
         },
         OptRow {
             label: "Fast ink (A2)",
             hint: "Experimental 1-bit waveform for live ink",
-            cells: vec![
-                choice("Off", Change::InkA2(false), !s.ink_a2),
-                choice("On", Change::InkA2(true), s.ink_a2),
-            ],
+            cells: toggle(s.ink_a2, Change::InkA2),
         },
         OptRow {
             label: "Experimental features",
             hint: "Asian and right-to-left layouts, Word mode, Fast ink",
-            cells: vec![
-                choice("Off", Change::Experimental(false), !s.experimental),
-                choice("On", Change::Experimental(true), s.experimental),
-            ],
+            cells: toggle(s.experimental, Change::Experimental),
         },
         OptRow {
             label: "Logging",
             hint: "The app and its plugins write a log file",
-            cells: vec![
-                choice("Off", Change::Log(false), !s.log),
-                choice("On", Change::Log(true), s.log),
-            ],
+            cells: toggle(s.log, Change::Log),
         },
         OptRow {
             label: "Level",
@@ -283,34 +259,22 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
         OptRow {
             label: "Enhanced keyboard",
             hint: "Off: the Kobo reader's keyboard, with no options on it",
-            cells: vec![
-                choice("Off", Change::EnhancedKeyboard(false), !s.enhanced_keyboard),
-                choice("On", Change::EnhancedKeyboard(true), s.enhanced_keyboard),
-            ],
+            cells: toggle(s.enhanced_keyboard, Change::EnhancedKeyboard),
         },
         OptRow {
             label: "Letter boxes",
             hint: "One character per box instead of free writing",
-            cells: vec![
-                choice("Off", Change::InkBoxes(false), !s.ink_boxes),
-                choice("On", Change::InkBoxes(true), s.ink_boxes),
-            ],
+            cells: toggle(s.ink_boxes, Change::InkBoxes),
         },
         OptRow {
             label: "Word mode (experimental)",
             hint: "Read every word against a word list; off is more accurate",
-            cells: vec![
-                choice("Off", Change::InkWords(false), !s.ink_words),
-                choice("On", Change::InkWords(true), s.ink_words),
-            ],
+            cells: toggle(s.ink_words, Change::InkWords),
         },
         OptRow {
             label: "Override system language",
             hint: "Choose the app's language instead of the Kobo's",
-            cells: vec![
-                choice("Off", Change::LangOverride(false), !s.lang_override),
-                choice("On", Change::LangOverride(true), s.lang_override),
-            ],
+            cells: toggle(s.lang_override, Change::LangOverride),
         },
         OptRow {
             label: "Interface language",
@@ -323,43 +287,17 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
         OptRow {
             label: "Keyboard tone",
             hint: "The keyboard can differ from the page",
-            cells: vec![
-                choice(
-                    "Theme",
-                    Change::KeyTone(KeyTone::Theme),
-                    s.key_tone == KeyTone::Theme,
-                ),
-                choice(
-                    "Light",
-                    Change::KeyTone(KeyTone::Light),
-                    s.key_tone == KeyTone::Light,
-                ),
-                choice(
-                    "Dark",
-                    Change::KeyTone(KeyTone::Dark),
-                    s.key_tone == KeyTone::Dark,
-                ),
-            ],
+            cells: word_cells(s.key_tone, Change::KeyTone),
         },
         OptRow {
             label: "Drawer",
             hint: "Contents, to-dos and scratch open here (v0.5)",
-            cells: vec![
-                choice("Left", Change::Drawer(Side::Left), s.drawer == Side::Left),
-                choice(
-                    "Right",
-                    Change::Drawer(Side::Right),
-                    s.drawer == Side::Right,
-                ),
-            ],
+            cells: word_cells(s.drawer, Change::Drawer),
         },
         OptRow {
             label: "USB keyboard & mouse",
             hint: "Needs a powered hub: the reader does not power the port",
-            cells: vec![
-                choice("Off", Change::Usb(false), !s.usb),
-                choice("On", Change::Usb(true), s.usb),
-            ],
+            cells: toggle(s.usb, Change::Usb),
         },
         OptRow {
             label: "Scroll",
@@ -376,31 +314,12 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
         OptRow {
             label: "Orientation",
             hint: "Auto follows how you hold it",
-            cells: vec![
-                choice(
-                    "Auto",
-                    Change::Orientation(Orientation::Auto),
-                    s.orientation == Orientation::Auto,
-                ),
-                choice(
-                    "Portrait",
-                    Change::Orientation(Orientation::Portrait),
-                    s.orientation == Orientation::Portrait,
-                ),
-                choice(
-                    "Landscape",
-                    Change::Orientation(Orientation::Landscape),
-                    s.orientation == Orientation::Landscape,
-                ),
-            ],
+            cells: word_cells(s.orientation, Change::Orientation),
         },
         OptRow {
             label: "Upside down",
             hint: "Turns Portrait or Landscape 180°",
-            cells: vec![
-                choice("Off", Change::UpsideDown(false), !s.upside_down),
-                choice("On", Change::UpsideDown(true), s.upside_down),
-            ],
+            cells: toggle(s.upside_down, Change::UpsideDown),
         },
     ]
 }
@@ -918,14 +837,10 @@ fn summary(m: &OptionsModel<'_>, cat: usize) -> String {
     let on_off = |b: bool| tr(if b { "On" } else { "Off" }).into_owned();
     match cat {
         // The type size has no unit worth showing (v1.6.3: it is a slider).
-        0 => tr(match s.face {
-            Typeface::Literata => "Literata",
-            Typeface::Atkinson => "Atkinson",
-        })
-        .into_owned(),
+        0 => tr(s.face.label()).into_owned(),
         1 => format!(
             "{}, {} %",
-            tr(if s.paper == Paper::Night {
+            tr(if s.paper == sigma_core::settings::Paper::Night {
                 "Night"
             } else {
                 "Day"

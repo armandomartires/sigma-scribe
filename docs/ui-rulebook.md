@@ -51,7 +51,7 @@ Night is the same drawing inverted, never a grey card. Use the `Theme` tokens, n
    - read-only: an italic value; disabled: `MUTED` grey value, no target.
 4. **Root** lists the categories, each with a one-line summary of its state. A category holds bands; keep related rows together, put rarely used or risky ones in their own category (Experimental features).
 5. **Hidden, not greyed,** when a row cannot apply on this device (Backlight without a front light) or belongs to a feature that is switched off (Fast ink and Word mode while Experimental features is off). Greyed only when the row *could* apply and a setting explains why not (Interface language while the Kobo's language is followed, Upside down on Auto, Words per line with Line off, Tab width with Tab key on Tab, Keyboard size with Auto on). A greyed row says why in a **note** under its label (`DRow::note`, small Atkinson in the mute colour); no other row has one.
-6. Settings are saved to `.sigma-settings` as `key=value`; a new key has a default and old files load unchanged. A setting that is only a request to the device (Backlight) is not saved.
+6. Settings are saved to `.sigma-settings` as `key=value`; a new key has a default and old files load unchanged. A setting that is only a request to the device (Backlight) is not saved. Each line of the file is one entry of `settings::FIELDS` (key, how it is read, how it is written); a setting with a fixed set of values lists them once in its `Words` table (the file's word and the Settings label), which both the file and the row's cells use.
 7. Notes (rule 5) are one short line, no marketing words. Rows that are live carry no help text; the Help screen explains the rest.
 
 ## 6. Controls
