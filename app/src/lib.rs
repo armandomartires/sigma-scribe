@@ -4859,7 +4859,7 @@ impl App {
             .collect();
         links.sort_unstable();
         links.dedup();
-        if self.open_plugin_graph(&g.notes, &rows, &links) {
+        if self.open_plugin_graph(&g.notes, &rows, &links, g.edges()) {
             self.graph = None;
             return;
         }

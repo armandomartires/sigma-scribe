@@ -75,6 +75,7 @@ impl App {
         notes: &[NotePath],
         rows: &[GraphRow],
         links: &[(usize, usize)],
+        link_count: usize,
     ) -> bool {
         if self.plugin_failed {
             return false;
@@ -83,7 +84,7 @@ impl App {
         else {
             return false;
         };
-        match self.load_plugin(&manifest.id, &wasm, rows, links) {
+        match self.load_plugin(&manifest.id, &wasm, rows, links, link_count) {
             Ok((plugin, frame)) => {
                 self.plugin_screen = Some(PluginScreen {
                     plugin,
@@ -108,6 +109,7 @@ impl App {
         wasm: &std::path::Path,
         rows: &[GraphRow],
         links: &[(usize, usize)],
+        link_count: usize,
     ) -> Result<(Plugin, Frame), String> {
         let bytes = std::fs::read(wasm).map_err(|e| e.to_string())?;
         let cache = DirCache::new(
@@ -120,11 +122,10 @@ impl App {
         });
         let mut plugin =
             Plugin::load(&bytes, env, cache, Limits::default()).map_err(|e| e.to_string())?;
-        let s = self.screen.scale();
         let scene = Scene {
             width: self.screen.width as i32,
             height: self.screen.height as i32,
-            scale: s.px(1000.0) as f32 / 1000.0,
+            scale: self.screen.scale().0,
             ui_px: self.screen.ui_px(),
             top: self.screen.plugin_screen_top(&self.keyboard),
             bottom: self.screen.height as i32,
@@ -137,6 +138,7 @@ impl App {
                 })
                 .collect(),
             edges: links.iter().map(|&(a, b)| (a as u32, b as u32)).collect(),
+            links: link_count as u32,
         };
         let frame = plugin
             .call(&PEvent::Open(scene))
