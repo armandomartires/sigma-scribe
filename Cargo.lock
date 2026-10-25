@@ -624,6 +624,10 @@ name = "sigma-hwr"
 version = "1.11.1"
 
 [[package]]
+name = "sigma-plugin-api"
+version = "1.11.1"
+
+[[package]]
 name = "sigma-render"
 version = "1.11.1"
 dependencies = [
