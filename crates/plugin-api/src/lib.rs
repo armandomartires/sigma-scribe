@@ -17,7 +17,7 @@
 //! `cache_get` and `cache_put` (see `sigma-plugin-host`).
 
 /// Wire format version. Bumped on any incompatible change.
-pub const ABI: u32 = 1;
+pub const ABI: u32 = 2;
 
 /// Decoding limits.
 pub const MAX_OPS: usize = 200_000;
@@ -25,6 +25,7 @@ pub const MAX_HITS: usize = 50_000;
 pub const MAX_NOTES: usize = 50_000;
 pub const MAX_EDGES: usize = 500_000;
 pub const MAX_STR: usize = 8 * 1024;
+pub const MAX_SETTINGS: usize = 64;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DecodeError;
@@ -262,6 +263,10 @@ pub struct Frame {
     /// Every action leaves the screen, so the host applies only the first.
     pub actions: Vec<Action>,
     pub redraw: Redraw,
+    /// The plugin has more to do (building a layout, say): the host shows
+    /// this frame and, when idle, sends [`Event::Step`] for the next one.
+    /// The frame is the progress picture meanwhile.
+    pub pending: bool,
 }
 
 impl Frame {
@@ -333,6 +338,7 @@ impl Frame {
             }
         }
         w.u8(self.redraw as u8);
+        w.u8(u8::from(self.pending));
         w.0
     }
 
@@ -395,6 +401,11 @@ impl Frame {
             3 => Redraw::Full,
             _ => return Err(DecodeError),
         };
+        f.pending = match r.u8()? {
+            0 => false,
+            1 => true,
+            _ => return Err(DecodeError),
+        };
         r.finish()?;
         Ok(f)
     }
@@ -426,6 +437,10 @@ pub struct Scene {
     /// How many links reach a note (what footers say), which counts
     /// repeated links that `edges` lists once.
     pub links: u32,
+    /// The plugin's own settings as the reader set them, by key: the chosen
+    /// option's text as the plugin declared it ("List", "All", ...). Every
+    /// declared setting is present.
+    pub settings: Vec<(String, String)>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -460,6 +475,8 @@ pub enum Event {
         forward: bool,
     },
     Back,
+    /// The host is idle and the last frame was `pending`: do the next piece.
+    Step,
 }
 
 impl Event {
@@ -486,6 +503,11 @@ impl Event {
                     w.u32(b);
                 }
                 w.u32(s.links);
+                w.u32(s.settings.len() as u32);
+                for (k, v) in &s.settings {
+                    w.str(k);
+                    w.str(v);
+                }
             }
             Event::Tap { x, y } => {
                 w.u8(1);
@@ -509,6 +531,7 @@ impl Event {
                 w.u8(u8::from(*forward));
             }
             Event::Back => w.u8(5),
+            Event::Step => w.u8(6),
         }
         w.0
     }
@@ -534,6 +557,10 @@ impl Event {
                     edges.push((r.u32()?, r.u32()?));
                 }
                 let links = r.u32()?;
+                let mut settings = Vec::new();
+                for _ in 0..r.count(MAX_SETTINGS, 8)? {
+                    settings.push((r.str()?, r.str()?));
+                }
                 Event::Open(Scene {
                     width,
                     height,
@@ -544,6 +571,7 @@ impl Event {
                     notes,
                     edges,
                     links,
+                    settings,
                 })
             }
             1 => Event::Tap {
@@ -569,6 +597,7 @@ impl Event {
                 forward: r.u8()? != 0,
             },
             5 => Event::Back,
+            6 => Event::Step,
             _ => return Err(DecodeError),
         };
         r.finish()?;
@@ -618,6 +647,7 @@ mod tests {
             }],
             actions: vec![Action::OpenNote(3), Action::PreviewNote(1), Action::Close],
             redraw: Redraw::Clean,
+            pending: true,
         }
     }
 
@@ -643,6 +673,10 @@ mod tests {
             ],
             edges: vec![(0, 1), (1, 0)],
             links: 3,
+            settings: vec![
+                ("view".into(), "List".into()),
+                ("labels".into(), "All".into()),
+            ],
         }
     }
 
@@ -673,6 +707,7 @@ mod tests {
             },
             Event::PageTurn { forward: true },
             Event::Back,
+            Event::Step,
         ] {
             assert_eq!(Event::decode(&e.encode()), Ok(e));
         }
