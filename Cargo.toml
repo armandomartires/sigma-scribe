@@ -35,3 +35,20 @@ opt-level = 3
 
 [profile.dev.package.fontdue]
 opt-level = 3
+
+# The WASM interpreter runs plugins (the Graph layout) inside `cargo test`;
+# unoptimised it is far too slow.
+[profile.dev.package.wasmi]
+opt-level = 3
+
+[profile.dev.package.wasmi_core]
+opt-level = 3
+
+[profile.dev.package.wasmi_ir]
+opt-level = 3
+
+[profile.dev.package.wasmi_collections]
+opt-level = 3
+
+[profile.dev.package.wasmparser]
+opt-level = 3

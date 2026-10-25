@@ -37,9 +37,37 @@ impl Env for ScreenEnv {
     }
 }
 
+/// Identifies a plugin module on disk, so a loaded instance is reused only
+/// while the file is unchanged.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Stamp {
+    path: std::path::PathBuf,
+    modified: Option<std::time::SystemTime>,
+    len: u64,
+}
+
+impl Stamp {
+    fn of(path: &std::path::Path) -> std::io::Result<Self> {
+        let m = std::fs::metadata(path)?;
+        Ok(Self {
+            path: path.to_path_buf(),
+            modified: m.modified().ok(),
+            len: m.len(),
+        })
+    }
+}
+
+/// A loaded plugin kept between opens: starting wasmi and validating the
+/// module costs more than answering an event.
+pub struct IdlePlugin {
+    plugin: Plugin,
+    stamp: Stamp,
+}
+
 /// A plugin screen that is open.
 pub struct PluginScreen {
     plugin: Plugin,
+    stamp: Stamp,
     frame: Frame,
     /// The notes the plugin was given, so actions can name them.
     notes: Vec<NotePath>,
@@ -59,13 +87,22 @@ impl App {
     pub fn set_plugins_root(&mut self, root: impl Into<std::path::PathBuf>) {
         self.plugins_root = root.into();
         self.plugin_failed = false;
+        self.plugin_idle = None;
     }
 
     /// Closes the Graph screen, built-in or plugin.
     pub(crate) fn close_graph(&mut self) {
         self.graph = None;
-        self.plugin_screen = None;
         self.map_drag = None;
+        // Keep a healthy plugin loaded for the next open.
+        if let Some(ps) = self.plugin_screen.take() {
+            if !ps.plugin.is_poisoned() {
+                self.plugin_idle = Some(IdlePlugin {
+                    plugin: ps.plugin,
+                    stamp: ps.stamp,
+                });
+            }
+        }
     }
 
     /// Tries to open the Graph as a plugin screen. False when no usable
@@ -75,6 +112,7 @@ impl App {
         notes: &[NotePath],
         rows: &[GraphRow],
         links: &[(usize, usize)],
+        link_count: usize,
     ) -> bool {
         if self.plugin_failed {
             return false;
@@ -83,10 +121,11 @@ impl App {
         else {
             return false;
         };
-        match self.load_plugin(&manifest.id, &wasm, rows, links) {
-            Ok((plugin, frame)) => {
+        match self.load_plugin(&manifest.id, &wasm, rows, links, link_count) {
+            Ok((plugin, frame, stamp)) => {
                 self.plugin_screen = Some(PluginScreen {
                     plugin,
+                    stamp,
                     frame,
                     notes: notes.to_vec(),
                     title: manifest.name,
@@ -108,23 +147,29 @@ impl App {
         wasm: &std::path::Path,
         rows: &[GraphRow],
         links: &[(usize, usize)],
-    ) -> Result<(Plugin, Frame), String> {
-        let bytes = std::fs::read(wasm).map_err(|e| e.to_string())?;
-        let cache = DirCache::new(
-            self.plugins_root.join(id).join(".cache"),
-            CACHE_ENTRIES,
-            CACHE_BYTES,
-        );
-        let env = Box::new(ScreenEnv {
-            fonts: Fonts::new(),
-        });
-        let mut plugin =
-            Plugin::load(&bytes, env, cache, Limits::default()).map_err(|e| e.to_string())?;
-        let s = self.screen.scale();
+        link_count: usize,
+    ) -> Result<(Plugin, Frame, Stamp), String> {
+        let stamp = Stamp::of(wasm).map_err(|e| e.to_string())?;
+        let idle = self.plugin_idle.take().filter(|i| i.stamp == stamp);
+        let mut plugin = match idle {
+            Some(i) => i.plugin,
+            None => {
+                let bytes = std::fs::read(wasm).map_err(|e| e.to_string())?;
+                let cache = DirCache::new(
+                    self.plugins_root.join(id).join(".cache"),
+                    CACHE_ENTRIES,
+                    CACHE_BYTES,
+                );
+                let env = Box::new(ScreenEnv {
+                    fonts: Fonts::new(),
+                });
+                Plugin::load(&bytes, env, cache, Limits::default()).map_err(|e| e.to_string())?
+            }
+        };
         let scene = Scene {
             width: self.screen.width as i32,
             height: self.screen.height as i32,
-            scale: s.px(1000.0) as f32 / 1000.0,
+            scale: self.screen.scale().0,
             ui_px: self.screen.ui_px(),
             top: self.screen.plugin_screen_top(&self.keyboard),
             bottom: self.screen.height as i32,
@@ -137,11 +182,12 @@ impl App {
                 })
                 .collect(),
             edges: links.iter().map(|&(a, b)| (a as u32, b as u32)).collect(),
+            links: link_count as u32,
         };
         let frame = plugin
             .call(&PEvent::Open(scene))
             .map_err(|e| e.to_string())?;
-        Ok((plugin, frame))
+        Ok((plugin, frame, stamp))
     }
 
     /// Sends an event to the open plugin and applies its answer. A failing

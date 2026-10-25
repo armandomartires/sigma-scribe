@@ -413,7 +413,8 @@ pub struct Note {
 pub struct Scene {
     pub width: i32,
     pub height: i32,
-    /// UI scale (1.0 at the Forma's reference density) and the UI font size.
+    /// The host's exact UI scale factor (so `round(brief * scale)` gives the
+    /// same pixels as the host) and its UI font size.
     pub scale: f32,
     pub ui_px: f32,
     /// Top and bottom bars the host draws itself: the plugin paints between.
@@ -422,6 +423,9 @@ pub struct Scene {
     pub notes: Vec<Note>,
     /// Directed links between notes, as indexes into `notes`.
     pub edges: Vec<(u32, u32)>,
+    /// How many links reach a note (what footers say), which counts
+    /// repeated links that `edges` lists once.
+    pub links: u32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -481,6 +485,7 @@ impl Event {
                     w.u32(a);
                     w.u32(b);
                 }
+                w.u32(s.links);
             }
             Event::Tap { x, y } => {
                 w.u8(1);
@@ -528,6 +533,7 @@ impl Event {
                 for _ in 0..r.count(MAX_EDGES, 8)? {
                     edges.push((r.u32()?, r.u32()?));
                 }
+                let links = r.u32()?;
                 Event::Open(Scene {
                     width,
                     height,
@@ -537,6 +543,7 @@ impl Event {
                     bottom,
                     notes,
                     edges,
+                    links,
                 })
             }
             1 => Event::Tap {
@@ -635,6 +642,7 @@ mod tests {
                 },
             ],
             edges: vec![(0, 1), (1, 0)],
+            links: 3,
         }
     }
 

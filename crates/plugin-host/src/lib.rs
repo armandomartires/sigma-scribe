@@ -343,6 +343,12 @@ impl Plugin {
         Ok(out)
     }
 
+    /// Whether an earlier call failed, so the instance must not be reused.
+    #[must_use]
+    pub fn is_poisoned(&self) -> bool {
+        self.poisoned
+    }
+
     /// Fuel left after the last call (for tuning the budget).
     #[must_use]
     pub fn fuel_left(&self) -> u64 {

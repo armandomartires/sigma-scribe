@@ -27,7 +27,7 @@ use sigma_render::{
 use std::path::PathBuf;
 
 mod plugin_screen;
-pub use plugin_screen::{PluginScreen, GRAPH_PLUGIN};
+pub use plugin_screen::{IdlePlugin, PluginScreen, GRAPH_PLUGIN};
 
 pub const NOTE: &str = "field-notes.md";
 pub const SEED: &str = include_str!("../seed/field-notes.md");
@@ -430,6 +430,8 @@ pub struct App {
     map_cache: Option<(u64, std::sync::Arc<MapLayout>)>,
     /// The Graph as a WASM plugin, when one is installed and enabled.
     plugin_screen: Option<PluginScreen>,
+    /// A loaded plugin kept for the next open.
+    plugin_idle: Option<IdlePlugin>,
     /// Where plugins are installed.
     plugins_root: PathBuf,
     /// A plugin failed: the built-in Graph serves the rest of the session.
@@ -554,6 +556,7 @@ impl App {
             map_drag: None,
             map_cache: None,
             plugin_screen: None,
+            plugin_idle: None,
             plugins_root: sigma_core::plugins::plugins_root(),
             plugin_failed: false,
             preview: None,
@@ -4859,7 +4862,7 @@ impl App {
             .collect();
         links.sort_unstable();
         links.dedup();
-        if self.open_plugin_graph(&g.notes, &rows, &links) {
+        if self.open_plugin_graph(&g.notes, &rows, &links, g.edges()) {
             self.graph = None;
             return;
         }
