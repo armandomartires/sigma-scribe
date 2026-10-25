@@ -906,3 +906,25 @@ restart to apply
 Needs a newer app
 = Cal una versió més recent de l'aplicació
 
+# Graph plugin: loading, progress and its settings
+Quick
+= Ràpid
+
+Best
+= Millor
+
+Labels
+= Etiquetes
+
+Start on
+= Comença a
+
+Turn the plugin on first
+= Activa primer el complement
+
+Opening the graph…
+= S'està obrint el graf…
+
+Building the graph…
+= S'està construint el graf…
+

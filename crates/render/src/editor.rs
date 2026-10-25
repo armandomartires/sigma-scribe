@@ -171,6 +171,9 @@ pub struct EditorScreen {
     pub overwrite: bool,
     /// Navigation history is not empty: show the Back arrow (v1.0.2).
     pub back_on: bool,
+    /// The Graph icon is shown: the Graph plugin is on (or the built-in
+    /// Graph is wanted). Off closes the icon's place up.
+    pub graph_on: bool,
     /// Settings → Word mode is on (v1.5.3): Letters offers Words.
     pub ink_words: bool,
     /// Sketch: the dotted guide line is shown (v1.13.1).
@@ -234,6 +237,7 @@ impl EditorScreen {
             usb_live: false,
             overwrite: false,
             back_on: false,
+            graph_on: true,
             ink_words: false,
             sketch_guide: true,
             drawer_open: [false; 3],
@@ -428,7 +432,8 @@ impl EditorScreen {
         };
         let by = (title.h - btn) / 2;
         // Right-aligned group, mockup order left to right.
-        let x0 = w - self.px(12.0) - TITLE_ICONS * btn - (TITLE_ICONS - 1) * icon_gap;
+        let shown = TITLE_ICONS - i32::from(!self.graph_on);
+        let x0 = w - self.px(12.0) - shown * btn - (shown - 1) * icon_gap;
         let slot = |i: i32| Rect::new(x0 + i * (btn + icon_gap), by, btn, btn);
         let back_button = slot(0);
         let files_button = slot(1);
@@ -437,8 +442,13 @@ impl EditorScreen {
         let scratch_button = slot(4);
         let todos_button = slot(5);
         let contents_button = slot(6);
-        let graph_button = slot(7);
-        let options_button = slot(8);
+        // No Graph icon (its plugin is off): no button, and Settings stays
+        // flush right.
+        let (graph_button, options_button) = if self.graph_on {
+            (slot(7), slot(8))
+        } else {
+            (Rect::default(), slot(7))
+        };
         // Help opens from Settings → Help & about; the far-right slot is the
         // Settings button, and Close takes its place on the other screens.
         let close_button = options_button;
@@ -1113,7 +1123,7 @@ impl EditorScreen {
         if l.find_button.inset(-self.px(4.0)).contains(x, y) {
             return Hit::Find;
         }
-        if l.graph_button.inset(-self.px(4.0)).contains(x, y) {
+        if self.graph_on && l.graph_button.inset(-self.px(4.0)).contains(x, y) {
             return Hit::Graph;
         }
         for (r, p) in [
@@ -1176,7 +1186,9 @@ impl EditorScreen {
                 c.stroke(l.find_button, 2, t.ink);
             }
             crate::icons::draw_icon(c, crate::icons::Icon::Search, l.find_button, t.ink);
-            crate::icons::draw_icon(c, crate::icons::Icon::Graph, l.graph_button, t.ink);
+            if self.graph_on {
+                crate::icons::draw_icon(c, crate::icons::Icon::Graph, l.graph_button, t.ink);
+            }
             for (i, r) in [l.contents_button, l.todos_button, l.scratch_button]
                 .into_iter()
                 .enumerate()
@@ -2076,7 +2088,7 @@ impl EditorScreen {
             Hit::Options
         } else if l.find_button.inset(-self.px(4.0)).contains(x, y) {
             Hit::Find
-        } else if l.graph_button.inset(-self.px(4.0)).contains(x, y) {
+        } else if self.graph_on && l.graph_button.inset(-self.px(4.0)).contains(x, y) {
             Hit::Graph
         } else if l.contents_button.inset(-self.px(4.0)).contains(x, y) {
             // v1.0.3: the drawer panes open in preview too.
@@ -2113,7 +2125,9 @@ impl EditorScreen {
         crate::icons::draw_icon(c, crate::icons::Icon::Pencil, l.preview_button, t.ink);
         self.draw_options_icon(c, l.options_button, t);
         crate::icons::draw_icon(c, crate::icons::Icon::Search, l.find_button, t.ink);
-        crate::icons::draw_icon(c, crate::icons::Icon::Graph, l.graph_button, t.ink);
+        if self.graph_on {
+            crate::icons::draw_icon(c, crate::icons::Icon::Graph, l.graph_button, t.ink);
+        }
         // v1.0.3: the drawer pane buttons, active while open (as in write).
         for (i, r) in [l.contents_button, l.todos_button, l.scratch_button]
             .into_iter()
@@ -2393,6 +2407,68 @@ mod tests {
         assert!(e.scroll < before);
         e.page_turn(&mut b, page, true);
         assert_eq!(e.scroll, before.min(e.scroll));
+    }
+
+    #[test]
+    fn without_the_graph_icon_the_rest_close_up_and_settings_stays_flush_right() {
+        let k = Keyboard::default();
+        for (w, h) in [(W, H), (H, W)] {
+            let mut e = EditorScreen::new(w, h);
+            let with = e.layout(true, &k);
+            e.graph_on = false;
+            let l = e.layout(true, &k);
+            let s = e.scale();
+            let order = [
+                l.files_button,
+                l.preview_button,
+                l.find_button,
+                l.scratch_button,
+                l.todos_button,
+                l.contents_button,
+                l.options_button,
+            ];
+            for r in order {
+                assert_eq!(
+                    (r.w, r.h),
+                    (s.px(44.0), s.px(44.0)),
+                    "{w}x{h}: same icon size"
+                );
+            }
+            for p in order.windows(2) {
+                assert!(p[0].x + p[0].w < p[1].x, "left to right, no overlap");
+            }
+            assert_eq!(
+                l.options_button, with.options_button,
+                "Settings does not move"
+            );
+            assert_eq!(l.close_button, l.options_button);
+            assert_eq!(l.graph_button, Rect::default(), "no button");
+            // The place the Graph icon had is the Contents icon's now.
+            assert!(l.contents_button.x > with.contents_button.x);
+            // Nothing answers where the Graph icon was, nor in the corner a
+            // default rectangle would cover.
+            let b = Buffer::new("x");
+            let st = SaveState::Saved;
+            let m = model(&b, &k, &st);
+            let g = with.graph_button;
+            assert_ne!(e.hit(&m, g.x + g.w / 2, g.y + g.h / 2), Hit::Graph);
+            assert_ne!(e.hit(&m, 0, 0), Hit::Graph);
+            assert_ne!(e.preview_hit(&k, g.x + g.w / 2, g.y + g.h / 2), Hit::Graph);
+            assert_ne!(e.preview_hit(&k, 0, 0), Hit::Graph);
+            // Every remaining icon still hits itself.
+            let want = [
+                Hit::Files,
+                Hit::TogglePreview,
+                Hit::Find,
+                Hit::Drawer(crate::drawer::Pane::Scratch),
+                Hit::Drawer(crate::drawer::Pane::Todos),
+                Hit::Drawer(crate::drawer::Pane::Contents),
+                Hit::Options,
+            ];
+            for (r, h) in order.iter().zip(want) {
+                assert_eq!(e.hit(&m, r.x + r.w / 2, r.y + r.h / 2), h, "{w}x{h:?}");
+            }
+        }
     }
 
     #[test]

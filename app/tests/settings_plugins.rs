@@ -53,7 +53,10 @@ impl Rig {
                 "graph-map",
                 "Graph",
                 "screen",
-                "entry=graph.wasm\n",
+                "entry=graph.wasm\n\
+                 setting=view|Start on|Map,List|Map\n\
+                 setting=labels|Labels|Auto,All|Auto\n\
+                 setting=layout|Layout|Quick,Best|Best\n",
             );
             std::fs::copy(
                 fixture().join("graph.wasm"),
@@ -98,6 +101,12 @@ impl Rig {
             .control_centre(label)
             .unwrap_or_else(|| panic!("no control {label}"));
         self.send(Event::Tap { x, y })
+    }
+
+    /// Taps the Graph icon and lets the idle ticks load and build the screen.
+    fn open_graph(&mut self) {
+        self.tap_on("Graph");
+        self.app.plugin_settle(&mut self.dev);
     }
 
     fn open_plugins_page(&mut self) {
@@ -146,13 +155,14 @@ fn installed_plugins_are_listed_and_switchable() {
 }
 
 #[test]
-fn switching_the_graph_plugin_off_and_on_changes_what_the_graph_icon_opens() {
+fn switching_the_graph_plugin_off_removes_the_graph_icon_and_on_puts_it_back() {
     let mut r = Rig::new("toggle", true);
-    // On: the Graph icon opens the plugin.
-    r.tap_on("Graph");
+    // On: the Graph icon is in the title bar and opens the plugin.
+    assert!(r.app.control_centre("Graph").is_some());
+    r.open_graph();
     assert!(r.app.plugin_screen_open());
     r.tap_on("Close");
-    // Off in Settings.
+    // Off in Settings: the icon is gone from the top menu.
     r.open_plugins_page();
     assert_eq!(r.tap_on("Graph/Off"), Some(Refresh::Full));
     assert!(
@@ -162,13 +172,13 @@ fn switching_the_graph_plugin_off_and_on_changes_what_the_graph_icon_opens() {
     );
     assert!(r.app.control_centre("Graph/On").is_some());
     r.tap_on("Close");
-    r.tap_on("Graph");
-    assert!(
-        r.app.graph.is_some() && !r.app.plugin_screen_open(),
-        "the built-in Graph"
-    );
-    r.tap_on("Close");
-    // On again.
+    assert!(r.app.control_centre("Graph").is_none(), "no Graph icon");
+    assert!(r.app.touch_targets().iter().all(|(n, _)| n != "Graph"));
+    // The other icons are still there, and Settings is still flush right.
+    for icon in ["Files", "Preview", "Find", "Options"] {
+        assert!(r.app.control_centre(icon).is_some(), "{icon}");
+    }
+    // On again: the icon is back, and opens the plugin.
     r.open_plugins_page();
     r.tap_on("Graph/On");
     assert!(
@@ -177,7 +187,8 @@ fn switching_the_graph_plugin_off_and_on_changes_what_the_graph_icon_opens() {
         r.state()
     );
     r.tap_on("Close");
-    r.tap_on("Graph");
+    assert!(r.app.control_centre("Graph").is_some(), "the icon is back");
+    r.open_graph();
     assert!(r.app.plugin_screen_open(), "the plugin again");
 }
 
@@ -211,9 +222,7 @@ fn the_choice_survives_a_restart() {
     again.open(&sigma_core::NotePath::parse("a.md").unwrap());
     let mut dev = DesktopDevice::new(1440, 1920);
     again.render(&mut dev, Refresh::Full).unwrap();
-    let (x, y) = again.control_centre("Graph").unwrap();
-    again.handle(Event::Tap { x, y });
-    assert!(again.graph.is_some() && !again.plugin_screen_open());
+    assert!(again.control_centre("Graph").is_none(), "still no icon");
 }
 
 #[test]
@@ -226,10 +235,9 @@ fn no_plugins_installed_says_so_and_has_nothing_to_switch() {
         .touch_targets()
         .iter()
         .all(|(n, _)| !n.contains("/On") && !n.contains("/Off")));
-    // The built-in Graph still works with no plugins at all.
+    // With no Graph plugin there is no Graph icon.
     r.tap_on("Close");
-    r.tap_on("Graph");
-    assert!(r.app.graph.is_some());
+    assert!(r.app.control_centre("Graph").is_none());
 }
 
 #[test]
@@ -280,7 +288,12 @@ fn the_plugins_page_fits_in_each_language_and_orientation() {
         for o in [Orientation::Portrait, Orientation::Landscape] {
             r.app.change(Change::Orientation(o));
             r.app.open_options();
-            for p in [SettingsPage::Root, SettingsPage::Category(PLUGINS_CATEGORY)] {
+            // Graph is third in the list (by name): the plugin's own page too.
+            for p in [
+                SettingsPage::Root,
+                SettingsPage::Category(PLUGINS_CATEGORY),
+                SettingsPage::Plugin(2),
+            ] {
                 r.app.settings_page = p;
                 r.app.settings_sub = 0;
                 loop {
@@ -304,4 +317,135 @@ fn the_plugins_page_fits_in_each_language_and_orientation() {
         }
     }
     i18n::set_lang(Lang::En);
+}
+
+const GRAPH_SETTINGS: &str = "Graph \u{b7} Settings";
+
+#[test]
+fn a_plugins_settings_page_is_locked_while_it_is_off_and_opens_once_it_is_on() {
+    let mut r = Rig::new("unlock", true);
+    r.open_plugins_page();
+    // On: the settings row opens the page.
+    assert!(r.app.control_centre(GRAPH_SETTINGS).is_some(), "unlocked");
+    // Off: the row is still listed but cannot be opened.
+    r.tap_on("Graph/Off");
+    assert!(r.app.control_centre(GRAPH_SETTINGS).is_none(), "locked");
+    // On again: unlocked.
+    r.tap_on("Graph/On");
+    assert!(
+        r.app.control_centre(GRAPH_SETTINGS).is_some(),
+        "unlocked again"
+    );
+    // A plugin that declares no settings has no such row, and neither does
+    // one that needs a newer app.
+    let font = "A very long plugin name that must stay clear of the switch \u{b7} Settings";
+    assert!(r.app.control_centre(font).is_none());
+    assert!(r
+        .app
+        .control_centre("Future theme \u{b7} Settings")
+        .is_none());
+}
+
+#[test]
+fn the_settings_page_shows_each_setting_and_saves_the_choice() {
+    let mut r = Rig::new("choices", true);
+    r.open_plugins_page();
+    r.tap_on(GRAPH_SETTINGS);
+    assert_eq!(r.app.settings_page, SettingsPage::Plugin(2));
+    for c in [
+        "Start on/Map",
+        "Start on/List",
+        "Labels/Auto",
+        "Labels/All",
+        "Layout/Quick",
+        "Layout/Best",
+    ] {
+        assert!(r.app.control_centre(c).is_some(), "{c}");
+    }
+    let file = r.plugins.join("graph-map/settings");
+    assert!(!file.exists(), "nothing written until a choice is made");
+    r.tap_on("Start on/List");
+    r.tap_on("Labels/All");
+    r.tap_on("Layout/Quick");
+    let text = std::fs::read_to_string(&file).unwrap();
+    for want in ["view=List", "labels=All", "layout=Quick"] {
+        assert!(text.contains(want), "{want} in {text:?}");
+    }
+    // The choices are what the plugin will be told.
+    let m = plugins::manifest_in(&r.plugins, "graph-map").unwrap();
+    assert_eq!(plugins::settings_in(&r.plugins, &m), [1, 1, 0]);
+    // A choice can be changed back; the others stay.
+    r.tap_on("Start on/Map");
+    let m = plugins::manifest_in(&r.plugins, "graph-map").unwrap();
+    assert_eq!(plugins::settings_in(&r.plugins, &m), [0, 1, 0]);
+    // Back and Esc walk up: Plugins, then the Settings root.
+    r.send(Event::Key(HwKey::Escape));
+    assert_eq!(
+        r.app.settings_page,
+        SettingsPage::Category(PLUGINS_CATEGORY)
+    );
+    r.send(Event::Key(HwKey::Escape));
+    assert_eq!(r.app.settings_page, SettingsPage::Root);
+}
+
+#[test]
+fn a_chosen_setting_changes_the_graph_the_real_plugin_opens() {
+    let mut r = Rig::new("effect", true);
+    // Default: the map.
+    r.open_graph();
+    assert!(r.app.control_centre("Zoom+").is_some(), "the map");
+    r.tap_on("Close");
+    // Start on List.
+    r.open_plugins_page();
+    r.tap_on(GRAPH_SETTINGS);
+    r.tap_on("Start on/List");
+    r.send(Event::Key(HwKey::Escape));
+    r.send(Event::Key(HwKey::Escape));
+    r.send(Event::Key(HwKey::Escape));
+    assert!(!r.app.options);
+    r.open_graph();
+    assert!(r.app.plugin_screen_open());
+    assert!(r.app.control_centre("Zoom+").is_none(), "no zoom: the list");
+    assert!(r.app.control_centre("Map").is_some() && r.app.control_centre("List").is_some());
+}
+
+#[test]
+fn an_unreachable_settings_page_has_nothing_to_change() {
+    let mut r = Rig::new("stale", true);
+    r.open_plugins_page();
+    r.tap_on("Graph/Off");
+    // Somehow on the page of a plugin that is off: nothing to switch or set.
+    r.app.settings_page = SettingsPage::Plugin(2);
+    r.app.render(&mut r.dev, Refresh::Full).unwrap();
+    assert!(r
+        .app
+        .touch_targets()
+        .iter()
+        .all(|(n, _)| !n.contains("Start on") && !n.contains("Labels") && !n.contains("Layout")));
+    // And a page index that is no plugin at all is just as quiet.
+    r.app.settings_page = SettingsPage::Plugin(99);
+    r.app.render(&mut r.dev, Refresh::Full).unwrap();
+    r.send(Event::Key(HwKey::Escape));
+    assert_eq!(
+        r.app.settings_page,
+        SettingsPage::Category(PLUGINS_CATEGORY)
+    );
+}
+
+#[test]
+fn a_setting_acts_on_the_plugin_the_page_showed() {
+    let mut r = Rig::new("setid", true);
+    r.open_plugins_page();
+    r.tap_on(GRAPH_SETTINGS);
+    // Another plugin vanishes while the page is open: the choice still goes to
+    // the Graph plugin, not to whichever plugin took its place in a re-listing.
+    std::fs::remove_dir_all(r.plugins.join("cjk-font")).unwrap();
+    r.tap_on("Layout/Quick");
+    let m = plugins::manifest_in(&r.plugins, "graph-map").unwrap();
+    assert_eq!(
+        plugins::settings_in(&r.plugins, &m)[2],
+        0,
+        "Quick, for Graph"
+    );
+    assert!(!r.plugins.join("future/settings").exists());
 }

@@ -439,6 +439,10 @@ pub struct App {
     plugins_root: PathBuf,
     /// A plugin failed: the built-in Graph serves the rest of the session.
     plugin_failed: bool,
+    /// Show the Graph icon even with the Graph plugin off, and open the
+    /// built-in Graph (the reference the plugin is tested against, and the
+    /// emulator's Graph). Off in the app.
+    graph_builtin: bool,
     /// `Some` while the note is shown rendered (eye ↔ pencil).
     pub preview: Option<PreviewState>,
     /// Every Options setting (v0.4), kept in `notes/.sigma-settings`.
@@ -563,6 +567,7 @@ impl App {
             plugin_list: Vec::new(),
             plugins_root: sigma_core::plugins::plugins_root(),
             plugin_failed: false,
+            graph_builtin: false,
             preview: None,
             canvas: Canvas::new(lw, lh, 255),
             shown: Canvas::new(lw, lh, 0),
@@ -610,6 +615,7 @@ impl App {
         };
         app.set_gsensor(false);
         app.sync_keyboard_style();
+        app.sync_graph_icon();
         app
     }
 
@@ -731,6 +737,9 @@ impl App {
     pub fn change(&mut self, c: Change) -> Refresh {
         if let Change::Plugin(i, on) = c {
             return self.set_plugin(i, on);
+        }
+        if let Change::PluginSetting(p, s, o) = c {
+            return self.set_plugin_setting(usize::from(p), usize::from(s), usize::from(o));
         }
         if c == Change::TrainSamples {
             self.options = false;
@@ -3707,6 +3716,11 @@ impl App {
                 if let Some(r) = self.ink_tick(t) {
                     return Some(r);
                 }
+                // A plugin screen with more to do (loading, or building a
+                // layout) takes its next step while the app is idle.
+                if let Some(r) = self.plugin_step() {
+                    return Some(r);
+                }
                 if let Some(items) = self.indexer.poll() {
                     let changed = items != self.disk_todos;
                     self.disk_todos = items;
@@ -4266,7 +4280,7 @@ impl App {
             "To-dos" => Some(centre(l.todos_button)),
             "Scratch" => Some(centre(l.scratch_button)),
             "Find" => Some(centre(l.find_button)),
-            "Graph" => Some(centre(l.graph_button)),
+            "Graph" if self.screen.graph_on => Some(centre(l.graph_button)),
             "FindField" | "ReplaceField" | "FindClose" | "Prev" | "Next" | "Replace" | "All"
             | "Aa" => self.screen.find_control(&l, label),
             s if s.starts_with("Heading:")
@@ -5363,7 +5377,9 @@ impl App {
         add("Files", l.files_button);
         add("Preview", l.preview_button);
         add("Find", l.find_button);
-        add("Graph", l.graph_button);
+        if self.screen.graph_on {
+            add("Graph", l.graph_button);
+        }
         add("Options", l.options_button);
         if self.preview.is_some() {
             return out;

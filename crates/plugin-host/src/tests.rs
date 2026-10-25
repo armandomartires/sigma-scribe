@@ -32,11 +32,17 @@ fn plugin(wat: &str, name: &str) -> Plugin {
     plugin_with(wat, &dir(name), Limits::default()).unwrap()
 }
 
-const HEAD: &str = r#"
+/// Memory and the two entry points every module has; the ABI is the API's.
+fn head() -> String {
+    format!(
+        r#"
   (memory (export "memory") 2)
-  (func (export "sigma_abi") (result i32) i32.const 1)
+  (func (export "sigma_abi") (result i32) i32.const {})
   (func (export "sigma_alloc") (param i32) (result i32) i32.const 1024)
-"#;
+"#,
+        sigma_plugin_api::ABI
+    )
+}
 
 fn module(body: &str) -> String {
     module_with("", body)
@@ -44,7 +50,7 @@ fn module(body: &str) -> String {
 
 /// Imports must precede every function in WAT, so they come first.
 fn module_with(imports: &str, body: &str) -> String {
-    format!("(module {imports} {HEAD} {body})")
+    format!("(module {imports} {} {body})", head())
 }
 
 fn pack(ptr: &str, len: &str) -> String {
@@ -76,6 +82,7 @@ fn a_frame_is_decoded() {
         hits: vec![],
         actions: vec![Action::OpenNote(2)],
         redraw: Redraw::Partial,
+        pending: true,
     };
     let bytes = frame.encode();
     let esc: String = bytes.iter().map(|b| format!("\\{b:02x}")).collect();

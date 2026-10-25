@@ -405,6 +405,9 @@ pub enum SettingsPage {
     Category(usize),
     /// A row's choice list, inside a category.
     Choice(usize, &'static str),
+    /// A plugin's own settings: its place in the Plugins list. Reachable
+    /// only while the plugin is on.
+    Plugin(usize),
 }
 
 /// Categories: name, then (section heading, row labels).
@@ -508,6 +511,8 @@ pub enum Kind {
     Pick(String),
     /// Opens a Help page (index into `help::MENU`).
     Link(usize),
+    /// Opens another Settings page (a plugin's own).
+    Open(SettingsPage),
     /// Read-only value.
     Info(String),
     /// A disabled choice (v1.5.5): its value in the slider's grey, no tap.
@@ -548,6 +553,17 @@ pub struct PluginRow {
     pub restart: bool,
     /// False when the plugin needs a newer app: shown, but not switchable.
     pub compatible: bool,
+    /// The settings the plugin declares, with the reader's choices.
+    pub settings: Vec<PluginSetting>,
+}
+
+/// One of a plugin's settings: a choice between a few options.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PluginSetting {
+    pub label: String,
+    pub options: Vec<String>,
+    /// Index into `options`.
+    pub selected: usize,
 }
 
 pub struct OptionsModel<'a> {
@@ -917,6 +933,56 @@ fn plugin_items(m: &OptionsModel<'_>) -> Vec<Item> {
             kind,
             note: Some(Cow::Owned(note)),
         }));
+        // A plugin with settings of its own: their page opens once the
+        // plugin is on, and is locked (greyed, with the reason) while off.
+        if p.compatible && !p.settings.is_empty() {
+            let label = Cow::Owned(format!("{} \u{b7} Settings", p.name));
+            out.push(Item::Row(if p.enabled {
+                DRow {
+                    label,
+                    kind: Kind::Open(SettingsPage::Plugin(i)),
+                    note: None,
+                }
+            } else {
+                DRow {
+                    label,
+                    kind: Kind::Muted(String::new()),
+                    note: Some(Cow::Borrowed("Turn the plugin on first")),
+                }
+            }));
+        }
+    }
+    out
+}
+
+/// A plugin's own settings page: one choice per declared setting. Nothing
+/// to show (and so nothing to change) unless the plugin is there and on.
+fn plugin_setting_items(m: &OptionsModel<'_>, i: usize) -> Vec<Item> {
+    let mut out = vec![Item::Band("Settings")];
+    let Some(p) = m.plugins.get(i).filter(|p| p.enabled && p.compatible) else {
+        out.push(Item::Row(DRow {
+            label: Cow::Borrowed("Turn the plugin on first"),
+            kind: Kind::Info(String::new()),
+            note: None,
+        }));
+        return out;
+    };
+    for (si, st) in p.settings.iter().enumerate() {
+        let cells = st
+            .options
+            .iter()
+            .enumerate()
+            .map(|(oi, o)| Cell {
+                label: o.clone(),
+                change: Some(Change::PluginSetting(i as u8, si as u8, oi as u8)),
+                active: oi == st.selected,
+            })
+            .collect();
+        out.push(Item::Row(DRow {
+            label: Cow::Owned(st.label.clone()),
+            kind: Kind::Inline(cells),
+            note: None,
+        }));
     }
     out
 }
@@ -929,6 +995,7 @@ pub fn page_items(m: &OptionsModel<'_>) -> Vec<Item> {
             .map(|i| Item::Category(i, summary(m, i)))
             .collect(),
         SettingsPage::Category(PLUGINS_CATEGORY) => plugin_items(m),
+        SettingsPage::Plugin(i) => plugin_setting_items(m, i),
         SettingsPage::Category(c) => {
             let mut out = Vec::new();
             for (band, rows) in CATEGORIES[c.min(CATEGORIES.len() - 1)].1 {
@@ -966,6 +1033,22 @@ pub fn page_title(p: SettingsPage) -> &'static str {
         SettingsPage::Root => "Settings",
         SettingsPage::Category(c) => CATEGORIES[c.min(CATEGORIES.len() - 1)].0,
         SettingsPage::Choice(_, l) => l,
+        SettingsPage::Plugin(_) => CATEGORIES[PLUGINS_CATEGORY].0,
+    }
+}
+
+/// The page title as the model shows it: a plugin's own page is titled with
+/// the plugin's name.
+#[must_use]
+pub fn page_title_in<'a>(m: &'a OptionsModel<'_>) -> Cow<'a, str> {
+    match m.page {
+        SettingsPage::Plugin(i) => m
+            .plugins
+            .get(i)
+            .map_or(Cow::Borrowed(page_title(m.page)), |p| {
+                Cow::Borrowed(p.name.as_str())
+            }),
+        p => Cow::Borrowed(page_title(p)),
     }
 }
 
@@ -976,6 +1059,7 @@ pub fn parent(p: SettingsPage) -> Option<SettingsPage> {
         SettingsPage::Root => None,
         SettingsPage::Category(_) => Some(SettingsPage::Root),
         SettingsPage::Choice(c, _) => Some(SettingsPage::Category(c)),
+        SettingsPage::Plugin(_) => Some(SettingsPage::Category(PLUGINS_CATEGORY)),
     }
 }
 
@@ -1255,7 +1339,7 @@ impl EditorScreen {
                 )],
                 Item::Choice(..) => vec![crate::radio::target(band, self.scale())],
                 Item::Row(DRow {
-                    kind: Kind::Pick(_) | Kind::Link(_),
+                    kind: Kind::Pick(_) | Kind::Link(_) | Kind::Open(_),
                     ..
                 })
                 | Item::Category(..) => vec![band],
@@ -1316,6 +1400,7 @@ impl EditorScreen {
                             _ => OptionsHit::Nothing,
                         },
                         Kind::Link(i) => OptionsHit::Help(*i),
+                        Kind::Open(p) => OptionsHit::Open(*p),
                         Kind::Info(_) | Kind::Muted(_) => OptionsHit::Nothing,
                         Kind::Slider { stops, enabled, .. } => {
                             if !*enabled {
@@ -1375,7 +1460,9 @@ impl EditorScreen {
                             out.push((format!("{}/{name}", d.label), *r));
                         }
                     }
-                    Kind::Pick(_) | Kind::Link(_) => out.push((d.label.to_string(), cells[0])),
+                    Kind::Pick(_) | Kind::Link(_) | Kind::Open(_) => {
+                        out.push((d.label.to_string(), cells[0]));
+                    }
                     Kind::Info(_) | Kind::Muted(_) => {}
                     Kind::Slider { stops, .. } => {
                         out.push((d.label.to_string(), cells[0]));
@@ -1464,7 +1551,7 @@ impl EditorScreen {
                 let n = ch.len() as i32;
                 Some(ch[(cur + d).rem_euclid(n) as usize].0.clone())
             }
-            SettingsPage::Choice(..) => Some("Back".into()),
+            SettingsPage::Choice(..) | SettingsPage::Plugin(_) => Some("Back".into()),
             SettingsPage::Category(c) if c != cat => Some("Back".into()),
             SettingsPage::Category(_) => {
                 let here = self.options_controls(m);
@@ -1489,7 +1576,7 @@ impl EditorScreen {
             &l.base,
             &hd,
             "Settings",
-            page_title(m.page),
+            &page_title_in(m),
             Some((m.sub.min(l.pages - 1), l.pages)),
             t,
         );
@@ -1597,7 +1684,7 @@ impl EditorScreen {
                             crate::switch::draw(c, s, &self.fonts, ui, cells[0], *on, t);
                         }
                         Kind::Pick(v) => italic(c, &tr(v), t.ink),
-                        Kind::Link(_) => italic(c, &tr("Open"), t.ink),
+                        Kind::Link(_) | Kind::Open(_) => italic(c, &tr("Open"), t.ink),
                         Kind::Info(v) => italic(c, v, t.mute),
                         Kind::Muted(v) => italic(c, v, crate::slider::MUTED),
                         Kind::Slider {
@@ -1690,6 +1777,83 @@ mod tests {
             ui_scale_pending: None,
             plugins: &[],
         }
+    }
+
+    fn graph_row(enabled: bool) -> PluginRow {
+        PluginRow {
+            id: "graph-map".into(),
+            name: "Graph".into(),
+            kind: "Screen",
+            version: "1.1.0".into(),
+            enabled,
+            restart: false,
+            compatible: true,
+            settings: vec![PluginSetting {
+                label: "Start on".into(),
+                options: vec!["Map".into(), "List".into()],
+                selected: 1,
+            }],
+        }
+    }
+
+    #[test]
+    fn a_plugins_settings_row_is_locked_until_it_is_on_and_its_page_encodes_changes() {
+        let (st, k) = (Settings::default(), Keyboard::default());
+        let kinds = |rows: &[PluginRow], page| -> Vec<(String, Kind)> {
+            let m = OptionsModel {
+                plugins: rows,
+                ..model(&st, &k, page, 0)
+            };
+            page_items(&m)
+                .into_iter()
+                .filter_map(|i| match i {
+                    Item::Row(d) => Some((d.label.to_string(), d.kind)),
+                    _ => None,
+                })
+                .collect()
+        };
+        let list = SettingsPage::Category(PLUGINS_CATEGORY);
+        // On: a switch (to turn it off) and an open row for its page.
+        let on = kinds(&[graph_row(true)], list);
+        assert_eq!(on.len(), 2);
+        assert!(matches!(
+            on[0].1,
+            Kind::Check {
+                on: true,
+                change: Change::Plugin(0, false)
+            }
+        ));
+        assert_eq!(on[1].0, "Graph \u{b7} Settings");
+        assert_eq!(on[1].1, Kind::Open(SettingsPage::Plugin(0)));
+        // Off: the same row, greyed, and not openable.
+        let off = kinds(&[graph_row(false)], list);
+        assert!(matches!(
+            off[0].1,
+            Kind::Check {
+                on: false,
+                change: Change::Plugin(0, true)
+            }
+        ));
+        assert!(matches!(off[1].1, Kind::Muted(_)));
+        // Its page: one choice per setting, each cell naming its change.
+        let page = kinds(&[graph_row(true)], SettingsPage::Plugin(0));
+        let Kind::Inline(cells) = &page[0].1 else {
+            panic!("a choice")
+        };
+        assert_eq!(page[0].0, "Start on");
+        assert_eq!(cells.len(), 2);
+        assert_eq!(cells[0].change, Some(Change::PluginSetting(0, 0, 0)));
+        assert_eq!(cells[1].change, Some(Change::PluginSetting(0, 0, 1)));
+        assert!(
+            !cells[0].active && cells[1].active,
+            "the chosen option is active"
+        );
+        // While the plugin is off its page has nothing to set.
+        assert!(matches!(
+            kinds(&[graph_row(false)], SettingsPage::Plugin(0))[0].1,
+            Kind::Info(_)
+        ));
+        assert_eq!(parent(SettingsPage::Plugin(0)), Some(list));
     }
 
     /// One bar everywhere: Settings, the editor and Preview draw the same
