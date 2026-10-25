@@ -265,6 +265,22 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
             ],
         },
         OptRow {
+            label: "Logging",
+            hint: "The app and its plugins write a log file",
+            cells: vec![
+                choice("Off", Change::Log(false), !s.log),
+                choice("On", Change::Log(true), s.log),
+            ],
+        },
+        OptRow {
+            label: "Level",
+            hint: "The lowest level the log records",
+            cells: sigma_core::log::Level::ALL
+                .into_iter()
+                .map(|l| choice(level_label(l), Change::LogLevel(l), s.log_level == l))
+                .collect(),
+        },
+        OptRow {
             label: "Enhanced keyboard",
             hint: "Off: the Kobo reader's keyboard, with no options on it",
             cells: vec![
@@ -418,7 +434,10 @@ pub type Section = (&'static str, &'static [&'static str]);
 /// a fixed list.
 pub const PLUGINS_CATEGORY: usize = 6;
 
-pub const CATEGORIES: [(&str, &[Section]); 8] = [
+/// The Logging category: a switch and, once it is on, the level.
+pub const LOGGING_CATEGORY: usize = 7;
+
+pub const CATEGORIES: [(&str, &[Section]); 9] = [
     (
         "Writing",
         &[
@@ -471,6 +490,7 @@ pub const CATEGORIES: [(&str, &[Section]); 8] = [
         &[("Not fully tested yet", &["Experimental features"])],
     ),
     ("Plugins", &[]),
+    ("Logging", &[("Log file", &["Logging", "Level"])]),
     (
         "Help & about",
         &[(
@@ -658,11 +678,27 @@ fn row_kind(r: &OptRow) -> Kind {
     )
 }
 
+/// A level as the Settings choice names it.
+fn level_label(l: sigma_core::log::Level) -> &'static str {
+    use sigma_core::log::Level;
+    match l {
+        Level::Debug => "Debug",
+        Level::Info => "Info",
+        Level::Warning => "Warning",
+        Level::Error => "Error",
+        Level::Critical => "Critical",
+    }
+}
+
 /// The rows of every category, by label.
 #[must_use]
 pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
     // Experimental features hide their own switches until they are on.
     if matches!(label, "Fast ink (A2)" | "Word mode (experimental)") && !m.settings.experimental {
+        return None;
+    }
+    // The level has nothing to do until the log is on.
+    if label == "Level" && !m.settings.log {
         return None;
     }
     // The Compact / Full choice belongs to the enhanced keyboard only (v1.13).
@@ -897,6 +933,13 @@ fn summary(m: &OptionsModel<'_>, cat: usize) -> String {
             } else {
                 let on = m.plugins.iter().filter(|p| p.enabled).count();
                 format!("{on} / {}", m.plugins.len())
+            }
+        }
+        LOGGING_CATEGORY => {
+            if s.log {
+                tr(level_label(s.log_level)).into_owned()
+            } else {
+                on_off(false)
             }
         }
         _ => m.version.to_owned(),

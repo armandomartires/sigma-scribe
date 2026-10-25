@@ -928,3 +928,28 @@ Opening the graph…
 Building the graph…
 = S'està construint el graf…
 
+# Settings → Logging
+Logging
+= Registre
+
+Level
+= Nivell
+
+Debug
+= Depuració
+
+Info
+= Info
+
+Warning
+= Advertència
+
+Error
+= Error
+
+Critical
+= Crític
+
+Log file
+= Fitxer de registre
+

@@ -928,3 +928,28 @@ Opening the graph…
 Building the graph…
 = Graph wird aufgebaut…
 
+# Settings → Logging
+Logging
+= Protokollierung
+
+Level
+= Stufe
+
+Debug
+= Debug
+
+Info
+= Info
+
+Warning
+= Warnung
+
+Error
+= Fehler
+
+Critical
+= Kritisch
+
+Log file
+= Protokolldatei
+

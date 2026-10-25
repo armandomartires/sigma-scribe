@@ -137,12 +137,12 @@ impl KoboDevice {
 fn open_light() -> Option<crate::light::Light> {
     let root = std::path::Path::new(crate::light::ROOT);
     for line in crate::light::describe(root) {
-        eprintln!("light: sysfs {line}");
+        sigma_core::info!("light", "sysfs {line}");
     }
     let l = crate::light::Light::find(root);
     match &l {
-        Some(l) => eprintln!("light: using {} (step {:?})", l.name(), l.step()),
-        None => eprintln!("light: no front light found"),
+        Some(l) => sigma_core::info!("light", "using {} (step {:?})", l.name(), l.step()),
+        None => sigma_core::info!("light", "no front light found"),
     }
     l
 }
@@ -169,9 +169,13 @@ impl Device for KoboDevice {
         if rc < 0 {
             // Not fatal: the pixels are already in the framebuffer and the
             // next refresh shows them. Exiting here lost the session once.
-            eprintln!(
-                "sigma-scribe: warning: fbink refresh {}x{}@{},{} failed ({rc})",
-                r.w, r.h, r.x, r.y
+            sigma_core::warn!(
+                "fbink",
+                "refresh {}x{}@{},{} failed ({rc})",
+                r.w,
+                r.h,
+                r.x,
+                r.y
             );
         }
         // v1.0.3 (S10.3-D2): never wait for completion here; this runs on
@@ -186,8 +190,9 @@ impl Device for KoboDevice {
             _ => false,
         };
         if log {
-            eprintln!(
-                "perf pointer: {} {}x{} submit {} ms",
+            sigma_core::info!(
+                "perf pointer",
+                "{} {}x{} submit {} ms",
                 refresh.perf_name(),
                 r.w,
                 r.h,
@@ -205,8 +210,9 @@ impl Device for KoboDevice {
                 .status();
         }
         let r = self.otg.set_host(on);
-        eprintln!(
-            "usb: host mode {} -> {:?} (role now {:?})",
+        sigma_core::info!(
+            "usb",
+            "host mode {} -> {:?} (role now {:?})",
             if on { "on" } else { "off" },
             r,
             self.otg.role()
@@ -224,7 +230,7 @@ impl Device for KoboDevice {
             .as_ref()
             .ok_or_else(|| io::Error::other("no front light"))?;
         let r = l.set_step(step);
-        eprintln!("light: {} -> step {step}: {r:?}", l.name());
+        sigma_core::info!("light", "{} -> step {step}: {r:?}", l.name());
         r
     }
 
@@ -248,7 +254,7 @@ impl Drop for KoboDevice {
     fn drop(&mut self) {
         // Give the port back to Nickel (USB storage) if we took it.
         if let Err(e) = self.otg.set_host(false) {
-            eprintln!("usb: could not restore gadget mode: {e}");
+            sigma_core::error!("usb", "could not restore gadget mode: {e}");
         }
         // SAFETY: closes FBInk's own fd.
         unsafe {
@@ -313,8 +319,9 @@ fn spawn_usb_watcher(tx: Sender<Event>, epoch: Instant) {
                     continue;
                 };
                 let (kbd, ptr) = (d.keyboard, d.pointer);
-                eprintln!(
-                    "usb: \"{}\" on event{n} (keyboard {kbd}, pointer {ptr})",
+                sigma_core::info!(
+                    "usb",
+                    "\"{}\" on event{n} (keyboard {kbd}, pointer {ptr})",
                     d.name
                 );
                 if let Ok(mut o) = open.lock() {
@@ -346,7 +353,7 @@ fn spawn_usb_watcher(tx: Sender<Event>, epoch: Instant) {
                             }
                         }
                     }
-                    eprintln!("usb: event{n} gone");
+                    sigma_core::info!("usb", "event{n} gone");
                     let (k, p) = open.lock().map_or((false, false), |mut o| {
                         o.remove(&n);
                         (o.values().any(|v| v.0), o.values().any(|v| v.1))

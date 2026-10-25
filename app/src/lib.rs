@@ -55,6 +55,21 @@ pub fn notes_dir() -> PathBuf {
     }
 }
 
+/// Where the log file goes (Settings → Logging): `SIGMA_LOG_DIR`, else
+/// `.adds/sigma-scribe/log` on the Kobo, else `./target/emu-log` on a
+/// desktop.
+#[must_use]
+pub fn log_dir() -> PathBuf {
+    if let Ok(p) = std::env::var("SIGMA_LOG_DIR") {
+        return p.into();
+    }
+    if cfg!(target_arch = "arm") {
+        "/mnt/onboard/.adds/sigma-scribe/log".into()
+    } else {
+        "target/emu-log".into()
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum PagedBar {
     Settings,
@@ -616,7 +631,20 @@ impl App {
         app.set_gsensor(false);
         app.sync_keyboard_style();
         app.sync_graph_icon();
+        app.apply_logging();
+        sigma_core::info!(
+            "app",
+            "sigma-scribe {} started: screen {width}x{height}, notes {}, plugins {}",
+            env!("CARGO_PKG_VERSION"),
+            app.library.root().display(),
+            app.plugins_root.display()
+        );
         app
+    }
+
+    /// Applies Settings → Logging: the log file on or off, and its level.
+    fn apply_logging(&self) {
+        sigma_core::log::configure(self.settings.log, self.settings.log_level, Some(log_dir()));
     }
 
     /// The Kobo style board while Enhanced keyboard is off (v1.13); back to
@@ -753,7 +781,7 @@ impl App {
             let p = samples_path(self.library.root());
             if let Err(e) = std::fs::remove_file(&p) {
                 if e.kind() != std::io::ErrorKind::NotFound {
-                    eprintln!("sigma-scribe: delete samples: {e}");
+                    sigma_core::warn!("samples", "delete: {e}");
                 }
             }
             if let Some(d) = p.parent() {
@@ -769,6 +797,13 @@ impl App {
             return Refresh::Partial;
         }
         self.settings.apply(c);
+        if matches!(c, Change::Log(_) | Change::LogLevel(_)) {
+            self.apply_logging();
+            if self.settings.log {
+                sigma_core::info!("app", "logging level {}", self.settings.log_level.label());
+            }
+        }
+        sigma_core::debug!("settings", "{c:?}");
         self.screen.ink_words = self.settings.word_mode();
         if c == Change::LangOverride(true) {
             // Start from the language in use, so turning it on changes nothing.
@@ -1183,6 +1218,7 @@ impl App {
 
     /// Opens the Options sheet (closes preview and selection chrome).
     pub fn open_options(&mut self) {
+        sigma_core::debug!("ui", "open settings");
         self.help = None;
         self.close_find();
         self.close_graph();
@@ -1826,6 +1862,7 @@ impl App {
 
     /// Saves the open note and opens another.
     pub fn open(&mut self, p: &NotePath) {
+        sigma_core::debug!("app", "open note {}", p.as_str());
         self.save();
         let (body, unreadable) = load_note(&self.store, p);
         self.current = p.clone();
@@ -2063,6 +2100,7 @@ impl App {
 
     /// Opens the Files sheet at the current note's folder.
     pub fn open_files(&mut self) {
+        sigma_core::debug!("ui", "open files");
         self.help = None;
         self.close_find();
         self.close_graph();
@@ -3104,7 +3142,7 @@ impl App {
             }
             Ok(None) => Refresh::Partial,
             Err(e) => {
-                eprintln!("sigma-scribe: ink save failed: {e}");
+                sigma_core::error!("ink", "save failed: {e}");
                 self.ink = Some(InkState {
                     error: Some(e.to_string()),
                     ..st
@@ -4040,7 +4078,7 @@ impl App {
         if self.settings.usb != self.usb_host {
             self.usb_host = self.settings.usb;
             if let Err(e) = dev.usb_host(self.usb_host) {
-                eprintln!("usb: {e}");
+                sigma_core::error!("usb", "{e}");
             }
         }
     }
@@ -4057,7 +4095,7 @@ impl App {
         }
         if let Some(n) = self.light_want.take() {
             if let Err(e) = dev.set_light(n) {
-                eprintln!("light: {e}");
+                sigma_core::error!("light", "{e}");
             }
         }
     }
@@ -4093,13 +4131,15 @@ impl App {
             self.usb_host = false;
         }
         if let Some((n, p50, p95, max)) = self.perf.summary() {
-            eprintln!(
-                "perf: {n} keystrokes, keystroke-to-refresh p50 {p50:.1} ms, p95 {p95:.1} ms, max {max:.1} ms"
+            sigma_core::info!(
+                "perf",
+                "{n} keystrokes, keystroke-to-refresh p50 {p50:.1} ms, p95 {p95:.1} ms, max {max:.1} ms"
             );
         }
         if let Some((n, p50, p95, max)) = self.perf.pointer_summary() {
-            eprintln!(
-                "perf pointer: {n} du updates, move-to-submit p50 {p50:.1} ms, p95 {p95:.1} ms, max {max:.1} ms"
+            sigma_core::info!(
+                "perf pointer",
+                "{n} du updates, move-to-submit p50 {p50:.1} ms, p95 {p95:.1} ms, max {max:.1} ms"
             );
         }
         Ok(())
@@ -4837,6 +4877,7 @@ impl App {
 
     /// Opens the Graph sheet with fresh rows.
     pub fn open_graph(&mut self) {
+        sigma_core::debug!("ui", "open graph");
         self.help = None;
         self.close_find();
         self.save();
@@ -5234,6 +5275,7 @@ impl App {
     }
 
     pub fn open_help(&mut self) {
+        sigma_core::debug!("ui", "open help");
         self.close_find();
         self.close_graph();
         self.files = None;

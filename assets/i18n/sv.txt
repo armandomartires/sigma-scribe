@@ -928,3 +928,28 @@ Opening the graph…
 Building the graph…
 = Bygger grafen…
 
+# Settings → Logging
+Logging
+= Loggning
+
+Level
+= Nivå
+
+Debug
+= Felsökning
+
+Info
+= Info
+
+Warning
+= Varning
+
+Error
+= Fel
+
+Critical
+= Kritisk
+
+Log file
+= Loggfil
+
