@@ -10,6 +10,7 @@ use crate::canvas::{Canvas, Rect};
 use crate::editor::EditorScreen;
 use crate::fonts::Face;
 use crate::graphmap::{fill_round, thick_line};
+use crate::i18n::tr;
 use crate::theme::Theme;
 use sigma_core::Keyboard;
 use sigma_plugin_api::{Frame, Op, Tone};
@@ -41,6 +42,46 @@ impl EditorScreen {
     #[must_use]
     pub fn plugin_screen_top(&self, keyboard: &Keyboard) -> i32 {
         self.layout(false, keyboard).title.h
+    }
+
+    /// The picture shown while a plugin's module loads, before it can draw
+    /// anything: a title and an empty bar, laid out like the plugin's own
+    /// progress picture so the two follow each other without a jump.
+    #[must_use]
+    pub fn plugin_loading_frame(&self, keyboard: &Keyboard) -> Frame {
+        let s = self.scale();
+        let ui = self.ui_px();
+        let (w, h) = (self.width as i32, self.height as i32);
+        let top = self.plugin_screen_top(keyboard);
+        let title = tr("Opening the graph\u{2026}").into_owned();
+        let size = ui * 1.3;
+        let y = top as f32 + (h - top) as f32 * 0.4;
+        let tw = self.fonts.width(Face::AtkinsonBold, size, &title);
+        let bar_w = (w - 2 * s.px(120.0)).clamp(s.px(200.0), s.px(640.0));
+        let bar =
+            sigma_plugin_api::Rect::new((w - bar_w) / 2, y as i32 + s.px(36.0), bar_w, s.px(28.0));
+        Frame {
+            ops: vec![
+                Op::Fill {
+                    r: sigma_plugin_api::Rect::new(0, 0, w, h),
+                    c: Tone::Paper,
+                },
+                Op::Text {
+                    face: sigma_plugin_api::Face::Bold,
+                    size,
+                    x: (w as f32 - tw) / 2.0,
+                    y,
+                    s: title,
+                    c: Tone::Ink,
+                },
+                Op::Stroke {
+                    r: bar,
+                    t: s.px(2.0).max(2),
+                    c: Tone::Ink,
+                },
+            ],
+            ..Frame::default()
+        }
     }
 
     /// The close button's box.

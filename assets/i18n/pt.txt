@@ -907,3 +907,25 @@ restart to apply
 Needs a newer app
 = Requer uma versão mais recente da aplicação
 
+# Graph plugin: loading, progress and its settings
+Quick
+= Rápido
+
+Best
+= Melhor
+
+Labels
+= Etiquetas
+
+Start on
+= Começar em
+
+Turn the plugin on first
+= Ative primeiro a extensão
+
+Opening the graph…
+= A abrir o grafo…
+
+Building the graph…
+= A construir o grafo…
+

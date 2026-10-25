@@ -4,6 +4,9 @@
 //!
 //!     cargo test --release -p sigma-scribe --test graph_plugin_perf -- --ignored --nocapture
 //!
+//! "Something on screen" is the loading picture (or, for a loaded plugin, the
+//! progress bar), which is what stops the app looking hung.
+//!
 //! Ignored by default: timings depend on the machine. On the Forma, expect
 //! roughly 8 to 10 times the desktop numbers (docs/perf.md).
 
@@ -31,14 +34,18 @@ fn write_notes(dir: &Path, count: usize, extra: bool) {
     }
 }
 
-fn open_graph(app: &mut App, dev: &mut DesktopDevice) -> f64 {
+/// Opens the Graph; returns the milliseconds until something is on screen (a
+/// loading picture or the map) and until the map is ready, bar steps included.
+fn open_graph(app: &mut App, dev: &mut DesktopDevice) -> (f64, f64) {
     let (x, y) = app.control_centre("Graph").unwrap();
     let t = Instant::now();
     if let Some(r) = app.handle(Event::Tap { x, y }) {
         app.render(dev, r).unwrap();
     }
-    let ms = t.elapsed().as_secs_f64() * 1e3;
-    assert!(app.plugin_screen_open());
+    let first = t.elapsed().as_secs_f64() * 1e3;
+    app.plugin_settle(dev);
+    let ms = (first, t.elapsed().as_secs_f64() * 1e3);
+    assert!(app.plugin_screen_open() && !app.plugin_busy());
     let (x, y) = app.control_centre("Close").unwrap();
     if let Some(r) = app.handle(Event::Tap { x, y }) {
         app.render(dev, r).unwrap();
@@ -77,7 +84,8 @@ fn open_cold_cached_and_warm() {
         write_notes(&notes, count, true);
         let warm = open_graph(&mut app, &mut dev);
         println!(
-            "{count:4} notes: first open {cold:8.1} ms   unchanged {cached:7.1} ms   after one new note {warm:8.1} ms"
+            "{count:4} notes: first open {:8.1} ms (something on screen after {:5.1})   unchanged {:7.1} ms   after one new note {:8.1} ms (picture after {:5.1})",
+            cold.1, cold.0, cached.1, warm.1, warm.0
         );
     }
 }

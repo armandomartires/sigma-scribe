@@ -75,6 +75,10 @@ impl Rig {
         }
         let mut app = App::new(w, h, notes);
         app.set_plugins_root(plugins);
+        if !plugin {
+            // The reference: the app's own Graph, with no plugin installed.
+            app.set_builtin_graph(true);
+        }
         app.open(&NotePath::parse("note-01.md").unwrap());
         if night {
             app.change(Change::Paper(Paper::Night));
@@ -241,6 +245,14 @@ fn equivalent_from(
     let open = Step::Tap("Graph");
     for (n, step) in std::iter::once(&open).chain(steps).enumerate() {
         let (rb, rp) = (run(&mut builtin, step), run(&mut plugin, step));
+        if n == 0 {
+            // The plugin loads and builds on idle ticks (a loading picture,
+            // maybe a progress bar); the built-in Graph is there at once.
+            // Compare once it has finished, with the refreshes starting over.
+            plugin.app.plugin_settle(&mut plugin.dev);
+            builtin.dev.refreshes.clear();
+            plugin.dev.refreshes.clear();
+        }
         let ctx = format!("{tag}: step {n} {step:?}");
         if n == 0 {
             assert!(builtin.app.graph.is_some(), "{ctx}: built-in Graph open");
@@ -250,7 +262,7 @@ fn equivalent_from(
             );
         }
         let exact = n >= exact_from;
-        if exact {
+        if exact && n > 0 {
             assert_eq!(rb, rp, "{ctx}: refresh class");
             assert_eq!(
                 builtin.dev.refreshes, plugin.dev.refreshes,

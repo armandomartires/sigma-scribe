@@ -1,4 +1,4 @@
-Built from sigma-scribe-plugins commit f291295250fe2d7ed436d510070bf6a106aa4ecd
+Built from sigma-scribe-plugins commit 72424ef037cc8219d82cd6dfb0a21a09766639b3
 with scripts/build-plugin.sh graph-map (rustc 1.99.1).
 Refresh with scripts/update-graph-plugin-fixture.sh.
-12f8a70a03ccf16c1ad596e3ec508e0d8f0f93f79eeec77607c447704cb06c20  graph.wasm
+8ec359768d271f662b05d9ca7d918d5b1d92407cd3598f0e5765409a9ac35915  graph.wasm

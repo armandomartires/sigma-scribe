@@ -158,6 +158,56 @@ pub struct Manifest {
     pub api: u32,
     /// The module of a [`PluginKind::Screen`] plugin, relative to its folder.
     pub entry: Option<String>,
+    /// The plugin's own settings (`setting=` lines), shown on its page in
+    /// Settings → Plugins while it is on.
+    pub settings: Vec<SettingDecl>,
+}
+
+/// A setting a plugin declares in `plugin.conf`:
+/// `setting=key|Label|Option A,Option B|Default`. A choice between two to
+/// four options; the host draws it and keeps the value.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SettingDecl {
+    pub key: String,
+    pub label: String,
+    pub options: Vec<String>,
+    /// Index into `options`.
+    pub default: usize,
+}
+
+/// Most settings a plugin may declare.
+pub const MAX_PLUGIN_SETTINGS: usize = 8;
+
+impl SettingDecl {
+    /// Parses the value of one `setting=` line; `None` when it is not valid.
+    #[must_use]
+    pub fn parse(v: &str) -> Option<Self> {
+        let mut it = v.split('|').map(str::trim);
+        let (key, label, opts, default) = (it.next()?, it.next()?, it.next()?, it.next()?);
+        if it.next().is_some()
+            || key.is_empty()
+            || key.len() > 24
+            || !key
+                .bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+            || label.is_empty()
+            || label.len() > 40
+        {
+            return None;
+        }
+        let options: Vec<String> = opts.split(',').map(|o| o.trim().to_owned()).collect();
+        if !(2..=4).contains(&options.len()) || options.iter().any(|o| o.is_empty() || o.len() > 24)
+        {
+            return None;
+        }
+        let default = options.iter().position(|o| o == default).unwrap_or(0);
+        Some(Self {
+            key: key.to_owned(),
+            label: label.to_owned(),
+            options,
+            default,
+        })
+    }
 }
 
 fn fields(text: &str) -> BTreeMap<&str, &str> {
@@ -196,7 +246,18 @@ impl Manifest {
         if kind == PluginKind::Screen && entry.is_none() {
             return None;
         }
+        let mut settings: Vec<SettingDecl> = Vec::new();
+        for d in text
+            .lines()
+            .filter_map(|l| l.trim().strip_prefix("setting="))
+            .filter_map(SettingDecl::parse)
+        {
+            if settings.len() < MAX_PLUGIN_SETTINGS && settings.iter().all(|x| x.key != d.key) {
+                settings.push(d);
+            }
+        }
         Some(Self {
+            settings,
             entry,
             kind,
             name: f
@@ -413,6 +474,79 @@ pub fn enabled_screen_in(
     }
     let wasm = root.join(id).join(m.entry.as_deref()?);
     wasm.is_file().then_some((m, wasm))
+}
+
+/// The file holding a plugin's setting values.
+fn settings_path(root: &std::path::Path, id: &str) -> std::path::PathBuf {
+    root.join(id).join("settings")
+}
+
+/// The chosen option of each of `m`'s declared settings, as an index into
+/// its options: what `<root>/<id>/settings` says, else the default. Values
+/// that are not one of the options (an older or hand-edited file) count as
+/// the default.
+#[must_use]
+pub fn settings_in(root: &std::path::Path, m: &Manifest) -> Vec<usize> {
+    let text = valid_id(&m.id)
+        .then(|| std::fs::read_to_string(settings_path(root, &m.id)).ok())
+        .flatten()
+        .unwrap_or_default();
+    let saved = fields(&text);
+    m.settings
+        .iter()
+        .map(|d| {
+            saved
+                .get(d.key.as_str())
+                .and_then(|v| d.options.iter().position(|o| o == v))
+                .unwrap_or(d.default)
+        })
+        .collect()
+}
+
+/// Sets one declared setting of plugin `m` to option number `option`, keeping
+/// the file's other values. Written atomically.
+///
+/// # Errors
+/// `NotFound` for a setting the plugin did not declare, `InvalidInput` for an
+/// option out of range, or any filesystem error.
+pub fn set_setting_in(
+    root: &std::path::Path,
+    m: &Manifest,
+    key: &str,
+    option: usize,
+) -> std::io::Result<()> {
+    use std::io::{Error, ErrorKind};
+    let d = m
+        .settings
+        .iter()
+        .find(|d| d.key == key)
+        .ok_or_else(|| Error::new(ErrorKind::NotFound, "no such setting"))?;
+    let value = d
+        .options
+        .get(option)
+        .ok_or_else(|| Error::new(ErrorKind::InvalidInput, "no such option"))?;
+    if !valid_id(&m.id) {
+        return Err(Error::new(ErrorKind::NotFound, "no such plugin"));
+    }
+    let path = settings_path(root, &m.id);
+    let old = std::fs::read_to_string(&path).unwrap_or_default();
+    let mut lines: Vec<String> = old
+        .lines()
+        .filter(|l| l.split_once('=').is_none_or(|(k, _)| k.trim() != key))
+        .map(str::to_owned)
+        .collect();
+    lines.push(format!("{key}={value}"));
+    crate::store::write_atomic(&path, &(lines.join("\n") + "\n"))
+}
+
+/// The manifest of plugin `id` under `root`, when there is a valid one.
+#[must_use]
+pub fn manifest_in(root: &std::path::Path, id: &str) -> Option<Manifest> {
+    valid_id(id)
+        .then(|| std::fs::read_to_string(root.join(id).join("plugin.conf")).ok())
+        .flatten()
+        .and_then(|t| Manifest::parse(&t))
+        .filter(|m| m.id == id)
 }
 
 /// A plugin found on disk, for the Settings list.
@@ -774,6 +908,92 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(root.join("plugins.state")).unwrap(),
             before
+        );
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    fn declared(extra: &str) -> Manifest {
+        Manifest::parse(&format!(
+            "id=graph-map\nversion=1\nkind=screen\nentry=g.wasm\n{extra}"
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn settings_are_declared_in_plugin_conf() {
+        let m =
+            declared("setting=view|Start on|Map,List|Map\nsetting=labels|Labels|Auto, All|All\n");
+        assert_eq!(m.settings.len(), 2);
+        assert_eq!(m.settings[0].key, "view");
+        assert_eq!(m.settings[0].label, "Start on");
+        assert_eq!(m.settings[0].options, ["Map", "List"]);
+        assert_eq!(m.settings[0].default, 0);
+        assert_eq!(
+            m.settings[1].options,
+            ["Auto", "All"],
+            "options are trimmed"
+        );
+        assert_eq!(m.settings[1].default, 1, "the default names an option");
+        assert!(declared("").settings.is_empty());
+    }
+
+    #[test]
+    fn bad_setting_lines_are_skipped_not_fatal() {
+        let m = declared(
+            "setting=Bad Key|L|a,b|a\n\
+             setting=one|L|only|only\n\
+             setting=five|L|a,b,c,d,e|a\n\
+             setting=empty|L|a,|a\n\
+             setting=nolabel||a,b|a\n\
+             setting=extra|L|a,b|a|x\n\
+             setting=ok|Fine|a,b|zzz\n\
+             setting=ok|Again|c,d|c\n",
+        );
+        assert_eq!(m.settings.len(), 1, "{:?}", m.settings);
+        assert_eq!(
+            m.settings[0].label, "Fine",
+            "the first of a repeated key wins"
+        );
+        assert_eq!(
+            m.settings[0].default, 0,
+            "an unknown default is the first option"
+        );
+        // At most eight.
+        let many: String = (0..12).map(|i| format!("setting=k{i}|L|a,b|a\n")).collect();
+        assert_eq!(declared(&many).settings.len(), MAX_PLUGIN_SETTINGS);
+    }
+
+    #[test]
+    fn setting_values_default_save_and_ignore_junk() {
+        let root = std::env::temp_dir().join(format!("sigma-setvals-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let m =
+            declared("setting=view|Start on|Map,List|Map\nsetting=labels|Labels|Auto,All|Auto\n");
+        // Nothing saved: the defaults.
+        assert_eq!(settings_in(&root, &m), [0, 0]);
+        std::fs::create_dir_all(root.join("graph-map")).unwrap();
+        set_setting_in(&root, &m, "view", 1).unwrap();
+        assert_eq!(settings_in(&root, &m), [1, 0]);
+        set_setting_in(&root, &m, "labels", 1).unwrap();
+        set_setting_in(&root, &m, "view", 0).unwrap();
+        assert_eq!(settings_in(&root, &m), [0, 1], "the other value is kept");
+        let text = std::fs::read_to_string(root.join("graph-map/settings")).unwrap();
+        assert_eq!(text.lines().count(), 2, "one line per key: {text:?}");
+        // A value that is not an option, and a key that is not declared, are
+        // ignored when reading.
+        std::fs::write(
+            root.join("graph-map/settings"),
+            "view=Sideways\nlabels=All\nold=1\n",
+        )
+        .unwrap();
+        assert_eq!(settings_in(&root, &m), [0, 1]);
+        // Writing refuses what was not declared or is out of range.
+        assert!(set_setting_in(&root, &m, "nope", 0).is_err());
+        assert!(set_setting_in(&root, &m, "view", 2).is_err());
+        assert_eq!(
+            settings_in(&root, &m),
+            [0, 1],
+            "failed writes change nothing"
         );
         std::fs::remove_dir_all(&root).unwrap();
     }
