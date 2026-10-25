@@ -13,6 +13,7 @@ use crate::theme::Theme;
 use sigma_core::keyboard::Layout as KbLayout;
 use sigma_core::settings::{Change, KeyTone, Orientation, Paper, Settings, Side, Typeface};
 use sigma_core::Keyboard;
+use std::borrow::Cow;
 
 /// One control in a row: a button (with the change it makes) or a value.
 #[derive(Clone, Debug, PartialEq)]
@@ -410,7 +411,11 @@ pub enum SettingsPage {
 /// A section: heading and row labels.
 pub type Section = (&'static str, &'static [&'static str]);
 
-pub const CATEGORIES: [(&str, &[Section]); 7] = [
+/// The Plugins category: its rows come from the installed plugins, not from
+/// a fixed list.
+pub const PLUGINS_CATEGORY: usize = 6;
+
+pub const CATEGORIES: [(&str, &[Section]); 8] = [
     (
         "Writing",
         &[
@@ -462,6 +467,7 @@ pub const CATEGORIES: [(&str, &[Section]); 7] = [
         "Experimental features",
         &[("Not fully tested yet", &["Experimental features"])],
     ),
+    ("Plugins", &[]),
     (
         "Help & about",
         &[(
@@ -519,11 +525,29 @@ pub enum Kind {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DRow {
-    pub label: &'static str,
+    /// Static for every built-in row; a plugin's name is owned.
+    pub label: Cow<'static, str>,
     pub kind: Kind,
     /// A greyed row says why, in small print under its label (rulebook
     /// §5.5 and §5.7); `None` on every row that is live.
-    pub note: Option<&'static str>,
+    pub note: Option<Cow<'static, str>>,
+}
+
+/// An installed plugin, as the Plugins page lists it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PluginRow {
+    /// The plugin's id, which a switch acts on (the row's place in the list
+    /// is only what the page showed).
+    pub id: String,
+    pub name: String,
+    /// The kind in English ("Screen", "Font", …); translated when drawn.
+    pub kind: &'static str,
+    pub version: String,
+    pub enabled: bool,
+    /// Data packs are read at start, so a change waits for a restart.
+    pub restart: bool,
+    /// False when the plugin needs a newer app: shown, but not switchable.
+    pub compatible: bool,
 }
 
 pub struct OptionsModel<'a> {
@@ -548,6 +572,8 @@ pub struct OptionsModel<'a> {
     /// UI scale while its slider is being dragged: the thumb moves and the
     /// value shows, but the scale itself only changes on release (v1.13.1).
     pub ui_scale_pending: Option<u16>,
+    /// The installed plugins, for Settings → Plugins.
+    pub plugins: &'a [PluginRow],
 }
 
 /// One drawn line of a page: a section band or a row.
@@ -777,7 +803,11 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
         }
         _ => None,
     };
-    Some(DRow { label, kind, note })
+    Some(DRow {
+        label: Cow::Borrowed(label),
+        kind,
+        note: note.map(Cow::Borrowed),
+    })
 }
 
 /// The choices of a Pick row: label, change, active.
@@ -845,8 +875,50 @@ fn summary(m: &OptionsModel<'_>, cat: usize) -> String {
         3 => m.language.to_owned(),
         4 => on_off(s.usb),
         5 => on_off(s.experimental),
+        PLUGINS_CATEGORY => {
+            if m.plugins.is_empty() {
+                tr("None").into_owned()
+            } else {
+                let on = m.plugins.iter().filter(|p| p.enabled).count();
+                format!("{on} / {}", m.plugins.len())
+            }
+        }
         _ => m.version.to_owned(),
     }
+}
+
+/// The Plugins page: one switch per installed plugin.
+fn plugin_items(m: &OptionsModel<'_>) -> Vec<Item> {
+    let mut out = vec![Item::Band("Installed")];
+    if m.plugins.is_empty() {
+        out.push(Item::Row(DRow {
+            label: Cow::Borrowed("No plugins installed"),
+            kind: Kind::Info(String::new()),
+            note: Some(Cow::Borrowed("Put plugins in .adds/sigma-scribe/plugins")),
+        }));
+        return out;
+    }
+    for (i, p) in m.plugins.iter().enumerate() {
+        let mut note = format!("{} \u{b7} {}", p.kind, p.version);
+        let kind = if p.compatible {
+            if p.restart {
+                note.push_str(" \u{b7} restart to apply");
+            }
+            Kind::Check {
+                on: p.enabled,
+                change: Change::Plugin(i, !p.enabled),
+            }
+        } else {
+            note = "Needs a newer app".to_owned();
+            Kind::Muted(tr("Off").into_owned())
+        };
+        out.push(Item::Row(DRow {
+            label: Cow::Owned(p.name.clone()),
+            kind,
+            note: Some(Cow::Owned(note)),
+        }));
+    }
+    out
 }
 
 /// Every item of a page, before splitting into sub-pages.
@@ -856,6 +928,7 @@ pub fn page_items(m: &OptionsModel<'_>) -> Vec<Item> {
         SettingsPage::Root => (0..CATEGORIES.len())
             .map(|i| Item::Category(i, summary(m, i)))
             .collect(),
+        SettingsPage::Category(PLUGINS_CATEGORY) => plugin_items(m),
         SettingsPage::Category(c) => {
             let mut out = Vec::new();
             for (band, rows) in CATEGORIES[c.min(CATEGORIES.len() - 1)].1 {
@@ -873,6 +946,16 @@ pub fn page_items(m: &OptionsModel<'_>) -> Vec<Item> {
             .into_iter()
             .map(|(l, c, a)| Item::Choice(l, c, a))
             .collect(),
+    }
+}
+
+/// The `&'static str` of a built-in row (only those open a choice page).
+// It matches on the variant to hand back the static string, which `&str` cannot.
+#[allow(clippy::ptr_arg)]
+fn static_label(l: &Cow<'static, str>) -> &'static str {
+    match l {
+        Cow::Borrowed(s) => s,
+        Cow::Owned(_) => "",
     }
 }
 
@@ -948,7 +1031,7 @@ impl EditorScreen {
                         },
                     ..
                 }) => Some((
-                    *label,
+                    static_label(label),
                     self.slider_geom(*band, stops.len()),
                     stops.clone(),
                     *value,
@@ -1228,7 +1311,7 @@ impl EditorScreen {
                         }
                         Kind::Pick(_) => match m.page {
                             SettingsPage::Category(c) => {
-                                OptionsHit::Open(SettingsPage::Choice(c, d.label))
+                                OptionsHit::Open(SettingsPage::Choice(c, static_label(&d.label)))
                             }
                             _ => OptionsHit::Nothing,
                         },
@@ -1292,10 +1375,10 @@ impl EditorScreen {
                             out.push((format!("{}/{name}", d.label), *r));
                         }
                     }
-                    Kind::Pick(_) | Kind::Link(_) => out.push((d.label.into(), cells[0])),
+                    Kind::Pick(_) | Kind::Link(_) => out.push((d.label.to_string(), cells[0])),
                     Kind::Info(_) | Kind::Muted(_) => {}
                     Kind::Slider { stops, .. } => {
-                        out.push((d.label.into(), cells[0]));
+                        out.push((d.label.to_string(), cells[0]));
                         for (i, (cell, r)) in stops.iter().zip(&cells[1..]).enumerate() {
                             // Unlabelled stops (Size) are `Size/1`, `Size/2` ….
                             let name = if cell.label.is_empty() {
@@ -1468,7 +1551,7 @@ impl EditorScreen {
                     crate::radio::draw(c, s, cells[0], *on, t);
                 }
                 Item::Row(d) => {
-                    if let Some(note) = d.note {
+                    if let Some(note) = &d.note {
                         // Label up, the reason in small print under it.
                         let nb = mid + ui * 1.0;
                         self.fonts.draw(
@@ -1477,7 +1560,7 @@ impl EditorScreen {
                             ui,
                             band.x as f32,
                             base - ui * 0.45,
-                            &format!("{}:", tr(d.label)),
+                            &format!("{}:", tr(&d.label)),
                             t.ink,
                         );
                         // Kept to the column left of the controls: smaller,
@@ -1507,7 +1590,7 @@ impl EditorScreen {
                         self.fonts
                             .draw(c, Face::Atkinson, size, band.x as f32, nb, &shown, t.mute);
                     } else {
-                        label(c, &tr(d.label));
+                        label(c, &tr(&d.label));
                     }
                     match &d.kind {
                         Kind::Check { on, .. } => {
@@ -1529,7 +1612,7 @@ impl EditorScreen {
                                 value: *value,
                                 enabled: *enabled,
                                 ends: *ends,
-                                focused: m.focus == Some(d.label),
+                                focused: m.focus == Some(static_label(&d.label)),
                             };
                             let ink = if t.paper < 128 { 0xFF } else { 0x00 };
                             crate::slider::draw(c, &g, &sl, &self.fonts, ui, s, (ink, t.paper));
@@ -1605,6 +1688,7 @@ mod tests {
             hw_samples: 0,
             light: None,
             ui_scale_pending: None,
+            plugins: &[],
         }
     }
 

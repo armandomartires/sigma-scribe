@@ -862,3 +862,47 @@ Turn off Auto keyboard size
 
 Dark mode
 = Dunkelmodus
+
+# Settings → Plugins
+Plugins
+= Plugins
+
+Installed
+= Installiert
+
+No plugins installed
+= Keine Plugins installiert
+
+Put plugins in .adds/sigma-scribe/plugins
+= Plugins in .adds/sigma-scribe/plugins ablegen
+
+Screen
+= Bildschirm
+
+Font
+= Schriftart
+
+Dictionary
+= Wörterbuch
+
+Handwriting model
+= Handschriftmodell
+
+Word list
+= Wortliste
+
+Translation
+= Übersetzung
+
+Keyboard layout
+= Tastaturbelegung
+
+Icons
+= Symbole
+
+restart to apply
+= zum Anwenden neu starten
+
+Needs a newer app
+= Benötigt eine neuere App-Version
+

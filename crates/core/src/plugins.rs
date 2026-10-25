@@ -62,6 +62,22 @@ impl PluginKind {
         })
     }
 
+    /// The kind in English, for the Settings list.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Font => "Font",
+            Self::Dictionary => "Dictionary",
+            Self::HwrModel => "Handwriting model",
+            Self::WordList => "Word list",
+            Self::Theme => "Theme",
+            Self::Translation => "Translation",
+            Self::Layout => "Keyboard layout",
+            Self::Icons => "Icons",
+            Self::Screen => "Screen",
+        }
+    }
+
     #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
@@ -94,6 +110,12 @@ impl Version {
         };
         let v = Self(part()?, part()?, part()?);
         it.next().is_none().then_some(v)
+    }
+}
+
+impl std::fmt::Display for Version {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}.{}", self.0, self.1, self.2)
     }
 }
 
@@ -393,6 +415,76 @@ pub fn enabled_screen_in(
     wasm.is_file().then_some((m, wasm))
 }
 
+/// A plugin found on disk, for the Settings list.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Listed {
+    pub manifest: Manifest,
+    /// On in `plugins.state`. A plugin the file does not mention is off.
+    pub enabled: bool,
+}
+
+/// The plugins installed under `root`: every folder with a valid
+/// `plugin.conf` whose id is the folder's name, sorted by name.
+#[must_use]
+pub fn list_in(root: &std::path::Path) -> Vec<Listed> {
+    let state = std::fs::read_to_string(root.join("plugins.state"))
+        .map(|t| State::parse(&t))
+        .unwrap_or_default();
+    let Ok(dir) = std::fs::read_dir(root) else {
+        return Vec::new();
+    };
+    let mut out: Vec<Listed> = dir
+        .filter_map(Result::ok)
+        .filter_map(|e| {
+            let id = e.file_name().into_string().ok()?;
+            let m = Manifest::parse(&std::fs::read_to_string(e.path().join("plugin.conf")).ok()?)?;
+            (m.id == id).then(|| Listed {
+                enabled: state.get(&id).is_some_and(|p| p.enabled),
+                manifest: m,
+            })
+        })
+        .collect();
+    out.sort_by(|a, b| {
+        a.manifest
+            .name
+            .to_lowercase()
+            .cmp(&b.manifest.name.to_lowercase())
+            .then_with(|| a.manifest.id.cmp(&b.manifest.id))
+    });
+    out
+}
+
+/// [`list_in`] for the installed plugins folder.
+#[must_use]
+pub fn list() -> Vec<Listed> {
+    list_in(&plugins_root())
+}
+
+/// Turns plugin `id` on or off in `plugins.state`, atomically. A plugin that
+/// is on disk but not yet in the file is added.
+///
+/// # Errors
+/// `NotFound` when there is no valid plugin of that id under `root`, or any
+/// filesystem error (the old file is left intact).
+pub fn set_enabled_in(root: &std::path::Path, id: &str, enabled: bool) -> std::io::Result<()> {
+    use std::io::{Error, ErrorKind};
+    let manifest = valid_id(id)
+        .then(|| std::fs::read_to_string(root.join(id).join("plugin.conf")).ok())
+        .flatten()
+        .and_then(|t| Manifest::parse(&t))
+        .filter(|m| m.id == id)
+        .ok_or_else(|| Error::new(ErrorKind::NotFound, "no such plugin"))?;
+    let path = root.join("plugins.state");
+    let mut state = std::fs::read_to_string(&path)
+        .map(|t| State::parse(&t))
+        .unwrap_or_default();
+    if state.get(id).is_none() {
+        state.install(id, manifest.version);
+    }
+    state.set_enabled(id, enabled);
+    crate::store::write_atomic(&path, &state.serialize())
+}
+
 /// [`enabled_files_in`] for the installed plugins folder.
 #[must_use]
 pub fn enabled_files(rel: &str) -> Vec<std::path::PathBuf> {
@@ -599,6 +691,90 @@ mod tests {
             assert!(enabled_screen_in(&root, id).is_none(), "{id}");
         }
         assert!(enabled_screen_in(&root.join("nope"), "graph-map").is_none());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    fn plugin_folder(root: &std::path::Path, id: &str, name: &str, kind: &str) {
+        std::fs::create_dir_all(root.join(id)).unwrap();
+        std::fs::write(
+            root.join(id).join("plugin.conf"),
+            format!("id={id}\nname={name}\nversion=1.2.0\nkind={kind}\nentry=m.wasm\n"),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn list_in_finds_valid_folders_sorted_with_their_state() {
+        let root = std::env::temp_dir().join(format!("sigma-list-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        plugin_folder(&root, "zeta", "Zeta pack", "font");
+        plugin_folder(&root, "graph-map", "Graph", "screen");
+        plugin_folder(&root, "off", "alpha", "theme");
+        // Not plugins: a folder without a manifest, one whose id differs from
+        // its name, a stray file.
+        std::fs::create_dir_all(root.join("empty")).unwrap();
+        plugin_folder(&root, "liar", "Liar", "font");
+        std::fs::write(
+            root.join("liar/plugin.conf"),
+            "id=other\nversion=1\nkind=font",
+        )
+        .unwrap();
+        std::fs::write(root.join("notes.txt"), "x").unwrap();
+        std::fs::write(
+            root.join("plugins.state"),
+            "graph-map=1.0.0,enabled\noff=1.0.0,disabled\n",
+        )
+        .unwrap();
+        let got: Vec<(String, bool)> = list_in(&root)
+            .into_iter()
+            .map(|l| (l.manifest.id, l.enabled))
+            .collect();
+        assert_eq!(
+            got,
+            vec![
+                ("off".to_string(), false), // "alpha"
+                ("graph-map".to_string(), true),
+                ("zeta".to_string(), false), // on disk, not in the file
+            ]
+        );
+        assert!(list_in(&root.join("nope")).is_empty());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn set_enabled_in_writes_the_state_file() {
+        let root = std::env::temp_dir().join(format!("sigma-toggle-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        plugin_folder(&root, "graph-map", "Graph", "screen");
+        plugin_folder(&root, "other", "Other", "font");
+        // Not in the file yet: turning it on adds it.
+        set_enabled_in(&root, "graph-map", true).unwrap();
+        assert!(list_in(&root)
+            .iter()
+            .any(|l| l.manifest.id == "graph-map" && l.enabled));
+        assert!(
+            enabled_screen_in(&root, "graph-map").is_none(),
+            "no module file yet"
+        );
+        std::fs::write(root.join("graph-map/m.wasm"), b"\0asm").unwrap();
+        assert!(enabled_screen_in(&root, "graph-map").is_some());
+        // Off and on again; other plugins and versions are left alone.
+        set_enabled_in(&root, "other", true).unwrap();
+        set_enabled_in(&root, "graph-map", false).unwrap();
+        assert!(enabled_screen_in(&root, "graph-map").is_none());
+        let state = State::parse(&std::fs::read_to_string(root.join("plugins.state")).unwrap());
+        assert!(state.get("other").unwrap().enabled);
+        assert!(!state.get("graph-map").unwrap().enabled);
+        assert_eq!(state.get("graph-map").unwrap().version, Version(1, 2, 0));
+        // Unknown, unsafe or manifest-less ids are errors and change nothing.
+        let before = std::fs::read_to_string(root.join("plugins.state")).unwrap();
+        for id in ["missing", "../x", "", "Graph-Map"] {
+            assert!(set_enabled_in(&root, id, true).is_err(), "{id:?}");
+        }
+        assert_eq!(
+            std::fs::read_to_string(root.join("plugins.state")).unwrap(),
+            before
+        );
         std::fs::remove_dir_all(&root).unwrap();
     }
 

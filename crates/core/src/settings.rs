@@ -377,6 +377,10 @@ pub enum Change {
     /// The backlight step, 0 to [`BACKLIGHT_MAX`] (v1.12). Not a saved
     /// setting: the app sends it to the front light, which keeps it.
     Backlight(u8),
+    /// Turn plugin number `.0` (its place in the Settings → Plugins list) on
+    /// or off. Kept in `plugins.state`, not in the settings file, so
+    /// `Settings` ignores it and the app applies it.
+    Plugin(usize, bool),
     /// Keyboard size (v1.4.3): 0 = Auto, or a percentage from `KB_SIZES`.
     KbSize(u16),
     /// Keyboard size Auto on / off (v1.4.4). Off keeps the size Auto was
@@ -527,7 +531,7 @@ impl Settings {
                 }
             }
             Change::EnhancedKeyboard(on) => self.enhanced_keyboard = on,
-            Change::Backlight(_) => {}
+            Change::Backlight(_) | Change::Plugin(..) => {}
             Change::KbAuto(on) => {
                 self.kb_size = if on { 0 } else { self.keyboard_scale() };
             }

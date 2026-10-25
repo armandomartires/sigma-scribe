@@ -6,6 +6,14 @@ use sigma_core::layouts::KeyLayout;
 use sigma_core::settings::{Change, Settings};
 use sigma_render::options::{display_row, page_items, Item, Kind, OptionsModel, SettingsPage};
 
+/// A row label as `&'static str` (a test may leak the odd owned one).
+fn st(l: std::borrow::Cow<'static, str>) -> &'static str {
+    match l {
+        std::borrow::Cow::Borrowed(s) => s,
+        std::borrow::Cow::Owned(s) => Box::leak(s.into_boxed_str()),
+    }
+}
+
 fn rows(s: &Settings, page: SettingsPage) -> Vec<&'static str> {
     let kb = sigma_core::keyboard::Keyboard::default();
     let m = OptionsModel {
@@ -21,11 +29,12 @@ fn rows(s: &Settings, page: SettingsPage) -> Vec<&'static str> {
         hw_samples: 0,
         light: None,
         ui_scale_pending: None,
+        plugins: &[],
     };
     page_items(&m)
         .into_iter()
         .filter_map(|i| match i {
-            Item::Row(r) => Some(r.label),
+            Item::Row(r) => Some(st(r.label)),
             _ => None,
         })
         .collect()
@@ -132,6 +141,7 @@ fn the_switch_is_a_checkbox_row() {
         hw_samples: 0,
         light: None,
         ui_scale_pending: None,
+        plugins: &[],
     };
     let row = display_row(&m, "Experimental features").unwrap();
     assert!(matches!(row.kind, Kind::Check { on: false, .. }));
@@ -160,12 +170,13 @@ fn display_rows(light: Option<u8>) -> Vec<(&'static str, Option<usize>)> {
         hw_samples: 0,
         light,
         ui_scale_pending: None,
+        plugins: &[],
     };
     page_items(&m)
         .into_iter()
         .filter_map(|i| match i {
             Item::Row(r) => Some((
-                r.label,
+                st(r.label.clone()),
                 match r.kind {
                     Kind::Slider { stops, value, .. } if r.label == "Backlight" => {
                         assert_eq!(stops.len(), usize::from(BACKLIGHT_MAX) + 1, "nine stops");

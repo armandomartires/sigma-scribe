@@ -5,6 +5,25 @@ installed under `.adds/sigma-scribe/plugins/<id>/`. `plugins.state` there
 records what is installed and enabled. Format and index rules live in
 `crates/core/src/plugins.rs`.
 
+## Switching plugins on and off
+
+Settings → Plugins lists every plugin folder under `.adds/sigma-scribe/plugins/`
+that has a valid `plugin.conf` (its id is the folder's name) and gives it an
+On/Off switch. The choice is written to `plugins.state` straight away.
+
+- A **screen plugin** (the Graph) takes effect the next time its screen opens.
+  Off: the title-bar Graph icon opens the built-in Graph. On: it opens the
+  plugin.
+- A **data pack** is read when the app starts, so its row says "restart to
+  apply".
+- A plugin that needs a newer app than this one is listed, greyed and without
+  a switch.
+- A plugin that is on disk but not yet in `plugins.state` shows as Off; its
+  first switch-on adds it to the file.
+
+Installing from the plugins repository is not in the app yet: copy a plugin's
+folder to `.adds/sigma-scribe/plugins/<id>/`.
+
 ## Kinds
 
 - **Data packs** (font, dictionary, hwr-model, word-list, theme, translation,
