@@ -956,15 +956,3 @@ Log file
 Drawer width
 = Larghezza del pannello
 
-Narrow
-= Stretto
-
-Medium
-= Medio
-
-Wide
-= Largo
-
-How much of the page the drawer covers
-= Quanta parte della pagina copre il pannello
-

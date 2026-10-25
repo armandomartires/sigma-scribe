@@ -132,8 +132,8 @@ impl EditorScreen {
     #[must_use]
     pub fn drawer_rect(&self, base: &Layout, side: Side) -> Rect {
         let p = base.page;
-        let k = self.cfg.drawer_width.factor();
-        let w = ((p.w as f32 * 0.48 * k) as i32).min(self.d(320.0 * k));
+        let share = sigma_core::settings::drawer_share(self.cfg.drawer_width);
+        let w = ((p.w as f32 * share) as i32).min(self.d(320.0 * share / 0.48));
         let x = match side {
             Side::Left => p.x,
             Side::Right => p.x + p.w - w,

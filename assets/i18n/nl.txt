@@ -956,15 +956,3 @@ Log file
 Drawer width
 = Breedte van de lade
 
-Narrow
-= Smal
-
-Medium
-= Gemiddeld
-
-Wide
-= Breed
-
-How much of the page the drawer covers
-= Hoeveel van de pagina de lade bedekt
-

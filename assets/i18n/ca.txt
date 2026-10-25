@@ -956,15 +956,3 @@ Log file
 Drawer width
 = Amplada del calaix
 
-Narrow
-= Estret
-
-Medium
-= Mitjà
-
-Wide
-= Ample
-
-How much of the page the drawer covers
-= Quant de la pàgina cobreix el calaix
-

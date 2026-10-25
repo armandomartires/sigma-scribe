@@ -956,15 +956,3 @@ Log file
 Drawer width
 = Lådans bredd
 
-Narrow
-= Smal
-
-Medium
-= Medel
-
-Wide
-= Bred
-
-How much of the page the drawer covers
-= Hur mycket av sidan lådan täcker
-

@@ -8,7 +8,7 @@
 //! The modules under test are app/tests/fixtures/<id>/pane.wasm, built from
 //! the sigma-scribe-plugins repo (scripts/update-plugin-fixtures.sh).
 
-use sigma_core::settings::{DrawerWidth, Paper};
+use sigma_core::settings::{Paper, DRAWER_WIDTH_DEFAULT};
 use sigma_core::{Change, NotePath};
 use sigma_device::desktop::DesktopDevice;
 use sigma_device::{Event, HwKey, Refresh};
@@ -71,15 +71,7 @@ struct Rig {
 }
 
 impl Rig {
-    fn new(
-        tag: &str,
-        plugin: bool,
-        w: u32,
-        h: u32,
-        lib: Lib,
-        night: bool,
-        width: DrawerWidth,
-    ) -> Self {
+    fn new(tag: &str, plugin: bool, w: u32, h: u32, lib: Lib, night: bool, width: u8) -> Self {
         let d = std::env::temp_dir().join(format!("sigma-pq-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
         let (notes, plugins) = (d.join("notes"), d.join("plugins"));
@@ -160,18 +152,10 @@ fn run(r: &mut Rig, step: &Step) -> Option<Refresh> {
 }
 
 fn equivalent(tag: &str, w: u32, h: u32, lib: Lib, night: bool, steps: &[Step]) {
-    equivalent_wide(tag, w, h, lib, night, DrawerWidth::Wide, steps);
+    equivalent_wide(tag, w, h, lib, night, DRAWER_WIDTH_DEFAULT, steps);
 }
 
-fn equivalent_wide(
-    tag: &str,
-    w: u32,
-    h: u32,
-    lib: Lib,
-    night: bool,
-    width: DrawerWidth,
-    steps: &[Step],
-) {
+fn equivalent_wide(tag: &str, w: u32, h: u32, lib: Lib, night: bool, width: u8, steps: &[Step]) {
     let mut builtin = Rig::new(&format!("{tag}-b"), false, w, h, lib, night, width);
     let mut plugin = Rig::new(&format!("{tag}-p"), true, w, h, lib, night, width);
     for (n, step) in steps.iter().enumerate() {
@@ -352,10 +336,7 @@ fn panes_in_preview_and_a_smaller_screen_match_the_built_in() {
 
 #[test]
 fn every_drawer_width_matches_the_built_in() {
-    for (tag, width) in [
-        ("narrow", DrawerWidth::Narrow),
-        ("medium", DrawerWidth::Medium),
-    ] {
+    for (tag, width) in [("narrow", 0), ("medium", 4)] {
         equivalent_wide(
             tag,
             1440,

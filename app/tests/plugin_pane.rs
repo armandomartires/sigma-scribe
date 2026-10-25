@@ -222,18 +222,15 @@ fn a_pane_plugin_that_traps_is_dropped_for_the_session() {
 
 #[test]
 fn the_drawer_width_setting_changes_the_pane_a_plugin_is_given() {
-    use sigma_core::settings::DrawerWidth;
     let mut r = Rig::new("width", true, None);
     let width = |r: &Rig| {
         let base = r.app.screen.layout(false, &r.app.keyboard);
         r.app.screen.drawer_rect(&base, r.app.settings.drawer).w
     };
     let wide = width(&r);
-    r.app
-        .change(sigma_core::Change::DrawerWidth(DrawerWidth::Medium));
+    r.app.change(sigma_core::Change::DrawerWidth(4));
     let medium = width(&r);
-    r.app
-        .change(sigma_core::Change::DrawerWidth(DrawerWidth::Narrow));
+    r.app.change(sigma_core::Change::DrawerWidth(0));
     let narrow = width(&r);
     assert!(narrow < medium && medium < wide, "{narrow} {medium} {wide}");
     // Wide is what the drawer always was: 48 % of the page.
@@ -244,4 +241,18 @@ fn the_drawer_width_setting_changes_the_pane_a_plugin_is_given() {
     let (x, _) = r.app.control_centre("Heading:Plan").unwrap();
     let d = r.app.screen.drawer_rect(&base, r.app.settings.drawer);
     assert!(x >= d.x && x < d.x + d.w, "row centre {x} inside {d:?}");
+}
+
+#[test]
+fn the_drawer_width_slider_is_in_display_settings_and_moves_the_drawer() {
+    let mut r = Rig::new("slider", true, None);
+    r.tap_on("Options");
+    r.tap_on("Display");
+    r.tap_on("Drawer width/24 %");
+    assert_eq!(r.app.settings.drawer_width, 0);
+    r.tap_on("Drawer width/48 %");
+    assert_eq!(
+        r.app.settings.drawer_width,
+        sigma_core::settings::DRAWER_WIDTH_DEFAULT
+    );
 }

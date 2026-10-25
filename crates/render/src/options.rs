@@ -11,9 +11,7 @@ use crate::fonts::Face;
 use crate::i18n::tr;
 use crate::theme::Theme;
 use sigma_core::keyboard::Layout as KbLayout;
-use sigma_core::settings::{
-    Change, DrawerWidth, KeyTone, Orientation, Paper, Settings, Side, Typeface,
-};
+use sigma_core::settings::{Change, KeyTone, Orientation, Paper, Settings, Side, Typeface};
 use sigma_core::Keyboard;
 use std::borrow::Cow;
 
@@ -352,27 +350,6 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
                     "Right",
                     Change::Drawer(Side::Right),
                     s.drawer == Side::Right,
-                ),
-            ],
-        },
-        OptRow {
-            label: "Drawer width",
-            hint: "How much of the page the drawer covers",
-            cells: vec![
-                choice(
-                    "Narrow",
-                    Change::DrawerWidth(DrawerWidth::Narrow),
-                    s.drawer_width == DrawerWidth::Narrow,
-                ),
-                choice(
-                    "Medium",
-                    Change::DrawerWidth(DrawerWidth::Medium),
-                    s.drawer_width == DrawerWidth::Medium,
-                ),
-                choice(
-                    "Wide",
-                    Change::DrawerWidth(DrawerWidth::Wide),
-                    s.drawer_width == DrawerWidth::Wide,
                 ),
             ],
         },
@@ -825,6 +802,25 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
                 stops,
                 enabled: true,
                 ends: true,
+            }
+        }
+        // Nine stops from a narrow drawer to the widest (about half the page).
+        "Drawer width" => {
+            let stops: Vec<Cell> = (0..sigma_core::settings::DRAWER_WIDTH_STOPS)
+                .map(|i| {
+                    let pct = (sigma_core::settings::drawer_share(i) * 100.0).round();
+                    choice(
+                        &format!("{pct} %"),
+                        Change::DrawerWidth(i),
+                        i == m.settings.drawer_width,
+                    )
+                })
+                .collect();
+            Kind::Slider {
+                value: usize::from(m.settings.drawer_width),
+                stops,
+                enabled: true,
+                ends: false,
             }
         }
         "Keyboard size" => {
