@@ -31,16 +31,26 @@ pub enum KeyTone {
     Dark,
 }
 
-/// Stops of the Drawer width slider: the drawer covers 24 % to 48 % of the
-/// page in steps of 3 %. The last stop, the default, is the width the drawer
-/// had before the setting existed.
-pub const DRAWER_WIDTH_STOPS: u8 = 9;
-pub const DRAWER_WIDTH_DEFAULT: u8 = DRAWER_WIDTH_STOPS - 1;
+/// The Drawer width slider: the drawer covers 20 % to 50 % of the page (the
+/// middle of the screen at most) and snaps to every 5 %. The widest is the
+/// default.
+pub const DRAWER_WIDTH_MIN: u8 = 20;
+pub const DRAWER_WIDTH_MAX: u8 = 50;
+pub const DRAWER_WIDTH_STEP: u8 = 5;
+pub const DRAWER_WIDTH_DEFAULT: u8 = DRAWER_WIDTH_MAX;
 
-/// The drawer's share of the page at slider stop `stop` (cut to the range).
+/// `percent` snapped to the nearest 5 % within the range.
 #[must_use]
-pub fn drawer_share(stop: u8) -> f32 {
-    f32::from(24 + 3 * stop.min(DRAWER_WIDTH_DEFAULT)) / 100.0
+pub fn drawer_width_snap(percent: u8) -> u8 {
+    let p = percent.clamp(DRAWER_WIDTH_MIN, DRAWER_WIDTH_MAX);
+    let steps = (p - DRAWER_WIDTH_MIN + DRAWER_WIDTH_STEP / 2) / DRAWER_WIDTH_STEP;
+    (DRAWER_WIDTH_MIN + steps * DRAWER_WIDTH_STEP).min(DRAWER_WIDTH_MAX)
+}
+
+/// The drawer's share of the page for a width in percent.
+#[must_use]
+pub fn drawer_share(percent: u8) -> f32 {
+    f32::from(drawer_width_snap(percent)) / 100.0
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -175,7 +185,7 @@ pub struct Settings {
     pub keyboard: Layout,
     pub key_tone: KeyTone,
     pub drawer: Side,
-    /// Slider stop of the drawer's width, `0..DRAWER_WIDTH_STOPS`.
+    /// The drawer's width in percent of the page, a multiple of 5.
     pub drawer_width: u8,
     pub usb: bool,
     /// Reverse scroll (v1.0.1): wheel / two-finger notches move content the
@@ -377,7 +387,7 @@ pub enum Change {
     Keyboard(Layout),
     KeyTone(KeyTone),
     Drawer(Side),
-    /// The drawer's width, as a slider stop.
+    /// The drawer's width in percent of the page (snapped to 5).
     DrawerWidth(u8),
     Usb(bool),
     NaturalScroll(bool),
@@ -525,7 +535,7 @@ impl Settings {
             Change::Keyboard(l) => self.keyboard = l,
             Change::KeyTone(t) => self.key_tone = t,
             Change::Drawer(s) => self.drawer = s,
-            Change::DrawerWidth(w) => self.drawer_width = w.min(DRAWER_WIDTH_DEFAULT),
+            Change::DrawerWidth(w) => self.drawer_width = drawer_width_snap(w),
             Change::Usb(on) => self.usb = on,
             Change::NaturalScroll(on) => self.natural_scroll = on,
             Change::InkPen(p) => self.ink_pen = p,
@@ -689,12 +699,10 @@ impl Settings {
                 "drawer_width" => {
                     // Words from the first builds of this setting still read.
                     s.drawer_width = match v {
-                        "narrow" => 3,
-                        "medium" => 5,
+                        "narrow" => 30,
+                        "medium" => 40,
                         "wide" => DRAWER_WIDTH_DEFAULT,
-                        n => n
-                            .parse::<u8>()
-                            .map_or(s.drawer_width, |n| n.min(DRAWER_WIDTH_DEFAULT)),
+                        n => n.parse::<u8>().map_or(s.drawer_width, drawer_width_snap),
                     };
                 }
                 "usb" => s.usb = b().unwrap_or(s.usb),
@@ -944,7 +952,7 @@ mod tests {
             Change::Keyboard(Layout::Compact),
             Change::KeyTone(KeyTone::Light),
             Change::Drawer(Side::Left),
-            Change::DrawerWidth(2),
+            Change::DrawerWidth(30),
             Change::Usb(true),
             Change::Orientation(Orientation::Landscape),
             Change::LandKeys(LandKeys::Split),
@@ -1048,21 +1056,27 @@ mod tests {
     }
 
     #[test]
-    fn drawer_width_is_a_slider_stop_that_reads_old_words_and_clamps() {
+    fn drawer_width_snaps_to_5_reads_old_values_and_clamps() {
         assert_eq!(Settings::default().drawer_width, DRAWER_WIDTH_DEFAULT);
-        assert_eq!(drawer_share(DRAWER_WIDTH_DEFAULT), 0.48);
-        assert_eq!(drawer_share(0), 0.24);
+        assert_eq!(drawer_share(50), 0.5);
+        assert_eq!(drawer_share(20), 0.2);
         let mut s = Settings::default();
-        s.apply(Change::DrawerWidth(3));
-        assert!(Settings::parse(&s.serialize()).drawer_width == 3);
+        s.apply(Change::DrawerWidth(33));
+        assert_eq!(s.drawer_width, 35);
+        s.apply(Change::DrawerWidth(32));
+        assert_eq!(s.drawer_width, 30);
+        assert_eq!(Settings::parse(&s.serialize()).drawer_width, 30);
         s.apply(Change::DrawerWidth(200));
-        assert_eq!(s.drawer_width, DRAWER_WIDTH_DEFAULT);
+        assert_eq!(s.drawer_width, 50);
+        s.apply(Change::DrawerWidth(0));
+        assert_eq!(s.drawer_width, 20);
         for (v, want) in [
-            ("narrow", 3),
-            ("medium", 5),
-            ("wide", 8),
-            ("5", 5),
-            ("99", 8),
+            ("narrow", 30),
+            ("medium", 40),
+            ("wide", 50),
+            ("45", 45),
+            ("99", 50),
+            ("27", 25),
         ] {
             let g = Settings::parse(&format!("drawer_width={v}\n"));
             assert_eq!(g.drawer_width, want, "{v}");

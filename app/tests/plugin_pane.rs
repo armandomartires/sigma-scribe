@@ -228,14 +228,14 @@ fn the_drawer_width_setting_changes_the_pane_a_plugin_is_given() {
         r.app.screen.drawer_rect(&base, r.app.settings.drawer).w
     };
     let wide = width(&r);
-    r.app.change(sigma_core::Change::DrawerWidth(4));
+    r.app.change(sigma_core::Change::DrawerWidth(35));
     let medium = width(&r);
-    r.app.change(sigma_core::Change::DrawerWidth(0));
+    r.app.change(sigma_core::Change::DrawerWidth(20));
     let narrow = width(&r);
     assert!(narrow < medium && medium < wide, "{narrow} {medium} {wide}");
-    // Wide is what the drawer always was: 48 % of the page.
+    // The default is the widest: half the page.
     let base = r.app.screen.layout(false, &r.app.keyboard);
-    assert_eq!(wide, (base.page.w as f32 * 0.48) as i32);
+    assert_eq!(wide, (base.page.w as f32 * 0.50) as i32);
     // The pane is laid out again for the new width: rows keep inside it.
     r.tap_on("Contents");
     let (x, _) = r.app.control_centre("Heading:Plan").unwrap();
@@ -248,9 +248,9 @@ fn the_drawer_width_slider_is_in_display_settings_and_moves_the_drawer() {
     let mut r = Rig::new("slider", true, None);
     r.tap_on("Options");
     r.tap_on("Display");
-    r.tap_on("Drawer width/24 %");
-    assert_eq!(r.app.settings.drawer_width, 0);
-    r.tap_on("Drawer width/48 %");
+    r.tap_on("Drawer width/20 %");
+    assert_eq!(r.app.settings.drawer_width, 20);
+    r.tap_on("Drawer width/50 %");
     assert_eq!(
         r.app.settings.drawer_width,
         sigma_core::settings::DRAWER_WIDTH_DEFAULT

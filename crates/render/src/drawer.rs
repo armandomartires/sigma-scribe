@@ -604,7 +604,7 @@ mod tests {
                     let l = e.drawer_layout(&base, &m);
                     assert_eq!(
                         l.rect.w,
-                        ((base.page.w as f32 * 0.48) as i32).min(e.d(320.0))
+                        ((base.page.w as f32 * 0.50) as i32).min(e.d(320.0 * 0.50 / 0.48))
                     );
                     assert_eq!(l.rect.x == base.page.x, side == Side::Left);
                     let n = mask.count_ones() as i32;
