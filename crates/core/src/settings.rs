@@ -31,6 +31,46 @@ pub enum KeyTone {
     Dark,
 }
 
+/// How much of the page the side drawer covers (`drawer_width=`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum DrawerWidth {
+    Narrow,
+    Medium,
+    #[default]
+    Wide,
+}
+
+impl DrawerWidth {
+    /// Share of the widest drawer (the one before this setting existed).
+    #[must_use]
+    pub fn factor(self) -> f32 {
+        match self {
+            Self::Narrow => 2.0 / 3.0,
+            Self::Medium => 5.0 / 6.0,
+            Self::Wide => 1.0,
+        }
+    }
+
+    #[must_use]
+    pub fn key(self) -> &'static str {
+        match self {
+            Self::Narrow => "narrow",
+            Self::Medium => "medium",
+            Self::Wide => "wide",
+        }
+    }
+
+    #[must_use]
+    pub fn parse(v: &str) -> Option<Self> {
+        Some(match v {
+            "narrow" => Self::Narrow,
+            "medium" => Self::Medium,
+            "wide" => Self::Wide,
+            _ => return None,
+        })
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Side {
     Left,
@@ -163,6 +203,7 @@ pub struct Settings {
     pub keyboard: Layout,
     pub key_tone: KeyTone,
     pub drawer: Side,
+    pub drawer_width: DrawerWidth,
     pub usb: bool,
     /// Reverse scroll (v1.0.1): wheel / two-finger notches move content the
     /// other way ("natural", like a touch screen). Default off = 1.0.
@@ -314,6 +355,7 @@ impl Default for Settings {
             keyboard: Layout::Full,
             key_tone: KeyTone::Theme,
             drawer: Side::Right,
+            drawer_width: DrawerWidth::Wide,
             usb: false,
             natural_scroll: false,
             orientation: Orientation::Auto,
@@ -362,6 +404,7 @@ pub enum Change {
     Keyboard(Layout),
     KeyTone(KeyTone),
     Drawer(Side),
+    DrawerWidth(DrawerWidth),
     Usb(bool),
     NaturalScroll(bool),
     Orientation(Orientation),
@@ -508,6 +551,7 @@ impl Settings {
             Change::Keyboard(l) => self.keyboard = l,
             Change::KeyTone(t) => self.key_tone = t,
             Change::Drawer(s) => self.drawer = s,
+            Change::DrawerWidth(w) => self.drawer_width = w,
             Change::Usb(on) => self.usb = on,
             Change::NaturalScroll(on) => self.natural_scroll = on,
             Change::InkPen(p) => self.ink_pen = p,
@@ -668,6 +712,7 @@ impl Settings {
                     }
                 }
                 "drawer" => s.drawer = parse_side(v).unwrap_or(s.drawer),
+                "drawer_width" => s.drawer_width = DrawerWidth::parse(v).unwrap_or(s.drawer_width),
                 "usb" => s.usb = b().unwrap_or(s.usb),
                 "ui_scale" => {
                     if let Ok(n) = v.parse::<u16>() {
@@ -809,7 +854,7 @@ impl Settings {
         let on = |b: bool| if b { "on" } else { "off" };
         format!(
             "keyboard={}\npaper={}\ntype={}\nline={}\nline_words={}\nsize={}\nleading={}\nmargin={}\n\
-             tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\nusb={}\nscroll={}\norientation={}\n\
+             tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\ndrawer_width={}\nusb={}\nscroll={}\norientation={}\n\
              upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\nink_words={}\nink_boxes={}\nui_lang_override={}\nui_lang={}\nexperimental={}\nenhanced_keyboard={}\nlog={}\nlog_level={}\n",
             self.keyboard.name(),
             match self.paper {
@@ -833,6 +878,7 @@ impl Settings {
                 KeyTone::Dark => "dark",
             },
             side(self.drawer),
+            self.drawer_width.key(),
             on(self.usb),
             if self.natural_scroll { "natural" } else { "traditional" },
             match self.orientation {
@@ -914,6 +960,7 @@ mod tests {
             Change::Keyboard(Layout::Compact),
             Change::KeyTone(KeyTone::Light),
             Change::Drawer(Side::Left),
+            Change::DrawerWidth(DrawerWidth::Narrow),
             Change::Usb(true),
             Change::Orientation(Orientation::Landscape),
             Change::LandKeys(LandKeys::Split),

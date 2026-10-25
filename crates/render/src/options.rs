@@ -11,7 +11,9 @@ use crate::fonts::Face;
 use crate::i18n::tr;
 use crate::theme::Theme;
 use sigma_core::keyboard::Layout as KbLayout;
-use sigma_core::settings::{Change, KeyTone, Orientation, Paper, Settings, Side, Typeface};
+use sigma_core::settings::{
+    Change, DrawerWidth, KeyTone, Orientation, Paper, Settings, Side, Typeface,
+};
 use sigma_core::Keyboard;
 use std::borrow::Cow;
 
@@ -354,6 +356,27 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
             ],
         },
         OptRow {
+            label: "Drawer width",
+            hint: "How much of the page the drawer covers",
+            cells: vec![
+                choice(
+                    "Narrow",
+                    Change::DrawerWidth(DrawerWidth::Narrow),
+                    s.drawer_width == DrawerWidth::Narrow,
+                ),
+                choice(
+                    "Medium",
+                    Change::DrawerWidth(DrawerWidth::Medium),
+                    s.drawer_width == DrawerWidth::Medium,
+                ),
+                choice(
+                    "Wide",
+                    Change::DrawerWidth(DrawerWidth::Wide),
+                    s.drawer_width == DrawerWidth::Wide,
+                ),
+            ],
+        },
+        OptRow {
             label: "USB keyboard & mouse",
             hint: "Needs a powered hub: the reader does not power the port",
             cells: vec![
@@ -449,7 +472,7 @@ pub const CATEGORIES: [(&str, &[Section]); 9] = [
     (
         "Display",
         &[
-            ("Page", &["Dark mode", "UI scale", "Drawer"]),
+            ("Page", &["Dark mode", "UI scale", "Drawer", "Drawer width"]),
             ("Light", &["Backlight"]),
             ("Orientation", &["Orientation", "Upside down"]),
         ],

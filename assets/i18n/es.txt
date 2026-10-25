@@ -953,3 +953,18 @@ Critical
 Log file
 = Archivo de registro
 
+Drawer width
+= Ancho del panel
+
+Narrow
+= Estrecho
+
+Medium
+= Medio
+
+Wide
+= Ancho
+
+How much of the page the drawer covers
+= Cuánto de la página cubre el panel
+

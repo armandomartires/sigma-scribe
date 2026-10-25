@@ -953,3 +953,18 @@ Critical
 Log file
 = Logfil
 
+Drawer width
+= Skuffens bredde
+
+Narrow
+= Smal
+
+Medium
+= Mellem
+
+Wide
+= Bred
+
+How much of the page the drawer covers
+= Hvor meget af siden skuffen dækker
+

@@ -953,3 +953,18 @@ Critical
 Log file
 = Protokolldatei
 
+Drawer width
+= Breite der Seitenleiste
+
+Narrow
+= Schmal
+
+Medium
+= Mittel
+
+Wide
+= Breit
+
+How much of the page the drawer covers
+= Wie viel der Seite die Seitenleiste bedeckt
+

@@ -163,7 +163,8 @@ pub const TITLE_ICONS: i32 = 9;
 pub struct EditorScreen {
     pub width: u32,
     pub height: u32,
-    pub fonts: Fonts,
+    /// Shared with the plugins the app runs, so the fonts are parsed once.
+    pub fonts: std::rc::Rc<Fonts>,
     pub scroll: usize,
     /// A USB keyboard is connected (v0.8).
     pub usb_live: bool,
@@ -229,7 +230,7 @@ impl EditorScreen {
         Self {
             width,
             height,
-            fonts: Fonts::new(),
+            fonts: std::rc::Rc::new(Fonts::new()),
             scroll: 0,
             s: Scale(Scale::for_width(width.min(height)).0 * 2.0),
             k: Scale(Scale::for_width(width.min(height)).0 * 1.5),

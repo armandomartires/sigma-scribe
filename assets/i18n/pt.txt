@@ -954,3 +954,18 @@ Critical
 Log file
 = Ficheiro de registo
 
+Drawer width
+= Largura do painel
+
+Narrow
+= Estreito
+
+Medium
+= Médio
+
+Wide
+= Largo
+
+How much of the page the drawer covers
+= Quanto da página o painel cobre
+

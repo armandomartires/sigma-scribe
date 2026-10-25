@@ -23,7 +23,8 @@ const CACHE_ENTRIES: usize = 16;
 const CACHE_BYTES: u64 = 1 << 20;
 
 struct ScreenEnv {
-    fonts: Fonts,
+    /// The app's own fonts, shared: parsing them costs about a second.
+    fonts: std::rc::Rc<Fonts>,
     /// The plugin's id, which tags its log lines (`plugin/graph-map`).
     id: String,
 }
@@ -377,7 +378,7 @@ impl App {
             CACHE_BYTES,
         );
         let env = Box::new(ScreenEnv {
-            fonts: Fonts::new(),
+            fonts: self.screen.fonts.clone(),
             id: id.to_owned(),
         });
         Plugin::load(&bytes, env, cache, Limits::default()).map_err(|e| e.to_string())

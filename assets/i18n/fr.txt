@@ -954,3 +954,18 @@ Critical
 Log file
 = Fichier journal
 
+Drawer width
+= Largeur du panneau
+
+Narrow
+= Étroit
+
+Medium
+= Moyen
+
+Wide
+= Large
+
+How much of the page the drawer covers
+= Part de la page couverte par le panneau
+

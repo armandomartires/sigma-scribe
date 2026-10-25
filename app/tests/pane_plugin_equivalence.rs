@@ -8,7 +8,7 @@
 //! The modules under test are app/tests/fixtures/<id>/pane.wasm, built from
 //! the sigma-scribe-plugins repo (scripts/update-plugin-fixtures.sh).
 
-use sigma_core::settings::Paper;
+use sigma_core::settings::{DrawerWidth, Paper};
 use sigma_core::{Change, NotePath};
 use sigma_device::desktop::DesktopDevice;
 use sigma_device::{Event, HwKey, Refresh};
@@ -71,7 +71,15 @@ struct Rig {
 }
 
 impl Rig {
-    fn new(tag: &str, plugin: bool, w: u32, h: u32, lib: Lib, night: bool) -> Self {
+    fn new(
+        tag: &str,
+        plugin: bool,
+        w: u32,
+        h: u32,
+        lib: Lib,
+        night: bool,
+        width: DrawerWidth,
+    ) -> Self {
         let d = std::env::temp_dir().join(format!("sigma-pq-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
         let (notes, plugins) = (d.join("notes"), d.join("plugins"));
@@ -99,6 +107,7 @@ impl Rig {
         if night {
             app.change(Change::Paper(Paper::Night));
         }
+        app.change(Change::DrawerWidth(width));
         let mut dev = DesktopDevice::new(w, h);
         app.render(&mut dev, Refresh::Full).unwrap();
         Self { app, dev }
@@ -151,8 +160,20 @@ fn run(r: &mut Rig, step: &Step) -> Option<Refresh> {
 }
 
 fn equivalent(tag: &str, w: u32, h: u32, lib: Lib, night: bool, steps: &[Step]) {
-    let mut builtin = Rig::new(&format!("{tag}-b"), false, w, h, lib, night);
-    let mut plugin = Rig::new(&format!("{tag}-p"), true, w, h, lib, night);
+    equivalent_wide(tag, w, h, lib, night, DrawerWidth::Wide, steps);
+}
+
+fn equivalent_wide(
+    tag: &str,
+    w: u32,
+    h: u32,
+    lib: Lib,
+    night: bool,
+    width: DrawerWidth,
+    steps: &[Step],
+) {
+    let mut builtin = Rig::new(&format!("{tag}-b"), false, w, h, lib, night, width);
+    let mut plugin = Rig::new(&format!("{tag}-p"), true, w, h, lib, night, width);
     for (n, step) in steps.iter().enumerate() {
         let (rb, rp) = (run(&mut builtin, step), run(&mut plugin, step));
         // The to-do index is built in the background; wait for it in both.
@@ -327,4 +348,30 @@ fn panes_in_preview_and_a_smaller_screen_match_the_built_in() {
             Step::Tap("Pencil"),
         ],
     );
+}
+
+#[test]
+fn every_drawer_width_matches_the_built_in() {
+    for (tag, width) in [
+        ("narrow", DrawerWidth::Narrow),
+        ("medium", DrawerWidth::Medium),
+    ] {
+        equivalent_wide(
+            tag,
+            1440,
+            1920,
+            Lib::Rich,
+            false,
+            width,
+            &[
+                Step::Tap("Contents"),
+                Step::Tap("To-dos"),
+                Step::Tap("Scratch"),
+                Step::Type("a side note that is long enough to wrap in a narrow drawer"),
+                Step::Tap("TodoBox:call Ana about the contract"),
+                Step::Tap("Preview"),
+                Step::Tap("Heading:Monday"),
+            ],
+        );
+    }
 }

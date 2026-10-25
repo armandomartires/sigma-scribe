@@ -219,3 +219,29 @@ fn a_pane_plugin_that_traps_is_dropped_for_the_session() {
         "and stays built-in"
     );
 }
+
+#[test]
+fn the_drawer_width_setting_changes_the_pane_a_plugin_is_given() {
+    use sigma_core::settings::DrawerWidth;
+    let mut r = Rig::new("width", true, None);
+    let width = |r: &Rig| {
+        let base = r.app.screen.layout(false, &r.app.keyboard);
+        r.app.screen.drawer_rect(&base, r.app.settings.drawer).w
+    };
+    let wide = width(&r);
+    r.app
+        .change(sigma_core::Change::DrawerWidth(DrawerWidth::Medium));
+    let medium = width(&r);
+    r.app
+        .change(sigma_core::Change::DrawerWidth(DrawerWidth::Narrow));
+    let narrow = width(&r);
+    assert!(narrow < medium && medium < wide, "{narrow} {medium} {wide}");
+    // Wide is what the drawer always was: 48 % of the page.
+    let base = r.app.screen.layout(false, &r.app.keyboard);
+    assert_eq!(wide, (base.page.w as f32 * 0.48) as i32);
+    // The pane is laid out again for the new width: rows keep inside it.
+    r.tap_on("Contents");
+    let (x, _) = r.app.control_centre("Heading:Plan").unwrap();
+    let d = r.app.screen.drawer_rect(&base, r.app.settings.drawer);
+    assert!(x >= d.x && x < d.x + d.w, "row centre {x} inside {d:?}");
+}
