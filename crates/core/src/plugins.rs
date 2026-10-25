@@ -429,12 +429,21 @@ pub struct State {
 
 impl State {
     /// Parses `plugins.state`. Lines without a valid id, version and flag
-    /// are skipped; any flag other than `disabled` counts as enabled.
+    /// are skipped; any flag other than `disabled` counts as enabled. When
+    /// an id has several valid lines the first wins. The result is sorted
+    /// by id.
     #[must_use]
     pub fn parse(text: &str) -> Self {
         let mut s = Self::default();
-        for (id, v) in fields(text) {
-            let Some((ver, flag)) = v.split_once(',') else {
+        for l in text.lines().map(str::trim) {
+            if l.is_empty() || l.starts_with('#') {
+                continue;
+            }
+            let Some((id, v)) = l.split_once('=') else {
+                continue;
+            };
+            let id = id.trim();
+            let Some((ver, flag)) = v.trim().split_once(',') else {
                 continue;
             };
             let Some(version) = Version::parse(ver) else {
@@ -448,6 +457,7 @@ impl State {
                 });
             }
         }
+        s.plugins.sort_by(|a, b| a.id.cmp(&b.id));
         s
     }
 
@@ -863,6 +873,24 @@ mod tests {
         assert_eq!(back.enabled().count(), 1);
         assert!(s.remove("skk"));
         assert!(s.get("skk").is_none());
+    }
+
+    #[test]
+    fn state_keeps_the_first_valid_line_per_id() {
+        let s = State::parse(
+            "skk=1.0.0,enabled\n\
+             cjk-font=bad\n\
+             cjk-font=1.2.0,disabled\n\
+             cjk-font=garbage\n\
+             cjk-font=1.3.0,enabled\n\
+             skk=2.0.0,disabled\n",
+        );
+        let ids: Vec<&str> = s.plugins.iter().map(|p| p.id.as_str()).collect();
+        assert_eq!(ids, ["cjk-font", "skk"]);
+        let cjk = s.get("cjk-font").unwrap();
+        assert_eq!((cjk.version, cjk.enabled), (Version(1, 2, 0), false));
+        let skk = s.get("skk").unwrap();
+        assert_eq!((skk.version, skk.enabled), (Version(1, 0, 0), true));
     }
 
     #[test]
