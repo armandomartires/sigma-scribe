@@ -215,8 +215,11 @@ impl Logger {
     pub fn emit(&mut self, level: Level, target: &str, msg: &str) -> Route {
         let mut route = self.route(level);
         if route.file {
+            // Open the file first (that writes the session marker), so the
+            // marker is stamped before the line that caused it.
+            let opened = self.ensure_open();
             let line = self.format(level, target, msg, SystemTime::now());
-            if let Err(e) = self.write_line(&line) {
+            if let Err(e) = opened.and_then(|()| self.put(&line)) {
                 eprintln!("log: cannot write the log file: {e}");
                 self.failed = true;
                 self.sink = None;
@@ -254,11 +257,12 @@ impl Logger {
         self.put(&head)
     }
 
-    fn write_line(&mut self, line: &str) -> io::Result<()> {
+    /// Opens the file if it is not open (which writes the session marker).
+    fn ensure_open(&mut self) -> io::Result<()> {
         if self.sink.is_none() {
             self.open()?;
         }
-        self.put(line)
+        Ok(())
     }
 
     /// Appends a line, rotating first if it would pass the size limit.
@@ -390,8 +394,9 @@ pub fn file_only(level: Level, target: &str, args: fmt::Arguments<'_>) {
         return;
     }
     let msg = args.to_string();
+    let opened = g.ensure_open();
     let line = g.format(level, target, &msg, SystemTime::now());
-    if g.write_line(&line).is_err() {
+    if opened.and_then(|()| g.put(&line)).is_err() {
         g.failed = true;
         g.sink = None;
     }
@@ -568,6 +573,20 @@ mod tests {
             lines[2]
         );
         assert!(!text.contains("too quiet"));
+        // The session marker is stamped before the line that opened the file,
+        // so the uptimes read in order.
+        let ups: Vec<f64> = lines
+            .iter()
+            .map(|l| {
+                l.split(' ')
+                    .nth(2)
+                    .unwrap()
+                    .trim_start_matches('+')
+                    .parse()
+                    .unwrap()
+            })
+            .collect();
+        assert!(ups.windows(2).all(|w| w[0] <= w[1]), "{ups:?}");
         // Nothing is created until a line needs the file.
         let d2 = dir("lazy");
         let mut l2 = Logger::new();
