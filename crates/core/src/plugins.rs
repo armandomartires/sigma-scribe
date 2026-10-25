@@ -26,7 +26,9 @@ pub const SOURCE_PREFIXES: [&str; 2] = [
 /// True when `url` is inside the plugins repo.
 #[must_use]
 pub fn trusted_source(url: &str) -> bool {
-    SOURCE_PREFIXES.iter().any(|p| url.starts_with(p) && !url[p.len()..].contains(".."))
+    SOURCE_PREFIXES
+        .iter()
+        .any(|p| url.starts_with(p) && !url[p.len()..].contains(".."))
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -111,7 +113,9 @@ pub fn safe_rel_path(path: &str) -> bool {
         && !path.starts_with('/')
         && !path.contains('\\')
         && !path.contains('\0')
-        && path.split('/').all(|c| !c.is_empty() && c != "." && c != "..")
+        && path
+            .split('/')
+            .all(|c| !c.is_empty() && c != "." && c != "..")
 }
 
 /// What a plugin says about itself (`plugin.conf` inside the package, and
@@ -156,12 +160,16 @@ impl Manifest {
             return None;
         }
         Some(Self {
-            name: f.get("name").map_or_else(|| id.clone(), |s| (*s).to_string()),
+            name: f
+                .get("name")
+                .map_or_else(|| id.clone(), |s| (*s).to_string()),
             id,
             version: Version::parse(f.get("version")?)?,
             kind: PluginKind::parse(f.get("kind")?)?,
             description: f.get("description").unwrap_or(&"").to_string(),
-            min_app: f.get("min_app").map_or(Some(Version::default()), |v| Version::parse(v))?,
+            min_app: f
+                .get("min_app")
+                .map_or(Some(Version::default()), |v| Version::parse(v))?,
             api,
         })
     }
@@ -190,7 +198,9 @@ pub struct Index {
 }
 
 fn valid_sha256(s: &str) -> bool {
-    s.len() == 64 && s.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    s.len() == 64
+        && s.bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
 impl Index {
@@ -248,8 +258,12 @@ impl State {
     pub fn parse(text: &str) -> Self {
         let mut s = Self::default();
         for (id, v) in fields(text) {
-            let Some((ver, flag)) = v.split_once(',') else { continue };
-            let Some(version) = Version::parse(ver) else { continue };
+            let Some((ver, flag)) = v.split_once(',') else {
+                continue;
+            };
+            let Some(version) = Version::parse(ver) else {
+                continue;
+            };
             if valid_id(id) && s.get(id).is_none() {
                 s.plugins.push(Installed {
                     id: id.to_string(),
@@ -282,13 +296,21 @@ impl State {
     pub fn install(&mut self, id: &str, version: Version) {
         match self.plugins.iter_mut().find(|p| p.id == id) {
             Some(p) => p.version = version,
-            None => self.plugins.push(Installed { id: id.to_string(), version, enabled: true }),
+            None => self.plugins.push(Installed {
+                id: id.to_string(),
+                version,
+                enabled: true,
+            }),
         }
     }
 
     /// Returns false when the plugin is not installed.
     pub fn set_enabled(&mut self, id: &str, enabled: bool) -> bool {
-        self.plugins.iter_mut().find(|p| p.id == id).map(|p| p.enabled = enabled).is_some()
+        self.plugins
+            .iter_mut()
+            .find(|p| p.id == id)
+            .map(|p| p.enabled = enabled)
+            .is_some()
     }
 
     pub fn remove(&mut self, id: &str) -> bool {
@@ -389,7 +411,16 @@ mod tests {
     #[test]
     fn rel_paths_reject_traversal() {
         assert!(safe_rel_path("fonts/cjk.ttf"));
-        for bad in ["", "/etc/passwd", "../x", "a/../b", "a//b", "a\\b", "./a", "a/"] {
+        for bad in [
+            "",
+            "/etc/passwd",
+            "../x",
+            "a/../b",
+            "a//b",
+            "a\\b",
+            "./a",
+            "a/",
+        ] {
             assert!(!safe_rel_path(bad), "{bad}");
         }
     }
@@ -481,7 +512,12 @@ mod tests {
     #[test]
     fn availability_follows_state_and_app_version() {
         let m = Manifest::parse(&manifest("min_app=1.5.0\n")).unwrap();
-        let e = IndexEntry { manifest: m, url: format!("{}x.sgp", SOURCE_PREFIXES[0]), size: 1, sha256: SHA.into() };
+        let e = IndexEntry {
+            manifest: m,
+            url: format!("{}x.sgp", SOURCE_PREFIXES[0]),
+            size: 1,
+            sha256: SHA.into(),
+        };
         let mut s = State::default();
         let app = Version(1, 11, 1);
         assert_eq!(availability(&e, &s, app), Availability::NotInstalled);
@@ -489,6 +525,9 @@ mod tests {
         assert_eq!(availability(&e, &s, app), Availability::UpdateAvailable);
         s.install("cjk-font", Version(1, 2, 0));
         assert_eq!(availability(&e, &s, app), Availability::UpToDate);
-        assert_eq!(availability(&e, &s, Version(1, 4, 0)), Availability::Incompatible);
+        assert_eq!(
+            availability(&e, &s, Version(1, 4, 0)),
+            Availability::Incompatible
+        );
     }
 }
