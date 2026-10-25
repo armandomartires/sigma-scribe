@@ -137,6 +137,12 @@ pub const WORDS_RANGE: (u8, u8) = (8, 16);
 pub const SIZE_STEP: f32 = 1.0;
 /// Stops of the Size slider (no unit is shown); the default 20 is one.
 pub const SIZE_STOPS: [f32; 9] = [14.0, 17.0, 20.0, 23.0, 26.0, 29.0, 32.0, 35.0, 38.0];
+/// Stops of the Leading slider, 1.2 to 2.0; the default 1.5 is one.
+pub const LEADING_STOPS: [f32; 9] = [1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0];
+/// Stops of the Margin slider (brief px), 8 to 400; the default 28 is one.
+pub const MARGIN_STOPS: [f32; 10] = [
+    8.0, 16.0, 28.0, 40.0, 56.0, 80.0, 120.0, 180.0, 260.0, 400.0,
+];
 pub const LEADING_STEP: f32 = 0.1;
 pub const MARGIN_STEP: f32 = 4.0;
 
@@ -338,7 +344,11 @@ pub enum Change {
     /// Size to a value (the slider's stops, `SIZE_STOPS`).
     SizeTo(f32),
     Leading(i8),
+    /// Leading to a value (the slider's stops, `LEADING_STOPS`).
+    LeadingTo(f32),
     Margin(i8),
+    /// Margin to a value (the slider's stops, `MARGIN_STOPS`).
+    MarginTo(f32),
     TabSpaces(bool),
     TabWidth(u8),
     Keyboard(Layout),
@@ -355,6 +365,8 @@ pub enum Change {
     PadSide(Side),
     /// One UI-scale step up (+1) or down (-1).
     UiScale(i8),
+    /// UI scale to a value (the slider's stops, `UI_SCALES`).
+    UiScaleTo(u16),
     /// One step through the keyboard layouts (v1.3).
     KbLayout(i8),
     /// Experimental features on / off (v1.12). Turning them off puts an
@@ -397,7 +409,7 @@ impl Change {
     pub fn refit(self) -> Option<Option<bool>> {
         match self {
             Self::Size(_) | Self::SizeTo(_) => Some(Some(true)),
-            Self::Margin(_) => Some(Some(false)),
+            Self::Margin(_) | Self::MarginTo(_) => Some(Some(false)),
             Self::LineOn(_)
             | Self::LineWords(_)
             | Self::Face(_)
@@ -459,6 +471,8 @@ impl Settings {
                     LEADING_RANGE,
                 );
             }
+            Change::LeadingTo(v) => self.leading = clampf(tenth(v), LEADING_RANGE),
+            Change::MarginTo(v) => self.margin = clampf(tenth(v), MARGIN_RANGE),
             Change::Margin(d) => {
                 self.margin = clampf(
                     tenth(self.margin + f32::from(d) * MARGIN_STEP),
@@ -521,6 +535,14 @@ impl Settings {
                 if KB_SIZES.contains(&v) {
                     self.kb_size = v;
                 }
+            }
+            Change::UiScaleTo(v) => {
+                let near = UI_SCALES
+                    .iter()
+                    .copied()
+                    .min_by_key(|&s| s.abs_diff(v))
+                    .unwrap_or(200);
+                self.ui_scale = near;
             }
             Change::UiScale(d) => {
                 let i = UI_SCALES

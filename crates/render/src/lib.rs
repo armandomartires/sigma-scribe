@@ -1,4 +1,4 @@
-//! Sigma Scribe rendering: an 8-bit greyscale canvas, the brief's design
+//! Σscribe rendering: an 8-bit greyscale canvas, the brief's design
 //! tokens, real fonts, and the v0.1 editor screen. Device-independent: the
 //! FBInk backend blits the canvas to the Forma, the desktop backend writes PNG.
 
@@ -17,9 +17,11 @@ pub mod ink;
 pub mod options;
 pub mod pointer;
 pub mod preview;
+pub mod radio;
 pub mod scrollbar;
 pub(crate) mod shape;
 pub mod slider;
+pub mod switch;
 pub mod theme;
 
 pub use canvas::{Canvas, Rect};

@@ -1,6 +1,6 @@
 # Start here
 
-Test notes for Sigma Scribe. Open each one and try the feature beside it.
+Test notes for Σscribe. Open each one and try the feature beside it.
 
 - Preview of every Markdown element: [[test-markdown-tour]]
 - Find & replace with 50 matches: [[test-find-50-lamps]]

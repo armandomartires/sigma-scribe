@@ -3,10 +3,10 @@ expect-open field-notes.md
 tap-on Options
 tap-on Writing
 shot v1.6.3-size-slider-default
-tap-on Size/5
+tap-on Size/26
 expect-setting size=26
 shot v1.6.3-size-slider-larger
-tap-on Size/1
+tap-on Size/14
 expect-setting size=14
-tap-on Size/9
+tap-on Size/38
 expect-setting size=38

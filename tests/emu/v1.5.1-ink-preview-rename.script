@@ -15,14 +15,14 @@ shot v1.5.1-preview-ink-paper
 tap-on Pencil
 tap-on Options
 tap-on Display
-tap-on Paper/Night
+tap-on Dark mode/On
 tap-on Close
 tap-on Preview
 shot v1.5.1-preview-ink-night
 tap-on Pencil
 tap-on Options
 tap-on Display
-tap-on Paper/Day
+tap-on Dark mode/Off
 tap-on Close
 tap-on Title
 clear-field

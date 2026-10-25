@@ -129,6 +129,6 @@ fn title_bar_fits_with_back_in_both_orientations() {
             "{land}: {:?}",
             l.name_rect
         );
-        assert!(l.help_button.x + l.help_button.w <= w as i32);
+        assert!(l.options_button.x + l.options_button.w <= w as i32);
     }
 }

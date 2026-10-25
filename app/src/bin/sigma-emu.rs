@@ -9,7 +9,7 @@
 //!   move-handle-end W | move-handle-start W | expect-bar A,B|none
 //!   expect-clipboard T | expect-caret-after W |
 //!   expect-not TEXT | expect-selection TEXT | clear-field | expect-file PATH | expect-no-file PATH | expect-open PATH
-//!   v0.4: tap-on Options | tap-on Row/Cell (in Options, e.g. Paper/Night, Size/+)
+//!   v0.4: tap-on Options | tap-on Row/Cell (in Options, e.g. Dark mode/On, Size/+)
 //!   tap-on Split|Full|Centre|Arrows|123|Pad left|Pad right (landscape bar)
 //!   expect-setting KEY=VALUE | expect-words N | expect-screen WxH | restart
 //!   v0.5: tap-on Contents|To-dos|Scratch (icons) | tap-on Heading:TEXT |
@@ -119,6 +119,16 @@ fn main() -> ExitCode {
             "tap-on" => {
                 // v1.4.2: Settings controls on another page are reached
                 // through the pages (Display -> Orientation -> Landscape).
+                // v1.13.1: Help has no title-bar icon; it opens from Settings →
+                // Help & about. Scripts keep `tap-on Help` for "open Help".
+                if arg == "Help" && app.control_centre(arg).is_none() {
+                    if app.preview.is_some() {
+                        app.exit_preview();
+                    }
+                    app.open_help();
+                    let _ = app.render(&mut dev, sigma_device::Refresh::Full);
+                    continue;
+                }
                 reach(&mut app, &mut dev, arg);
                 match app.control_centre(arg) {
                     Some((x, y)) => events.push(Event::Tap { x, y }),

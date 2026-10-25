@@ -89,13 +89,13 @@ tap-on Close
 pointer unplug
 # Night, landscape.
 tap-on Options
-tap-on Paper/Night
+tap-on Dark mode/On
 tap-on Close
 tap-on Graph
 shot v1.0-graph-map-night
 tap-on Close
 tap-on Options
-tap-on Paper/Day
+tap-on Dark mode/Off
 tap-on Orientation/Landscape
 tap-on Close
 tap-on Graph

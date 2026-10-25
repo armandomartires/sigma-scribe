@@ -1,4 +1,4 @@
-# Sigma Scribe pinyin dictionary (pinyin-hans.txt), built by tools/zh-dict.py from Rime luna-pinyin
+# Σscribe pinyin dictionary (pinyin-hans.txt), built by tools/zh-dict.py from Rime luna-pinyin
 # and essay (LGPL-3.0; see PINYIN-NOTICE.txt). key<TAB>word weight<TAB>word weight...
 a	啊 84662	阿 16255	吖 4107	锕 802	嗄 775	呵 404	腌 309	吁 23	ㄚ 1	𠼞 1	𥥩 1	𨉚 1
 a a	啊啊 1598

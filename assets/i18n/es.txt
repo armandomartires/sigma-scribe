@@ -1,4 +1,4 @@
-# Sigma Scribe — Español. machine-drafted, best effort; needs a native review.
+# Σscribe — Español. machine-drafted, best effort; needs a native review.
 # Format: English text, then "= " and the translation. See crates/render/src/i18n.rs.
 
 Files
@@ -481,8 +481,8 @@ Options → Layout sets the keyboard: US, UK, French, German, Spanish, Portugues
 Export
 = Exportar
 
-Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
-= Tus notas son archivos .md sencillos. Conecta el Kobo a un ordenador por USB (sal antes de Sigma Scribe), elige Conectar y copia la carpeta sigma-scribe/notes. No hace falta nada más; la sincronización (p. ej. Syncthing) puede llegar más adelante.
+Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Σscribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
+= Tus notas son archivos .md sencillos. Conecta el Kobo a un ordenador por USB (sal antes de Σscribe), elige Conectar y copia la carpeta sigma-scribe/notes. No hace falta nada más; la sincronización (p. ej. Syncthing) puede llegar más adelante.
 
 If nothing happens
 = Si no pasa nada
@@ -556,8 +556,8 @@ Link to a note
 The note name, or a name and the words to show. A dashed link creates the note. Links are what the graph draws.
 = El nombre de la nota, o un nombre y las palabras a mostrar. Un enlace discontinuo crea la nota. Los enlaces son lo que dibuja el grafo.
 
-Sigma Scribe
-= Sigma Scribe
+Σscribe
+= Σscribe
 
 Version {n} A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.
 = Versión {n} Un cuaderno para el Kobo Forma: archivos Markdown sencillos en una página de tinta electrónica, escritos sobre el cristal.
@@ -571,8 +571,8 @@ AGPL-{n}-only. The source is on GitHub: armandomartires/sigma-scribe.
 Author
 = Autor
 
-Sigma Recon.
-= Sigma Recon.
+SIGMArecon.
+= SIGMArecon.
 
 Your notes
 = Tus notas
@@ -832,3 +832,33 @@ Light
 = Luz
 Enhanced keyboard
 = Teclado mejorado
+
+Sketch
+= Boceto
+
+Redo
+= Rehacer
+
+Loading…
+= Cargando…
+
+In Write mode a sketch is added to the note as an image link. Preview shows the whole sketch.
+= En modo Escritura, un boceto se añade a la nota como enlace de imagen. La vista previa muestra el boceto completo.
+
+Needs Portrait or Landscape
+= Requiere Vertical u Horizontal
+
+Follows the Kobo's language
+= Sigue el idioma del Kobo
+
+Needs Line on
+= Requiere Línea activada
+
+Used when Tab key is Spaces
+= Se usa cuando la tecla Tab está en Espacios
+
+Turn off Auto keyboard size
+= Desactiva el tamaño automático
+
+Dark mode
+= Modo oscuro

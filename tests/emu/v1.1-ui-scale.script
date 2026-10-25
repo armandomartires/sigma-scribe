@@ -3,10 +3,10 @@ copy-notes tests/test-notes/_test
 shot v1.1-write-200
 tap-on Options
 shot v1.1-options-200
-tap-on UI scale/-
-tap-on UI scale/-
-tap-on UI scale/-
-tap-on UI scale/-
+tap-on UI scale/100 %
+tap-on UI scale/100 %
+tap-on UI scale/100 %
+tap-on UI scale/100 %
 shot v1.1-options-100
 tap-on Close
 shot v1.1-write-100
@@ -14,10 +14,10 @@ tap-on Files
 shot v1.1-files-100
 tap-on Close
 tap-on Options
-tap-on UI scale/+
-tap-on UI scale/+
-tap-on UI scale/+
-tap-on UI scale/+
+tap-on UI scale/200 %
+tap-on UI scale/200 %
+tap-on UI scale/200 %
+tap-on UI scale/200 %
 tap-on Close
 tap-on Files
 shot v1.1-files-200

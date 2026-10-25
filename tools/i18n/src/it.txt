@@ -158,7 +158,7 @@ Mouse e touchpad
 Un mouse o touchpad USB (anche il touchpad di una tastiera come la Logitech K{n} Plus) mostra una piccola freccia. Clic = tocco; trascinare sulla nota seleziona; doppio clic seleziona una parola; la rotella o lo scorrimento a due dita muove la nota e gira le pagine in anteprima e negli elenchi. La freccia si nasconde dopo {m} secondi ferma e quando scrivi. Il clic destro non fa nulla.
 Opzioni → Layout imposta la tastiera: US, UK, francese, tedesco, spagnolo, portoghese o italiano. Esc chiude Trova, fogli e selezioni.
 Esporta
-Le tue note sono semplici file .md. Collega il Kobo a un computer via USB (esci prima da Sigma Scribe), scegli Connetti e copia la cartella sigma-scribe/notes. Non serve altro; la sincronizzazione (ad es. Syncthing) potrà arrivare più avanti.
+Le tue note sono semplici file .md. Collega il Kobo a un computer via USB (esci prima da Σscribe), scegli Connetti e copia la cartella sigma-scribe/notes. Non serve altro; la sincronizzazione (ad es. Syncthing) potrà arrivare più avanti.
 Se non succede nulla
 Controlla l'alimentazione dell'hub, prova un'altra tastiera (quelle semplici con filo funzionano meglio), poi esci e riapri l'app. Il registro .adds/sigma-scribe/sigma-scribe.log annota ogni tastiera trovata.
 Titolo
@@ -183,12 +183,12 @@ Barrato
 Due tilde per lato.
 Link a una nota
 Il nome della nota, o un nome e le parole da mostrare. Un link tratteggiato crea la nota. I link sono ciò che disegna il grafo.
-Sigma Scribe
+Σscribe
 Versione {n} Un quaderno per il Kobo Forma: semplici file Markdown su una pagina e-ink, scritti sul vetro.
 Licenza
 Solo AGPL-{n}. Il codice è su GitHub: armandomartires/sigma-scribe.
 Autore
-Sigma Recon.
+SIGMArecon.
 Le tue note
 Semplici file .md e .txt in {name}. Collega il Kobo via USB per copiarli. Gli appunti sono il file nascosto .scratchpad.md.
 Pulsanti

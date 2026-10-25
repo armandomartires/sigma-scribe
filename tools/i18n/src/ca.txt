@@ -158,7 +158,7 @@ Ratolí i ratolí tàctil
 Un ratolí o ratolí tàctil USB (també el d'un teclat com el Logitech K{n} Plus) mostra una fletxa petita. Clic = tocar; arrossegar a la nota selecciona; doble clic selecciona una paraula; la roda o el desplaçament amb dos dits mou la nota i passa pàgines a la previsualització i a les llistes. La fletxa s'amaga després de {m} segons quieta i quan escrius. El clic dret no fa res.
 Opcions → Distribució fixa el teclat: EUA, RU, francès, alemany, espanyol, portuguès o italià. Esc tanca Cerca, fulls i seleccions.
 Exporta
-Les teves notes són fitxers .md senzills. Connecta el Kobo a un ordinador per USB (surt abans de Sigma Scribe), tria Connecta i copia la carpeta sigma-scribe/notes. No cal res més; la sincronització (p. ex. Syncthing) pot arribar més endavant.
+Les teves notes són fitxers .md senzills. Connecta el Kobo a un ordinador per USB (surt abans de Σscribe), tria Connecta i copia la carpeta sigma-scribe/notes. No cal res més; la sincronització (p. ex. Syncthing) pot arribar més endavant.
 Si no passa res
 Comprova l'alimentació del concentrador, prova un altre teclat (els senzills amb cable funcionen millor) i després surt i torna a obrir l'app. El registre .adds/sigma-scribe/sigma-scribe.log anota cada teclat trobat.
 Encapçalament
@@ -183,12 +183,12 @@ Ratllat
 Dues titlles a cada costat.
 Enllaç a una nota
 El nom de la nota, o un nom i les paraules a mostrar. Un enllaç discontinu crea la nota. Els enllaços són el que dibuixa el graf.
-Sigma Scribe
+Σscribe
 Versió {n} Un quadern per al Kobo Forma: fitxers Markdown senzills en una pàgina de tinta electrònica, escrits sobre el vidre.
 Llicència
 Només AGPL-{n}. El codi és a GitHub: armandomartires/sigma-scribe.
 Autor
-Sigma Recon.
+SIGMArecon.
 Les teves notes
 Fitxers .md i .txt senzills a {name}. Connecta el Kobo per USB per copiar-los. L'esborrany és el fitxer ocult .scratchpad.md.
 Botons

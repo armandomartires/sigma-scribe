@@ -111,14 +111,14 @@ fn hides_when_idle_and_when_typing() {
 #[test]
 fn click_is_a_tap_drag_selects_double_click_word() {
     let mut r = Rig::new("click");
-    let (x, y) = r.app.control_centre("Help").unwrap();
+    let (x, y) = r.app.control_centre("Options").unwrap();
     r.to(x, y);
     r.click();
-    assert!(r.app.help.is_some(), "click pressed Help");
+    assert!(r.app.options, "click pressed Settings");
     let (x, y) = r.app.control_centre("Close").unwrap();
     r.to(x, y);
     r.click();
-    assert!(r.app.help.is_none());
+    assert!(!r.app.options);
     // Click places the caret.
     let (x, y) = r.app.text_point("delta", false).unwrap();
     r.to(x, y);

@@ -1,4 +1,4 @@
-//! Sigma Scribe editor core.
+//! Σscribe editor core.
 //!
 //! Pure Rust with no platform dependency, so every rule in `design-brief.md`
 //! that is not about pixels can be tested with `cargo test` on a desktop.

@@ -91,8 +91,6 @@ pub enum Hit {
     Find,
     /// Connected nodes: the Graph sheet (v0.6).
     Graph,
-    /// Question mark: the Help sheet (v0.7).
-    Help,
     /// Contents / To-dos / Scratch icon: toggle that drawer pane (v0.5).
     Drawer(crate::drawer::Pane),
     /// Landscape keyboard bar: Split / Full / Centre, pad toggles (v0.4).
@@ -127,20 +125,20 @@ pub struct Layout {
     pub keys: Vec<(Rect, Key)>,
     /// Title-bar icons, v1.0 (S9.2): twice the brief's size, in the
     /// mockup's order left to right after the title: Files, Preview, Find,
-    /// Scratch, To-dos, Contents, Graph, Options, Help.
+    /// Scratch, To-dos, Contents, Graph, Settings.
     pub files_button: Rect,
     /// Back arrow (v1.0.2), the slot left of Files; drawn and hit only
     /// while `EditorScreen::back_on`.
     pub back_button: Rect,
     /// Eye / pencil, right of the folder.
     pub preview_button: Rect,
-    /// Close X of the sheets (Files, Graph, Help, Options): the rightmost
-    /// slot, where Help sits in write mode.
+    /// Close X of the sheets (Files, Graph, Help, Settings): the rightmost
+    /// slot, where the Settings button sits in write mode.
     pub close_button: Rect,
     pub name_rect: Rect,
     pub ok_rect: Rect,
     pub cancel_rect: Rect,
-    /// "Aa" Options button, between Graph and Help.
+    /// The Settings (gear) button, the rightmost icon.
     pub options_button: Rect,
     /// Drawer pane icons after Find: Scratch, To-dos, Contents.
     pub scratch_button: Rect,
@@ -152,8 +150,6 @@ pub struct Layout {
     pub graph_button: Rect,
     /// The Find bar under the title bar when open (zero height otherwise).
     pub find_bar: Rect,
-    /// Help, the rightmost icon (mockup order, S9.2).
-    pub help_button: Rect,
     /// The text column inside the page: the page itself, or the locked
     /// portrait-width column (Line on, landscape) with gutters beside it.
     pub column: Rect,
@@ -162,7 +158,7 @@ pub struct Layout {
 
 /// Icon slots in the title bar (S9.2; v1.0.2 adds Back before Files, so
 /// sizing always reserves room for it).
-pub const TITLE_ICONS: i32 = 10;
+pub const TITLE_ICONS: i32 = 9;
 
 pub struct EditorScreen {
     pub width: u32,
@@ -177,6 +173,8 @@ pub struct EditorScreen {
     pub back_on: bool,
     /// Settings → Word mode is on (v1.5.3): Letters offers Words.
     pub ink_words: bool,
+    /// Sketch: the dotted guide line is shown (v1.13.1).
+    pub sketch_guide: bool,
     s: Scale,
     /// Keyboard scale (v1.4.3): page scale × `Settings::keyboard_scale`.
     k: Scale,
@@ -237,6 +235,7 @@ impl EditorScreen {
             overwrite: false,
             back_on: false,
             ink_words: false,
+            sketch_guide: true,
             drawer_open: [false; 3],
             find_open: false,
             cand_reserve: false,
@@ -440,8 +439,9 @@ impl EditorScreen {
         let contents_button = slot(6);
         let graph_button = slot(7);
         let options_button = slot(8);
-        let help_button = slot(9);
-        let close_button = help_button;
+        // Help opens from Settings → Help & about; the far-right slot is the
+        // Settings button, and Close takes its place on the other screens.
+        let close_button = options_button;
         let first = if self.back_on {
             back_button
         } else {
@@ -481,7 +481,6 @@ impl EditorScreen {
             find_button,
             graph_button,
             find_bar,
-            help_button,
             column,
             kb_buttons,
         }
@@ -547,8 +546,14 @@ impl EditorScreen {
         // Portrait key size; Full shrinks it slightly if board + pad would
         // not fit the long side.
         let mut unit = (short - 2 * pad + gap) as f32 / grid;
+        // The number pad has a fourth column for + - * /; arrows have three.
+        let pad_cols = if self.cfg.pad == Pad::Numbers {
+            4.0
+        } else {
+            3.0
+        };
         if mode == LandKeys::Full {
-            unit = unit.min((w - 2 * pad + gap) as f32 / (grid + 3.5));
+            unit = unit.min((w - 2 * pad + gap) as f32 / (grid + pad_cols + 0.5));
         }
         let board_w = grid * unit;
         let split_gap = if mode == LandKeys::Split {
@@ -557,7 +562,7 @@ impl EditorScreen {
             0.0
         };
         let (pad_w, pad_gap) = if mode == LandKeys::Full {
-            (3.0 * unit, unit / 2.0)
+            (pad_cols * unit, unit / 2.0)
         } else {
             (0.0, 0.0)
         };
@@ -621,21 +626,21 @@ impl EditorScreen {
                 board_x + board_w + pad_gap
             };
             let n = |c: char| Some(Key::Char(c));
-            let cells: Vec<[Option<Key>; 3]> = match self.cfg.pad {
+            let cells: Vec<Vec<Option<Key>>> = match self.cfg.pad {
                 Pad::Numbers => vec![
-                    [n('7'), n('8'), n('9')],
-                    [n('4'), n('5'), n('6')],
-                    [n('1'), n('2'), n('3')],
-                    [n('0'), n('.'), None],
+                    vec![n('7'), n('8'), n('9'), n('+')],
+                    vec![n('4'), n('5'), n('6'), n('-')],
+                    vec![n('1'), n('2'), n('3'), n('*')],
+                    vec![n('0'), n('.'), Some(Key::Return), n('/')],
                 ],
                 Pad::Arrows => vec![
-                    [None, Some(Key::Arrow(Dir::Up)), None],
-                    [
+                    vec![None, Some(Key::Arrow(Dir::Up)), None],
+                    vec![
                         Some(Key::Arrow(Dir::Left)),
                         None,
                         Some(Key::Arrow(Dir::Right)),
                     ],
-                    [None, Some(Key::Arrow(Dir::Down)), None],
+                    vec![None, Some(Key::Arrow(Dir::Down)), None],
                 ],
             };
             let nr = rows.len() as i32;
@@ -710,24 +715,80 @@ impl EditorScreen {
         if total <= visible || page.h <= 0 {
             return None;
         }
-        let p = self.page_s;
-        let strip = crate::scrollbar::strip(page, p.px(12.0).max(8), p.px(6.0), p.px(8.0));
-        let thumb = crate::scrollbar::thumb(strip, total, visible, self.scroll, p.px(40.0));
-        Some((strip, thumb))
+        crate::scrollbar::bar(self.page_s, page, total, visible, self.scroll)
+    }
+
+    /// Where a finger grabs the scroll bar (v1.13.1): the strip widened to a
+    /// touch target, out to the page edge, and the thumb on it. `None` when
+    /// the whole note fits.
+    #[must_use]
+    pub fn scroll_bar_zone(&self, buffer: &Buffer, page: Rect) -> Option<(Rect, Rect)> {
+        let rows = self.rows(buffer, page).len();
+        let (strip, thumb) = self.scroll_bar(page, rows, self.visible_rows(page))?;
+        Some((crate::scrollbar::zone(self.page_s, page, strip), thumb))
+    }
+
+    /// Drag: the thumb's centre follows the finger at `y`.
+    pub fn scroll_bar_to(&mut self, buffer: &mut Buffer, page: Rect, y: i32) {
+        let rows = self.rows(buffer, page).len();
+        let visible = self.visible_rows(page);
+        let Some((strip, thumb)) = self.scroll_bar(page, rows, visible) else {
+            return;
+        };
+        let span = (strip.h - thumb.h).max(1) as f32;
+        let f = ((y - thumb.h / 2 - strip.y) as f32 / span).clamp(0.0, 1.0);
+        let last = rows.saturating_sub(visible);
+        self.scroll = (f * last as f32).round() as usize;
+        self.caret_into_view(buffer, page);
+    }
+
+    /// Tap on the bar: a screen up if the finger is above the thumb's
+    /// centre, a screen down if below. The caret stays where it is.
+    pub fn scroll_bar_step(&mut self, buffer: &mut Buffer, page: Rect, y: i32) {
+        let rows = self.rows(buffer, page).len();
+        let visible = self.visible_rows(page);
+        let Some((_, thumb)) = self.scroll_bar(page, rows, visible) else {
+            return;
+        };
+        let n = visible.saturating_sub(1).max(1);
+        let last = rows.saturating_sub(visible);
+        self.scroll = if y < thumb.y + thumb.h / 2 {
+            self.scroll.saturating_sub(n)
+        } else {
+            (self.scroll + n).min(last)
+        };
+        self.caret_into_view(buffer, page);
+    }
+
+    /// After the bar moved the view: a caret that fell out of it goes to the
+    /// nearest visible row (the page redraw would scroll back to it).
+    fn caret_into_view(&self, buffer: &mut Buffer, page: Rect) {
+        let rows = self.rows(buffer, page);
+        let m = self.measure();
+        let (row, col) = caret_cell(buffer.text(), &rows, buffer.caret(), &m);
+        let last = (self.scroll + self.visible_rows(page)).saturating_sub(1);
+        let target = row.clamp(self.scroll, last.min(rows.len().saturating_sub(1)));
+        if target != row {
+            if let Some(&r) = rows.get(target) {
+                buffer.move_to(offset_at(buffer.text(), r, col, &m), false);
+            }
+        }
+    }
+
+    /// What the scroll bar sits on: the desk when Line is on in landscape.
+    fn bar_bg(&self, t: Theme) -> u8 {
+        if self.landscape() && self.cfg.line_on {
+            t.gutter
+        } else {
+            t.paper
+        }
     }
 
     fn draw_scroll_bar(&self, c: &mut Canvas, page: Rect, total: usize, visible: usize, t: Theme) {
-        let Some((strip, thumb)) = self.scroll_bar(page, total, visible) else {
-            return;
-        };
-        // Night pages are dark: the bar inverts, still only black and white.
-        let (paper, ink) = if t.paper < 128 {
-            (0x00, 0xFF)
-        } else {
-            (0xFF, 0x00)
-        };
-        c.fill(strip, paper);
-        crate::scrollbar::draw(c, strip, thumb, ink, paper, self.page_s.px(2.0).max(2));
+        if let Some(b) = self.scroll_bar(page, total, visible) {
+            // On the desk beside a locked column, else on the paper.
+            crate::scrollbar::draw_bar(c, self.page_s, b, t, self.bar_bg(t));
+        }
     }
 
     fn text_area(&self, page: Rect) -> Rect {
@@ -1055,9 +1116,6 @@ impl EditorScreen {
         if l.graph_button.inset(-self.px(4.0)).contains(x, y) {
             return Hit::Graph;
         }
-        if l.help_button.inset(-self.px(4.0)).contains(x, y) {
-            return Hit::Help;
-        }
         for (r, p) in [
             (l.contents_button, crate::drawer::Pane::Contents),
             (l.todos_button, crate::drawer::Pane::Todos),
@@ -1119,7 +1177,6 @@ impl EditorScreen {
             }
             crate::icons::draw_icon(c, crate::icons::Icon::Search, l.find_button, t.ink);
             crate::icons::draw_icon(c, crate::icons::Icon::Graph, l.graph_button, t.ink);
-            crate::icons::draw_icon(c, crate::icons::Icon::Help, l.help_button, t.ink);
             for (i, r) in [l.contents_button, l.todos_button, l.scratch_button]
                 .into_iter()
                 .enumerate()
@@ -1401,19 +1458,7 @@ impl EditorScreen {
 
     /// "Aa" in a 44 px target: the Options sheet.
     pub fn draw_options_icon(&self, c: &mut Canvas, r: Rect, t: Theme) {
-        let size = self.ui_px() * 1.1 * r.w as f32 / self.px(44.0) as f32;
-        let w = self.fonts.width(Face::AtkinsonBold, size, "Aa");
-        let base =
-            r.y as f32 + r.h as f32 / 2.0 + self.fonts.ascent(Face::AtkinsonBold, size) / 2.6;
-        self.fonts.draw(
-            c,
-            Face::AtkinsonBold,
-            size,
-            r.x as f32 + (r.w as f32 - w) / 2.0,
-            base,
-            "Aa",
-            t.ink,
-        );
+        crate::icons::draw_icon(c, crate::icons::Icon::Settings, r, t.ink);
     }
 
     #[must_use]
@@ -1555,13 +1600,35 @@ impl EditorScreen {
         }
         for &(r, k) in &l.keys {
             let active = keyboard.is_active(k);
-            let (bg, fg) = if active {
+            let (_, fg) = if active {
                 (t.ink, t.paper)
             } else {
                 (t.paper, t.ink)
             };
-            c.fill(r, bg);
-            c.stroke(r, 1, if active { t.ink } else { t.rule });
+            // Same language as the Write panel: rounded outlined keys.
+            let rad = self.kpx(8.0).max(4);
+            crate::ink::round_outline_in(
+                c,
+                r,
+                rad,
+                if active { 0 } else { self.kpx(1.5).max(1) },
+                t.ink,
+            );
+            let icon = match k {
+                Key::Back => Some(crate::icons::Icon::Backspace),
+                Key::Shift => Some(crate::icons::Icon::Shift),
+                Key::Return => Some(crate::icons::Icon::Return),
+                Key::Space => Some(crate::icons::Icon::Space),
+                Key::Home => Some(crate::icons::Icon::LineStart),
+                Key::End => Some(crate::icons::Icon::LineEnd),
+                Key::PgUp => Some(crate::icons::Icon::PageUp),
+                Key::PgDn => Some(crate::icons::Icon::PageDown),
+                Key::Tab => Some(crate::icons::Icon::Tab),
+                _ => None,
+            };
+            if let Some(i) = icon {
+                crate::icons::draw_icon(c, i, r, fg);
+            }
             if k == Key::Shift && keyboard.shift_lock {
                 // Locked: a bar under the label (one-shot has none).
                 c.fill(
@@ -1579,6 +1646,9 @@ impl EditorScreen {
                 draw_arrow(c, r, d, self.k, fg);
                 continue;
             }
+            if icon.is_some() {
+                continue;
+            }
             let label = keyboard.label(k);
             let label = if matches!(k, Key::Char(_)) {
                 // A vowel sign or mark alone sits on a dotted circle (v1.9).
@@ -1590,6 +1660,14 @@ impl EditorScreen {
                         format!("\u{25CC}{label}")
                     }
                     _ => label,
+                }
+            } else if k == Key::SwitchLayout {
+                // "Compact" is too wide for its key: four letters and a dot.
+                let l = tr(&label).into_owned();
+                if l.chars().count() > 5 {
+                    format!("{}.", l.chars().take(4).collect::<String>())
+                } else {
+                    l
                 }
             } else {
                 tr(&label).into_owned()
@@ -1736,18 +1814,33 @@ fn space_across(keyboard: &Keyboard, r: usize, row: &[Key], grid: f32) -> Vec<Ke
     best.2
 }
 
-/// Landscape with Line on: the strips beside the locked column (brief §4).
+/// Landscape with Line on: the document is a page on a desk. The strips
+/// beside the locked column are the desk: the gutter tone with a fine,
+/// fixed grain (the same pixels every frame, so a redraw never flickers).
 pub fn draw_gutters(c: &mut Canvas, l: &Layout, t: Theme) {
     if l.column.w > 0 && l.column.w < l.page.w {
-        c.fill(
-            Rect::new(l.page.x, l.page.y, l.column.x - l.page.x, l.page.h),
-            t.gutter,
-        );
-        let right = l.column.x + l.column.w;
-        c.fill(
-            Rect::new(right, l.page.y, l.page.x + l.page.w - right, l.page.h),
-            t.gutter,
-        );
+        let left = Rect::new(l.page.x, l.page.y, l.column.x - l.page.x, l.page.h);
+        let right_x = l.column.x + l.column.w;
+        let right = Rect::new(right_x, l.page.y, l.page.x + l.page.w - right_x, l.page.h);
+        for r in [left, right] {
+            grain_fill(c, r, t.gutter);
+        }
+    }
+}
+
+/// Fills `r` with `base` ± a few levels of fixed noise (a desk guard's
+/// texture). The noise is a hash of the pixel's place, so it is stable.
+fn grain_fill(c: &mut Canvas, r: Rect, base: u8) {
+    let b = c.bounds();
+    for y in r.y.max(b.y)..(r.y + r.h).min(b.y + b.h) {
+        for x in r.x.max(b.x)..(r.x + r.w).min(b.x + b.w) {
+            let mut h = (x as u32).wrapping_mul(0x9E37_79B1) ^ (y as u32).wrapping_mul(0x85EB_CA6B);
+            h ^= h >> 15;
+            h = h.wrapping_mul(0x2C1B_3C6D);
+            h ^= h >> 12;
+            let n = (h % 11) as i32 - 5;
+            c.pixels[(y * c.width as i32 + x) as usize] = (i32::from(base) + n).clamp(0, 255) as u8;
+        }
     }
 }
 
@@ -1985,8 +2078,6 @@ impl EditorScreen {
             Hit::Find
         } else if l.graph_button.inset(-self.px(4.0)).contains(x, y) {
             Hit::Graph
-        } else if l.help_button.inset(-self.px(4.0)).contains(x, y) {
-            Hit::Help
         } else if l.contents_button.inset(-self.px(4.0)).contains(x, y) {
             // v1.0.3: the drawer panes open in preview too.
             Hit::Drawer(crate::drawer::Pane::Contents)
@@ -1997,6 +2088,19 @@ impl EditorScreen {
         } else {
             Hit::Nothing
         }
+    }
+
+    /// The preview's scroll bar as a paged bar (v1.13.1): the page's place
+    /// among `n` pages; `None` with one page.
+    #[must_use]
+    pub fn preview_paged_bar(
+        &self,
+        keyboard: &Keyboard,
+        n: usize,
+        at: usize,
+    ) -> Option<crate::scrollbar::Paged> {
+        let l = self.layout(false, keyboard);
+        crate::scrollbar::Paged::new(self.page_s, l.page, n, at)
     }
 
     /// Draws preview mode: title with the pencil, one page, status bar.
@@ -2010,8 +2114,6 @@ impl EditorScreen {
         self.draw_options_icon(c, l.options_button, t);
         crate::icons::draw_icon(c, crate::icons::Icon::Search, l.find_button, t.ink);
         crate::icons::draw_icon(c, crate::icons::Icon::Graph, l.graph_button, t.ink);
-        // Help was tappable but not drawn in preview before S9.2.
-        crate::icons::draw_icon(c, crate::icons::Icon::Help, l.help_button, t.ink);
         // v1.0.3: the drawer pane buttons, active while open (as in write).
         for (i, r) in [l.contents_button, l.todos_button, l.scratch_button]
             .into_iter()
@@ -2029,6 +2131,10 @@ impl EditorScreen {
         }
         let area = self.preview_area(m.keyboard);
         let page = m.page.min(m.doc.pages.len().saturating_sub(1));
+        // The same bar as the editor's: the page's place among the pages.
+        if let Some(b) = crate::scrollbar::bar(self.page_s, l.page, m.doc.pages.len(), 1, page) {
+            crate::scrollbar::draw_bar(c, self.page_s, b, t, self.bar_bg(t));
+        }
         if let Some(r) = m.doc.pages.get(page) {
             preview::draw_page(
                 c,
@@ -2305,7 +2411,6 @@ mod tests {
                 l.contents_button,
                 l.graph_button,
                 l.options_button,
-                l.help_button,
             ];
             for r in order {
                 assert_eq!(
@@ -2318,8 +2423,8 @@ mod tests {
             for p in order.windows(2) {
                 assert!(p[0].x + p[0].w < p[1].x, "left to right, no overlap");
             }
-            assert_eq!(l.close_button, l.help_button);
-            assert!(l.help_button.x + l.help_button.w <= w as i32 - s.px(12.0));
+            assert_eq!(l.close_button, l.options_button);
+            assert!(l.options_button.x + l.options_button.w <= w as i32 - s.px(12.0));
             assert!(l.name_rect.w >= s.px(100.0), "{w}: title keeps room");
             assert!(l.title.h >= s.px(44.0) && l.page.y >= l.title.h);
             // Every icon hits itself in write and preview mode.
@@ -2335,7 +2440,6 @@ mod tests {
                 Hit::Drawer(crate::drawer::Pane::Contents),
                 Hit::Graph,
                 Hit::Options,
-                Hit::Help,
             ];
             for (r, h) in order.iter().zip(want) {
                 let (x, y) = (r.x + r.w / 2, r.y + r.h / 2);
@@ -2459,8 +2563,9 @@ mod tests {
                         assert!(l.page.h >= 500, "{mode:?} page {}", l.page.h);
                         if layout == L::Compact {
                             let q = l.keys.iter().find(|(_, k)| *k == Key::Char('q')).unwrap().0;
+                            // Full with the + - * / column shrinks keys a little.
                             let tol = if mode == LandKeys::Full {
-                                unit_w / 20
+                                unit_w / 10
                             } else {
                                 1
                             };
@@ -2560,9 +2665,14 @@ mod tests {
         let l = e.draw(&mut c, &m);
         let px = |x: i32, y: i32| c.pixels[(y * W as i32 + x) as usize];
         assert_eq!(
-            px(5, l.page.y + 5),
+            px(W as i32 / 2, l.page.y + 5),
             Theme::NIGHT.paper,
             "night page, not a grey card"
+        );
+        assert_eq!(
+            px(5, l.page.y + 5),
+            Theme::NIGHT.paper,
+            "no desk without Line"
         );
         assert_eq!(px(2, l.keyboard.y + 3), Theme::DAY.paper, "light keyboard");
         assert!(e.status_right(Theme::NIGHT, &s).starts_with("Night"));
@@ -2601,7 +2711,7 @@ mod scroll_bar_tests {
             for y in strip.y..strip.y + strip.h {
                 for x in strip.x..strip.x + strip.w {
                     let v = c.pixels[(y * 1440 + x) as usize];
-                    assert!(v == 0 || v == 255, "{v} at {x},{y}");
+                    assert!(v == 0 || v == 255 || v == t.paper, "{v} at {x},{y}");
                 }
             }
         }

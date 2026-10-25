@@ -1,6 +1,6 @@
 [package]
 name = "sigma-scribe"
-description = "Sigma Scribe: a Markdown notebook for the Kobo Forma."
+description = "Σscribe: a Markdown notebook for the Kobo Forma."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

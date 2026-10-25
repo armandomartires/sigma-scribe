@@ -73,6 +73,6 @@ jobs:
         run: |
           V=${{ needs.package.outputs.version }}
           gh release create "v$V" --draft --verify-tag \
-            --title "Sigma Scribe $V for Kobo Forma" \
+            --title "Σscribe $V for Kobo Forma" \
             --notes-file "docs/release/v$V-notes.md" \
             dist/sigma-scribe-$V-kobo.tar.gz dist/sigma-scribe-$V-kobo.tar.gz.sha256 dist/sigma-scribe-$V-kobo.sha256

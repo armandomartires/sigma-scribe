@@ -1,6 +1,6 @@
 # UI rulebook
 
-The rules every screen, control and change to Sigma Scribe's interface follows. They come from `design-brief.md` (the page), the Kobo's own interface (`docs/ui-reference/README.md`, the chrome) and what the device taught us (`plan.md` decisions, `docs/device-checklist-prerelease.md`). When a rule here conflicts with a mock, **the rule wins for behaviour and the Kobo reference wins for chrome**; the page itself follows the design brief. A change that breaks a rule says so in its sprint note and in the changelog.
+The rules every screen, control and change to Σscribe's interface follows. They come from `design-brief.md` (the page), the Kobo's own interface (`docs/ui-reference/README.md`, the chrome) and what the device taught us (`plan.md` decisions, `docs/device-checklist-prerelease.md`). When a rule here conflicts with a mock, **the rule wins for behaviour and the Kobo reference wins for chrome**; the page itself follows the design brief. A change that breaks a rule says so in its sprint note and in the changelog.
 
 Numbers in "px" are **brief px** (a 1264 px wide page) unless marked *device px*; the renderer scales them (`Scale::px`, 1440 px wide Forma = ×1.139) and multiplies chrome by the UI scale (100–200 %, default 200 %).
 
@@ -16,7 +16,7 @@ Numbers in "px" are **brief px** (a 1264 px wide page) unless marked *device px*
 ## 2. Touch
 
 1. **Every target is at least 44 px (device px at the device scale), 44 × 44.** Check it at every UI scale (100/125/150/175/200 %) and in both orientations; `app/tests/ui_scale.rs` and the panel layout tests do.
-2. A checkbox and its "On" read as one target. A slider has one target per stop, each ≥ 44 px.
+2. A switch and its state word read as one target; a radio button is one target. A slider has one target per stop, each ≥ 44 px.
 3. Keyboard keys are ≥ 44 px at the keyboard's own scale (Auto = UI scale up to 150 %), and the keyboard never covers more than 42 % (portrait) or 45 % (landscape) of the height.
 4. Page buttons turn pages everywhere there is paging (note, preview, Settings sub-pages, Graph); never put a destructive action on one.
 
@@ -41,32 +41,36 @@ Night is the same drawing inverted, never a grey card. Use the `Theme` tokens, n
 
 ## 5. Settings pages (the Kobo pattern)
 
-1. **Top bar:** back arrow left (not on the root), small centred "Settings", close × right; no rule under it. Page **title** large below, **"Page i of n"** italic at the right of the title when the page has more than one.
+1. **Top bar:** back arrow left (not on the root), small centred "Settings" ("Help" on the Help screens), close × right; no rule under it. Page **title** large below, **"Page i of n"** italic at the right of the title when the page has more than one. Settings and Help share this header (`page_header`, `draw_page_header`): a Help sub-page is the same screen with its topic as the title and the back arrow in the bar; there is no separate crumb row and no footer line.
 2. **Bands:** a full-width grey wash with an upper-case heading, 24 px high. A band is never the last thing on a page, and **a band with no visible row is not drawn** (no empty "Light" band on a Kobo without a light).
 3. **Rows** are 52 px (sliders 84 px), a hairline rule between rows, label left, control right, 20 px side padding.
-   - on/off: **checkbox + italic "On"** (a filled square when on). The Kobo uses a toggle switch on a few pages; we use checkboxes everywhere, so one habit covers the app.
+   - on/off: a **toggle switch** (`switch.rs`), after the Kobo's own: an upper-case state word (ON / OFF, translated) and a capsule. On = a filled capsule with a paper knob ringed in ink at the right; off = an outlined capsule with a ringed knob at the left. One target, 44 px high, flush right. Every on/off setting uses it (`Kind::Check`). A single-choice list is not on/off: it uses radio buttons.
    - two or three exclusive choices: **inline buttons**, the selected one filled in ink with the label inverted.
-   - a number: **− value +** stepper, or a **slider** when the range is a handful of stops.
-   - a longer list: a **Pick** row (value in italics) that opens a **choice page** (a list with a checkbox per choice); back returns to the category.
+   - a number: **− value +** stepper, or a **slider** when the range is a handful of stops (Size, Leading, Margin, UI scale, Keyboard size, Backlight).
+   - a longer list: a **Pick** row (value in italics) that opens a **choice page**: a list with a **radio button** per choice (`radio.rs`: a ring, with a dot inside the chosen one, flush right, 44 px target); back returns to the category.
    - read-only: an italic value; disabled: `MUTED` grey value, no target.
 4. **Root** lists the categories, each with a one-line summary of its state. A category holds bands; keep related rows together, put rarely used or risky ones in their own category (Experimental features).
-5. **Hidden, not greyed,** when a row cannot apply on this device (Backlight without a front light) or belongs to a feature that is switched off (Fast ink and Word mode while Experimental features is off). Greyed only when the row *could* apply and a setting explains why not (Interface language while the Kobo's language is followed).
+5. **Hidden, not greyed,** when a row cannot apply on this device (Backlight without a front light) or belongs to a feature that is switched off (Fast ink and Word mode while Experimental features is off). Greyed only when the row *could* apply and a setting explains why not (Interface language while the Kobo's language is followed, Upside down on Auto, Words per line with Line off, Tab width with Tab key on Tab, Keyboard size with Auto on). A greyed row says why in a **note** under its label (`DRow::note`, small Atkinson in the mute colour); no other row has one.
 6. Settings are saved to `.sigma-settings` as `key=value`; a new key has a default and old files load unchanged. A setting that is only a request to the device (Backlight) is not saved.
-7. Help text under a row is plain Literata in the mute colour and wraps; no marketing words.
+7. Notes (rule 5) are one short line, no marketing words. Rows that are live carry no help text; the Help screen explains the rest.
 
 ## 6. Controls
 
-1. **Scroll bar** (`scrollbar.rs`; editor and Settings): a **1 px hairline track** down the right margin, 12 px wide strip, and a **hollow, rounded (capsule) thumb** with a 2 px outline, at least 40 px tall, paper inside. The editor's thumb size and place follow the visible share of the note; Settings' follow the sub-page (`n` pages, thumb = one). Not drawn when everything fits. Display only, black and white.
-2. **Slider** (`slider.rs`): a track with a dot per stop and a thumb; taps and drags snap to the nearest stop; Left/Right move it when focused; focus = a bigger thumb with a thicker ring. Enabled = solid ink (DU-safe); disabled = static grey, hollow dots and thumb. End labels only where they help ("Off" and "Full" on Backlight; none on Size).
-3. **Icons** are Lucide (ISC), baked at build time with resvg into one greyscale mask per scale step (stroke ≈ 2.25), drawn by `icons::draw_icon`; no hand-drawn glyph and no icon font. A new icon is a Lucide name in `build.rs`. The Aa icon keeps its letters.
-4. **Buttons** are outlined rounded rectangles (keys of the writing panel) or filled/outlined cells (inline buttons); the pressed or selected state is ink with an inverted label. The selected toolbar icon is a filled disc with a white glyph (the Kobo's).
-5. **Popovers and sheets** open with a `Full` refresh when they cover the page; a popover that covers less uses `Partial`.
+1. **Scroll bar** (`scrollbar.rs`; editor, Preview, Help and Settings, all through `scrollbar::bar` and `scrollbar::Metrics`): a **1 px hairline track** down the right margin and a **hollow, rounded (capsule) thumb**. Every size lives in `Metrics` (handle 17 px, 1.5 handle widths from the edge, outline 2.5 px, thumb at least 40 px, inset 8 px), in brief px scaled by the **page** scale, never the UI scale, so the bar is the same size on every screen and at every UI scale. The editor's thumb follows the visible share of the note; Preview, Help and Settings follow the page (`n` pages, thumb = one). Not drawn when everything fits. Black and white on the paper (on the desk tone beside a locked column). It answers a finger everywhere: drag the thumb, or tap above or below its centre to move a screen (editor) or a page (Settings, Help, Preview) back or forward; the touch zone is the strip widened to the page edge (`scrollbar::zone`, `scrollbar::Paged`). Pages keep their content `Metrics::content_gap` clear of the bar (`content_inset`).
+2. **Toggle switch** (`switch.rs`) and **radio button** (`radio.rs`): see §5.3. All sizes (`switch::Metrics`), the target and the drawing live in that module, so one change reaches every switch. Pure ink and paper.
+3. **Slider** (`slider.rs`), after the Kobo's brightness slider: a **thick track** up to a **hollow ring thumb** and a **hairline** after it; no dot per stop. **Every slider shows its current value over the thumb** and updates it as the thumb moves (Size "20", Leading "1.5", Margin "28", UI scale "150 %", Keyboard size "125%", Backlight "Off" / "25 %" / "Full"); sliders with an `ends` flag (UI scale, Keyboard size, Backlight) also label the two ends on the same line. Taps and drags snap to the nearest stop, one target per stop ≥ 44 px (**UI scale is the one exception: it rescales the whole screen, so its thumb and value follow the finger but the scale changes only when the finger lifts**); Left/Right move it when focused; focus = a bigger thumb with a thicker ring. Enabled = solid ink and 1-bit text (DU-safe); disabled = static grey (`MUTED`).
+4. **Icons** are Lucide (ISC), baked at build time with resvg into one greyscale mask per scale step (stroke ≈ 2.25), drawn by `icons::draw_icon`; no hand-drawn glyph and no icon font. A new icon is a Lucide name in `build.rs`. The Aa icon keeps its letters.
+5. **Buttons** are outlined rounded rectangles (keys of the writing panel) or filled/outlined cells (inline buttons); the pressed or selected state is ink with an inverted label. The selected toolbar icon is a filled disc with a white glyph (the Kobo's).
+6. **Popovers and sheets** open with a `Full` refresh when they cover the page; a popover that covers less uses `Partial`.
 
 ## 7. The writing panel
 
 1. The panel covers the bottom 45 % (portrait) or 55 % (landscape), pure white with a 2 px black rule on top; ink is pure black.
-2. A candidate bar on top (‹ words › ×), a key grid on the left (≥ 44 px keys), a row of caret and page keys (Home, End, PgUp, PgDn, Ins, Undo) above an open writing area that stays at least 55 % of the width. Pending ink is committed before a key acts.
-3. Nothing in the panel is grey; keys are outlines and 1-bit text (`text_1bit`).
+2. **Write** (free writing): a candidate bar on top (‹ words › ×), a key grid on the left (Sketch swap, `, . ? ! @`, 123, language, Space; ≥ 44 px keys) and, above an open writing area that stays at least 55 % of the width, two rows: **Undo, Redo, Erase, Return** and **Home, End, Ins, PgUp, PgDn**. Pending ink is committed before a key acts.
+3. **Letter boxes** use the same look and the same two rows: Write/Sketch left, Undo, Redo, Erase, Return, Space centred, Train and Done right; the nav row centred; the candidate row on top.
+4. **Sketch** (was Draw): Write on the left; Undo, Clear, Pen and **Line** (shows or hides the dotted guide) centred; Cancel and Insert (the one dark key) right; a footer line says a sketch is added as an image link and Preview shows it whole.
+5. Icons: Undo, Redo, Erase, Return, Space, Home, End, PgUp, PgDn and Tab are Lucide icons (§6.3), as on the enhanced keyboard; Ins and words stay text.
+6. Nothing in the panel is grey; keys are rounded outlines and 1-bit text (`text_1bit`). The enhanced keyboard (Compact and Full) uses the same rounded outlines, and its number pad has a **+ − * /** column and a Return key.
 
 ## 8. Words
 
@@ -98,8 +102,21 @@ Seen in `docs/ui-reference/`; use them when the feature comes, in this form.
 
 1. **Text buttons:** a grey wash rectangle (the `wash` token), an italic Literata label, no outline, ≥ 44 px high; one primary button per page ("Continue", "Done", "Cancel"). Plain actions inside a list are italic text rows between hairlines.
 2. **Dialogs:** a 1 px frame, a serif title, the body, wash buttons left-aligned under it; never dimmed or shadowed.
-3. **Progress bar:** a flat bar, dark filled part and light remainder, no animation between updates (a step per refresh).
+3. **Progress bar** (built, on the splash screen: `Splash`): a flat bar as in the Kobo's loading screen: "Loading…" in the serif, left-aligned, over a thin bar, dark where it is done and the rule tone for the rest; no outline, no animation between updates (a step per refresh, only the bar region refreshes). The splash is drawn the moment the panel opens, in the saved paper and rotation: name, author, then the word and the bar.
 4. **Paged tour or help:** top bar (back, centred title, close), a line illustration, a serif headline, a sans paragraph, "Page i of n" italic at the bottom centre with ‹ › at the corners.
 5. **On-screen keyboard, Kobo style** (built in v1.13; Settings → Enhanced keyboard off): number row always on top, letters in three rows, a bottom row with symbols key, accents key, an underline-bracket space bar, ← → and one dark action key; three layers (letters, symbols, accents), Shift switches case on every layer; keys are flat (no outlines) in sans; targets ≥ 44 px. It is an alternative **style**: with it on, nothing else is on the keyboard (no layout switch, no modifiers, no landscape bar); with Enhanced keyboard on, nothing on the Compact or Full board mentions it. Layouts without room for it keep the Full board.
 6. **Language names** are shown in their own script (the Kobo's list), whatever the interface language.
 7. **Help as a modal dialog:** a 1 px frame over the page (the page stays drawn, no dimming), a close × inside the frame's top right corner, a dotted circle behind the illustration, headline, paragraph, "Page i of n" and ‹ › at the bottom; the last page of a legend ends with a Done wash button. An **icon legend** page lists icon left, name right, one per row.
+
+## 12. Page and desk
+
+1. The page's side margins are plain paper. Only **landscape with Line length on** shows a desk: the strips beside the locked column are the `gutter` tone (darker by day, lighter at night) with a fixed fine grain (a hash of the pixel's place, the same every frame). The document is a page on the desk, with its normal text margin inside.
+2. The scroll bar sits on the desk tone beside a locked column and on the paper otherwise.
+
+## 13. Names
+
+1. The app is **Σscribe** (NickelMenu entry, window, About); the author is **SIGMArecon**. The NickelMenu tab is **My Apps** with its own grid icon (`experimental:menu_main_15505_*` in `nm/sigma-scribe`, icons under `.adds/sigma-scribe/icons/`). File, folder and binary names stay `sigma-scribe`.
+
+## 14. The title bar
+
+1. Right-aligned icons, left to right: Files, Preview, Find, Scratch, To-dos, Contents, Graph, **Settings** (the Lucide gear). There is no Help icon: Help opens from Settings → Help & about. On the sheets (Files, Graph, Help, Settings) the Close × takes the rightmost slot.

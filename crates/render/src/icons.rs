@@ -31,6 +31,17 @@ pub enum Icon {
     Space,
     /// Shift on the Kobo style keyboard (v1.13).
     Shift,
+    /// Write panel Undo and Redo (v1.13.1).
+    Undo,
+    Redo,
+    /// Home and End (line start, line end), PgUp and PgDn, Tab (v1.13.1).
+    LineStart,
+    LineEnd,
+    PageUp,
+    PageDown,
+    Tab,
+    /// The Settings button in the title bar (v1.13.1).
+    Settings,
 }
 
 impl Icon {
@@ -56,6 +67,14 @@ impl Icon {
             Self::NextPage => "chevron-right",
             Self::Space => "space",
             Self::Shift => "arrow-big-up",
+            Self::Undo => "undo-2",
+            Self::Redo => "redo-2",
+            Self::LineStart => "arrow-left-to-line",
+            Self::LineEnd => "arrow-right-to-line",
+            Self::PageUp => "chevrons-up",
+            Self::PageDown => "chevrons-down",
+            Self::Tab => "indent-increase",
+            Self::Settings => "settings",
         }
     }
 }
@@ -155,6 +174,15 @@ mod tests {
             Icon::PrevPage,
             Icon::NextPage,
             Icon::Space,
+            Icon::Shift,
+            Icon::Undo,
+            Icon::Redo,
+            Icon::LineStart,
+            Icon::LineEnd,
+            Icon::PageUp,
+            Icon::PageDown,
+            Icon::Tab,
+            Icon::Settings,
         ] {
             for &s in SIZES {
                 let m = ICONS

@@ -33,9 +33,9 @@ shot v1.4.2-language
 esc
 esc
 tap-on Options
-tap-on Paper/Night
+tap-on Dark mode/On
 shot v1.4.2-display-night
-tap-on Paper/Day
+tap-on Dark mode/Off
 tap-on Close
 locale-conf tests/fixtures/kobo-ereader-fr.conf
 tap-on Options

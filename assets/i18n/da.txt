@@ -1,4 +1,4 @@
-# Sigma Scribe — Dansk. machine-drafted, best effort; needs a native review.
+# Σscribe — Dansk. machine-drafted, best effort; needs a native review.
 # Format: English text, then "= " and the translation. See crates/render/src/i18n.rs.
 
 Files
@@ -481,8 +481,8 @@ Options → Layout sets the keyboard: US, UK, French, German, Spanish, Portugues
 Export
 = Eksport
 
-Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
-= Dine noter er almindelige .md-filer. Slut Kobo'en til en computer via USB (luk Sigma Scribe først), vælg Tilslut, og kopiér mappen sigma-scribe/notes. Der skal ikke mere til; synkronisering (f.eks. Syncthing) kan komme senere.
+Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Σscribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.
+= Dine noter er almindelige .md-filer. Slut Kobo'en til en computer via USB (luk Σscribe først), vælg Tilslut, og kopiér mappen sigma-scribe/notes. Der skal ikke mere til; synkronisering (f.eks. Syncthing) kan komme senere.
 
 If nothing happens
 = Hvis intet sker
@@ -556,8 +556,8 @@ Link to a note
 The note name, or a name and the words to show. A dashed link creates the note. Links are what the graph draws.
 = Notens navn, eller et navn og de ord der skal vises. Et stiplet link opretter noten. Links er det, grafen tegner.
 
-Sigma Scribe
-= Sigma Scribe
+Σscribe
+= Σscribe
 
 Version {n} A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.
 = Version {n} En notesbog til Kobo Forma: almindelige Markdown-filer på en e-ink-side, skrevet på glasset.
@@ -571,8 +571,8 @@ AGPL-{n}-only. The source is on GitHub: armandomartires/sigma-scribe.
 Author
 = Forfatter
 
-Sigma Recon.
-= Sigma Recon.
+SIGMArecon.
+= SIGMArecon.
 
 Your notes
 = Dine noter
@@ -832,3 +832,33 @@ Light
 = Lys
 Enhanced keyboard
 = Udvidet tastatur
+
+Sketch
+= Skitse
+
+Redo
+= Gentag
+
+Loading…
+= Indlæser…
+
+In Write mode a sketch is added to the note as an image link. Preview shows the whole sketch.
+= I skrivetilstand tilføjes en skitse til noten som et billedlink. Eksempelvisningen viser hele skitsen.
+
+Needs Portrait or Landscape
+= Kræver Stående eller Liggende
+
+Follows the Kobo's language
+= Følger Kobo'ens sprog
+
+Needs Line on
+= Kræver Linje til
+
+Used when Tab key is Spaces
+= Bruges, når Tab-tasten er sat til Mellemrum
+
+Turn off Auto keyboard size
+= Slå automatisk størrelse fra
+
+Dark mode
+= Mørk tilstand

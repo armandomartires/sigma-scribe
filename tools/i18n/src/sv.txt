@@ -158,7 +158,7 @@ Mus och pekplatta
 En USB-mus eller pekplatta (även pekplattan på ett tangentbord som Logitech K{n} Plus) visar en liten pil. Klick = tryck; dra i anteckningen markerar; dubbelklick markerar ett ord; hjulet eller rullning med två fingrar flyttar anteckningen och bläddrar i förhandsvisning och listor. Pilen döljs efter {m} sekunder stilla och när du skriver. Högerklick gör ingenting.
 Alternativ → Layout väljer tangentbordet: US, UK, franska, tyska, spanska, portugisiska eller italienska. Esc stänger Sök, paneler och markeringar.
 Exportera
-Dina anteckningar är vanliga .md-filer. Anslut Koboen till en dator via USB (avsluta Sigma Scribe först), välj Anslut och kopiera mappen sigma-scribe/notes. Inget mer behövs; synkronisering (t.ex. Syncthing) kan komma senare.
+Dina anteckningar är vanliga .md-filer. Anslut Koboen till en dator via USB (avsluta Σscribe först), välj Anslut och kopiera mappen sigma-scribe/notes. Inget mer behövs; synkronisering (t.ex. Syncthing) kan komma senare.
 Om inget händer
 Kontrollera hubbens ström, prova ett annat tangentbord (enkla med sladd fungerar bäst) och avsluta och öppna appen igen. Loggen .adds/sigma-scribe/sigma-scribe.log noterar varje hittat tangentbord.
 Rubrik
@@ -183,12 +183,12 @@ Genomstruken
 Två tilde på varje sida.
 Länk till en anteckning
 Anteckningens namn, eller ett namn och orden som ska visas. En streckad länk skapar anteckningen. Länkar är det grafen ritar.
-Sigma Scribe
+Σscribe
 Version {n} En anteckningsbok för Kobo Forma: vanliga Markdown-filer på en e-ink-sida, skrivna på glaset.
 Licens
 Endast AGPL-{n}. Koden finns på GitHub: armandomartires/sigma-scribe.
 Upphov
-Sigma Recon.
+SIGMArecon.
 Dina anteckningar
 Vanliga .md- och .txt-filer i {name}. Anslut Koboen via USB för att kopiera dem. Kladden är den dolda filen .scratchpad.md.
 Knappar

@@ -1,4 +1,4 @@
-//! Sigma Scribe v0.2: a library of plain `.md` / `.txt` notes in folders,
+//! Σscribe v0.2: a library of plain `.md` / `.txt` notes in folders,
 //! the Files sheet, rename in place, and the v0.1 editor with on-screen
 //! keyboard and autosave. Generic over the device so the Forma, the desktop
 //! window and the headless emulator run the same code.
@@ -53,11 +53,20 @@ pub fn notes_dir() -> PathBuf {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PagedBar {
+    Settings,
+    Help,
+    Preview,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Drag {
     /// Dragging a handle; the other end stays put.
     Handle { fixed: usize },
     /// Moving after a long-press on a word: extend word by word.
     Word { a: usize, b: usize },
+    /// Holding the scroll bar (v1.13.1): the thumb follows the finger.
+    Bar,
 }
 
 /// Pointer redraws at most this often (ms): e-ink friendly (v0.8.1).
@@ -430,6 +439,11 @@ pub struct App {
     /// A finger went down on a Settings slider (v1.4.4): the drag owns the
     /// touch until it lifts.
     slider_touch: Option<&'static str>,
+    /// A finger on a paged scroll bar (Settings, Help, Preview): where it
+    /// went down and whether it has moved (v1.13.1).
+    bar_drag: Option<(i32, bool)>,
+    /// UI scale picked on its slider but not applied until the finger lifts.
+    ui_scale_drag: Option<u16>,
     /// Panel size as the device reports it (portrait on the Forma).
     phys: (u32, u32),
     /// Rotated copy of the canvas sent to the panel in landscape.
@@ -547,6 +561,8 @@ impl App {
             settings_sub: 0,
             settings_focus: None,
             slider_touch: None,
+            bar_drag: None,
+            ui_scale_drag: None,
             phys: (width, height),
             phys_canvas: Canvas::new(width, height, 255),
             drawer: [false; 3],
@@ -1166,6 +1182,7 @@ impl App {
             focus: self.settings_focus,
             hw_samples: self.hwr.samples,
             light: self.light_have.then_some(self.light_step),
+            ui_scale_pending: self.ui_scale_drag,
         }
     }
 
@@ -1207,12 +1224,112 @@ impl App {
     /// A finger on Settings (v1.4.4): a touch that starts on a slider is a
     /// drag that snaps to the nearest stop; anything else goes on to the
     /// gesture recogniser (taps).
+    /// The paged scroll bar on the screen in front, if it has more than one
+    /// page: Settings, a Help sub-page or Preview (v1.13.1).
+    fn paged_bar(&self) -> Option<(PagedBar, sigma_render::scrollbar::Paged)> {
+        if self.ink.is_some() || self.rename.is_some() {
+            return None;
+        }
+        if self.options {
+            let l = self.screen.options_layout(&self.options_model());
+            return l.bar.map(|b| (PagedBar::Settings, b));
+        }
+        if let Some(h) = &self.help {
+            let b = self.screen.help_paged_bar(&self.help_model(h))?;
+            return Some((PagedBar::Help, b));
+        }
+        if self.files.is_some() || self.graph.is_some() {
+            return None;
+        }
+        let p = self.preview.as_ref()?;
+        let b = self
+            .screen
+            .preview_paged_bar(&self.keyboard, p.doc.pages.len(), p.page)?;
+        Some((PagedBar::Preview, b))
+    }
+
+    /// Turns to `page` on the bar's screen; `None` when already there.
+    fn set_bar_page(&mut self, kind: PagedBar, page: usize, last: bool) -> Option<Refresh> {
+        match kind {
+            PagedBar::Settings => {
+                if page == self.settings_sub {
+                    return None;
+                }
+                self.settings_sub = page;
+                Some(if last {
+                    Refresh::Full
+                } else {
+                    Refresh::Partial
+                })
+            }
+            PagedBar::Help => {
+                let h = self.help.as_mut()?;
+                (page != h.at).then(|| {
+                    h.at = page;
+                    Refresh::Partial
+                })
+            }
+            PagedBar::Preview => {
+                let p = self.preview.as_mut()?;
+                (page != p.page).then(|| {
+                    p.page = page;
+                    Refresh::Partial
+                })
+            }
+        }
+    }
+
+    /// A tap on the bar: the page before or after, from the thumb's centre.
+    fn bar_tap(&mut self, x: i32, y: i32) -> Option<Option<Refresh>> {
+        let (kind, b) = self.paged_bar()?;
+        b.zone
+            .contains(x, y)
+            .then(|| self.set_bar_page(kind, b.tap(y), true))
+    }
+
+    /// A finger on a paged scroll bar: drag the thumb, or tap above or below
+    /// it. `None` when the touch is not on the bar.
+    fn bar_touch(&mut self, phase: Phase, x: i32, y: i32) -> Option<Option<Refresh>> {
+        match phase {
+            Phase::Down => {
+                let (_, b) = self.paged_bar()?;
+                if !b.zone.contains(x, y) {
+                    return None;
+                }
+                self.bar_drag = Some((y, false));
+                Some(None)
+            }
+            Phase::Move | Phase::Up => {
+                let (y0, moved) = self.bar_drag?;
+                let (kind, b) = self.paged_bar()?;
+                let moved = moved || (y - y0).abs() > self.screen.scale().px(12.0);
+                if phase == Phase::Up {
+                    self.bar_drag = None;
+                    let page = if moved { b.drag_to(y) } else { b.tap(y) };
+                    return Some(self.set_bar_page(kind, page, true));
+                }
+                self.bar_drag = Some((y0, moved));
+                Some(if moved {
+                    self.set_bar_page(kind, b.drag_to(y), false)
+                } else {
+                    None
+                })
+            }
+        }
+    }
+
     fn options_touch(&mut self, phase: Phase, x: i32, y: i32) -> Option<Option<Refresh>> {
         match phase {
             Phase::Down => {
                 let (lab, ch) = self.screen.options_slider_at(&self.options_model(), x, y)?;
                 self.slider_touch = Some(lab);
                 self.settings_focus = Some(lab);
+                // UI scale rescales everything: only the thumb moves while
+                // the finger is down, the scale changes on release.
+                if let Some(Change::UiScaleTo(v)) = ch {
+                    self.ui_scale_drag = Some(v);
+                    return Some(Some(Refresh::Partial));
+                }
                 Some(Some(match ch {
                     Some(c) => self.change(c),
                     None => Refresh::Partial,
@@ -1226,9 +1343,31 @@ impl App {
                 let ch = self
                     .screen
                     .options_slider_drag(&self.options_model(), lab, x);
+                if lab == "UI scale" {
+                    let Some(Change::UiScaleTo(v)) = ch else {
+                        return Some(None);
+                    };
+                    if phase == Phase::Up {
+                        self.ui_scale_drag = None;
+                        return Some(Some(if v == self.settings.ui_scale {
+                            Refresh::Partial
+                        } else {
+                            self.change(Change::UiScaleTo(v))
+                        }));
+                    }
+                    let moved = self.ui_scale_drag != Some(v);
+                    self.ui_scale_drag = Some(v);
+                    return Some(moved.then_some(Refresh::Partial));
+                }
                 Some(match ch {
                     Some(Change::KbSize(v)) if v == self.settings.kb_size => None,
                     Some(Change::SizeTo(v)) if (v - self.settings.size).abs() < 0.05 => None,
+                    Some(Change::LeadingTo(v)) if (v - self.settings.leading).abs() < 0.05 => None,
+                    Some(Change::MarginTo(v)) if (v - self.settings.margin).abs() < 0.05 => None,
+                    Some(Change::UiScaleTo(v)) if v == self.settings.ui_scale => None,
+                    // The same light step again (every drag event repeats it): no
+                    // redraw, no sysfs write, no log line.
+                    Some(Change::Backlight(n)) if n == self.light_step => None,
                     Some(c) => Some(self.change(c)),
                     None => None,
                 })
@@ -1761,11 +1900,6 @@ impl App {
                 Hit::Graph => {
                     self.exit_preview();
                     self.open_graph();
-                    Some(Refresh::Full)
-                }
-                Hit::Help => {
-                    self.exit_preview();
-                    self.open_help();
                     Some(Refresh::Full)
                 }
                 _ => {
@@ -2354,8 +2488,22 @@ impl App {
     /// Caret tap: pending ink is read, then the caret goes to the tapped
     /// spot of the note.
     fn place_caret(&mut self, x: i32, y: i32) -> Option<Refresh> {
-        let Hit::Caret(at) = self.editor_hit(x, y) else {
-            return None;
+        let at = match self.editor_hit(x, y) {
+            Hit::Caret(at) => at,
+            // The title bar stays live while the panel is open: reading
+            // the pending ink, the panel closes and the tap goes on to it.
+            Hit::Back
+            | Hit::Files
+            | Hit::TogglePreview
+            | Hit::Options
+            | Hit::Find
+            | Hit::Graph
+            | Hit::Drawer(_) => {
+                let _ = self.read_letter();
+                self.ink = None;
+                return self.handle_inner(Event::Tap { x, y });
+            }
+            _ => return None,
         };
         let _ = self.read_letter();
         self.buffer.set_caret(at);
@@ -2632,6 +2780,10 @@ impl App {
         use sigma_render::ink::{InkButton, InkMode};
         let mode = self.ink.as_ref()?.mode;
         match (mode, b) {
+            (InkMode::Draw, InkButton::Guide) => {
+                self.screen.sketch_guide = !self.screen.sketch_guide;
+                return Some(Refresh::Partial);
+            }
             (InkMode::Draw, InkButton::Mode) => {
                 let boxes = self.settings.ink_boxes;
                 let ink = self.ink.as_mut()?;
@@ -2717,6 +2869,18 @@ impl App {
                 return Some(Refresh::Partial);
             }
             (InkMode::Free, InkButton::Undo) => return self.ink_undo(true),
+            (InkMode::Letters | InkMode::Free, InkButton::Redo) => {
+                let _ = self.read_letter();
+                if !self.buffer.redo() {
+                    return None;
+                }
+                if let Some(ink) = &mut self.ink {
+                    ink.cands.clear();
+                    ink.replace_ok = false;
+                }
+                self.save();
+                return Some(Refresh::Partial);
+            }
             (
                 InkMode::Letters | InkMode::Free,
                 InkButton::Home | InkButton::End | InkButton::PgUp | InkButton::PgDn,
@@ -3210,6 +3374,10 @@ impl App {
             Gesture::Press { x, y } => {
                 self.drag = None;
                 self.map_drag = None;
+                if self.on_scroll_bar(x, y) {
+                    self.drag = Some(Drag::Bar);
+                    return None;
+                }
                 if self.in_editor() && self.sel_ui.is_some() {
                     if let (Hit::Handle(i), Some((a, b))) =
                         (self.editor_hit(x, y), self.buffer.selection())
@@ -3224,9 +3392,13 @@ impl App {
                 None
             }
             Gesture::Tap { x, y } => {
-                if self.drag.take().is_some() {
-                    self.sel_ui = Some(SelUi { bar: true });
-                    return Some(Refresh::Fast);
+                if let Some(d) = self.drag.take() {
+                    // A tap on the scroll bar goes on below; a handle or
+                    // word drag ends with its selection bar.
+                    if d != Drag::Bar {
+                        self.sel_ui = Some(SelUi { bar: true });
+                        return Some(Refresh::Fast);
+                    }
                 }
                 self.handle(Event::Tap { x, y })
             }
@@ -3251,6 +3423,11 @@ impl App {
             }
             // A held key or row still counts as one tap.
             Gesture::LongPress { x, y } => self.handle(Event::Tap { x, y }),
+            Gesture::Drag { y, .. } if self.drag == Some(Drag::Bar) => {
+                let page = self.page_rect();
+                self.screen.scroll_bar_to(&mut self.buffer, page, y);
+                Some(Refresh::Fast)
+            }
             Gesture::Drag { x, y, .. } => {
                 let drag = self.drag?;
                 let o = |app: &Self, yy: i32| app.screen.offset_at_point(&app.buffer, page, x, yy);
@@ -3265,6 +3442,7 @@ impl App {
                             self.buffer.select(fixed, at);
                         }
                     }
+                    Drag::Bar => return None,
                     Drag::Word { a, b } => {
                         let at = o(self, y);
                         let (s0, e0) = if at >= b {
@@ -3284,6 +3462,12 @@ impl App {
                 self.sel_ui = Some(SelUi { bar: false });
                 Some(Refresh::Fast)
             }
+            Gesture::Release { y, .. } if self.drag == Some(Drag::Bar) => {
+                self.drag = None;
+                let page = self.page_rect();
+                self.screen.scroll_bar_to(&mut self.buffer, page, y);
+                Some(Refresh::Partial)
+            }
             Gesture::Release { x, y, held } => {
                 // Throttled drags: the lift position is always applied.
                 if self.drag.is_some() {
@@ -3301,6 +3485,18 @@ impl App {
                 }
             }
         }
+    }
+
+    /// Is (x, y) on the editor's scroll bar (v1.13.1)?
+    fn on_scroll_bar(&self, x: i32, y: i32) -> bool {
+        self.in_editor()
+            && self.ink.is_none()
+            && !self.options
+            && !self.in_drawer(x, y)
+            && self
+                .screen
+                .scroll_bar_zone(&self.buffer, self.page_rect())
+                .is_some_and(|(z, _)| z.contains(x, y))
     }
 
     fn editor_hit(&self, x: i32, y: i32) -> Hit {
@@ -3421,6 +3617,9 @@ impl App {
         let page = self.screen.layout(self.keys_visible(), &self.keyboard).page;
         match e {
             Event::Tilt { .. } => None,
+            Event::Tap { x, y } if self.paged_bar().is_some_and(|(_, b)| b.zone.contains(x, y)) => {
+                self.bar_tap(x, y).flatten()
+            }
             Event::Tap { x, y } if self.ink.is_some() => {
                 let l = self.panel_layout()?;
                 if !l.panel.contains(x, y) {
@@ -3431,6 +3630,9 @@ impl App {
             }
             Event::Touch { phase, x, y, t } => {
                 if let Some(r) = self.ink_touch(phase, x, y, t) {
+                    return r;
+                }
+                if let Some(r) = self.bar_touch(phase, x, y) {
                     return r;
                 }
                 if self.options {
@@ -3666,6 +3868,11 @@ impl App {
                         None
                     },
                 };
+                if self.on_scroll_bar(x, y) {
+                    let page = self.page_rect();
+                    self.screen.scroll_bar_step(&mut self.buffer, page, y);
+                    return Some(Refresh::Partial);
+                }
                 let hit = self.screen.hit(&model, x, y);
                 if !matches!(hit, Hit::Bar(_) | Hit::Handle(_)) {
                     // Tapping elsewhere dismisses the selection chrome.
@@ -3686,10 +3893,6 @@ impl App {
                     }),
                     Hit::Graph => {
                         self.open_graph();
-                        Some(Refresh::Full)
-                    }
-                    Hit::Help => {
-                        self.open_help();
                         Some(Refresh::Full)
                     }
                     Hit::Drawer(p) => Some(self.toggle_pane(p)),
@@ -3877,11 +4080,15 @@ impl App {
             }
             let want = match label {
                 "Undo" => InkButton::Undo,
+                "Line" | "Guide" => InkButton::Guide,
+                "Redo" => InkButton::Redo,
                 "Clear" => InkButton::Clear,
                 "Pen" => InkButton::Pen,
                 "Cancel" | "Done" => InkButton::Cancel,
                 "Insert" => InkButton::Insert,
-                "Letters" | "Draw" | "Words" | "Mode" | "Swap" => InkButton::Mode,
+                "Letters" | "Draw" | "Words" | "Sketch" | "Write" | "Mode" | "Swap" => {
+                    InkButton::Mode
+                }
                 "Prev" => InkButton::Prev,
                 "Next" => InkButton::Next,
                 "Close" | "×" => InkButton::Cancel,
@@ -3992,7 +4199,6 @@ impl App {
             "Scratch" => Some(centre(l.scratch_button)),
             "Find" => Some(centre(l.find_button)),
             "Graph" => Some(centre(l.graph_button)),
-            "Help" => Some(centre(l.help_button)),
             "FindField" | "ReplaceField" | "FindClose" | "Prev" | "Next" | "Replace" | "All"
             | "Aa" => self.screen.find_control(&l, label),
             s if s.starts_with("Heading:")
@@ -4099,6 +4305,130 @@ fn load_settings(root: &std::path::Path) -> Settings {
 }
 
 /// Screen size for an orientation on a panel of `phys` size.
+/// The splash screen: drawn the moment the panel is open, before the
+/// library, dictionaries and settings are loaded, so the Forma shows the
+/// app while it starts. Follows the saved paper and rotation, and shows a
+/// progress bar that the start moves along with [`Splash::progress`]. It
+/// never fails the start: a panel that cannot be written to is left alone.
+pub struct Splash {
+    c: Canvas,
+    phys: (u32, u32),
+    rot: Rotation,
+    t: Theme,
+    bar: Rect,
+}
+
+impl Splash {
+    /// Draws the splash at 0 % and shows it (a full refresh).
+    pub fn show(dev: &mut dyn Device, root: &std::path::Path) -> Self {
+        use sigma_render::fonts::{Face, Fonts};
+        use sigma_render::theme::Scale;
+        let st = load_settings(root);
+        let t = Theme::for_paper(st.paper);
+        let phys = dev.size();
+        let (lw, lh) = logical_size(phys, st.rotation);
+        let mut c = Canvas::new(lw, lh, t.paper);
+        let fonts = Fonts::new();
+        let s = Scale::for_width(lw.min(lh));
+        let centre = |c: &mut Canvas, face: Face, size: f32, y: f32, text: &str, ink: u8| {
+            let w = fonts.width(face, size, text);
+            fonts.draw(c, face, size, (lw as f32 - w) / 2.0, y, text, ink);
+        };
+        let mid = lh as f32 * 0.42;
+        centre(
+            &mut c,
+            Face::LiterataSemi,
+            s.px(120.0) as f32,
+            mid,
+            "Σscribe",
+            t.ink,
+        );
+        centre(
+            &mut c,
+            Face::Atkinson,
+            s.px(26.0) as f32,
+            mid + s.px(70.0) as f32,
+            "SIGMArecon",
+            t.mute,
+        );
+        // Kobo's loading bar: the word in the serif, left-aligned, over a flat
+        // bar that is dark where it is done and light for the rest.
+        let bw = s.px(520.0);
+        let bar = Rect::new(
+            (lw as i32 - bw) / 2,
+            (lh as f32 * 0.60) as i32,
+            bw,
+            s.px(8.0).max(4),
+        );
+        fonts.draw(
+            &mut c,
+            Face::Literata,
+            s.px(32.0) as f32,
+            bar.x as f32,
+            (bar.y - s.px(22.0)) as f32,
+            &sigma_render::i18n::tr("Loading…"),
+            t.ink,
+        );
+        let mut sp = Self {
+            c,
+            phys,
+            rot: st.rotation,
+            t,
+            bar,
+        };
+        sp.draw_bar(0.0);
+        sp.present(dev, None, Refresh::Full);
+        sp
+    }
+
+    /// Moves the bar to `done` (0 to 1) and shows just the bar.
+    pub fn progress(&mut self, dev: &mut dyn Device, done: f32) {
+        self.draw_bar(done);
+        let r = self.bar.inset(-4);
+        self.present(dev, Some(r), Refresh::Partial);
+    }
+
+    /// A flat bar: dark for what is done, the rule tone for the rest.
+    fn draw_bar(&mut self, done: f32) {
+        let r = self.bar;
+        self.c.fill(r, self.t.rule);
+        let w = (r.w as f32 * done.clamp(0.0, 1.0)) as i32;
+        if w > 0 {
+            self.c.fill(Rect::new(r.x, r.y, w, r.h), self.t.ink);
+        }
+    }
+
+    /// Shows `region` (the whole screen when `None`), turned to the panel.
+    fn present(&self, dev: &mut dyn Device, region: Option<Rect>, refresh: Refresh) {
+        let (lw, lh) = (self.c.width as i32, self.c.height as i32);
+        let r = region.unwrap_or(self.c.bounds());
+        let (x0, y0) = (r.x.max(0), r.y.max(0));
+        let (x1, y1) = ((r.x + r.w).min(lw), (r.y + r.h).min(lh));
+        let mut panel = Canvas::new(self.phys.0, self.phys.1, self.t.paper);
+        let pw = panel.width as usize;
+        for y in 0..lh {
+            for x in 0..lw {
+                let (px, py) = match self.rot {
+                    Rotation::R0 => (x, y),
+                    Rotation::R90 => (lh - 1 - y, x),
+                    Rotation::R180 => (lw - 1 - x, lh - 1 - y),
+                    Rotation::R270 => (y, lw - 1 - x),
+                };
+                if let Some(v) = panel.pixels.get_mut(py as usize * pw + px as usize) {
+                    *v = self.c.pixels[(y * lw + x) as usize];
+                }
+            }
+        }
+        let pr = match self.rot {
+            Rotation::R0 => Rect::new(x0, y0, x1 - x0, y1 - y0),
+            Rotation::R90 => Rect::new(lh - y1, x0, y1 - y0, x1 - x0),
+            Rotation::R180 => Rect::new(lw - x1, lh - y1, x1 - x0, y1 - y0),
+            Rotation::R270 => Rect::new(y0, lw - x1, y1 - y0, x1 - x0),
+        };
+        let _ = dev.present(&panel, pr, refresh);
+    }
+}
+
 fn logical_size(phys: (u32, u32), r: Rotation) -> (u32, u32) {
     let (short, long) = (phys.0.min(phys.1), phys.0.max(phys.1));
     if r.is_landscape() {
@@ -4778,7 +5108,7 @@ impl App {
         };
         let rows: Vec<(String, String)> = vec![
             (
-                "Sigma Scribe".into(),
+                "Σscribe".into(),
                 format!(
                     "Version {}. A notebook for the Kobo Forma: plain Markdown files on an e-ink page, typed on the glass.",
                     env!("CARGO_PKG_VERSION")
@@ -4788,7 +5118,7 @@ impl App {
                 "License".into(),
                 "AGPL-3.0-only. The source is on GitHub: armandomartires/sigma-scribe.".into(),
             ),
-            ("Author".into(), "Sigma Recon.".into()),
+            ("Author".into(), "SIGMArecon.".into()),
             (
                 "Your notes".into(),
                 tr_name(
@@ -4832,7 +5162,7 @@ impl App {
         });
     }
 
-    fn help_model<'a>(&'a self, h: &'a HelpState) -> HelpModel<'a> {
+    pub fn help_model<'a>(&'a self, h: &'a HelpState) -> HelpModel<'a> {
         HelpModel {
             page: h.page,
             doc: h.doc.as_ref(),
@@ -4906,14 +5236,16 @@ impl App {
         }
         if let Some(h) = &self.help {
             let m = self.help_model(h);
-            let l = self.screen.help_layout(m.keyboard);
+            let l = self
+                .screen
+                .help_layout(m.keyboard, h.page != HelpPage::Menu);
             add("Close", l.close);
             if h.page == HelpPage::Menu {
                 add("App info", l.rows[0]);
                 add("Markdown reference", l.rows[1]);
                 add("USB keyboard, mouse & export", l.rows[2]);
-            } else {
-                add("Back", l.crumb);
+            } else if let Some(b) = l.back {
+                add("Back", b);
             }
             return out;
         }
@@ -4961,7 +5293,6 @@ impl App {
         add("Find", l.find_button);
         add("Graph", l.graph_button);
         add("Options", l.options_button);
-        add("Help", l.help_button);
         if self.preview.is_some() {
             return out;
         }

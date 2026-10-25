@@ -56,11 +56,11 @@ tap-on Close
 expect-screen 1920x1440
 shot v0.5-landscape-drawer
 tap-on Options
-tap-on Paper/Night
+tap-on Dark mode/On
 tap-on Close
 shot v0.5-night-drawer
 tap-on Options
-tap-on Paper/Day
+tap-on Dark mode/Off
 tap-on Orientation/Portrait
 tap-on Drawer/Right
 tap-on Close

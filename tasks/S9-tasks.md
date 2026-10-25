@@ -8,7 +8,7 @@ Status 2026-10-21: T02, T03 done; T05, T06 drafts written (files only, not poste
 - **Description:** `.github/workflows/release.yml` on tags: build FBInk (pinned), ARM binary, `package-kobo.sh`, upload tarball + sha256.
 - **Acceptance:** tagged build reproduces the local package hashes.  **Deps:** S9-T01  **Estimate:** 1 d
 ### ✅ S9-T03 — Docs & screenshots
-- **Acceptance:** README install/uninstall, licences (AGPL-3.0, FBInk GPL-3.0+, OFL), author Sigma Recon, screenshots.  **Estimate:** 0.5 d
+- **Acceptance:** README install/uninstall, licences (AGPL-3.0, FBInk GPL-3.0+, OFL), author SIGMArecon, screenshots.  **Estimate:** 0.5 d
 ### ⏳ S9-T04 — GitHub Release v1.0.0
 - **Acceptance:** release published by Armando (needs `gh auth login` + approval).  **Deps:** S9-T02  **Estimate:** 0.25 d
 ### ✅ (draft) S9-T05 — MobileRead announcement draft

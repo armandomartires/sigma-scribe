@@ -8,12 +8,12 @@ shot v1.4.1-pointer-paper
 pointer-to 500 1700
 shot v1.4.1-pointer-over-keys
 tap-on Options
-tap-on Paper/Night
+tap-on Dark mode/On
 tap-on Close
 pointer-to 600 800
 pointer-move 150 90
 expect-pointer visible
 shot v1.4.1-pointer-night
 tap-on Options
-tap-on Paper/Day
+tap-on Dark mode/Off
 tap-on Close

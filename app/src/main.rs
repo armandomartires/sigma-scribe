@@ -28,8 +28,12 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    let notes = notes_dir();
+    let mut splash = sigma_scribe::Splash::show(dev.as_mut(), &notes);
     let (w, h) = dev.size();
-    let mut app = App::new(w, h, notes_dir());
+    splash.progress(dev.as_mut(), 0.3);
+    let mut app = App::new(w, h, notes);
+    splash.progress(dev.as_mut(), 1.0);
     match app.run(dev.as_mut()) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {

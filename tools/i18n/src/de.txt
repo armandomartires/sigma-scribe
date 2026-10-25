@@ -158,7 +158,7 @@ Maus und Touchpad
 Eine USB-Maus oder ein Touchpad (auch das Touchpad einer Tastatur wie der Logitech K{n} Plus) zeigt einen kleinen Pfeil. Klick = Tippen; Ziehen in der Notiz wählt aus; Doppelklick wählt ein Wort; Rad oder Zwei-Finger-Scrollen bewegt die Notiz und blättert in Vorschau und Listen. Der Pfeil verschwindet nach {m} Sekunden Ruhe und beim Tippen. Rechtsklick tut nichts.
 Optionen → Layout legt die Tastatur fest: US, UK, Französisch, Deutsch, Spanisch, Portugiesisch oder Italienisch. Esc schließt Suche, Blätter und Auswahlen.
 Export
-Deine Notizen sind einfache .md-Dateien. Verbinde den Kobo per USB mit einem Computer (verlasse vorher Sigma Scribe), wähle Verbinden und kopiere den Ordner sigma-scribe/notes. Mehr ist nicht nötig; Synchronisierung (z. B. Syncthing) kommt vielleicht später.
+Deine Notizen sind einfache .md-Dateien. Verbinde den Kobo per USB mit einem Computer (verlasse vorher Σscribe), wähle Verbinden und kopiere den Ordner sigma-scribe/notes. Mehr ist nicht nötig; Synchronisierung (z. B. Syncthing) kommt vielleicht später.
 Wenn nichts passiert
 Prüfe die Stromversorgung des Hubs, versuche eine andere Tastatur (einfache kabelgebundene funktionieren am besten), verlasse dann die App und öffne sie erneut. Das Geräteprotokoll .adds/sigma-scribe/sigma-scribe.log vermerkt jede gefundene Tastatur.
 Überschrift
@@ -183,12 +183,12 @@ Durchgestrichen
 Zwei Tilden auf jeder Seite.
 Link zu einer Notiz
 Der Notizname oder ein Name und die anzuzeigenden Worte. Ein gestrichelter Link erstellt die Notiz. Links zeichnet der Graph.
-Sigma Scribe
+Σscribe
 Version {n} Ein Notizbuch für die Kobo Forma: einfache Markdown-Dateien auf einer E-Ink-Seite, auf dem Glas getippt.
 Lizenz
 Nur AGPL-{n}. Der Quellcode ist auf GitHub: armandomartires/sigma-scribe.
 Autor
-Sigma Recon.
+SIGMArecon.
 Deine Notizen
 Einfache .md- und .txt-Dateien in {name}. Verbinde den Kobo per USB, um sie zu kopieren. Der Notizblock ist die versteckte Datei .scratchpad.md.
 Tasten

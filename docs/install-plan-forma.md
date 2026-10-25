@@ -1,4 +1,4 @@
-# Install plan — NickelMenu + Sigma Scribe v0.1 on the Kobo Forma
+# Install plan — NickelMenu + Σscribe v0.1 on the Kobo Forma
 
 **Status:** PLAN ONLY — nothing has been written to the Kobo. Run it with Armando holding the device.
 Device: Kobo Forma N782 (code 377), serial <FORMA-SERIAL>, firmware **4.38.23697**. Backup: `~/backups/kobo-forma-<FORMA-SERIAL>/2026-10-20/` (verified against `2026-10-20.device.sha256`).
@@ -7,7 +7,7 @@ Device: Kobo Forma N782 (code 377), serial <FORMA-SERIAL>, firmware **4.38.23697
 | Path on the Kobo | From | Purpose |
 |---|---|---|
 | `.kobo/KoboRoot.tgz` (consumed and deleted by the Kobo at boot) | NickelMenu v0.6.0 release, sha256 `322ff9aa863860e8f5f7e0b55cae561c54bf95983b9bce1d19819d1225d064af` | installs `/usr/local/Kobo/imageformats/libnm.so` + `.adds/nm/doc` |
-| `.adds/nm/sigma-scribe` | `packaging/kobo` | menu entry: `menu_item:main:Sigma Scribe:cmd_spawn:quiet:exec /mnt/onboard/.adds/sigma-scribe/launch.sh` |
+| `.adds/nm/sigma-scribe` | `packaging/kobo` | menu entry: `menu_item:main:Σscribe:cmd_spawn:quiet:exec /mnt/onboard/.adds/sigma-scribe/launch.sh` |
 | `.adds/sigma-scribe/` (`sigma-scribe`, `launch.sh`, `touch.conf`, `LICENSE`, `OFL-*.txt`) | `scripts/package-kobo.sh` → `dist/sigma-scribe-0.1.0-kobo/` | static ARMv7 binary (FBInk inside) + launcher |
 | `sigma-scribe/notes/field-notes.md` (created by the app) | app | your note, plain Markdown |
 
@@ -52,8 +52,8 @@ The Forma shows "Updating…" (installs NickelMenu) and restarts. **Leave it on 
 | # | Do | Expect | Result |
 |---|---|---|---|
 | 1 | After the update reboot, look at the home screen | Normal Kobo home; books intact | |
-| 2 | Open the main menu (☰, top left on 4.38) | New entry **Sigma Scribe** (NickelMenu) | |
-| 3 | Tap **Sigma Scribe** | Within ~5 s a full flash, then the page: title `field-notes.md`, seeded note, status `… words · line N   Paper · saved  [Keys]`, keyboard at the bottom | |
+| 2 | Open the main menu (☰, top left on 4.38) | New entry **Σscribe** (NickelMenu) | |
+| 3 | Tap **Σscribe** | Within ~5 s a full flash, then the page: title `field-notes.md`, seeded note, status `… words · line N   Paper · saved  [Keys]`, keyboard at the bottom | |
 | 4 | Display: compare with `docs/screenshots/v0.1/v0.1-start.png` | Same layout, crisp Literata text, no rotated or mirrored image | |
 | 5 | Touch accuracy: tap `q`, `p`, `Shift`, `Return`, `Space`, and the middle of the page | Each key types what it shows; page tap moves the caret there. If taps land mirrored/rotated, note where, edit `.adds/sigma-scribe/touch.conf` (try `swap,mirror_y`, `swap`, `mirror_x`) and retest | |
 | 6 | Type a sentence quickly (~20 keys) | No missed or doubled keys; status returns to `saved` | |
@@ -126,7 +126,7 @@ Package: CI artifact `sigma-scribe-1.4.6-probe-kobo` from release.yml run 397641
 3. Copy **only** `.adds/sigma-scribe/sigma-scribe` from the probe package (via `.new` + sync + hash check + rename) and check the binary sha256 above on the device. Nothing else changes (add `THIRD-PARTY.txt` as in the 1.4.6 plan if it is not there yet). Sync, unmount, eject.
 
 **Collect** (the user, on the Forma):
-1. Open Sigma Scribe from NickelMenu as usual; the probe starts with it.
+1. Open Σscribe from NickelMenu as usual; the probe starts with it.
 2. Hold the Forma upright (page buttons on the right) for ~5 s.
 3. Turn it a quarter **clockwise** and hold ~5 s; then **upside down** ~5 s; then a quarter **counter-clockwise** from upright ~5 s; then back upright ~5 s.
 4. Lay it **face up** on a table ~5 s, then hold it up again.
@@ -135,6 +135,18 @@ Package: CI artifact `sigma-scribe-1.4.6-probe-kobo` from release.yml run 397641
 **Fetch back** (PC, Kobo connected, read-only): copy `/mnt/onboard/.adds/sigma-scribe/gsensor-probe.log` (the probe log; capped at 2 MB) and `sigma-scribe.log` into the backup folder, then sync and eject. Nothing on the device is changed by fetching.
 
 **Afterwards:** either keep 1.4.6-probe (behaves like 1.4.6) or put the 1.4.6 binary back (same procedure, 1.4.6 hash). The log decides the 0x19 / 0x1a mapping; turning `ENABLED` on is a separate change and approval.
+
+## Upgrade PR 47 build 65ed5c6 → local builds of `v1.13.1-write-fixes` (run 2026-10-24 / 25, user-approved, each install after a checksummed backup)
+Local armv7 builds (`scripts/package-kobo.sh`, ARM musl) of the branch `v1.13.1-write-fixes`, ten installs in a row, each time only what differed from the package: the binary every time; `launch.sh`, the NickelMenu entry (`Σscribe`, `My Apps` label and icon options) and `.adds/sigma-scribe/icons/` once, for the rename and My Apps build. Final binary: head `a3baa08`, sha256 `298e92aed104c31f7680f4278d3fbbcec3d9024cc043a25266aaa96d3265d981` (the 1.11.1 version label is unchanged). Adds the Write/Sketch/letter-box redesign, Redo, icons, the number pad column, one scroll bar with touch, toggle switches, radio buttons, sliders, Dark mode, the Settings gear (no Help icon), Help aligned with Settings, the splash, the desk with grain, Σscribe/SIGMArecon naming and My Apps. See the Unreleased entries in `CHANGELOG.md`.
+
+Run log: Forma found as `/dev/sdc` (serial N7828B0052845, firmware 4.38.23828), mounted alone with udisksctl; sdb untouched. Every install: backup under `~/backups/kobo-forma-N7828B0052845/2026-10-24-…` and `2026-10-25-…` (`diff -r` clean, `SHA256SUMS` written), binary copied as `.new`, synced, compared, renamed; unmounted and powered off. At the user's request the notes were cleared once (2026-10-24, `…-pre-clean-notes`: `field-notes.md`, the `_test` set, the scratch pad and `.sigma-last-opened` removed; `.sigma-settings` and `.handwriting` kept; the full notes folder is in that backup). Rollback: any earlier binary is in the backup of the install that replaced it (`83800eb5…0623` is the PR 47 build, in `…-pre-write-fixes`).
+
+Device log read 2026-10-25 after the last install: three sessions, all `exit 0`; no errors, no panics, no odd touch input (only the known corner reports); `perf:` p50 100–132 ms over the sessions with typing (one 13-key session at 279 ms); the light device `mxc_msp430.0` took steps 0 to 7 from the slider. The log showed the Backlight slider rewriting the same step on every drag event (571 lines); fixed in `a3baa08` and installed (backup `…-pre-backlight-once`). Log read after that install (2026-10-25 02:00 session, exit 0, no errors): the slider swept 0 → 8 → 0 and the log has exactly one `light:` line per step (17 lines; step 8, full, works).
+
+## Upgrade main 99d6887 (1.11.1) → PR 47 build 65ed5c6 (run 2026-10-24, user-approved)
+CI package from the PR 47 branch (release run 40098145210, head 65ed5c6; `test` and `package` passed): tarball `746e62b6ceb3c8f0322668391dc4e7ea2a9976108a2dea60bad805eeed18b9aa`, binary sha256 `83800eb5af8c6f7b72da8806048426629a5bf260421bc6f2feed7077033c0623`. Adds the write-panel keys and Insert/overwrite (PR 45), the Kobo-style scroll bar, Experimental features and Backlight (PR 46) and the Kobo style keyboard (PR 47). Rollback: the 99d6887 binary (`44295142…11b2a`) from the backup.
+
+Run log: Forma found as `/dev/sdc` (serial N7828B0052845), mounted alone; sdb untouched. Only the binary differed from the package (`launch.sh`, `dict/`, notices and the NickelMenu entry identical). Backup `~/backups/kobo-forma-N7828B0052845/2026-10-24-pre-pr47` (352 files), `diff -r` clean, `SHA256SUMS` written. Binary copied as `.new`, synced, hash-checked, renamed; device sha256 matches. Unmounted and powered off. App not yet started on this build. Look for `light:` lines in `sigma-scribe.log` after the first run (which backlight device was found and used).
 
 ## Upgrade (unknown earlier main build) → main 99d6887 = 1.11.1 (run 2026-10-23, user-approved; user present)
 CI package from main (release run 40012285280, head 99d6887, merge of PR #43; `ci` passed): tarball `75fdd3e368613ea0697618968ea810845fc12c0a33ca6418ff7048505f70f6e7`, binary sha256 `442951422e5f54775f1079a4423b4f2c62c912e3ca3d995ccd1e815796711b2a` (6,189,336 bytes). Adds everything from 1.7.0 to 1.11.1 (Vietnamese, Korean, RTL, Indic and Thai, Japanese, Chinese pinyin, files kept out of the Kobo library) plus Auto orientation from the accelerometer, the corner-report filter, the Size slider and the Orientation buttons. Rollback: the previous binary (`aa6d68fc…c9ec9d3`) from the backup.
@@ -436,6 +448,6 @@ On-device checklist — v1.0 Graph map (S9.1):
 On-device checklist — v1.0 (release; S9 definition of done):
 - Help → App info shows **Version 1.0.0**.
 - **Update keeps notes**: after the upgrade above, every note, folder, the scratch pad and the settings from 0.4.0 are still there.
-- **Fresh install from the release tarball** *(needs its own approval: it deletes the app folder on the device after a verified backup)*: with notes backed up, remove `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`, unpack the CI tarball (sha256 `edba7f6fb63d0147f0464addb8249ecb1946da4514e0823ac9cf6575e07b8c58`) onto the drive root, eject; NickelMenu shows *Sigma Scribe*; first launch creates `sigma-scribe/notes` if missing; `THIRD-PARTY.txt` is present.
+- **Fresh install from the release tarball** *(needs its own approval: it deletes the app folder on the device after a verified backup)*: with notes backed up, remove `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`, unpack the CI tarball (sha256 `edba7f6fb63d0147f0464addb8249ecb1946da4514e0823ac9cf6575e07b8c58`) onto the drive root, eject; NickelMenu shows *Σscribe*; first launch creates `sigma-scribe/notes` if missing; `THIRD-PARTY.txt` is present.
 - **Uninstall clean** *(needs its own approval)*: delete `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`; NickelMenu no longer lists it; the stock reader works; `sigma-scribe/notes` is untouched. Then re-install for daily use.
 - No regressions anywhere; the log shows exit 0, no refresh failures, and the `perf:` line with p95 < 150 ms (record it).

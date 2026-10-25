@@ -50,14 +50,14 @@ shot v0.7-landscape-files
 tap-on Close
 tap-on Options
 shot v0.7-landscape-options
-tap-on Paper/Night
+tap-on Dark mode/On
 tap-on Close
 tap-on Help
 tap-on App info
 shot v0.7-landscape-night-app-info
 tap-on Close
 tap-on Options
-tap-on Paper/Day
+tap-on Dark mode/Off
 tap-on Orientation/Portrait
 tap-on Close
 expect-screen 1440x1920

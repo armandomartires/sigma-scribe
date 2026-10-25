@@ -57,7 +57,7 @@ expect-pointer hidden
 shot v1.0.3-pointer-cleaned
 # Landscape + Night with the drawer in preview.
 tap-on Options
-tap-on Paper/Night
+tap-on Dark mode/On
 tap-on Orientation/Landscape
 tap-on Close
 tap-on Contents
@@ -66,6 +66,6 @@ shot v1.0.3-preview-landscape-night
 tap-on Pencil
 tap-on Contents
 tap-on Options
-tap-on Paper/Day
+tap-on Dark mode/Off
 tap-on Orientation/Portrait
 tap-on Close

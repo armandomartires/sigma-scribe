@@ -28,6 +28,17 @@ const ICONS: &[&str] = &[
     "space",
     // v1.13 Kobo style keyboard.
     "arrow-big-up",
+    // v1.13.1 Write panel keys.
+    "undo-2",
+    "redo-2",
+    // v1.13.1 caret and page keys, Tab.
+    "arrow-left-to-line",
+    "arrow-right-to-line",
+    "chevrons-up",
+    "chevrons-down",
+    "indent-increase",
+    // v1.13.1 the Settings gear.
+    "settings",
 ];
 
 /// A touch target is 44 brief units; the glyph is half of it.

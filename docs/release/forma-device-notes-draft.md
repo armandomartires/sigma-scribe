@@ -1,5 +1,5 @@
 <!-- DRAFT (S9-T06, optional). NOT posted anywhere. Posting needs Armando's approval. Device facts marked "confirmed" come from on-device sessions up to v0.4.0. -->
-# Kobo Forma notes for developers (from Sigma Scribe)
+# Kobo Forma notes for developers (from Σscribe)
 
 - **Touch transform** (confirmed v0.1–v0.4): `swap,mirror_x` (KOReader's Kobo default) maps the cyttsp5 panel to the 1440×1920 portrait framebuffer. Lift is reported by any of `ABS_MT_TRACKING_ID=-1`, `BTN_TOUCH=0`, pressure/major 0.
 - **Page buttons** (confirmed): `KEY_PAGE_BACK` 193 / `KEY_PAGE_FWD` 194 (with the buttons on the right, 193 is top), power `KEY_POWER` 116.

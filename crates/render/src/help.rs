@@ -79,7 +79,7 @@ pub const KEYBOARD_HELP: [(&str, &str, &str); 7] = [
     ),
     (
         "Export",
-        "Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Sigma Scribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.",
+        "Your notes are plain .md files. Connect the Kobo to a computer over USB (leave Σscribe first), choose Connect, and copy the sigma-scribe/notes folder. Nothing else is needed; sync (e.g. Syncthing) may come later.",
         "",
     ),
     (
@@ -138,14 +138,16 @@ pub struct HelpModel<'a> {
 pub struct HelpLayout {
     pub base: Layout,
     pub close: Rect,
-    /// "Back to Help" (sub-pages).
-    pub crumb: Rect,
+    /// Back arrow in the top bar (sub-pages).
+    pub back: Option<Rect>,
+    /// Baseline of the page title.
+    pub heading_y: i32,
+    /// Where "Page i of n" goes, right of the title.
+    pub pager: Rect,
     /// Menu rows.
     pub rows: [Rect; 3],
     /// Text column of a sub-page.
     pub area: Rect,
-    /// Page indicator band.
-    pub foot: Rect,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -221,31 +223,30 @@ pub fn help_blocks(page: HelpPage, about: &[(String, String)]) -> Vec<Block> {
 }
 
 impl EditorScreen {
+    /// The Help screen's geometry: the same top bar and title as Settings
+    /// (`page_header`), then either the menu rows or the text column of a
+    /// sub-page (`sub`).
     #[must_use]
-    pub fn help_layout(&self, keyboard: &Keyboard) -> HelpLayout {
+    pub fn help_layout(&self, keyboard: &Keyboard, sub: bool) -> HelpLayout {
         let base = self.layout(false, keyboard);
         let s = self.scale();
         let w = self.width as i32;
         let h = self.height as i32;
-        let top = base.title.h;
-        let row_h = s.px(80.0);
-        let crumb = Rect::new(0, top, w, s.px(56.0));
-        let foot = Rect::new(0, h - s.px(48.0), w, s.px(48.0));
-        let m = s.px(28.0);
-        // Same column rule as the page: locked portrait width in landscape.
-        let cw = (w.min(h)).min(w) - 2 * m;
+        let hd = self.page_header(&base, sub);
+        let row_h = s.px(64.0);
+        let rows = [0, 1, 2].map(|i| Rect::new(hd.pad, hd.top + i * row_h, w - 2 * hd.pad, row_h));
+        // The page's own column: as wide as the title's margins in portrait,
+        // the locked portrait width in landscape.
+        let cw = w.min(h) - 2 * hd.pad;
         let ax = (w - cw) / 2;
-        let ay = crumb.y + crumb.h + s.px(16.0);
+        let ay = hd.top + s.px(8.0);
         HelpLayout {
             close: base.close_button,
-            crumb,
-            rows: [
-                Rect::new(0, top + s.px(8.0), w, row_h),
-                Rect::new(0, top + s.px(8.0) + row_h, w, row_h),
-                Rect::new(0, top + s.px(8.0) + 2 * row_h, w, row_h),
-            ],
-            area: Rect::new(ax, ay, cw, foot.y - ay - s.px(8.0)),
-            foot,
+            back: hd.back,
+            heading_y: hd.heading_y,
+            pager: hd.pager,
+            rows,
+            area: Rect::new(ax, ay, cw, h - s.px(12.0) - ay),
             base,
         }
     }
@@ -259,7 +260,7 @@ impl EditorScreen {
         page: HelpPage,
         about: &[(String, String)],
     ) -> Doc {
-        let l = self.help_layout(keyboard);
+        let l = self.help_layout(keyboard, true);
         let s = self.scale();
         let ty = Type {
             body: 20.0 * s.0,
@@ -280,9 +281,19 @@ impl EditorScreen {
         }
     }
 
+    /// The scroll bar of a sub-page, as a paged bar (v1.13.1).
+    #[must_use]
+    pub fn help_paged_bar(&self, m: &HelpModel<'_>) -> Option<crate::scrollbar::Paged> {
+        let doc = m.doc.filter(|_| m.page != HelpPage::Menu)?;
+        let l = self.help_layout(m.keyboard, true);
+        let page = Rect::new(0, l.area.y, self.width as i32, l.area.h);
+        let at = m.at.min(doc.pages.len().saturating_sub(1));
+        crate::scrollbar::Paged::new(self.page_scale(), page, doc.pages.len(), at)
+    }
+
     #[must_use]
     pub fn help_hit(&self, m: &HelpModel<'_>, x: i32, y: i32) -> HelpHit {
-        let l = self.help_layout(m.keyboard);
+        let l = self.help_layout(m.keyboard, m.page != HelpPage::Menu);
         if l.close.inset(-self.scale().px(4.0)).contains(x, y) {
             return HelpHit::Close;
         }
@@ -292,7 +303,10 @@ impl EditorScreen {
                     return HelpHit::Open(p);
                 }
             }
-        } else if l.crumb.contains(x, y) {
+        } else if l
+            .back
+            .is_some_and(|b| b.inset(-self.scale().px(4.0)).contains(x, y))
+        {
             return HelpHit::Back;
         }
         HelpHit::Nothing
@@ -302,13 +316,11 @@ impl EditorScreen {
     /// `App info`, `Markdown reference`.
     #[must_use]
     pub fn help_control(&self, m: &HelpModel<'_>, name: &str) -> Option<(i32, i32)> {
-        let l = self.help_layout(m.keyboard);
+        let l = self.help_layout(m.keyboard, m.page != HelpPage::Menu);
         let c = |r: Rect| (r.x + r.w / 2, r.y + r.h / 2);
         match name {
             "Close" => Some(c(l.close)),
-            "Back" if m.page != HelpPage::Menu => {
-                Some((l.crumb.x + l.crumb.w / 4, l.crumb.y + l.crumb.h / 2))
-            }
+            "Back" => l.back.map(c),
             _ if m.page == HelpPage::Menu => MENU
                 .iter()
                 .position(|(n, _, _)| *n == name)
@@ -319,61 +331,66 @@ impl EditorScreen {
 
     pub fn draw_help(&self, c: &mut Canvas, m: &HelpModel<'_>) -> HelpLayout {
         let t = m.theme;
-        let l = self.help_layout(m.keyboard);
+        let sub = m.page != HelpPage::Menu;
+        let l = self.help_layout(m.keyboard, sub);
         let s = self.scale();
         let ui = self.ui_px();
         c.fill(c.bounds(), t.paper);
-        self.draw_title(c, &l.base, &tr(m.page.title()), None, t, false);
-        crate::icons::draw_icon(c, crate::icons::Icon::Close, l.close, t.ink);
-        let tx = s.px(28.0) as f32;
-        if m.page == HelpPage::Menu {
+        let big = MENU
+            .iter()
+            .find(|(_, _, p)| *p == m.page)
+            .map_or("Help", |(n, _, _)| *n);
+        let pages = m
+            .doc
+            .map(|d| (m.at.min(d.pages.len().saturating_sub(1)), d.pages.len()));
+        let hd = self.page_header(&l.base, sub);
+        self.draw_page_header(c, &l.base, &hd, "Help", big, pages, t);
+        if !sub {
+            // The topics, as Settings lists its categories: the name in the
+            // serif, "Open" in italics, what is inside in small print.
             for (r, (label, hint, _)) in l.rows.iter().zip(MENU) {
+                let mid = r.y as f32 + r.h as f32 / 2.0;
+                let base = mid + self.fonts.ascent(Face::Literata, ui) / 2.6;
                 self.fonts.draw(
                     c,
-                    Face::AtkinsonBold,
-                    ui * 1.1,
-                    tx,
-                    r.y as f32 + r.h as f32 * 0.45,
+                    Face::Literata,
+                    ui,
+                    r.x as f32,
+                    base - ui * 0.45,
                     &tr(label),
                     t.ink,
                 );
                 self.fonts.draw(
                     c,
                     Face::Atkinson,
-                    ui * 0.85,
-                    tx,
-                    r.y as f32 + r.h as f32 * 0.8,
+                    ui * 0.8,
+                    r.x as f32,
+                    mid + ui * 1.0,
                     &tr(hint),
                     t.mute,
                 );
-                c.fill(Rect::new(0, r.y + r.h - 1, r.w, 1), t.rule);
+                let open = tr("Open");
+                let ow = self.fonts.width(Face::LiterataItalic, ui, &open);
+                self.fonts.draw(
+                    c,
+                    Face::LiterataItalic,
+                    ui,
+                    (r.x + r.w) as f32 - ow,
+                    base,
+                    &open,
+                    t.ink,
+                );
+                c.fill(Rect::new(r.x, r.y + r.h - 1, r.w, 1), t.rule);
             }
             return l;
         }
-        let by =
-            l.crumb.y as f32 + l.crumb.h as f32 / 2.0 + self.fonts.ascent(Face::Atkinson, ui) / 2.6;
-        let tx = crate::icons::draw_back_arrow(c, tx as i32, l.crumb.y + l.crumb.h / 2, ui, t.ink);
-        self.fonts
-            .draw(c, Face::Atkinson, ui, tx, by, &tr("Back to Help"), t.ink);
-        c.fill(
-            Rect::new(0, l.crumb.y + l.crumb.h - 1, l.crumb.w, 1),
-            t.rule,
-        );
         if let Some(doc) = m.doc {
             let at = m.at.min(doc.pages.len().saturating_sub(1));
             if let Some(range) = doc.pages.get(at) {
                 preview::draw_page(c, &self.fonts, l.area, &doc.lines, range.clone(), t, s);
             }
-            let n = doc.pages.len();
-            if n > 1 {
-                let label =
-                    tr(&format!("page {} of {n} \u{b7} page buttons turn", at + 1)).into_owned();
-                c.fill(Rect::new(0, l.foot.y, l.foot.w, 1), t.rule);
-                let fy = l.foot.y as f32
-                    + l.foot.h as f32 / 2.0
-                    + self.fonts.ascent(Face::Atkinson, ui) / 2.6;
-                self.fonts
-                    .draw(c, Face::Atkinson, ui, tx, fy, &label, t.mute);
+            if let Some(b) = self.help_paged_bar(m) {
+                crate::scrollbar::draw_bar(c, self.page_scale(), (b.strip, b.thumb), t, t.paper);
             }
         }
         l

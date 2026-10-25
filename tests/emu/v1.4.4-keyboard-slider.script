@@ -25,13 +25,13 @@ tap-on Auto keyboard size/On
 expect-setting keyboard_size=auto
 tap-on Back
 tap-on Display
-tap-on Paper/Night
+tap-on Dark mode/On
 tap-on Back
 tap-on Keyboard & input
 shot v1.4.4-keyboard-input-night
 tap-on Back
 tap-on Display
-tap-on Paper/Day
+tap-on Dark mode/Off
 tap-on Orientation/Landscape
 tap-on Back
 tap-on Keyboard & input

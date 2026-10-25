@@ -1,6 +1,6 @@
 [package]
 name = "sigma-render"
-description = "Software renderer and screens for Sigma Scribe (8-bit greyscale canvas, Literata/Atkinson)."
+description = "Software renderer and screens for Σscribe (8-bit greyscale canvas, Literata/Atkinson)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

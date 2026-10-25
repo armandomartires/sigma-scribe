@@ -1,9 +1,9 @@
 <!-- DRAFT for MobileRead → E-Book Readers → Kobo Reader → Kobo Developer's Corner. NOT posted. Posting needs Armando's explicit approval and a passing device test. -->
-**Title:** Sigma Scribe 1.0 — a Markdown notebook for the Kobo Forma (NickelMenu)
+**Title:** Σscribe 1.0 — a Markdown notebook for the Kobo Forma (NickelMenu)
 
 Hi all,
 
-I've released **Sigma Scribe**, a distraction-free Markdown notebook for the **Kobo Forma**. It's a native program (Rust + FBInk) started from **NickelMenu**; your notes are ordinary `.md` files in `sigma-scribe/notes` on the USB drive.
+I've released **Σscribe**, a distraction-free Markdown notebook for the **Kobo Forma**. It's a native program (Rust + FBInk) started from **NickelMenu**; your notes are ordinary `.md` files in `sigma-scribe/notes` on the USB drive.
 
 What it does:
 - On-screen keyboard (Compact / Full, landscape layouts), touch selection, undo, autosave
@@ -21,4 +21,4 @@ Screenshots: <links to docs/screenshots/v1.0>
 
 Thanks to NiLuJe for FBInk, pgaskin for NickelMenu, and the KOReader folks for documenting Kobo internals.
 
-— Sigma Recon
+— SIGMArecon

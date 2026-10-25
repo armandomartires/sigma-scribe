@@ -1,4 +1,4 @@
-# Sigma Scribe seed: words by pinyin (Simplified), most common first.
+# Σscribe seed: words by pinyin (Simplified), most common first.
 # Written for this project (AGPL-3.0-only).
 ni hao 你好
 ni men 你们

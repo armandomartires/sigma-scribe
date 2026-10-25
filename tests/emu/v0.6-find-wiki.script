@@ -77,7 +77,7 @@ shot v0.6-find-from-preview
 tap-on FindClose
 # Night and landscape.
 tap-on Options
-tap-on Paper/Night
+tap-on Dark mode/On
 tap-on Close
 tap-on Find
 expect-find 1 of 1
@@ -96,7 +96,7 @@ tap-on List
 shot v0.6-graph-landscape-night
 tap-on Close
 tap-on Options
-tap-on Paper/Day
+tap-on Dark mode/Off
 tap-on Orientation/Portrait
 tap-on Close
 expect-status saved
