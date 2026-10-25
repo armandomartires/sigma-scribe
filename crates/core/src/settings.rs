@@ -103,31 +103,7 @@ impl Rotation {
 
     #[must_use]
     pub fn name(self) -> &'static str {
-        match self {
-            Self::R0 => "Portrait",
-            Self::R90 => "Landscape",
-            Self::R180 => "Portrait inverted",
-            Self::R270 => "Landscape inverted",
-        }
-    }
-
-    fn degrees(self) -> u16 {
-        match self {
-            Self::R0 => 0,
-            Self::R90 => 90,
-            Self::R180 => 180,
-            Self::R270 => 270,
-        }
-    }
-
-    fn from_degrees(d: &str) -> Option<Self> {
-        Some(match d {
-            "0" => Self::R0,
-            "90" => Self::R90,
-            "180" => Self::R180,
-            "270" => Self::R270,
-            _ => return None,
-        })
+        self.label()
     }
 }
 
@@ -629,6 +605,7 @@ impl Settings {
     }
 
     /// Reads a settings file; anything missing or unreadable is a default.
+    /// Each line goes to its entry in [`FIELDS`]; unknown keys are skipped.
     #[must_use]
     pub fn parse(text: &str) -> Self {
         let mut s = Self::default();
@@ -636,140 +613,8 @@ impl Settings {
             let Some((k, v)) = line.split_once('=') else {
                 continue;
             };
-            let v = v.trim();
-            let f = || v.parse::<f32>().ok().filter(|x| x.is_finite());
-            let b = || match v {
-                "on" | "true" | "1" => Some(true),
-                "off" | "false" | "0" => Some(false),
-                _ => None,
-            };
-            match k.trim() {
-                "layout" => {
-                    s.kb_layout = crate::layouts::KeyLayout::parse(v).unwrap_or(s.kb_layout);
-                }
-                "keyboard" => s.keyboard = Layout::parse(v).unwrap_or(s.keyboard),
-                "paper" => {
-                    s.paper = match v {
-                        "night" => Paper::Night,
-                        "day" => Paper::Day,
-                        _ => s.paper,
-                    }
-                }
-                "type" => {
-                    s.face = match v {
-                        "atkinson" => Typeface::Atkinson,
-                        "literata" => Typeface::Literata,
-                        _ => s.face,
-                    }
-                }
-                "line" => s.line_on = b().unwrap_or(s.line_on),
-                "line_words" => {
-                    if let Ok(n) = v.parse::<u8>() {
-                        s.line_words = n.clamp(WORDS_RANGE.0, WORDS_RANGE.1);
-                    }
-                }
-                "size" => s.size = f().map_or(s.size, |x| clampf(x, SIZE_RANGE)),
-                "leading" => s.leading = f().map_or(s.leading, |x| clampf(x, LEADING_RANGE)),
-                "margin" => s.margin = f().map_or(s.margin, |x| clampf(x, MARGIN_RANGE)),
-                "tab" => {
-                    s.tab_spaces = match v {
-                        "tab" => false,
-                        "spaces" => true,
-                        _ => s.tab_spaces,
-                    }
-                }
-                "tab_width" => {
-                    if let Ok(n @ (2 | 4 | 8)) = v.parse::<u8>() {
-                        s.tab_width = n;
-                    }
-                }
-                "key_tone" => {
-                    s.key_tone = match v {
-                        "theme" => KeyTone::Theme,
-                        "light" => KeyTone::Light,
-                        "dark" => KeyTone::Dark,
-                        _ => s.key_tone,
-                    }
-                }
-                "drawer" => s.drawer = parse_side(v).unwrap_or(s.drawer),
-                "drawer_width" => {
-                    // Words from the first builds of this setting still read.
-                    s.drawer_width = match v {
-                        "narrow" => 1,
-                        "medium" => 2,
-                        "wide" => DRAWER_WIDTH_DEFAULT,
-                        n => n
-                            .parse::<u8>()
-                            .map_or(s.drawer_width, |n| n.min(DRAWER_WIDTH_DEFAULT)),
-                    };
-                }
-                "usb" => s.usb = b().unwrap_or(s.usb),
-                "ui_scale" => {
-                    if let Ok(n) = v.parse::<u16>() {
-                        if UI_SCALES.contains(&n) {
-                            s.ui_scale = n;
-                        }
-                    }
-                }
-                "keyboard_size" => {
-                    if v == "auto" {
-                        s.kb_size = 0;
-                    } else if let Ok(n) = v.parse::<u16>() {
-                        if KB_SIZES.contains(&n) {
-                            s.kb_size = n;
-                        }
-                    }
-                }
-                "scroll" => {
-                    s.natural_scroll = match v {
-                        "natural" => true,
-                        "traditional" => false,
-                        _ => s.natural_scroll,
-                    }
-                }
-                "orientation" => {
-                    s.orientation = match v {
-                        "auto" => Orientation::Auto,
-                        "portrait" => Orientation::Portrait,
-                        "landscape" => Orientation::Landscape,
-                        _ => s.orientation,
-                    }
-                }
-                "upside_down" => s.upside_down = b().unwrap_or(s.upside_down),
-                "rotation" => s.rotation = Rotation::from_degrees(v).unwrap_or(s.rotation),
-                "landscape_keys" => {
-                    s.land_keys = match v {
-                        "centre" => LandKeys::Centre,
-                        "split" => LandKeys::Split,
-                        "full" => LandKeys::Full,
-                        _ => s.land_keys,
-                    }
-                }
-                "pad" => {
-                    s.pad = match v {
-                        "numbers" => Pad::Numbers,
-                        "arrows" => Pad::Arrows,
-                        _ => s.pad,
-                    }
-                }
-                "pad_side" => s.pad_side = parse_side(v).unwrap_or(s.pad_side),
-                "ink_pen" => {
-                    s.ink_pen = match v {
-                        "finger" => crate::ink::Pen::Finger,
-                        "stylus" => crate::ink::Pen::Stylus,
-                        _ => s.ink_pen,
-                    }
-                }
-                "ink_a2" => s.ink_a2 = b().unwrap_or(s.ink_a2),
-                "ink_words" => s.ink_words = b().unwrap_or(s.ink_words),
-                "ink_boxes" => s.ink_boxes = b().unwrap_or(s.ink_boxes),
-                "ui_lang_override" => s.lang_override = b().unwrap_or(s.lang_override),
-                "ui_lang" => s.ui_lang = UiLang::from_code(v).unwrap_or(s.ui_lang),
-                "experimental" => s.experimental = b().unwrap_or(s.experimental),
-                "enhanced_keyboard" => s.enhanced_keyboard = b().unwrap_or(s.enhanced_keyboard),
-                "log" => s.log = b().unwrap_or(s.log),
-                "log_level" => s.log_level = crate::log::Level::parse(v).unwrap_or(s.log_level),
-                _ => {}
+            if let Some(f) = FIELDS.iter().find(|f| f.key == k.trim()) {
+                (f.read)(&mut s, v.trim());
             }
         }
         // Files before v1.2 have no rotation= line and always wrote
@@ -834,95 +679,426 @@ impl Settings {
         }
     }
 
-    /// The file body; [`Settings::parse`] reads it back unchanged.
+    /// The file body, one line per entry of [`FIELDS`] in its order;
+    /// [`Settings::parse`] reads it back unchanged.
     #[must_use]
     pub fn serialize(&self) -> String {
-        let side = |s: Side| match s {
-            Side::Left => "left",
-            Side::Right => "right",
-        };
-        let on = |b: bool| if b { "on" } else { "off" };
-        format!(
-            "keyboard={}\npaper={}\ntype={}\nline={}\nline_words={}\nsize={}\nleading={}\nmargin={}\n\
-             tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\ndrawer_width={}\nusb={}\nscroll={}\norientation={}\n\
-             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\nink_words={}\nink_boxes={}\nui_lang_override={}\nui_lang={}\nexperimental={}\nenhanced_keyboard={}\nlog={}\nlog_level={}\n",
-            self.keyboard.name(),
-            match self.paper {
-                Paper::Day => "day",
-                Paper::Night => "night",
-            },
-            match self.face {
-                Typeface::Literata => "literata",
-                Typeface::Atkinson => "atkinson",
-            },
-            on(self.line_on),
-            self.line_words,
-            tenth(self.size),
-            tenth(self.leading),
-            tenth(self.margin),
-            if self.tab_spaces { "spaces" } else { "tab" },
-            self.tab_width,
-            match self.key_tone {
-                KeyTone::Theme => "theme",
-                KeyTone::Light => "light",
-                KeyTone::Dark => "dark",
-            },
-            side(self.drawer),
-            self.drawer_width,
-            on(self.usb),
-            if self.natural_scroll { "natural" } else { "traditional" },
-            match self.orientation {
-                Orientation::Auto => "auto",
-                Orientation::Portrait => "portrait",
-                Orientation::Landscape => "landscape",
-            },
-            on(self.upside_down),
-            self.rotation.degrees(),
-            match self.land_keys {
-                LandKeys::Centre => "centre",
-                LandKeys::Split => "split",
-                LandKeys::Full => "full",
-            },
-            match self.pad {
-                Pad::Numbers => "numbers",
-                Pad::Arrows => "arrows",
-            },
-            side(self.pad_side),
-            self.ui_scale,
-            self.kb_layout.name(),
-            if self.kb_size == 0 {
-                "auto".to_owned()
-            } else {
-                self.kb_size.to_string()
-            },
-            match self.ink_pen {
-                crate::ink::Pen::Finger => "finger",
-                crate::ink::Pen::Stylus => "stylus",
-            },
-            on(self.ink_a2),
-            on(self.ink_words),
-            on(self.ink_boxes),
-            on(self.lang_override),
-            self.ui_lang.code(),
-            on(self.experimental),
-            on(self.enhanced_keyboard),
-            on(self.log),
-            self.log_level.key(),
-        )
+        FIELDS
+            .iter()
+            .map(|f| format!("{}={}\n", f.key, (f.write)(self)))
+            .collect()
     }
 }
 
-fn parse_side(v: &str) -> Option<Side> {
+/// A setting with a fixed set of values: for each value, its word in the
+/// settings file and its label in Settings (English; translated when drawn).
+/// The one place a value's spelling lives.
+pub trait Words: Copy + PartialEq + Sized + 'static {
+    const WORDS: &'static [(Self, &'static str, &'static str)];
+
+    /// The value as the settings file writes it.
+    #[must_use]
+    fn word(self) -> &'static str {
+        Self::WORDS.iter().find(|w| w.0 == self).map_or("", |w| w.1)
+    }
+
+    /// The value a word in the settings file names, if any.
+    #[must_use]
+    fn from_word(v: &str) -> Option<Self> {
+        Self::WORDS.iter().find(|w| w.1 == v).map(|w| w.0)
+    }
+
+    /// The value's label in Settings.
+    #[must_use]
+    fn label(self) -> &'static str {
+        Self::WORDS.iter().find(|w| w.0 == self).map_or("", |w| w.2)
+    }
+}
+
+impl Words for Paper {
+    // Dark mode is an Off / On switch.
+    const WORDS: &'static [(Self, &'static str, &'static str)] =
+        &[(Self::Day, "day", "Off"), (Self::Night, "night", "On")];
+}
+
+impl Words for Typeface {
+    const WORDS: &'static [(Self, &'static str, &'static str)] = &[
+        (Self::Literata, "literata", "Literata"),
+        (Self::Atkinson, "atkinson", "Atkinson"),
+    ];
+}
+
+impl Words for KeyTone {
+    const WORDS: &'static [(Self, &'static str, &'static str)] = &[
+        (Self::Theme, "theme", "Theme"),
+        (Self::Light, "light", "Light"),
+        (Self::Dark, "dark", "Dark"),
+    ];
+}
+
+impl Words for Side {
+    const WORDS: &'static [(Self, &'static str, &'static str)] = &[
+        (Self::Left, "left", "Left"),
+        (Self::Right, "right", "Right"),
+    ];
+}
+
+impl Words for Orientation {
+    const WORDS: &'static [(Self, &'static str, &'static str)] = &[
+        (Self::Auto, "auto", "Auto"),
+        (Self::Portrait, "portrait", "Portrait"),
+        (Self::Landscape, "landscape", "Landscape"),
+    ];
+}
+
+impl Words for Rotation {
+    const WORDS: &'static [(Self, &'static str, &'static str)] = &[
+        (Self::R0, "0", "Portrait"),
+        (Self::R90, "90", "Landscape"),
+        (Self::R180, "180", "Portrait inverted"),
+        (Self::R270, "270", "Landscape inverted"),
+    ];
+}
+
+impl Words for LandKeys {
+    const WORDS: &'static [(Self, &'static str, &'static str)] = &[
+        (Self::Centre, "centre", "Centre"),
+        (Self::Split, "split", "Split"),
+        (Self::Full, "full", "Full"),
+    ];
+}
+
+impl Words for Pad {
+    const WORDS: &'static [(Self, &'static str, &'static str)] = &[
+        (Self::Numbers, "numbers", "Numbers"),
+        (Self::Arrows, "arrows", "Arrows"),
+    ];
+}
+
+impl Words for crate::ink::Pen {
+    const WORDS: &'static [(Self, &'static str, &'static str)] = &[
+        (Self::Finger, "finger", "Finger"),
+        (Self::Stylus, "stylus", "Stylus"),
+    ];
+}
+
+/// One line of the settings file: its key, how a value is read (a bad value
+/// leaves the setting as it was), and how it is written.
+pub struct Field {
+    pub key: &'static str,
+    pub read: fn(&mut Settings, &str),
+    pub write: fn(&Settings) -> String,
+}
+
+fn read_bool(v: &str) -> Option<bool> {
     match v {
-        "left" => Some(Side::Left),
-        "right" => Some(Side::Right),
+        "on" | "true" | "1" => Some(true),
+        "off" | "false" | "0" => Some(false),
         _ => None,
     }
 }
 
+fn read_f32(v: &str, range: (f32, f32)) -> Option<f32> {
+    v.parse::<f32>()
+        .ok()
+        .filter(|x| x.is_finite())
+        .map(|x| clampf(x, range))
+}
+
+fn on(b: bool) -> String {
+    (if b { "on" } else { "off" }).to_owned()
+}
+
+/// An on / off setting.
+macro_rules! toggle {
+    ($key:literal, $f:ident) => {
+        Field {
+            key: $key,
+            read: |s, v| {
+                if let Some(b) = read_bool(v) {
+                    s.$f = b;
+                }
+            },
+            write: |s| on(s.$f),
+        }
+    };
+}
+
+/// A setting whose values are [`Words`].
+macro_rules! words {
+    ($key:literal, $f:ident) => {
+        Field {
+            key: $key,
+            read: |s, v| {
+                if let Some(x) = Words::from_word(v) {
+                    s.$f = x;
+                }
+            },
+            write: |s| s.$f.word().to_owned(),
+        }
+    };
+}
+
+/// A size in brief px or a factor: clamped when read, a tenth when written.
+macro_rules! tenths {
+    ($key:literal, $f:ident, $range:expr) => {
+        Field {
+            key: $key,
+            read: |s, v| {
+                if let Some(x) = read_f32(v, $range) {
+                    s.$f = x;
+                }
+            },
+            write: |s| tenth(s.$f).to_string(),
+        }
+    };
+}
+
+/// Every line of the settings file, in the order it is written. A new
+/// setting is one entry here (plus its field and default in [`Settings`]).
+pub const FIELDS: &[Field] = &[
+    Field {
+        key: "keyboard",
+        read: |s, v| s.keyboard = Layout::parse(v).unwrap_or(s.keyboard),
+        write: |s| s.keyboard.name().to_owned(),
+    },
+    words!("paper", paper),
+    words!("type", face),
+    toggle!("line", line_on),
+    Field {
+        key: "line_words",
+        read: |s, v| {
+            if let Ok(n) = v.parse::<u8>() {
+                s.line_words = n.clamp(WORDS_RANGE.0, WORDS_RANGE.1);
+            }
+        },
+        write: |s| s.line_words.to_string(),
+    },
+    tenths!("size", size, SIZE_RANGE),
+    tenths!("leading", leading, LEADING_RANGE),
+    tenths!("margin", margin, MARGIN_RANGE),
+    Field {
+        key: "tab",
+        read: |s, v| match v {
+            "tab" => s.tab_spaces = false,
+            "spaces" => s.tab_spaces = true,
+            _ => {}
+        },
+        write: |s| (if s.tab_spaces { "spaces" } else { "tab" }).to_owned(),
+    },
+    Field {
+        key: "tab_width",
+        read: |s, v| {
+            if let Ok(n @ (2 | 4 | 8)) = v.parse::<u8>() {
+                s.tab_width = n;
+            }
+        },
+        write: |s| s.tab_width.to_string(),
+    },
+    words!("key_tone", key_tone),
+    words!("drawer", drawer),
+    Field {
+        key: "drawer_width",
+        // Words from the first builds of this setting still read.
+        read: |s, v| {
+            s.drawer_width = match v {
+                "narrow" => 1,
+                "medium" => 2,
+                "wide" => DRAWER_WIDTH_DEFAULT,
+                n => n
+                    .parse::<u8>()
+                    .map_or(s.drawer_width, |n| n.min(DRAWER_WIDTH_DEFAULT)),
+            };
+        },
+        write: |s| s.drawer_width.to_string(),
+    },
+    toggle!("usb", usb),
+    Field {
+        key: "scroll",
+        read: |s, v| match v {
+            "natural" => s.natural_scroll = true,
+            "traditional" => s.natural_scroll = false,
+            _ => {}
+        },
+        write: |s| {
+            (if s.natural_scroll {
+                "natural"
+            } else {
+                "traditional"
+            })
+            .to_owned()
+        },
+    },
+    words!("orientation", orientation),
+    toggle!("upside_down", upside_down),
+    words!("rotation", rotation),
+    words!("landscape_keys", land_keys),
+    words!("pad", pad),
+    words!("pad_side", pad_side),
+    Field {
+        key: "ui_scale",
+        read: |s, v| {
+            if let Ok(n) = v.parse::<u16>() {
+                if UI_SCALES.contains(&n) {
+                    s.ui_scale = n;
+                }
+            }
+        },
+        write: |s| s.ui_scale.to_string(),
+    },
+    Field {
+        key: "layout",
+        read: |s, v| s.kb_layout = crate::layouts::KeyLayout::parse(v).unwrap_or(s.kb_layout),
+        write: |s| s.kb_layout.name().to_owned(),
+    },
+    Field {
+        key: "keyboard_size",
+        read: |s, v| {
+            if v == "auto" {
+                s.kb_size = 0;
+            } else if let Ok(n) = v.parse::<u16>() {
+                if KB_SIZES.contains(&n) {
+                    s.kb_size = n;
+                }
+            }
+        },
+        write: |s| {
+            if s.kb_size == 0 {
+                "auto".to_owned()
+            } else {
+                s.kb_size.to_string()
+            }
+        },
+    },
+    words!("ink_pen", ink_pen),
+    toggle!("ink_a2", ink_a2),
+    toggle!("ink_words", ink_words),
+    toggle!("ink_boxes", ink_boxes),
+    toggle!("ui_lang_override", lang_override),
+    Field {
+        key: "ui_lang",
+        read: |s, v| s.ui_lang = UiLang::from_code(v).unwrap_or(s.ui_lang),
+        write: |s| s.ui_lang.code().to_owned(),
+    },
+    toggle!("experimental", experimental),
+    toggle!("enhanced_keyboard", enhanced_keyboard),
+    toggle!("log", log),
+    Field {
+        key: "log_level",
+        read: |s, v| s.log_level = crate::log::Level::parse(v).unwrap_or(s.log_level),
+        write: |s| s.log_level.key().to_owned(),
+    },
+];
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every field away from its default (each one different from it).
+    fn every_field_changed() -> Settings {
+        Settings {
+            paper: Paper::Night,
+            face: Typeface::Atkinson,
+            line_on: true,
+            line_words: 15,
+            size: 23.5,
+            leading: 1.8,
+            margin: 120.0,
+            tab_spaces: false,
+            tab_width: 8,
+            keyboard: Layout::Compact,
+            key_tone: KeyTone::Dark,
+            drawer: Side::Left,
+            drawer_width: 1,
+            usb: true,
+            natural_scroll: true,
+            orientation: Orientation::Landscape,
+            upside_down: true,
+            rotation: Rotation::R270,
+            land_keys: LandKeys::Split,
+            pad: Pad::Arrows,
+            pad_side: Side::Left,
+            ui_scale: 150,
+            kb_layout: crate::layouts::ALL[3],
+            kb_size: 125,
+            ink_pen: crate::ink::Pen::Stylus,
+            ink_a2: true,
+            ink_words: true,
+            ink_boxes: true,
+            lang_override: true,
+            ui_lang: UiLang::Pt,
+            experimental: true,
+            enhanced_keyboard: false,
+            log: true,
+            log_level: crate::log::Level::Error,
+        }
+    }
+
+    /// The file is byte for byte what the hand-written serializer wrote
+    /// before the field table (v1.14), so no saved file changes.
+    #[test]
+    fn the_file_is_unchanged_by_the_field_table() {
+        assert_eq!(
+            Settings::default().serialize(),
+            "keyboard=full\npaper=day\ntype=literata\nline=off\nline_words=12\nsize=20\n\
+             leading=1.5\nmargin=28\ntab=spaces\ntab_width=4\nkey_tone=theme\ndrawer=right\n\
+             drawer_width=4\nusb=off\nscroll=traditional\norientation=auto\nupside_down=off\n\
+             rotation=0\nlandscape_keys=centre\npad=numbers\npad_side=right\nui_scale=200\n\
+             layout=us\nkeyboard_size=auto\nink_pen=finger\nink_a2=off\nink_words=off\n\
+             ink_boxes=off\nui_lang_override=off\nui_lang=en\nexperimental=off\n\
+             enhanced_keyboard=on\nlog=off\nlog_level=info\n"
+        );
+        assert_eq!(
+            every_field_changed().serialize(),
+            "keyboard=compact\npaper=night\ntype=atkinson\nline=on\nline_words=15\nsize=23.5\n\
+             leading=1.8\nmargin=120\ntab=tab\ntab_width=8\nkey_tone=dark\ndrawer=left\n\
+             drawer_width=1\nusb=on\nscroll=natural\norientation=landscape\nupside_down=on\n\
+             rotation=270\nlandscape_keys=split\npad=arrows\npad_side=left\nui_scale=150\n\
+             layout=de\nkeyboard_size=125\nink_pen=stylus\nink_a2=on\nink_words=on\n\
+             ink_boxes=on\nui_lang_override=on\nui_lang=pt\nexperimental=on\n\
+             enhanced_keyboard=off\nlog=on\nlog_level=error\n"
+        );
+    }
+
+    /// A field missing from the table would come back as its default.
+    #[test]
+    fn every_field_has_a_line_and_round_trips() {
+        let d = Settings::default();
+        let c = every_field_changed();
+        assert_eq!(Settings::parse(&c.serialize()), c);
+        let mut keys: Vec<&str> = FIELDS.iter().map(|f| f.key).collect();
+        keys.sort_unstable();
+        keys.dedup();
+        assert_eq!(keys.len(), FIELDS.len(), "a key is listed twice");
+        for f in FIELDS {
+            assert_ne!((f.write)(&d), (f.write)(&c), "{} is not exercised", f.key);
+            let mut s = d;
+            (f.read)(&mut s, &(f.write)(&c));
+            assert_eq!((f.write)(&s), (f.write)(&c), "{}", f.key);
+        }
+    }
+
+    fn words_round_trip<T: Words + std::fmt::Debug>() {
+        for &(v, w, l) in T::WORDS {
+            assert_eq!(T::from_word(w), Some(v));
+            assert_eq!((v.word(), v.label()), (w, l));
+        }
+        assert_eq!(T::from_word("sideways"), None);
+    }
+
+    #[test]
+    fn every_value_has_one_word() {
+        words_round_trip::<Paper>();
+        words_round_trip::<Typeface>();
+        words_round_trip::<KeyTone>();
+        words_round_trip::<Side>();
+        words_round_trip::<Orientation>();
+        words_round_trip::<Rotation>();
+        words_round_trip::<LandKeys>();
+        words_round_trip::<Pad>();
+        words_round_trip::<crate::ink::Pen>();
+        assert_eq!(Rotation::R180.name(), "Portrait inverted");
+    }
 
     #[test]
     fn defaults_follow_the_brief() {
