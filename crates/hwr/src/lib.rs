@@ -207,8 +207,11 @@ fn u16_at(b: &mut &[u8]) -> Option<u16> {
 fn f32s(b: &mut &[u8], n: usize) -> Option<Vec<f32>> {
     let s = take(b, 4 * n)?;
     Some(
-        s.chunks_exact(4)
-            .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+        // `take` returned exactly 4 * n bytes, so there is no remainder.
+        s.as_chunks::<4>()
+            .0
+            .iter()
+            .map(|c| f32::from_le_bytes(*c))
             .collect(),
     )
 }

@@ -16,41 +16,108 @@
 //!
 //! The host provides (module `sigma`): `text_width`, `ascent`, `tr`,
 //! `cache_get`, `cache_put`, `log` and `log_level` (see `sigma-plugin-host`).
+//!
+//! # Example
+//!
+//! A plugin decodes the host's event and answers with a frame; the host
+//! decodes that frame. Both sides use the same types:
+//!
+//! ```
+//! use sigma_plugin_api::{Action, Event, Frame, Op, Rect, Redraw, Tone};
+//!
+//! # fn main() -> Result<(), sigma_plugin_api::DecodeError> {
+//! // Host side: a tap arrives.
+//! let bytes = Event::Tap { x: 10, y: 20 }.encode();
+//!
+//! // Plugin side: decode it and answer.
+//! let frame = match Event::decode(&bytes)? {
+//!     Event::Back => Frame { actions: vec![Action::Close], ..Frame::default() },
+//!     _ => Frame {
+//!         ops: vec![Op::Fill { r: Rect::new(0, 0, 100, 50), c: Tone::Ink }],
+//!         redraw: Redraw::Partial,
+//!         ..Frame::default()
+//!     },
+//! };
+//!
+//! // Host side: decode the answer.
+//! assert_eq!(Frame::decode(&frame.encode())?, frame);
+//! # Ok(())
+//! # }
+//! ```
+
+#![warn(missing_docs)]
 
 /// Wire format version. Bumped on any incompatible change.
 pub const ABI: u32 = 4;
 
-/// Decoding limits.
+// Decoding limits. A count above its limit fails decoding before anything
+// is allocated, so a hostile or broken message cannot exhaust memory.
+
+/// Most drawing operations in one [`Frame`].
 pub const MAX_OPS: usize = 200_000;
+/// Most hit rectangles in one [`Frame`]; also the most actions.
 pub const MAX_HITS: usize = 50_000;
+/// Most notes in a [`Scene`].
 pub const MAX_NOTES: usize = 50_000;
+/// Most links in [`Scene::edges`].
 pub const MAX_EDGES: usize = 500_000;
+/// Longest string in bytes. [`Writer::str`] cuts longer strings on a
+/// character boundary; [`Reader::str`] rejects them.
 pub const MAX_STR: usize = 8 * 1024;
+/// Most entries in [`Scene::settings`].
 pub const MAX_SETTINGS: usize = 64;
+/// Most rows in [`Scene::todos`].
 pub const MAX_TODOS: usize = 20_000;
+/// Most rows in [`Scene::headings`].
 pub const MAX_HEADINGS: usize = 5_000;
 
+/// Bytes that are not a valid message: truncated, with trailing bytes, an
+/// unknown tag, invalid UTF-8, or a count or string above its limit.
+///
+/// It carries no detail on purpose: the host treats any decode failure the
+/// same way (the plugin is dropped), and a plugin cannot do better than
+/// ignore a bad event.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DecodeError;
 
+impl std::fmt::Display for DecodeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("invalid plugin message")
+    }
+}
+
+impl std::error::Error for DecodeError {}
+
+/// Result of decoding a message.
 pub type Result<T> = std::result::Result<T, DecodeError>;
 
+/// Appends values to a byte buffer in the wire encoding: integers and
+/// floats little-endian, strings as a `u32` byte length then UTF-8 bytes.
+///
+/// The [`Frame::encode`] and [`Event::encode`] methods use it; plugins that
+/// build messages by hand can too.
 #[derive(Default)]
 pub struct Writer(pub Vec<u8>);
 
 impl Writer {
+    /// Appends one byte.
     pub fn u8(&mut self, v: u8) {
         self.0.push(v);
     }
+    /// Appends a little-endian `u32`.
     pub fn u32(&mut self, v: u32) {
         self.0.extend_from_slice(&v.to_le_bytes());
     }
+    /// Appends a little-endian `i32`.
     pub fn i32(&mut self, v: i32) {
         self.0.extend_from_slice(&v.to_le_bytes());
     }
+    /// Appends a little-endian `f32`.
     pub fn f32(&mut self, v: f32) {
         self.0.extend_from_slice(&v.to_le_bytes());
     }
+    /// Appends a string, cut to [`MAX_STR`] bytes on a character boundary
+    /// so that the reader always accepts it.
     pub fn str(&mut self, s: &str) {
         let s = truncate(s, MAX_STR);
         self.u32(s.len() as u32);
@@ -67,12 +134,34 @@ fn truncate(s: &str, max: usize) -> &str {
     &s[..end]
 }
 
+/// Reads values written by [`Writer`], checking bounds on every read.
+///
+/// Every method fails with [`DecodeError`] instead of panicking when the
+/// buffer is too short or a value is invalid.
+///
+/// ```
+/// use sigma_plugin_api::{DecodeError, Reader, Writer};
+///
+/// let mut w = Writer::default();
+/// w.u32(7);
+/// w.str("hello");
+///
+/// let mut r = Reader::new(&w.0);
+/// assert_eq!(r.u32(), Ok(7));
+/// assert_eq!(r.str().as_deref(), Ok("hello"));
+/// r.finish()?; // nothing left over
+///
+/// // A truncated buffer is an error, not a panic.
+/// assert_eq!(Reader::new(&[1, 0]).u32(), Err(DecodeError));
+/// # Ok::<(), DecodeError>(())
+/// ```
 pub struct Reader<'a> {
     buf: &'a [u8],
     pos: usize,
 }
 
 impl<'a> Reader<'a> {
+    /// A reader at the start of `buf`.
     #[must_use]
     pub fn new(buf: &'a [u8]) -> Self {
         Self { buf, pos: 0 }
@@ -83,24 +172,45 @@ impl<'a> Reader<'a> {
         self.pos = end;
         Ok(s)
     }
+    /// Reads one byte.
+    ///
+    /// # Errors
+    /// [`DecodeError`] when the buffer has too few bytes left.
     pub fn u8(&mut self) -> Result<u8> {
         Ok(self.take(1)?[0])
     }
+    /// Reads a little-endian `u32`.
+    ///
+    /// # Errors
+    /// [`DecodeError`] when the buffer has too few bytes left.
     pub fn u32(&mut self) -> Result<u32> {
         Ok(u32::from_le_bytes(
             self.take(4)?.try_into().map_err(|_| DecodeError)?,
         ))
     }
+    /// Reads a little-endian `i32`.
+    ///
+    /// # Errors
+    /// [`DecodeError`] when the buffer has too few bytes left.
     pub fn i32(&mut self) -> Result<i32> {
         Ok(i32::from_le_bytes(
             self.take(4)?.try_into().map_err(|_| DecodeError)?,
         ))
     }
+    /// Reads a little-endian `f32`.
+    ///
+    /// # Errors
+    /// [`DecodeError`] when the buffer has too few bytes left.
     pub fn f32(&mut self) -> Result<f32> {
         Ok(f32::from_le_bytes(
             self.take(4)?.try_into().map_err(|_| DecodeError)?,
         ))
     }
+    /// Reads a length-prefixed UTF-8 string.
+    ///
+    /// # Errors
+    /// [`DecodeError`] when the length is above [`MAX_STR`], the buffer is
+    /// too short, or the bytes are not UTF-8.
     pub fn str(&mut self) -> Result<String> {
         let n = self.u32()? as usize;
         if n > MAX_STR {
@@ -117,7 +227,10 @@ impl<'a> Reader<'a> {
         }
         Ok(n)
     }
-    /// Fails when bytes are left over.
+    /// Checks that the whole buffer was read.
+    ///
+    /// # Errors
+    /// [`DecodeError`] when bytes are left over.
     pub fn finish(self) -> Result<()> {
         if self.pos == self.buf.len() {
             Ok(())
@@ -127,19 +240,27 @@ impl<'a> Reader<'a> {
     }
 }
 
+/// A rectangle in device pixels: top-left corner, width and height.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct Rect {
+    /// Left edge.
     pub x: i32,
+    /// Top edge.
     pub y: i32,
+    /// Width.
     pub w: i32,
+    /// Height.
     pub h: i32,
 }
 
 impl Rect {
+    /// A rectangle from its corner and size.
     #[must_use]
     pub fn new(x: i32, y: i32, w: i32, h: i32) -> Self {
         Self { x, y, w, h }
     }
+    /// Whether the point is inside. The left and top edges are inside, the
+    /// right and bottom edges are not.
     #[must_use]
     pub fn contains(&self, x: i32, y: i32) -> bool {
         x >= self.x && y >= self.y && x < self.x + self.w && y < self.y + self.h
@@ -157,9 +278,13 @@ impl Rect {
 /// Colours are the host theme's tokens, so a plugin follows Day and Night.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tone {
+    /// The page background.
     Paper,
+    /// Body text and strong marks.
     Ink,
+    /// Secondary text.
     Mute,
+    /// Hairlines and dividers.
     Rule,
 }
 
@@ -175,13 +300,17 @@ impl Tone {
     }
 }
 
+/// A weight of the host's UI font.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Face {
+    /// The regular weight.
     Regular,
+    /// The bold weight.
     Bold,
 }
 
 impl Face {
+    /// The face for its wire tag, or `None` for an unknown tag.
     #[must_use]
     pub fn from_u8(v: u8) -> Option<Self> {
         match v {
@@ -194,29 +323,23 @@ impl Face {
 
 /// One drawing command. All coordinates are device pixels.
 #[derive(Clone, Debug, PartialEq)]
+#[allow(missing_docs)] // Short field names are part of the wire format; variant docs explain them.
 pub enum Op {
-    Fill {
-        r: Rect,
-        c: Tone,
-    },
-    Stroke {
-        r: Rect,
-        t: i32,
-        c: Tone,
-    },
+    /// A filled rectangle `r` in tone `c`.
+    Fill { r: Rect, c: Tone },
+    /// The outline of rectangle `r`, `t` pixels thick, in tone `c`.
+    Stroke { r: Rect, t: i32, c: Tone },
     /// A pill: a rectangle with fully rounded ends (a circle when w == h).
-    Pill {
-        r: Rect,
-        c: Tone,
-    },
-    /// A straight line of width `w`, stamped as squares.
+    Pill { r: Rect, c: Tone },
+    /// A straight line from `a` to `b` of width `w`, stamped as squares.
     Line {
         a: (i32, i32),
         b: (i32, i32),
         w: i32,
         c: Tone,
     },
-    /// Text with its baseline at `y`, starting at `x`.
+    /// Text `s` in `face` at `size` pixels, with its baseline at `y`,
+    /// starting at `x`.
     Text {
         face: Face,
         size: f32,
@@ -227,15 +350,19 @@ pub enum Op {
     },
 }
 
+/// A labelled tappable area of a frame.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Hit {
     /// Plugin-defined id, echoed nowhere: hits are for host tap routing of
     /// emulator controls and accessibility; the plugin does its own routing.
     pub id: u32,
+    /// The tappable area.
     pub rect: Rect,
+    /// A name for the area, such as `Node:a.md`.
     pub label: String,
 }
 
+/// Something the plugin asks the host to do after showing a frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Action {
     /// Leave the screen.
@@ -257,6 +384,7 @@ pub enum Action {
 /// How much of the screen the host should refresh.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Redraw {
+    /// Leave the screen as it is.
     #[default]
     None,
     /// Repaint with a fast partial refresh.
@@ -267,13 +395,17 @@ pub enum Redraw {
     Full,
 }
 
+/// The plugin's answer to an [`Event`]: what to draw and what to do.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct Frame {
+    /// Drawing commands, painted in order.
     pub ops: Vec<Op>,
+    /// Labelled tappable areas.
     pub hits: Vec<Hit>,
     /// A screen's actions all leave it, so the host applies only the first;
     /// a pane stays open, so the host applies every action in order.
     pub actions: Vec<Action>,
+    /// How much of the screen to refresh.
     pub redraw: Redraw,
     /// The plugin has more to do (building a layout, say): the host shows
     /// this frame and, when idle, sends [`Event::Step`] for the next one.
@@ -288,11 +420,16 @@ pub struct Frame {
 /// A text field the host draws and edits inside a pane.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Field {
+    /// Where the field goes.
     pub rect: Rect,
+    /// Text shown while the field is empty.
     pub placeholder: String,
 }
 
 impl Frame {
+    /// The frame in the wire encoding. Strings longer than [`MAX_STR`] are
+    /// cut; the result always decodes with [`Frame::decode`] unless a list
+    /// is longer than its limit.
     #[must_use]
     pub fn encode(&self) -> Vec<u8> {
         let mut w = Writer::default();
@@ -385,6 +522,8 @@ impl Frame {
         w.0
     }
 
+    /// Decodes a frame written by [`Frame::encode`].
+    ///
     /// # Errors
     /// [`DecodeError`] for truncated, oversized, trailing or invalid bytes.
     pub fn decode(buf: &[u8]) -> Result<Self> {
@@ -465,9 +604,12 @@ impl Frame {
     }
 }
 
+/// One note of the library, as the host lists it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Note {
+    /// The note's path relative to the library, such as `b/c.md`.
     pub name: String,
+    /// Whether this is the note open in the editor.
     pub current: bool,
     /// Text for list rows, such as "3 links".
     pub detail: String,
@@ -476,15 +618,22 @@ pub struct Note {
 /// Everything the plugin needs to build its screen.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Scene {
+    /// Screen width in device pixels.
     pub width: i32,
+    /// Screen height in device pixels.
     pub height: i32,
-    /// The host's exact UI scale factor (so `round(brief * scale)` gives the
-    /// same pixels as the host) and its UI font size.
+    /// The host's exact UI scale factor, so `round(brief * scale)` gives the
+    /// same pixels as the host.
     pub scale: f32,
+    /// The host's UI font size in pixels.
     pub ui_px: f32,
-    /// Top and bottom bars the host draws itself: the plugin paints between.
+    /// Bottom edge of the top bar the host draws itself; the plugin paints
+    /// below it.
     pub top: i32,
+    /// Top edge of the bottom bar the host draws itself; the plugin paints
+    /// above it.
     pub bottom: i32,
+    /// Every note in the library.
     pub notes: Vec<Note>,
     /// Directed links between notes, as indexes into `notes`.
     pub edges: Vec<(u32, u32)>,
@@ -495,10 +644,11 @@ pub struct Scene {
     /// option's text as the plugin declared it ("List", "All", ...). Every
     /// declared setting is present.
     pub settings: Vec<(String, String)>,
-    /// Panes: the pane's left edge and the host's live to-do list (every
-    /// box in the library, the open note and the scratch pad taken from
-    /// their buffers). Empty for a screen.
+    /// Panes: the pane's left edge. Zero for a screen.
     pub left: i32,
+    /// Panes: the host's live to-do list (every box in the library, the
+    /// open note and the scratch pad taken from their buffers). Empty for a
+    /// screen.
     pub todos: Vec<TodoRow>,
     /// Panes: the headings of the open note, in order.
     pub headings: Vec<HeadingRow>,
@@ -511,6 +661,7 @@ pub struct HeadingRow {
     pub level: u8,
     /// The line it starts on (0-based).
     pub line: u32,
+    /// The heading text without the `#` marks.
     pub text: String,
 }
 
@@ -519,48 +670,51 @@ pub struct HeadingRow {
 pub struct TodoRow {
     /// Index into [`Scene::notes`].
     pub note: u32,
+    /// The line of the box in its note (0-based).
     pub line: u32,
+    /// Whether the box is checked.
     pub done: bool,
+    /// The to-do text after the box.
     pub text: String,
 }
 
+/// The stage of a drag.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Phase {
+    /// The finger or pointer went down.
     Start,
+    /// It moved while down.
     Move,
+    /// It went up.
     End,
 }
 
+/// A message from the host to the plugin. The plugin answers each with a
+/// [`Frame`].
 #[derive(Clone, Debug, PartialEq)]
+#[allow(missing_docs)] // Coordinates `x`, `y` are device pixels throughout.
 pub enum Event {
     /// The screen opens (or the library changed while it was open).
     Open(Scene),
-    Tap {
-        x: i32,
-        y: i32,
-    },
-    Drag {
-        phase: Phase,
-        x: i32,
-        y: i32,
-    },
+    /// A tap at a point.
+    Tap { x: i32, y: i32 },
+    /// A drag stage at a point.
+    Drag { phase: Phase, x: i32, y: i32 },
     /// Mouse wheel notches, already adjusted for the reader's scroll
     /// direction setting; positive is down. `x`, `y` is the pointer (the
     /// screen centre when the host has no pointer position).
-    Wheel {
-        x: i32,
-        y: i32,
-        dy: i32,
-    },
-    PageTurn {
-        forward: bool,
-    },
+    Wheel { x: i32, y: i32, dy: i32 },
+    /// A page-turn button; `forward` is the next page.
+    PageTurn { forward: bool },
+    /// The reader asked to go back (the back control or Esc).
     Back,
     /// The host is idle and the last frame was `pending`: do the next piece.
     Step,
 }
 
 impl Event {
+    /// The event in the wire encoding. Strings longer than [`MAX_STR`] are
+    /// cut.
     #[must_use]
     pub fn encode(&self) -> Vec<u8> {
         let mut w = Writer::default();
@@ -631,6 +785,8 @@ impl Event {
         w.0
     }
 
+    /// Decodes an event written by [`Event::encode`].
+    ///
     /// # Errors
     /// [`DecodeError`] for truncated, oversized, trailing or invalid bytes.
     pub fn decode(buf: &[u8]) -> Result<Self> {

@@ -1,5 +1,12 @@
 //! The device layer. The app draws into a `Canvas` and hands it here with a
 //! dirty rectangle and a refresh class; input comes back as `Event`s.
+//!
+//! Backends implement [`Device`]:
+//! - [`desktop`]: an in-memory panel that writes PNGs, used by the
+//!   emulator and every test; the live window lives in the app.
+//! - `fbink` (only when `target_arch = "arm"`): the Kobo panel through
+//!   FBInk, with evdev input. It is the one module allowed `unsafe`, for
+//!   the FFI.
 
 pub mod desktop;
 pub mod evdev;
@@ -104,13 +111,22 @@ mod refresh_tests {
     }
 }
 
+/// One input from the device, in screen coordinates (pixels, after
+/// rotation) and with millisecond timestamps `t` from a monotonic clock.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(missing_docs)] // Fields `x`, `y`, `t` are described above; the rest by their variant.
 pub enum Event {
+    /// A tap at a point (emulator scripts and the desktop window; the Kobo
+    /// sends [`Event::Touch`] instead).
     Tap {
+        /// Horizontal position.
         x: i32,
+        /// Vertical position.
         y: i32,
     },
+    /// A page-turn button.
     PageTurn {
+        /// `true` for the next page.
         forward: bool,
     },
     /// Power button: save and leave.
@@ -120,29 +136,22 @@ pub enum Event {
     /// A physical key with Ctrl / Alt held, or Shift with a non-character
     /// key (v0.8, USB keyboard). Routed through the on-screen keyboard's
     /// shortcut code.
-    Chord {
-        key: HwKey,
-        mods: Mods,
-    },
+    Chord { key: HwKey, mods: Mods },
     /// A USB keyboard appeared (`true`) or went away (`false`).
     Usb(bool),
     /// A USB mouse / touchpad appeared or went away (v0.8.1).
     PointerPlug(bool),
     /// Relative pointer motion in screen pixels (v0.8.1).
-    PointerMove {
-        dx: i32,
-        dy: i32,
-        t: u64,
-    },
-    PointerButton {
-        button: Button,
-        down: bool,
-        t: u64,
-    },
+    PointerMove { dx: i32, dy: i32, t: u64 },
+    /// A mouse button went down or up.
+    PointerButton { button: Button, down: bool, t: u64 },
     /// Wheel / two-finger scroll; positive = away from the user (up).
     Wheel {
+        /// Wheel notches.
         notches: i32,
     },
+    /// The desktop window was closed. The app treats it like
+    /// [`Event::Power`]: save and leave.
     Quit,
     /// Raw finger contact with a monotonic timestamp (ms). The app turns
     /// these into taps / holds / drags with `sigma_core::gesture`.
@@ -154,25 +163,34 @@ pub enum Event {
     },
     /// Clock tick while idle (≈ every 50 ms when a finger may be down), so
     /// holds fire without movement.
-    Tick {
-        t: u64,
-    },
+    Tick { t: u64 },
     /// The accelerometer reports a new hold (v1.2, Auto orientation).
-    Tilt {
-        tilt: gsensor::Tilt,
-        t: u64,
-    },
+    Tilt { tilt: gsensor::Tilt, t: u64 },
 }
 
+/// The stage of a raw finger contact.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Phase {
+    /// The finger touched the panel.
     Down,
+    /// It moved while down.
     Move,
+    /// It lifted.
     Up,
 }
 
+/// A display and its input: what the app needs from a Kobo or a stand-in.
+///
+/// The app owns the event loop: it calls [`Device::next_event`], updates
+/// its state, draws into a canvas and calls [`Device::present`] with only
+/// the region that changed and the cheapest [`Refresh`] that looks right.
 pub trait Device {
+    /// Panel size in pixels as `(width, height)`, in the current rotation.
     fn size(&self) -> (u32, u32);
+    /// Shows `region` of `canvas` on the panel with the given refresh. It
+    /// must not wait for the panel to finish (see
+    /// [`Refresh::waits_for_completion`]).
+    ///
     /// # Errors
     /// The panel could not be written.
     fn present(&mut self, canvas: &Canvas, region: Rect, refresh: Refresh) -> io::Result<()>;
@@ -207,7 +225,9 @@ pub trait Device {
 
 /// Keys from a physical keyboard, already mapped to characters.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(missing_docs)] // Named after the keys they are.
 pub enum HwKey {
+    /// A key that types a character, after layout and dead keys.
     Char(char),
     Backspace,
     Delete,
@@ -227,6 +247,7 @@ pub enum HwKey {
 
 /// Mouse buttons (v0.8.1).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(missing_docs)] // Named after the buttons they are.
 pub enum Button {
     Left,
     Right,
@@ -236,7 +257,11 @@ pub enum Button {
 /// Modifiers held with a physical key.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Mods {
+    /// Ctrl is held.
     pub ctrl: bool,
+    /// Shift is held.
     pub shift: bool,
+    /// Alt is held. Right Alt counts only on the US layout; elsewhere it is
+    /// AltGr and already folded into the character.
     pub alt: bool,
 }

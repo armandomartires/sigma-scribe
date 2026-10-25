@@ -810,7 +810,7 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
             let stops: Vec<Cell> = (0..DRAWER_WIDTH_STOPS)
                 .map(|i| {
                     let t = drawer_tenths(i);
-                    let text = if t % 10 == 0 {
+                    let text = if t.is_multiple_of(10) {
                         format!("{} %", t / 10)
                     } else {
                         format!("{}.{} %", t / 10, t % 10)
