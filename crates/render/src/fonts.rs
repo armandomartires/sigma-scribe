@@ -115,15 +115,11 @@ impl Fonts {
             .flat_map(sigma_core::plugins::enabled_files)
             .map(|p| p.to_string_lossy().into_owned())
             .collect();
-        let spec = env
-            .iter()
-            .chain(plugins.iter())
-            .map(String::as_str)
-            .chain([
-                "/mnt/onboard/.adds/sigma-scribe/fonts/cjk.ttf",
-                "/mnt/onboard/.adds/sigma-scribe/fonts/korean.ttf",
-                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc#0",
-            ]);
+        let spec = env.iter().chain(plugins.iter()).map(String::as_str).chain([
+            "/mnt/onboard/.adds/sigma-scribe/fonts/cjk.ttf",
+            "/mnt/onboard/.adds/sigma-scribe/fonts/korean.ttf",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc#0",
+        ]);
         for s in spec {
             let (path, index) = s
                 .split_once('#')
