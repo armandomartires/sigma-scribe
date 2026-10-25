@@ -804,23 +804,22 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
                 ends: true,
             }
         }
-        // Every 5 % from a narrow drawer to half the page.
+        // Five stops from a narrow drawer to half the page.
         "Drawer width" => {
-            use sigma_core::settings::{
-                DRAWER_WIDTH_MAX as MAX, DRAWER_WIDTH_MIN as MIN, DRAWER_WIDTH_STEP as STEP,
-            };
-            let stops: Vec<Cell> = (MIN..=MAX)
-                .step_by(usize::from(STEP))
-                .map(|pct| {
-                    choice(
-                        &format!("{pct} %"),
-                        Change::DrawerWidth(pct),
-                        pct == m.settings.drawer_width,
-                    )
+            use sigma_core::settings::{drawer_tenths, DRAWER_WIDTH_STOPS};
+            let stops: Vec<Cell> = (0..DRAWER_WIDTH_STOPS)
+                .map(|i| {
+                    let t = drawer_tenths(i);
+                    let text = if t % 10 == 0 {
+                        format!("{} %", t / 10)
+                    } else {
+                        format!("{}.{} %", t / 10, t % 10)
+                    };
+                    choice(&text, Change::DrawerWidth(i), i == m.settings.drawer_width)
                 })
                 .collect();
             Kind::Slider {
-                value: usize::from((m.settings.drawer_width - MIN) / STEP),
+                value: usize::from(m.settings.drawer_width),
                 stops,
                 enabled: true,
                 ends: false,

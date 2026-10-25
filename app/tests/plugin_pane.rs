@@ -228,9 +228,9 @@ fn the_drawer_width_setting_changes_the_pane_a_plugin_is_given() {
         r.app.screen.drawer_rect(&base, r.app.settings.drawer).w
     };
     let wide = width(&r);
-    r.app.change(sigma_core::Change::DrawerWidth(35));
+    r.app.change(sigma_core::Change::DrawerWidth(2));
     let medium = width(&r);
-    r.app.change(sigma_core::Change::DrawerWidth(20));
+    r.app.change(sigma_core::Change::DrawerWidth(0));
     let narrow = width(&r);
     assert!(narrow < medium && medium < wide, "{narrow} {medium} {wide}");
     // The default is the widest: half the page.
@@ -249,7 +249,7 @@ fn the_drawer_width_slider_is_in_display_settings_and_moves_the_drawer() {
     r.tap_on("Options");
     r.tap_on("Display");
     r.tap_on("Drawer width/20 %");
-    assert_eq!(r.app.settings.drawer_width, 20);
+    assert_eq!(r.app.settings.drawer_width, 0);
     r.tap_on("Drawer width/50 %");
     assert_eq!(
         r.app.settings.drawer_width,
