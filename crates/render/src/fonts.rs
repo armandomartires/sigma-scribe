@@ -109,11 +109,21 @@ impl Fonts {
 
     fn load_pack() -> Option<Font> {
         let env = std::env::var("SIGMA_FONT_PACK").ok();
-        let spec = env.as_deref().into_iter().chain([
-            "/mnt/onboard/.adds/sigma-scribe/fonts/cjk.ttf",
-            "/mnt/onboard/.adds/sigma-scribe/fonts/korean.ttf",
-            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc#0",
-        ]);
+        // Enabled plugins come before the loose files, so a plugin wins.
+        let plugins: Vec<String> = ["fonts/cjk.ttf", "fonts/korean.ttf"]
+            .into_iter()
+            .flat_map(sigma_core::plugins::enabled_files)
+            .map(|p| p.to_string_lossy().into_owned())
+            .collect();
+        let spec = env
+            .iter()
+            .chain(plugins.iter())
+            .map(String::as_str)
+            .chain([
+                "/mnt/onboard/.adds/sigma-scribe/fonts/cjk.ttf",
+                "/mnt/onboard/.adds/sigma-scribe/fonts/korean.ttf",
+                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc#0",
+            ]);
         for s in spec {
             let (path, index) = s
                 .split_once('#')

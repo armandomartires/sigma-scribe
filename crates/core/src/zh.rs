@@ -111,8 +111,16 @@ fn dict(script: Script) -> &'static RwLock<Dict> {
             // A development checkout (the emulator runs from its root).
             "assets/zh/".to_string(),
         ];
-        for dir in env.iter().chain(dir_paths.iter()) {
-            let path = format!("{}/{name}", dir.trim_end_matches('/'));
+        let plugin_paths = crate::plugins::enabled_files(&format!("dict/{name}"));
+        let loose = env
+            .iter()
+            .chain(dir_paths.iter())
+            .map(|dir| std::path::PathBuf::from(format!("{}/{name}", dir.trim_end_matches('/'))));
+        // The env override first, then enabled plugins, then the loose files.
+        let mut candidates: Vec<_> = loose.collect();
+        let at = usize::from(env.is_some());
+        candidates.splice(at..at, plugin_paths);
+        for path in candidates {
             if let Ok(text) = std::fs::read_to_string(path) {
                 return RwLock::new(Dict::parse(&text));
             }
