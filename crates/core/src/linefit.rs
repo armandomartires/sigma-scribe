@@ -16,6 +16,7 @@ to the river where an old boat was waiting for us with its sails folded";
 
 /// Width of `text` at `size` for one face.
 pub trait SizedMeasure {
+    /// Width of `text` set at type size `size`.
     fn width_at(&self, size: f32, text: &str) -> f32;
 }
 
@@ -36,27 +37,41 @@ pub fn width_per_size(m: &dyn SizedMeasure, n: u8) -> f32 {
     (a + b) / 2.0 / REF_SIZE
 }
 
+/// A type size and side margin, in the measure's units.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Fit {
+    /// Type size.
     pub size: f32,
+    /// Margin on each side of the column.
     pub margin: f32,
 }
 
 /// Allowed ranges, in the measure's units.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Limits {
+    /// Smallest and largest type size.
     pub size: (f32, f32),
+    /// Smallest and largest margin.
     pub margin: (f32, f32),
 }
 
 /// Which value the user just set (it is kept when possible).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Anchor {
+    /// The size was set; the margin follows.
     Size,
+    /// The margin was set; the size follows.
     Margin,
 }
 
 /// Fits size and margin to `column` so a line holds `words` words.
+///
+/// The anchored value is clamped to its range and kept unless the other
+/// value would leave its range. The returned margin is never negative.
+///
+/// # Panics
+/// If a range in `lim` has its low end above its high end, or an end is NaN
+/// (from [`f32::clamp`]).
 #[must_use]
 pub fn fit(
     m: &dyn SizedMeasure,

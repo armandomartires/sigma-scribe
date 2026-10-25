@@ -12,16 +12,21 @@ use std::path::{Path, PathBuf};
 /// One touch report inside the panel, panel pixels and ms.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Point {
+    /// Horizontal position, panel pixels.
     pub x: i32,
+    /// Vertical position, panel pixels.
     pub y: i32,
+    /// Time in ms.
     pub t: u64,
     /// Contact size (`ABS_MT_TOUCH_MAJOR`, device units) when the panel
     /// reports it (v1.5.1); `None` otherwise.
     pub major: Option<u16>,
 }
 
+/// One stroke: the points from touch down to touch up.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Stroke {
+    /// The points kept (jitter is dropped), in the order they came.
     pub points: Vec<Point>,
 }
 
@@ -29,8 +34,10 @@ pub struct Stroke {
 /// the Forma; only the drawn width differs).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Pen {
+    /// A finger: the wider line.
     #[default]
     Finger,
+    /// A stylus: the thinner line.
     Stylus,
 }
 
@@ -54,6 +61,7 @@ pub const MIN_STEP_PX: i32 = 2;
 /// The strokes in the panel, with undo.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Ink {
+    /// Finished strokes, oldest first.
     pub strokes: Vec<Stroke>,
     /// Stroke being drawn (finger still down).
     pub live: Option<Stroke>,
@@ -62,11 +70,13 @@ pub struct Ink {
 }
 
 impl Ink {
+    /// Whether there are no strokes, finished or live.
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.strokes.is_empty() && self.live.is_none()
     }
 
+    /// Starts a live stroke at `p`, replacing any live one.
     pub fn down(&mut self, p: Point) {
         self.live = Some(Stroke { points: vec![p] });
     }
@@ -227,7 +237,11 @@ pub fn next_paths(note: &Path) -> (PathBuf, PathBuf, String) {
     }
 }
 
-/// Writes both files; returns the Markdown line to insert.
+/// Writes both files for `ink` next to `note`; returns the Markdown line
+/// to insert, or `None` (and writes nothing) when there are no strokes.
+///
+/// # Errors
+/// A filesystem error creating the folder or writing either file.
 pub fn save(ink: &Ink, pen: Pen, note: &Path) -> std::io::Result<Option<String>> {
     let Some(svg) = ink.to_svg(pen) else {
         return Ok(None);

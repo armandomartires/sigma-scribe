@@ -31,15 +31,24 @@ pub fn trusted_source(url: &str) -> bool {
         .any(|p| url.starts_with(p) && !url[p.len()..].contains(".."))
 }
 
+/// What a plugin provides, from the manifest's `kind=` line.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PluginKind {
+    /// A font (`font`).
     Font,
+    /// A dictionary (`dictionary`).
     Dictionary,
+    /// A handwriting recognition model (`hwr-model`).
     HwrModel,
+    /// A word list (`word-list`).
     WordList,
+    /// A theme (`theme`).
     Theme,
+    /// A translation (`translation`).
     Translation,
+    /// A keyboard layout (`layout`).
     Layout,
+    /// An icon set (`icons`).
     Icons,
     /// A WASM screen plugin (`entry` names the module).
     Screen,
@@ -51,12 +60,17 @@ pub enum PluginKind {
 /// The drawer pane a [`PluginKind::Pane`] plugin provides.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PaneSlot {
+    /// The contents pane (`contents`).
     Contents,
+    /// The to-dos pane (`todos`).
     Todos,
+    /// The scratch pane (`scratch`).
     Scratch,
 }
 
 impl PaneSlot {
+    /// The slot named by a manifest's `slot=` value; `None` for any other
+    /// value.
     #[must_use]
     pub fn parse(s: &str) -> Option<Self> {
         Some(match s {
@@ -69,6 +83,8 @@ impl PaneSlot {
 }
 
 impl PluginKind {
+    /// The kind named by a manifest's `kind=` value (`font`, `hwr-model`...);
+    /// `None` for an unknown kind.
     #[must_use]
     pub fn parse(s: &str) -> Option<Self> {
         Some(match s {
@@ -103,6 +119,8 @@ impl PluginKind {
         }
     }
 
+    /// The kind as written in a manifest; the inverse of
+    /// [`PluginKind::parse`].
     #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
@@ -125,6 +143,8 @@ impl PluginKind {
 pub struct Version(pub u32, pub u32, pub u32);
 
 impl Version {
+    /// Parses `1`, `1.2` or `1.2.3`. `None` for more than three parts or a
+    /// part that is not a number.
     #[must_use]
     pub fn parse(s: &str) -> Option<Self> {
         let mut it = s.trim().split('.');
@@ -174,13 +194,20 @@ pub fn safe_rel_path(path: &str) -> bool {
 /// the same fields in an index block).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Manifest {
+    /// The plugin's id, a slug accepted by [`valid_id`].
     pub id: String,
+    /// The display name; the id when the manifest gives none.
     pub name: String,
+    /// The plugin's own version.
     pub version: Version,
+    /// What the plugin provides.
     pub kind: PluginKind,
+    /// A short description; empty when the manifest gives none.
     pub description: String,
     /// Oldest app version that can use it.
     pub min_app: Version,
+    /// The plugin format version it was written for; never above
+    /// [`API_VERSION`].
     pub api: u32,
     /// The module of a [`PluginKind::Screen`] plugin, relative to its folder.
     pub entry: Option<String>,
@@ -196,8 +223,11 @@ pub struct Manifest {
 /// four options; the host draws it and keeps the value.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SettingDecl {
+    /// The key the value is stored under: lowercase letters, digits and `_`.
     pub key: String,
+    /// The label shown in Settings.
     pub label: String,
+    /// The two to four choices, as shown and as stored.
     pub options: Vec<String>,
     /// Index into `options`.
     pub default: usize,
@@ -307,6 +337,7 @@ impl Manifest {
         })
     }
 
+    /// Whether an app of version `app` can use this plugin.
     #[must_use]
     pub fn compatible_with(&self, app: Version) -> bool {
         self.min_app <= app
@@ -316,17 +347,22 @@ impl Manifest {
 /// One downloadable plugin in the repository index.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct IndexEntry {
+    /// The plugin's manifest fields from its index block.
     pub manifest: Manifest,
+    /// Where the package is downloaded from; always a [`trusted_source`].
     pub url: String,
+    /// The package size in bytes, as the index states it.
     pub size: u64,
     /// Lowercase hex sha256 of the package file.
     pub sha256: String,
 }
 
+/// The repository index: what can be downloaded.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Index {
     /// Rises with every published index; the app refuses to go backwards.
     pub serial: u64,
+    /// The valid entries, in index order.
     pub entries: Vec<IndexEntry>,
 }
 
@@ -366,6 +402,7 @@ impl Index {
         Self { serial, entries }
     }
 
+    /// The first entry for plugin `id`.
     #[must_use]
     pub fn find(&self, id: &str) -> Option<&IndexEntry> {
         self.entries.iter().find(|e| e.manifest.id == id)
@@ -375,18 +412,24 @@ impl Index {
 /// An installed plugin as recorded in `plugins.state`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Installed {
+    /// The plugin's id.
     pub id: String,
+    /// The installed version.
     pub version: Version,
+    /// Whether the plugin is on.
     pub enabled: bool,
 }
 
 /// `plugins.state`: one `id=version,enabled|disabled` line per plugin.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct State {
+    /// The installed plugins, at most one per id.
     pub plugins: Vec<Installed>,
 }
 
 impl State {
+    /// Parses `plugins.state`. Lines without a valid id, version and flag
+    /// are skipped; any flag other than `disabled` counts as enabled.
     #[must_use]
     pub fn parse(text: &str) -> Self {
         let mut s = Self::default();
@@ -408,6 +451,7 @@ impl State {
         s
     }
 
+    /// The state as `plugins.state` text, one line per plugin.
     #[must_use]
     pub fn serialize(&self) -> String {
         let mut out = String::new();
@@ -419,6 +463,7 @@ impl State {
         out
     }
 
+    /// The record of plugin `id`, if it is installed.
     #[must_use]
     pub fn get(&self, id: &str) -> Option<&Installed> {
         self.plugins.iter().find(|p| p.id == id)
@@ -437,7 +482,8 @@ impl State {
         }
     }
 
-    /// Returns false when the plugin is not installed.
+    /// Turns plugin `id` on or off. Returns false when the plugin is not
+    /// installed.
     pub fn set_enabled(&mut self, id: &str, enabled: bool) -> bool {
         self.plugins
             .iter_mut()
@@ -446,12 +492,14 @@ impl State {
             .is_some()
     }
 
+    /// Forgets plugin `id`. Returns false when it was not installed.
     pub fn remove(&mut self, id: &str) -> bool {
         let n = self.plugins.len();
         self.plugins.retain(|p| p.id != id);
         self.plugins.len() != n
     }
 
+    /// The plugins that are on, in record order.
     pub fn enabled(&self) -> impl Iterator<Item = &Installed> {
         self.plugins.iter().filter(|p| p.enabled)
     }
@@ -469,7 +517,7 @@ pub fn plugins_root() -> std::path::PathBuf {
 }
 
 /// The files named `rel` (a path inside a plugin, such as `fonts/cjk.ttf`)
-/// that enabled plugins under `root` provide, in install order. Missing
+/// that enabled plugins under `root` provide, sorted by plugin id. Missing
 /// state or files give an empty list, so callers fall back to their old
 /// paths.
 #[must_use]
@@ -610,6 +658,7 @@ pub fn manifest_in(root: &std::path::Path, id: &str) -> Option<Manifest> {
 /// A plugin found on disk, for the Settings list.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Listed {
+    /// The plugin's `plugin.conf`.
     pub manifest: Manifest,
     /// On in `plugins.state`. A plugin the file does not mention is off.
     pub enabled: bool,
@@ -686,13 +735,19 @@ pub fn enabled_files(rel: &str) -> Vec<std::path::PathBuf> {
 /// What the repository offers for one plugin, given what is installed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Availability {
+    /// Not installed.
     NotInstalled,
+    /// Installed, and the index has no newer version.
     UpToDate,
+    /// Installed, and the index has a newer version.
     UpdateAvailable,
     /// Needs a newer app.
     Incompatible,
 }
 
+/// What the index offers for `entry`, given the installed `state` and the
+/// app version `app`. An incompatible entry is [`Availability::Incompatible`]
+/// whether or not it is installed.
 #[must_use]
 pub fn availability(entry: &IndexEntry, state: &State, app: Version) -> Availability {
     if !entry.manifest.compatible_with(app) {

@@ -18,17 +18,23 @@ use std::sync::{OnceLock, RwLock};
 /// Simplified or Traditional characters.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Script {
+    /// Simplified Chinese.
     Hans,
+    /// Traditional Chinese.
     Hant,
 }
 
 /// One candidate: the text and how many bytes of the input it covers.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Cand {
+    /// The characters to insert.
     pub text: String,
+    /// Bytes of the input (from its start) this candidate replaces.
     pub used: usize,
 }
 
+/// A pinyin dictionary: words by their syllables, and the known syllables.
+/// Its contents are private to this module.
 #[derive(Default)]
 pub struct Dict {
     /// Words by pinyin key (syllables joined by one space), best first.

@@ -12,6 +12,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+/// File name of the scratch note at the library root (the one hidden file
+/// [`NotePath::parse`] accepts).
 pub const SCRATCH: &str = ".scratchpad.md";
 const STATE: &str = ".sigma-last-opened";
 
@@ -20,6 +22,9 @@ const STATE: &str = ".sigma-last-opened";
 pub struct NotePath(String);
 
 impl NotePath {
+    /// Parses and checks a library path; leading and trailing `/` are
+    /// ignored, and an empty string is the root.
+    ///
     /// # Errors
     /// The path is absolute, escapes the root, or has hidden/empty parts.
     pub fn parse(s: &str) -> io::Result<Self> {
@@ -44,26 +49,32 @@ impl NotePath {
         Ok(Self(s.to_owned()))
     }
 
+    /// The library root folder (the empty path).
     #[must_use]
     pub fn root() -> Self {
         Self(String::new())
     }
 
+    /// The path as a `/`-separated string (`""` for the root).
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
+    /// Whether this is the root folder.
     #[must_use]
     pub fn is_root(&self) -> bool {
         self.0.is_empty()
     }
 
+    /// The last component (`""` for the root).
     #[must_use]
     pub fn name(&self) -> &str {
         self.0.rsplit('/').next().unwrap_or("")
     }
 
+    /// The containing folder; the root for top-level paths and for the root
+    /// itself.
     #[must_use]
     pub fn parent(&self) -> NotePath {
         match self.0.rfind('/') {
@@ -72,6 +83,7 @@ impl NotePath {
         }
     }
 
+    /// The path of `name` inside this folder. `name` is not checked.
     #[must_use]
     pub fn join(&self, name: &str) -> NotePath {
         if self.is_root() {
@@ -98,15 +110,21 @@ fn invalid(msg: String) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidInput, msg)
 }
 
+/// What a listed [`Entry`] is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
+    /// A folder.
     Folder,
+    /// A `.md` or `.txt` note file.
     Note,
 }
 
+/// One item of a folder listing, as returned by [`Library::list`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Entry {
+    /// Path of the item in the library.
     pub path: NotePath,
+    /// Whether it is a folder or a note.
     pub kind: Kind,
     /// Words in a note (0 for folders).
     pub words: usize,
@@ -146,22 +164,27 @@ pub fn clean_note_name(raw: &str, default_ext: &str) -> String {
     format!("{stem}{ext}")
 }
 
+/// The note library: a root folder on disk and the operations on the notes
+/// and folders under it.
 #[derive(Clone, Debug)]
 pub struct Library {
     root: PathBuf,
 }
 
 impl Library {
+    /// A library rooted at `root`. Nothing is created or checked on disk.
     #[must_use]
     pub fn new(root: impl Into<PathBuf>) -> Self {
         Self { root: root.into() }
     }
 
+    /// The root folder on disk.
     #[must_use]
     pub fn root(&self) -> &Path {
         &self.root
     }
 
+    /// The on-disk path of `p`.
     #[must_use]
     pub fn fs_path(&self, p: &NotePath) -> PathBuf {
         if p.is_root() {
@@ -171,6 +194,7 @@ impl Library {
         }
     }
 
+    /// Whether `p` exists on disk.
     #[must_use]
     pub fn exists(&self, p: &NotePath) -> bool {
         self.fs_path(p).exists()
@@ -285,6 +309,10 @@ impl Library {
         folder.join(&candidate)
     }
 
+    /// Creates an empty note in `folder` from a user-typed name (`untitled`
+    /// if blank, `.md` if no extension), with a numeric suffix if the name is
+    /// taken. Returns its path.
+    ///
     /// # Errors
     /// The note cannot be created.
     pub fn create_note(&self, folder: &NotePath, raw_name: &str) -> io::Result<NotePath> {
@@ -302,6 +330,9 @@ impl Library {
         Ok(p)
     }
 
+    /// Creates a folder in `parent` from a user-typed name (`new folder` if
+    /// blank), with a numeric suffix if the name is taken. Returns its path.
+    ///
     /// # Errors
     /// The folder cannot be created.
     pub fn create_folder(&self, parent: &NotePath, raw_name: &str) -> io::Result<NotePath> {
@@ -473,6 +504,8 @@ impl Library {
         Ok(())
     }
 
+    /// The note recorded by [`Library::set_last_opened`], if the record can
+    /// be read, parses, and still names an existing file.
     #[must_use]
     pub fn last_opened(&self) -> Option<NotePath> {
         let s = fs::read_to_string(self.root.join(STATE)).ok()?;
@@ -480,6 +513,9 @@ impl Library {
         (self.fs_path(&p).is_file()).then_some(p)
     }
 
+    /// Records `p` as the last opened note, in a hidden state file at the
+    /// library root.
+    ///
     /// # Errors
     /// The state file cannot be written.
     pub fn set_last_opened(&self, p: &NotePath) -> io::Result<()> {

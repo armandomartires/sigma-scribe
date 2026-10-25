@@ -7,7 +7,9 @@
 /// Tab behaviour from Options (brief §6): a real tab or N spaces.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TabKind {
+    /// A tab character.
     Tab,
+    /// This many spaces.
     Spaces(u8),
 }
 
@@ -17,6 +19,9 @@ impl Default for TabKind {
     }
 }
 
+/// One note's text with its caret, selection and undo history.
+///
+/// Every content change bumps [`Buffer::revision`].
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Buffer {
     text: String,
@@ -46,6 +51,7 @@ enum Edit {
 }
 
 impl Buffer {
+    /// A buffer holding `text`, with the caret at its end and no history.
     #[must_use]
     pub fn new(text: impl Into<String>) -> Self {
         let text = text.into();
@@ -67,6 +73,7 @@ impl Buffer {
         self.overwrite
     }
 
+    /// Sets whether typing overwrites.
     pub fn set_overwrite(&mut self, on: bool) {
         self.overwrite = on;
     }
@@ -76,11 +83,13 @@ impl Buffer {
         self.overwrite = !self.overwrite;
     }
 
+    /// The whole text.
     #[must_use]
     pub fn text(&self) -> &str {
         &self.text
     }
 
+    /// The caret, as a byte offset into [`Buffer::text`].
     #[must_use]
     pub fn caret(&self) -> usize {
         self.caret
@@ -92,6 +101,8 @@ impl Buffer {
         self.revision
     }
 
+    /// The selected range as `(start, end)` byte offsets, start first;
+    /// `None` when nothing is selected.
     #[must_use]
     pub fn selection(&self) -> Option<(usize, usize)> {
         self.anchor
@@ -99,6 +110,9 @@ impl Buffer {
             .map(|a| (a.min(self.caret), a.max(self.caret)))
     }
 
+    /// Puts the caret at `at` and clears the selection.
+    ///
+    /// `at` is clamped to the text and moved back to a `char` boundary.
     pub fn set_caret(&mut self, at: usize) {
         self.caret = self.floor(at.min(self.text.len()));
         self.anchor = None;
@@ -116,17 +130,20 @@ impl Buffer {
         self.last = Edit::Break;
     }
 
+    /// Selects the whole text, with the caret at the end.
     pub fn select_all(&mut self) {
         self.select(0, self.text.len());
     }
 
+    /// The selected text, or `None` when nothing is selected.
     #[must_use]
     pub fn selected_text(&self) -> Option<&str> {
         self.selection().map(|(a, b)| &self.text[a..b])
     }
 
-    /// The word (alphanumeric run, plus `'` / `-` inside it) at or just
-    /// before `at`; `None` on whitespace or punctuation (long-press).
+    /// The word (run of alphanumerics and `_`, plus `'`, `’` or `-` inside
+    /// it) at or just before `at`; `None` on whitespace or punctuation
+    /// (long-press).
     #[must_use]
     pub fn word_at(&self, at: usize) -> Option<(usize, usize)> {
         let at = self.floor(at.min(self.text.len()));
@@ -175,6 +192,10 @@ impl Buffer {
     }
 
     /// Start of the previous word (Ctrl+Left).
+    ///
+    /// # Panics
+    ///
+    /// If `at` is past the end of the text or not on a `char` boundary.
     #[must_use]
     pub fn word_left(&self, at: usize) -> usize {
         let before = &self.text[..at];
@@ -187,6 +208,10 @@ impl Buffer {
     }
 
     /// End of the next word (Ctrl+Right).
+    ///
+    /// # Panics
+    ///
+    /// If `at` is past the end of the text or not on a `char` boundary.
     #[must_use]
     pub fn word_right(&self, at: usize) -> usize {
         let after = &self.text[at..];
@@ -201,12 +226,13 @@ impl Buffer {
                 .unwrap_or(rest.len())
     }
 
-    /// Previous char boundary (for Shift+Left).
+    /// Previous grapheme cluster boundary before `at` (for Shift+Left).
     #[must_use]
     pub fn prev_pos(&self, at: usize) -> usize {
         self.prev_grapheme(at)
     }
 
+    /// Next grapheme cluster boundary after `at` (for Shift+Right).
     #[must_use]
     pub fn next_pos(&self, at: usize) -> usize {
         self.next_grapheme(at)
@@ -223,6 +249,7 @@ impl Buffer {
         self.last = kind;
     }
 
+    /// Whether there is a step to undo.
     #[must_use]
     pub fn can_undo(&self) -> bool {
         !self.undo.is_empty()
@@ -242,6 +269,7 @@ impl Buffer {
         true
     }
 
+    /// Re-applies the last undone step. Returns false if none.
     pub fn redo(&mut self) -> bool {
         let Some((t, c)) = self.redo.pop() else {
             return false;
@@ -255,6 +283,9 @@ impl Buffer {
         true
     }
 
+    /// Selects `anchor..caret` and puts the caret at `caret`.
+    ///
+    /// Both are clamped to the text and moved back to a `char` boundary.
     pub fn select(&mut self, anchor: usize, caret: usize) {
         self.anchor = Some(self.floor(anchor.min(self.text.len())));
         self.caret = self.floor(caret.min(self.text.len()));
@@ -356,6 +387,7 @@ impl Buffer {
         self.revision += 1;
     }
 
+    /// Types a tab as `kind` says: a tab character or spaces.
     pub fn insert_tab(&mut self, kind: TabKind) {
         match kind {
             TabKind::Tab => self.insert("\t"),
@@ -363,6 +395,7 @@ impl Buffer {
         }
     }
 
+    /// Types a line break.
     pub fn newline(&mut self) {
         self.insert("\n");
     }
@@ -404,6 +437,8 @@ impl Buffer {
         self.revision += 1;
     }
 
+    /// Moves the caret one grapheme cluster left, or to the start of the
+    /// selection if there is one, and clears the selection.
     pub fn left(&mut self) {
         self.caret = match self.selection() {
             Some((s, _)) => s,
@@ -413,6 +448,8 @@ impl Buffer {
         self.last = Edit::Break;
     }
 
+    /// Moves the caret one grapheme cluster right, or to the end of the
+    /// selection if there is one, and clears the selection.
     pub fn right(&mut self) {
         self.caret = match self.selection() {
             Some((_, e)) => e,
@@ -423,12 +460,20 @@ impl Buffer {
     }
 
     /// Start of the logical line containing `at`.
+    ///
+    /// # Panics
+    ///
+    /// If `at` is past the end of the text or not on a `char` boundary.
     #[must_use]
     pub fn line_start(&self, at: usize) -> usize {
         self.text[..at].rfind('\n').map_or(0, |i| i + 1)
     }
 
     /// End of the logical line containing `at` (before its `\n`).
+    ///
+    /// # Panics
+    ///
+    /// If `at` is past the end of the text or not on a `char` boundary.
     #[must_use]
     pub fn line_end(&self, at: usize) -> usize {
         self.text[at..]
@@ -449,6 +494,8 @@ impl Buffer {
         self.set_caret(prev_start + target);
     }
 
+    /// Moves to the next logical line, keeping the char column (or to the
+    /// end of the text on the last line).
     pub fn down(&mut self) {
         let start = self.line_start(self.caret);
         let end = self.line_end(self.caret);

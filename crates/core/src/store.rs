@@ -9,10 +9,15 @@ use std::fs::{self, File};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
+/// Where notes are loaded from and saved to, by name.
 pub trait NoteStore {
+    /// The note called `name`, or `None` when there is no such note.
+    ///
     /// # Errors
     /// The backend could not read the note.
     fn load(&self, name: &str) -> io::Result<Option<String>>;
+    /// Writes `body` as the note called `name`, replacing any old content.
+    ///
     /// # Errors
     /// The backend could not durably write the note.
     fn save(&mut self, name: &str, body: &str) -> io::Result<()>;
@@ -26,6 +31,7 @@ pub struct FsNoteStore {
 }
 
 impl FsNoteStore {
+    /// A store rooted at `root`. Nothing is touched on disk until a save.
     #[must_use]
     pub fn new(root: impl Into<PathBuf>) -> Self {
         Self { root: root.into() }
@@ -95,7 +101,9 @@ impl NoteStore for FsNoteStore {
 /// In-memory store for tests and the simulator.
 #[derive(Clone, Debug, Default)]
 pub struct MemoryNoteStore {
+    /// The notes, by name.
     pub notes: BTreeMap<String, String>,
+    /// When set, every save fails and leaves `notes` unchanged.
     pub fail: bool,
 }
 
@@ -113,10 +121,14 @@ impl NoteStore for MemoryNoteStore {
     }
 }
 
+/// Where the current note stands with respect to the store.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SaveState {
+    /// The last change is written.
     Saved,
+    /// A write is in flight.
     Saving,
+    /// The last write failed, with the reason.
     Failed(String),
 }
 
@@ -136,10 +148,12 @@ impl SaveState {
 #[derive(Clone, Debug)]
 pub struct Autosave {
     saved_revision: u64,
+    /// Where the note stands now.
     pub state: SaveState,
 }
 
 impl Autosave {
+    /// Tracker for a note whose `revision` is already saved.
     #[must_use]
     pub fn new(revision: u64) -> Self {
         Self {
@@ -148,6 +162,7 @@ impl Autosave {
         }
     }
 
+    /// Whether `revision` differs from the last saved revision.
     #[must_use]
     pub fn dirty(&self, revision: u64) -> bool {
         revision != self.saved_revision
@@ -165,6 +180,7 @@ impl Autosave {
         }
     }
 
+    /// A write has started; the state becomes [`SaveState::Saving`].
     pub fn begin(&mut self) {
         self.state = SaveState::Saving;
     }
@@ -175,6 +191,7 @@ impl Autosave {
         self.state = SaveState::Saved;
     }
 
+    /// The write failed because of `why`; the saved revision is unchanged.
     pub fn failed(&mut self, why: impl Into<String>) {
         self.state = SaveState::Failed(why.into());
     }

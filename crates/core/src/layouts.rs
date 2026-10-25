@@ -20,27 +20,48 @@ use crate::buffer::Buffer;
 /// A keyboard layout (Options → Layout).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum KeyLayout {
+    /// US.
     #[default]
     Us,
+    /// UK.
     Uk,
+    /// French AZERTY.
     Fr,
+    /// German QWERTZ.
     De,
+    /// Spanish.
     Es,
+    /// Portuguese.
     Pt,
+    /// Italian.
     It,
+    /// US International.
     UsIntl,
+    /// Belgian AZERTY.
     Be,
+    /// Danish.
     Dk,
+    /// Norwegian.
     No,
+    /// Swedish / Finnish.
     Se,
+    /// Polish (programmer).
     Pl,
+    /// Czech QWERTZ.
     Cz,
+    /// Romanian.
     Ro,
+    /// Turkish Q.
     Tr,
+    /// Spanish (Latin America).
     Latam,
+    /// Portuguese (Brazil).
     Br,
+    /// Russian.
     Ru,
+    /// Ukrainian.
     Ua,
+    /// Greek.
     Gr,
     /// Vietnamese on the US keys, Telex (v1.7).
     ViTelex,
@@ -72,6 +93,7 @@ pub enum KeyLayout {
     ZhHant,
 }
 
+/// Every layout, in the order of the [`KeyLayout`] variants.
 pub const ALL: [KeyLayout; 35] = [
     KeyLayout::Us,
     KeyLayout::Uk,
@@ -831,6 +853,7 @@ fn at(rows: &[&'static str; 4], i: usize) -> Option<char> {
 }
 
 impl KeyLayout {
+    /// The layout's id in the settings file (`us`, `fr`, `zh-hans`, ...).
     #[must_use]
     pub fn name(self) -> &'static str {
         match self {
@@ -914,6 +937,8 @@ impl KeyLayout {
         }
     }
 
+    /// The layout whose [`KeyLayout::name`] is `s` (surrounding whitespace
+    /// ignored); `None` for an unknown name.
     #[must_use]
     pub fn parse(s: &str) -> Option<Self> {
         ALL.into_iter().find(|l| l.name() == s.trim())
@@ -1197,6 +1222,7 @@ pub fn decompose(c: char) -> Option<(char, char)> {
 /// the keystrokes of the Vietnamese word being typed (v1.7).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Composer {
+    /// A dead key (a combining mark) waiting for the next character.
     pub pending: Option<char>,
     /// Keystrokes of the word in progress (Telex / VNI) and what they show.
     raw: String,

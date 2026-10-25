@@ -4,6 +4,8 @@
 //! that is not about pixels can be tested with `cargo test` on a desktop.
 //! The Cobalt (Plan A) and FBInk (Plan B) front ends both sit on top of this.
 
+#![warn(missing_docs)]
+
 pub mod buffer;
 pub mod find;
 pub mod gesture;
