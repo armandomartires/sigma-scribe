@@ -15,6 +15,12 @@
 //! - `cache_get(key: i64, out: i32, cap: i32) -> i32`: bytes written, -1
 //!   for a miss, -2 when `cap` is too small.
 //! - `cache_put(key: i64, ptr: i32, len: i32) -> i32`: 0, or -1 on failure.
+//! - `log(level: i32, ptr: i32, len: i32)`: a line for the app's log, at a
+//!   Python-style level (10 DEBUG, 20 INFO, 30 WARNING, 40 ERROR, 50
+//!   CRITICAL); the host tags it with the plugin and keeps it only if the
+//!   reader's Logging setting wants that level.
+//! - `log_level() -> i32`: the lowest level the host would keep (100: none),
+//!   so a plugin can skip building a message nobody will read.
 
 mod cache;
 
@@ -30,6 +36,12 @@ pub trait Env {
     fn text_width(&self, face: Face, size: f32, s: &str) -> f32;
     fn ascent(&self, face: Face, size: f32) -> f32;
     fn tr(&self, s: &str) -> String;
+    /// A line from the plugin, at a Python-style level number.
+    fn log(&self, _level: i32, _msg: &str) {}
+    /// The lowest level number a plugin line would be kept at; 100: none.
+    fn log_floor(&self) -> i32 {
+        100
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -226,6 +238,20 @@ fn link(engine: &Engine, max_message: usize) -> Result<Linker<State>, wasmi::Err
                 -1
             })
         },
+    )?;
+    l.func_wrap(
+        "sigma",
+        "log",
+        |c: Caller<'_, State>, level: i32, ptr: i32, len: i32| -> Result<(), wasmi::Error> {
+            let s = guest_str(&c, ptr, len)?;
+            c.data().env.log(level, &s);
+            Ok(())
+        },
+    )?;
+    l.func_wrap(
+        "sigma",
+        "log_level",
+        |c: Caller<'_, State>| -> Result<i32, wasmi::Error> { Ok(c.data().env.log_floor()) },
     )?;
     Ok(l)
 }

@@ -24,6 +24,8 @@ const CACHE_BYTES: u64 = 1 << 20;
 
 struct ScreenEnv {
     fonts: Fonts,
+    /// The plugin's id, which tags its log lines (`plugin/graph-map`).
+    id: String,
 }
 
 impl Env for ScreenEnv {
@@ -35,6 +37,16 @@ impl Env for ScreenEnv {
     }
     fn tr(&self, s: &str) -> String {
         tr(s).into_owned()
+    }
+    fn log(&self, level: i32, msg: &str) {
+        sigma_core::log::log(
+            sigma_core::log::Level::from_number(level),
+            &format!("plugin/{}", self.id),
+            format_args!("{msg}"),
+        );
+    }
+    fn log_floor(&self) -> i32 {
+        sigma_core::log::floor() as i32
     }
 }
 
@@ -180,6 +192,7 @@ impl App {
         if let Some(id) = &id {
             match plugins::set_enabled_in(&self.plugins_root, id, on) {
                 Ok(()) => {
+                    sigma_core::info!("plugin", "{id}: switched {}", if on { "on" } else { "off" });
                     if !on {
                         // A switched-off plugin need not stay in memory.
                         self.plugin_idle = None;
@@ -187,7 +200,7 @@ impl App {
                     // A plugin that failed earlier gets another chance.
                     self.plugin_failed = false;
                 }
-                Err(e) => eprintln!("sigma-scribe: plugin {id}: {e}"),
+                Err(e) => sigma_core::error!("plugin", "{id}: {e}"),
             }
         }
         self.refresh_plugin_list();
@@ -209,9 +222,13 @@ impl App {
             let key = plugins::manifest_in(&self.plugins_root, &id)
                 .and_then(|m| m.settings.get(setting).map(|d| (m.clone(), d.key.clone())));
             if let Some((manifest, key)) = key {
-                if let Err(e) = plugins::set_setting_in(&self.plugins_root, &manifest, &key, option)
-                {
-                    eprintln!("sigma-scribe: plugin {id}: {e}");
+                match plugins::set_setting_in(&self.plugins_root, &manifest, &key, option) {
+                    Ok(()) => sigma_core::info!(
+                        "plugin",
+                        "{id}: {key} = {}",
+                        manifest.settings[setting].options[option]
+                    ),
+                    Err(e) => sigma_core::error!("plugin", "{id}: {e}"),
                 }
             }
         }
@@ -257,7 +274,7 @@ impl App {
         let stamp = match Stamp::of(&wasm) {
             Ok(s) => s,
             Err(e) => {
-                eprintln!("sigma-scribe: plugin {GRAPH_PLUGIN}: {e}");
+                sigma_core::error!("plugin", "{GRAPH_PLUGIN}: {e}");
                 self.plugin_failed = true;
                 return false;
             }
@@ -275,13 +292,20 @@ impl App {
         match self.plugin_idle.take().filter(|i| i.stamp == stamp) {
             Some(i) => {
                 let mut plugin = i.plugin;
+                let t0 = std::time::Instant::now();
                 match plugin.call(&PEvent::Open(scene)) {
                     Ok(frame) => {
+                        sigma_core::debug!(
+                            "plugin",
+                            "{GRAPH_PLUGIN}: opened in {} ms (kept loaded{})",
+                            t0.elapsed().as_millis(),
+                            if frame.pending { ", building" } else { "" }
+                        );
                         ps.frame = frame;
                         ps.plugin = Some(plugin);
                     }
                     Err(e) => {
-                        eprintln!("sigma-scribe: plugin {GRAPH_PLUGIN}: {e}");
+                        sigma_core::error!("plugin", "{GRAPH_PLUGIN}: {e}");
                         self.plugin_failed = true;
                         return false;
                     }
@@ -346,6 +370,7 @@ impl App {
         );
         let env = Box::new(ScreenEnv {
             fonts: Fonts::new(),
+            id: id.to_owned(),
         });
         Plugin::load(&bytes, env, cache, Limits::default()).map_err(|e| e.to_string())
     }
@@ -356,14 +381,24 @@ impl App {
     pub(crate) fn plugin_step(&mut self) -> Option<Refresh> {
         let ps = self.plugin_screen.as_mut()?;
         if let Some(job) = ps.opening.take() {
+            let t0 = std::time::Instant::now();
+            let id = job.id.clone();
             let opened = self.load_module(&job.id, &job.wasm).and_then(|mut p| {
+                let loaded = t0.elapsed();
                 let f = p
                     .call(&PEvent::Open(job.scene))
                     .map_err(|e| e.to_string())?;
-                Ok((p, f))
+                Ok((p, f, loaded, t0.elapsed() - loaded))
             });
             return match opened {
-                Ok((plugin, frame)) => {
+                Ok((plugin, frame, loaded, opened)) => {
+                    sigma_core::info!(
+                        "plugin",
+                        "{id}: loaded in {} ms, opened in {} ms{}",
+                        loaded.as_millis(),
+                        opened.as_millis(),
+                        if frame.pending { " (building)" } else { "" }
+                    );
                     let ps = self.plugin_screen.as_mut()?;
                     ps.plugin = Some(plugin);
                     ps.frame = frame.clone();
@@ -373,14 +408,20 @@ impl App {
             };
         }
         if ps.frame.pending {
-            return self.plugin_event(&PEvent::Step);
+            let t0 = std::time::Instant::now();
+            let r = self.plugin_event(&PEvent::Step);
+            sigma_core::debug!("plugin", "step took {} ms", t0.elapsed().as_millis());
+            return r;
         }
         None
     }
 
     /// A plugin failed: drop it and open the built-in Graph instead.
     fn plugin_failed_over(&mut self, why: &str) -> Refresh {
-        eprintln!("sigma-scribe: plugin {GRAPH_PLUGIN}: {why}");
+        sigma_core::error!(
+            "plugin",
+            "{GRAPH_PLUGIN}: {why}; the built-in Graph opens instead"
+        );
         self.plugin_failed = true;
         self.plugin_screen = None;
         self.open_graph();

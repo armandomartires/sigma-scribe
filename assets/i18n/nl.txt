@@ -928,3 +928,28 @@ Opening the graph…
 Building the graph…
 = Graaf opbouwen…
 
+# Settings → Logging
+Logging
+= Logboek
+
+Level
+= Niveau
+
+Debug
+= Debug
+
+Info
+= Info
+
+Warning
+= Waarschuwing
+
+Error
+= Fout
+
+Critical
+= Kritiek
+
+Log file
+= Logbestand
+

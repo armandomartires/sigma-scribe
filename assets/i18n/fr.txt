@@ -929,3 +929,28 @@ Opening the graph…
 Building the graph…
 = Construction du graphe…
 
+# Settings → Logging
+Logging
+= Journalisation
+
+Level
+= Niveau
+
+Debug
+= Débogage
+
+Info
+= Infos
+
+Warning
+= Avertissement
+
+Error
+= Erreur
+
+Critical
+= Critique
+
+Log file
+= Fichier journal
+

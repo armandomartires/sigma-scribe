@@ -14,10 +14,10 @@
 //!   next call.
 //!
 //! The host provides (module `sigma`): `text_width`, `ascent`, `tr`,
-//! `cache_get` and `cache_put` (see `sigma-plugin-host`).
+//! `cache_get`, `cache_put`, `log` and `log_level` (see `sigma-plugin-host`).
 
 /// Wire format version. Bumped on any incompatible change.
-pub const ABI: u32 = 2;
+pub const ABI: u32 = 3;
 
 /// Decoding limits.
 pub const MAX_OPS: usize = 200_000;

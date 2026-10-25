@@ -211,6 +211,12 @@ pub struct Settings {
     /// the keyboard itself (layouts that do not fit it keep the Full board).
     /// `enhanced_keyboard=`.
     pub enhanced_keyboard: bool,
+    /// Settings → Logging: write the log file (the app and its plugins).
+    /// Global, off by default. `log=`.
+    pub log: bool,
+    /// The lowest level the log file records, from DEBUG to CRITICAL (the
+    /// levels of Python's logging). `log_level=`.
+    pub log_level: crate::log::Level,
 }
 
 /// Backlight steps above off: nine stops, 0 to 8 (Display → Backlight).
@@ -327,6 +333,8 @@ impl Default for Settings {
             ui_lang: UiLang::En,
             experimental: false,
             enhanced_keyboard: true,
+            log: false,
+            log_level: crate::log::Level::Info,
         }
     }
 }
@@ -381,6 +389,10 @@ pub enum Change {
     /// or off. Kept in `plugins.state`, not in the settings file, so
     /// `Settings` ignores it and the app applies it.
     Plugin(usize, bool),
+    /// Settings → Logging: the log file on or off (applied at once).
+    Log(bool),
+    /// Settings → Logging → Level.
+    LogLevel(crate::log::Level),
     /// Set a setting of a plugin: plugin number, the setting's place in its
     /// declared list, and the chosen option's place. Kept in the plugin's own
     /// `settings` file, so `Settings` ignores it and the app applies it.
@@ -535,6 +547,8 @@ impl Settings {
                 }
             }
             Change::EnhancedKeyboard(on) => self.enhanced_keyboard = on,
+            Change::Log(on) => self.log = on,
+            Change::LogLevel(l) => self.log_level = l,
             Change::Backlight(_) | Change::Plugin(..) | Change::PluginSetting(..) => {}
             Change::KbAuto(on) => {
                 self.kb_size = if on { 0 } else { self.keyboard_scale() };
@@ -718,6 +732,8 @@ impl Settings {
                 "ui_lang" => s.ui_lang = UiLang::from_code(v).unwrap_or(s.ui_lang),
                 "experimental" => s.experimental = b().unwrap_or(s.experimental),
                 "enhanced_keyboard" => s.enhanced_keyboard = b().unwrap_or(s.enhanced_keyboard),
+                "log" => s.log = b().unwrap_or(s.log),
+                "log_level" => s.log_level = crate::log::Level::parse(v).unwrap_or(s.log_level),
                 _ => {}
             }
         }
@@ -794,7 +810,7 @@ impl Settings {
         format!(
             "keyboard={}\npaper={}\ntype={}\nline={}\nline_words={}\nsize={}\nleading={}\nmargin={}\n\
              tab={}\ntab_width={}\nkey_tone={}\ndrawer={}\nusb={}\nscroll={}\norientation={}\n\
-             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\nink_words={}\nink_boxes={}\nui_lang_override={}\nui_lang={}\nexperimental={}\nenhanced_keyboard={}\n",
+             upside_down={}\nrotation={}\nlandscape_keys={}\npad={}\npad_side={}\nui_scale={}\nlayout={}\nkeyboard_size={}\nink_pen={}\nink_a2={}\nink_words={}\nink_boxes={}\nui_lang_override={}\nui_lang={}\nexperimental={}\nenhanced_keyboard={}\nlog={}\nlog_level={}\n",
             self.keyboard.name(),
             match self.paper {
                 Paper::Day => "day",
@@ -854,6 +870,8 @@ impl Settings {
             self.ui_lang.code(),
             on(self.experimental),
             on(self.enhanced_keyboard),
+            on(self.log),
+            self.log_level.key(),
         )
     }
 }
@@ -901,14 +919,46 @@ mod tests {
             Change::LandKeys(LandKeys::Split),
             Change::Pad(Pad::Arrows),
             Change::PadSide(Side::Left),
+            Change::Log(true),
+            Change::LogLevel(crate::log::Level::Error),
         ] {
             s.apply(c);
         }
         assert_eq!(Settings::parse(&s.serialize()), s);
+        assert!(s.log && s.log_level == crate::log::Level::Error);
         assert_eq!(s.tab_kind(), TabKind::Tab);
         assert_eq!(
             (s.size, s.leading, s.margin, s.line_words),
             (22.0, 1.4, 48.0, 15)
+        );
+    }
+
+    #[test]
+    fn logging_is_off_at_info_by_default_and_every_level_round_trips() {
+        use crate::log::Level;
+        let d = Settings::default();
+        assert!(!d.log && d.log_level == Level::Info);
+        for l in Level::ALL {
+            let mut s = Settings::default();
+            s.apply(Change::Log(true));
+            s.apply(Change::LogLevel(l));
+            let text = s.serialize();
+            assert!(
+                text.contains(&format!("log=on\nlog_level={}\n", l.key())),
+                "{text}"
+            );
+            assert_eq!(Settings::parse(&text), s, "{l:?}");
+        }
+        // A file from before logging has neither key: off, INFO.
+        let old = Settings::parse("keyboard=compact\nusb=on\n");
+        assert!(!old.log && old.log_level == Level::Info);
+        // Garbage keeps the default (or what was there), in any case.
+        let g = Settings::parse("log=maybe\nlog_level=LOUD\n");
+        assert!(!g.log && g.log_level == Level::Info);
+        let g = Settings::parse("log=on\nlog_level=WARNING\n");
+        assert!(
+            g.log && g.log_level == Level::Warning,
+            "names are case-insensitive"
         );
     }
 
