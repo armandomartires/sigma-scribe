@@ -415,7 +415,7 @@ fn exit(r: Rect, from: (i32, i32), to: (i32, i32)) -> (i32, i32) {
 
 /// A line `w` px thick: square stamps along a DDA (no anti-aliasing, so
 /// it is crisp at 16 grey levels).
-fn thick_line(c: &mut Canvas, a: (i32, i32), b: (i32, i32), w: i32, v: u8) {
+pub(crate) fn thick_line(c: &mut Canvas, a: (i32, i32), b: (i32, i32), w: i32, v: u8) {
     let steps = (b.0 - a.0).abs().max((b.1 - a.1).abs()).max(1);
     if steps > 20_000 {
         return;

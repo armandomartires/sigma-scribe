@@ -11,6 +11,7 @@ publish = false
 [dependencies]
 sigma-hwr = { path = "../hwr" }
 sigma-core = { path = "../core" }
+sigma-plugin-api = { path = "../plugin-api" }
 fontdue.workspace = true
 # v1.5.1: ink SVGs drawn in preview (same version as the icon bake).
 resvg = { version = "0.45", default-features = false }

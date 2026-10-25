@@ -52,6 +52,14 @@ impl FsNoteStore {
 /// # Errors
 /// Any filesystem error; the previous file is left intact.
 pub fn write_atomic(path: &Path, body: &str) -> io::Result<()> {
+    write_atomic_bytes(path, body.as_bytes())
+}
+
+/// [`write_atomic`] for binary data (plugin caches).
+///
+/// # Errors
+/// Any filesystem error; the previous file is left intact.
+pub fn write_atomic_bytes(path: &Path, body: &[u8]) -> io::Result<()> {
     let dir = path
         .parent()
         .map_or_else(|| PathBuf::from("."), Path::to_path_buf);
@@ -60,7 +68,7 @@ pub fn write_atomic(path: &Path, body: &str) -> io::Result<()> {
     let tmp = dir.join(format!(".{file_name}.tmp"));
     {
         let mut f = File::create(&tmp)?;
-        f.write_all(body.as_bytes())?;
+        f.write_all(body)?;
         f.sync_all()?;
     }
     fs::rename(&tmp, path)?;
