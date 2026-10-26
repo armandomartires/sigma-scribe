@@ -79,9 +79,11 @@ impl App {
         }
         if c == Change::DeleteSamples {
             let p = samples_path(self.library.root());
-            if let Err(e) = std::fs::remove_file(&p) {
-                if e.kind() != std::io::ErrorKind::NotFound {
-                    sigma_core::warn!("samples", "delete: {e}");
+            for f in [&p, &crate::learned_path(self.library.root())] {
+                if let Err(e) = std::fs::remove_file(f) {
+                    if e.kind() != std::io::ErrorKind::NotFound {
+                        sigma_core::warn!("samples", "delete: {e}");
+                    }
                 }
             }
             if let Some(d) = p.parent() {
@@ -161,9 +163,7 @@ impl App {
         self.sel_ui = None;
         self.drag = None;
         self.options = true;
-        self.hwr.samples = std::fs::read_to_string(samples_path(self.library.root()))
-            .map(|t| sigma_hwr::samples_from_text(&t).len())
-            .unwrap_or(0);
+        self.hwr.samples = crate::all_samples(self.library.root()).len();
         self.settings_page = sigma_render::SettingsPage::Root;
         self.settings_sub = 0;
         self.settings_focus = None;

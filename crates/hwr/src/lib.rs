@@ -640,7 +640,8 @@ pub fn samples_to_text(samples: &[Sample]) -> String {
 #[must_use]
 pub fn samples_from_text(text: &str) -> Vec<Sample> {
     text.lines()
-        .filter(|l| !l.starts_with('#'))
+        // The header is "# …"; a sample of the character '#' is "#\t…".
+        .filter(|l| !l.starts_with("# "))
         .filter_map(|l| {
             let (c, rest) = l.split_once('\t')?;
             let mut cs = c.chars();

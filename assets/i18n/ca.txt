@@ -727,6 +727,12 @@ Word mode (experimental)
 Read every word against a word list; off is more accurate
 = Compara cada paraula amb una llista; desactivat és més precís
 
+Learn from corrections
+= Aprèn de les correccions
+
+A letter you fix with a candidate teaches it your writing
+= Una lletra que corregeixes amb un candidat li ensenya la teva lletra
+
 Override system language
 = Substitueix l'idioma del sistema
 

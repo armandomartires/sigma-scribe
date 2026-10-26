@@ -279,6 +279,11 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
             cells: toggle(s.ink_words, Change::InkWords),
         },
         OptRow {
+            label: "Learn from corrections",
+            hint: "A letter you fix with a candidate teaches it your writing",
+            cells: toggle(s.ink_learn, Change::InkLearn),
+        },
+        OptRow {
             label: "Override system language",
             hint: "Choose the app's language instead of the Kobo's",
             cells: toggle(s.lang_override, Change::LangOverride),
@@ -398,6 +403,7 @@ pub const CATEGORIES: [(&str, &[Section]); 9] = [
                     "Fast ink (A2)",
                     "Letter boxes",
                     "Word mode (experimental)",
+                    "Learn from corrections",
                     "My handwriting",
                 ],
             ),

@@ -727,6 +727,12 @@ Word mode (experimental)
 Read every word against a word list; off is more accurate
 = Jedes Wort mit einer Wortliste abgleichen; aus ist genauer
 
+Learn from corrections
+= Aus Korrekturen lernen
+
+A letter you fix with a candidate teaches it your writing
+= Ein Buchstabe, den du mit einem Vorschlag korrigierst, lehrt es deine Schrift
+
 Override system language
 = Systemsprache überschreiben
 
