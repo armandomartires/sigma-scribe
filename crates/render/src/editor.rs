@@ -16,11 +16,17 @@ use sigma_core::{Buffer, Keyboard, SaveState};
 
 /// What the screen shows; owned by the app.
 pub struct Model<'a> {
+    /// The note's file name, shown in the title bar.
     pub file_name: &'a str,
+    /// The note's text, caret and selection.
     pub buffer: &'a Buffer,
+    /// The on-screen keyboard's state.
     pub keyboard: &'a Keyboard,
+    /// The on-screen keyboard is shown.
     pub keys_on: bool,
+    /// Save state, shown in the status bar.
     pub save: &'a SaveState,
+    /// Page colours.
     pub theme: Theme,
     /// Name field being edited in the title bar (rename in place).
     pub rename: Option<&'a Buffer>,
@@ -28,21 +34,28 @@ pub struct Model<'a> {
     pub sel_ui: Option<SelUi>,
 }
 
+/// How the touch selection chrome is shown.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct SelUi {
     /// Show the action bar (hidden while a handle is dragged).
     pub bar: bool,
 }
 
+/// A button on the selection action bar.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BarAction {
+    /// Cut the selection.
     Cut,
+    /// Copy the selection.
     Copy,
+    /// Paste the clipboard.
     Paste,
+    /// Select the whole note.
     SelectAll,
 }
 
 impl BarAction {
+    /// The button's English label, which is also its translation key.
     #[must_use]
     pub fn label(self) -> &'static str {
         match self {
@@ -60,13 +73,18 @@ pub struct SelGeom {
     /// Touch targets of the start / end handles (None when off-screen or
     /// when there is no selection).
     pub handles: [Option<Rect>; 2],
+    /// The action bar, when it is shown.
     pub bar: Option<Rect>,
+    /// The action bar's buttons with their touch targets.
     pub buttons: Vec<(Rect, BarAction)>,
 }
 
+/// What a tap at a screen point lands on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Hit {
+    /// A key of the on-screen keyboard.
     Key(Key),
+    /// The Keys button: show or hide the on-screen keyboard.
     ToggleKeys,
     /// The Write button: open the ink panel (v1.5.0).
     Ink,
@@ -76,6 +94,7 @@ pub enum Hit {
     Candidate(usize),
     /// Selection handle 0 = start, 1 = end.
     Handle(usize),
+    /// A button on the selection action bar.
     Bar(BarAction),
     /// Back arrow (v1.0.2): the previous note, mode and position.
     Back,
@@ -95,8 +114,11 @@ pub enum Hit {
     Drawer(crate::drawer::Pane),
     /// Landscape keyboard bar: Split / Full / Centre, pad toggles (v0.4).
     KbButton(KbButton),
+    /// OK of the rename field.
     RenameOk,
+    /// Cancel of the rename field.
     RenameCancel,
+    /// Nothing that reacts to a tap.
     Nothing,
 }
 
@@ -106,6 +128,7 @@ type Board = (Vec<(Rect, Key)>, Vec<(Rect, KbButton)>);
 /// Buttons in the landscape keyboard bar (brief §7).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum KbButton {
+    /// A landscape keyboard mode: Split, Full or Centre.
     Mode(LandKeys),
     /// Arrows ⇄ 123 pad (Full only).
     PadToggle,
@@ -113,15 +136,22 @@ pub enum KbButton {
     PadSide,
 }
 
+/// Where each part of the editor screen sits, in device pixels.
 #[derive(Clone, Debug, Default)]
 pub struct Layout {
+    /// The title bar.
     pub title: Rect,
+    /// The page, between the title bar (or the Find bar) and the status bar.
     pub page: Rect,
+    /// The status bar, above the keyboard.
     pub status: Rect,
+    /// The Keys button, flush right in the status bar.
     pub keys_button: Rect,
     /// "Write" (v1.5.0): opens the ink panel; left of Keys.
     pub ink_button: Rect,
+    /// The on-screen keyboard (zero height when hidden).
     pub keyboard: Rect,
+    /// Each key with its rectangle (empty when the keyboard is hidden).
     pub keys: Vec<(Rect, Key)>,
     /// Title-bar icons, v1.0 (S9.2): twice the brief's size, in the
     /// mockup's order left to right after the title: Files, Preview, Find,
@@ -135,24 +165,31 @@ pub struct Layout {
     /// Close X of the sheets (Files, Graph, Help, Settings): the rightmost
     /// slot, where the Settings button sits in write mode.
     pub close_button: Rect,
+    /// The file name in the title bar, left of the first icon.
     pub name_rect: Rect,
+    /// OK of the rename field.
     pub ok_rect: Rect,
+    /// Cancel of the rename field, left of OK.
     pub cancel_rect: Rect,
     /// The Settings (gear) button, the rightmost icon.
     pub options_button: Rect,
     /// Drawer pane icons after Find: Scratch, To-dos, Contents.
     pub scratch_button: Rect,
+    /// The To-dos pane icon (zero-sized when it is off).
     pub todos_button: Rect,
+    /// The Contents pane icon (zero-sized when it is off).
     pub contents_button: Rect,
     /// Find (between the eye and Scratch) and Graph (between Contents and
     /// Options).
     pub find_button: Rect,
+    /// The Graph icon (zero-sized when it is off).
     pub graph_button: Rect,
     /// The Find bar under the title bar when open (zero height otherwise).
     pub find_bar: Rect,
     /// The text column inside the page: the page itself, or the locked
     /// portrait-width column (Line on, landscape) with gutters beside it.
     pub column: Rect,
+    /// The landscape keyboard bar's buttons with their rectangles.
     pub kb_buttons: Vec<(Rect, KbButton)>,
 }
 
@@ -160,11 +197,16 @@ pub struct Layout {
 /// sizing always reserves room for it).
 pub const TITLE_ICONS: i32 = 9;
 
+/// The editor screen: layout, drawing and hit-testing for write and
+/// preview mode, with the view state they share (scroll, type settings).
 pub struct EditorScreen {
+    /// Panel width, device pixels.
     pub width: u32,
+    /// Panel height, device pixels.
     pub height: u32,
     /// Shared with the plugins the app runs, so the fonts are parsed once.
     pub fonts: std::rc::Rc<Fonts>,
+    /// Index of the visual row at the top of the page.
     pub scroll: usize,
     /// A USB keyboard is connected (v0.8).
     pub usb_live: bool,
@@ -179,7 +221,9 @@ pub struct EditorScreen {
     /// come from a pane plugin (or the built-in pane is wanted). Off closes
     /// the icon's place up.
     pub contents_on: bool,
+    /// The To-dos icon is shown.
     pub todos_on: bool,
+    /// The Scratch icon is shown.
     pub scratch_on: bool,
     /// Settings → Word mode is on (v1.5.3): Letters offers Words.
     pub ink_words: bool,
@@ -191,8 +235,11 @@ pub struct EditorScreen {
     /// The page scale (note text, margins): `s` without the UI scale (v1.1).
     page_s: Scale,
     // Typography defaults from the brief: 20 px, leading 1.5, margin 28 px.
+    /// Body text size in brief px (times the page scale for device pixels).
     pub body_px: f32,
+    /// Line height as a multiple of the body text size.
     pub leading: f32,
+    /// Page margin in brief px.
     pub margin_px: f32,
     /// Page face (Options → Type).
     pub face: Face,
@@ -225,6 +272,7 @@ impl SizedMeasure for FaceMeasure<'_> {
 }
 
 impl EditorScreen {
+    /// A screen for a `width` × `height` panel with the default type settings.
     #[must_use]
     pub fn new(width: u32, height: u32) -> Self {
         Self {
@@ -276,6 +324,7 @@ impl EditorScreen {
         self.k = Scale(self.page_s.0 * f32::from(self.cfg.keyboard_scale()) / 100.0);
     }
 
+    /// Whether the panel is wider than it is tall.
     #[must_use]
     pub fn landscape(&self) -> bool {
         self.width > self.height
@@ -380,6 +429,7 @@ impl EditorScreen {
         }
     }
 
+    /// Lays out the screen, with or without the on-screen keyboard.
     #[must_use]
     pub fn layout(&self, keys_on: bool, keyboard: &Keyboard) -> Layout {
         let (w, h) = (self.width as i32, self.height as i32);
@@ -844,6 +894,7 @@ impl EditorScreen {
         (self.text_area(page).h / self.line_h()).max(1) as usize
     }
 
+    /// The note wrapped into visual rows for `page`.
     #[must_use]
     pub fn rows(&self, buffer: &Buffer, page: Rect) -> Vec<VisualLine> {
         wrap(
@@ -871,6 +922,8 @@ impl EditorScreen {
         self.page_turn_ext(buffer, page, forward, false);
     }
 
+    /// As [`Self::page_turn`]; with `extend` the selection grows to the new
+    /// caret position.
     pub fn page_turn_ext(&mut self, buffer: &mut Buffer, page: Rect, forward: bool, extend: bool) {
         let rows = self.rows(buffer, page);
         let n = self.visible_rows(page).saturating_sub(1).max(1);
@@ -1009,6 +1062,7 @@ impl EditorScreen {
         )
     }
 
+    /// Height of one text row, device pixels.
     #[must_use]
     pub fn line_px(&self) -> i32 {
         self.line_h()
@@ -1085,6 +1139,8 @@ impl EditorScreen {
         g
     }
 
+    /// What a tap at (`x`, `y`) lands on, tested against the same layout the
+    /// screen draws.
     #[must_use]
     pub fn hit(&self, model: &Model<'_>, x: i32, y: i32) -> Hit {
         let l = self.layout(model.keys_on, model.keyboard);
@@ -1484,11 +1540,13 @@ impl EditorScreen {
         crate::icons::draw_icon(c, crate::icons::Icon::Settings, r, t.ink);
     }
 
+    /// Interface text size, device pixels: 17 brief px at the UI scale.
     #[must_use]
     pub fn ui_px(&self) -> f32 {
         17.0 * self.s.0
     }
 
+    /// The UI scale (title bar, status bar, sheets).
     #[must_use]
     pub fn scale(&self) -> Scale {
         self.s
@@ -1899,12 +1957,19 @@ fn draw_arrow(c: &mut Canvas, r: Rect, d: Dir, s: Scale, ink: u8) {
 
 /// What preview mode shows (v0.3, read-only).
 pub struct PreviewModel<'a> {
+    /// The note's file name, shown in the title bar.
     pub file_name: &'a str,
+    /// The parsed and laid-out note.
     pub doc: &'a Doc,
+    /// Index of the preview page shown (clamped to the last page).
     pub page: usize,
+    /// Word count, shown in the status bar.
     pub words: usize,
+    /// Save state, shown in the status bar.
     pub save: &'a SaveState,
+    /// The keyboard, for the layout (it stays hidden in preview).
     pub keyboard: &'a Keyboard,
+    /// Page colours.
     pub theme: Theme,
 }
 

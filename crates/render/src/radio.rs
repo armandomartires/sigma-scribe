@@ -10,13 +10,16 @@ use crate::theme::{Scale, Theme};
 
 /// Every size of the radio button, in brief px (scaled by `Scale`).
 pub struct Metrics {
+    /// Outer diameter of the ring.
     pub diameter: i32,
+    /// Stroke of the ring.
     pub line: i32,
     /// Between the ring and the dot.
     pub gap: i32,
 }
 
 impl Metrics {
+    /// The sizes at scale `s`.
     #[must_use]
     pub fn new(s: Scale) -> Self {
         Self {

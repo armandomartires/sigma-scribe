@@ -9,47 +9,75 @@ use crate::i18n::tr;
 use crate::theme::Theme;
 use sigma_core::Buffer;
 
+/// One of the two text fields of the Find bar.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FindField {
+    /// The search text.
     Find,
+    /// The replacement text.
     Replace,
 }
 
+/// What the Find bar shows when it is drawn.
 pub struct FindModel<'a> {
+    /// Text of the Find field.
     pub query: &'a Buffer,
+    /// Text of the Replace field.
     pub replace: &'a Buffer,
     /// Field the keyboard types into (`None`: the page has the caret).
     pub focus: Option<FindField>,
+    /// Match case is on (the Aa key is drawn inverted).
     pub case: bool,
     /// `Find`, `None`, or `i of n`.
     pub label: &'a str,
+    /// Colours to draw with.
     pub theme: Theme,
 }
 
+/// Where the Find bar's controls are, in screen pixels. All empty when the
+/// bar is closed.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct FindLayout {
+    /// The Find field.
     pub find: Rect,
+    /// The Replace field.
     pub replace: Rect,
+    /// The close mark.
     pub close: Rect,
+    /// The match count label, left of the tool keys.
     pub count: Rect,
+    /// The Prev key.
     pub prev: Rect,
+    /// The Next key.
     pub next: Rect,
+    /// The Replace key (replaces the current match).
     pub replace_one: Rect,
+    /// The All key (replaces every match).
     pub all: Rect,
+    /// The Aa (match case) key.
     pub case: Rect,
 }
 
+/// What a touch on the Find bar landed on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FindHit {
+    /// One of the two text fields.
     Field(FindField),
+    /// The close mark.
     Close,
+    /// The Prev key.
     Prev,
+    /// The Next key.
     Next,
+    /// The Replace key.
     Replace,
+    /// The All key.
     All,
+    /// The Aa (match case) key.
     Case,
     /// Inside the bar but on nothing.
     Bar,
+    /// Not on the Find bar.
     Outside,
 }
 
@@ -63,6 +91,8 @@ impl EditorScreen {
         s.px(44.0) * 2 + s.px(8.0) * 3
     }
 
+    /// Where the controls of the Find bar go, given the screen layout
+    /// `base`; all empty when the bar is closed.
     #[must_use]
     pub fn find_layout(&self, base: &Layout) -> FindLayout {
         let s = self.scale();
@@ -107,6 +137,8 @@ impl EditorScreen {
         }
     }
 
+    /// What the point (x, y) hits on the Find bar. Each control takes a
+    /// few pixels of slop around it.
     #[must_use]
     pub fn find_hit(&self, base: &Layout, x: i32, y: i32) -> FindHit {
         if !base.find_bar.contains(x, y) {
@@ -151,6 +183,9 @@ impl EditorScreen {
         Some((r.x + r.w / 2, r.y + r.h / 2))
     }
 
+    /// Draws the Find bar: the two fields (with the caret in the focused
+    /// one), the close mark, the count label and the tool keys. Does nothing
+    /// when the bar is closed.
     pub fn draw_find(&self, c: &mut Canvas, base: &Layout, m: &FindModel<'_>) {
         let bar = base.find_bar;
         if bar.h == 0 {

@@ -1,24 +1,35 @@
 //! A plain greyscale framebuffer (0 = black, 255 = white).
 
+/// A rectangle in device pixels: top-left corner and size. A width or
+/// height of zero or less makes it empty.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Rect {
+    /// Left edge.
     pub x: i32,
+    /// Top edge.
     pub y: i32,
+    /// Width.
     pub w: i32,
+    /// Height.
     pub h: i32,
 }
 
 impl Rect {
+    /// A rectangle from its left, top, width and height.
     #[must_use]
     pub const fn new(x: i32, y: i32, w: i32, h: i32) -> Self {
         Self { x, y, w, h }
     }
 
+    /// Whether the point (`x`, `y`) lies inside; the right and bottom edges
+    /// are outside.
     #[must_use]
     pub fn contains(&self, x: i32, y: i32) -> bool {
         x >= self.x && y >= self.y && x < self.x + self.w && y < self.y + self.h
     }
 
+    /// The smallest rectangle covering both. When `self` is empty the result
+    /// is `o`.
     #[must_use]
     pub fn union(&self, o: &Rect) -> Rect {
         if self.w <= 0 || self.h <= 0 {
@@ -44,20 +55,26 @@ impl Rect {
         Rect::new(x0, y0, (x1 - x0).max(0), (y1 - y0).max(0))
     }
 
+    /// The rectangle shrunk by `d` on every side (grown when `d` is negative).
     #[must_use]
     pub fn inset(&self, d: i32) -> Rect {
         Rect::new(self.x + d, self.y + d, self.w - 2 * d, self.h - 2 * d)
     }
 }
 
+/// A greyscale image in memory, one byte per pixel.
 #[derive(Clone, Debug)]
 pub struct Canvas {
+    /// Width in pixels.
     pub width: u32,
+    /// Height in pixels.
     pub height: u32,
+    /// The pixels row by row from the top left, `width * height` bytes.
     pub pixels: Vec<u8>,
 }
 
 impl Canvas {
+    /// A `width` × `height` canvas with every pixel set to `fill`.
     #[must_use]
     pub fn new(width: u32, height: u32, fill: u8) -> Self {
         Self {
@@ -67,6 +84,7 @@ impl Canvas {
         }
     }
 
+    /// The whole canvas as a rectangle at the origin.
     #[must_use]
     pub fn bounds(&self) -> Rect {
         Rect::new(0, 0, self.width as i32, self.height as i32)
@@ -80,6 +98,7 @@ impl Canvas {
         (x1 > x0 && y1 > y0).then_some((x0 as usize, y0 as usize, x1 as usize, y1 as usize))
     }
 
+    /// Sets every pixel of `r` to `v`, clipped to the canvas.
     pub fn fill(&mut self, r: Rect, v: u8) {
         if let Some((x0, y0, x1, y1)) = self.clip(r) {
             let w = self.width as usize;

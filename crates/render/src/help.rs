@@ -14,16 +14,21 @@ use crate::theme::Theme;
 use sigma_core::markdown::{Block, BlockKind, Run, Style};
 use sigma_core::Keyboard;
 
+/// A page of the Help sheet.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HelpPage {
+    /// The menu of sub-pages.
     Menu,
+    /// App info: version, licence, author and credits.
     About,
+    /// The Markdown reference.
     Markdown,
     /// USB keyboard, shortcuts and export (v0.8).
     Keyboard,
 }
 
 impl HelpPage {
+    /// The page's title, `Help` on the menu and `Help / …` on sub-pages.
     #[must_use]
     pub fn title(self) -> &'static str {
         match self {
@@ -124,19 +129,26 @@ pub const REFERENCE: [(&str, &str, &str); 11] = [
     ),
 ];
 
+/// What the Help sheet shows.
 pub struct HelpModel<'a> {
+    /// The page shown.
     pub page: HelpPage,
     /// Laid-out sub-page (None on the menu).
     pub doc: Option<&'a Doc>,
     /// Page of `doc` shown.
     pub at: usize,
+    /// Colours to draw with.
     pub theme: Theme,
+    /// Keyboard state, passed to the base layout.
     pub keyboard: &'a Keyboard,
 }
 
+/// Where the Help sheet's parts were placed, in device pixels.
 #[derive(Clone, Debug, Default)]
 pub struct HelpLayout {
+    /// The underlying screen layout.
     pub base: Layout,
+    /// The Close button.
     pub close: Rect,
     /// Back arrow in the top bar (sub-pages).
     pub back: Option<Rect>,
@@ -150,11 +162,16 @@ pub struct HelpLayout {
     pub area: Rect,
 }
 
+/// What a tap on the Help sheet landed on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HelpHit {
+    /// The Close button.
     Close,
+    /// The back arrow (sub-pages).
     Back,
+    /// A menu row: the page it opens.
     Open(HelpPage),
+    /// Nothing that responds to a tap.
     Nothing,
 }
 
@@ -291,6 +308,7 @@ impl EditorScreen {
         crate::scrollbar::Paged::new(self.page_scale(), page, doc.pages.len(), at)
     }
 
+    /// What the Help sheet has at (`x`, `y`), in device pixels.
     #[must_use]
     pub fn help_hit(&self, m: &HelpModel<'_>, x: i32, y: i32) -> HelpHit {
         let l = self.help_layout(m.keyboard, m.page != HelpPage::Menu);
@@ -329,6 +347,7 @@ impl EditorScreen {
         }
     }
 
+    /// Draws the Help sheet (menu or sub-page) and returns its layout.
     pub fn draw_help(&self, c: &mut Canvas, m: &HelpModel<'_>) -> HelpLayout {
         let t = m.theme;
         let sub = m.page != HelpPage::Menu;

@@ -10,41 +10,64 @@ include!(concat!(env!("OUT_DIR"), "/icons.rs"));
 /// Title-bar and sheet icons.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Icon {
+    /// The preview button in edit mode.
     Eye,
+    /// The preview button in preview mode.
     Pencil,
+    /// The Find button.
     Search,
+    /// The Scratch pane toggle.
     Scratch,
+    /// The To-dos pane toggle.
     Todos,
+    /// The Contents pane toggle.
     Contents,
+    /// The Graph sheet button.
     Graph,
+    /// The Help sheet button.
     Help,
+    /// The back arrow.
     Back,
+    /// The Files button.
     Folder,
+    /// The Close button of a sheet.
     Close,
     /// Handwriting panel (v1.5.3).
     Swap,
+    /// Backspace key.
     Backspace,
+    /// Return key.
     Return,
+    /// Language key.
     Globe,
+    /// Previous page button.
     PrevPage,
+    /// Next page button.
     NextPage,
+    /// Space key.
     Space,
     /// Shift on the Kobo style keyboard (v1.13).
     Shift,
     /// Write panel Undo and Redo (v1.13.1).
     Undo,
+    /// Redo button.
     Redo,
     /// Home and End (line start, line end), PgUp and PgDn, Tab (v1.13.1).
     LineStart,
+    /// End key (line end).
     LineEnd,
+    /// PgUp key.
     PageUp,
+    /// PgDn key.
     PageDown,
+    /// Tab key.
     Tab,
     /// The Settings button in the title bar (v1.13.1).
     Settings,
 }
 
 impl Icon {
+    /// The Lucide icon name this icon is baked from.
     #[must_use]
     pub fn lucide(self) -> &'static str {
         match self {

@@ -15,15 +15,18 @@ use crate::theme::Scale;
 /// Minimum tap target, device pixels at the device scale (as elsewhere).
 pub const MIN_TARGET: i32 = 44;
 
+/// A stepped slider: its stops, the thumb's position and its state.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Slider {
     /// Stop labels, left to right (already translated).
     pub stops: Vec<String>,
     /// Index of the thumb.
     pub value: usize,
+    /// Drawn in solid ink when true, in grey when false (disabled).
     pub enabled: bool,
     /// Label the two ends as well as the value over the thumb.
     pub ends: bool,
+    /// Has keyboard focus; an enabled slider then draws a focus frame.
     pub focused: bool,
 }
 

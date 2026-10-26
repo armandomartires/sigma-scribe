@@ -10,41 +10,60 @@ use sigma_core::ink::{Ink, Pen, Point, PX_PER_MM};
 
 /// Panel paper and ink: pure white and pure black, so DU is exact.
 pub const WHITE: u8 = 255;
+/// Panel ink: pure black.
 pub const BLACK: u8 = 0;
 
+/// A button of the writing panel.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum InkButton {
+    /// Takes back the last step.
     Undo,
     /// Sketch: shows or hides the dotted guide line (v1.13.1).
     Guide,
     /// Takes back an Undo of typed text (v1.13.1).
     Redo,
+    /// Sketch: removes every stroke.
     Clear,
+    /// Sketch: switches between finger and stylus.
     Pen,
+    /// Sketch: closes the panel ("Cancel"); elsewhere labelled "Done".
     Cancel,
+    /// Sketch: puts the drawing into the note.
     Insert,
     /// Draw ↔ Letters (v1.5.2).
     Mode,
+    /// Types a space.
     Space,
+    /// Erases one character ("Erase").
     Back,
+    /// Types a line break ("Return").
     Enter,
     /// Opens enrolment ("Train").
     Train,
+    /// Enrolment: moves on to the next character without saving.
     Skip,
+    /// Enrolment: saves the drawn sample.
     Save,
     /// The n-th candidate of the last letter.
     Cand(usize),
     /// Free panel (v1.5.3): ‹ › candidate pages, a key that types its
     /// character, 123 (digits) and the language key.
     Prev,
+    /// Next page of candidates (›).
     Next,
+    /// A key that types its character.
     Type(char),
+    /// 123: limits candidates to digits and signs.
     Digits,
+    /// The language key: cycles the language filter.
     Lang,
     /// Caret and page keys of the panels (v1.11.2).
     Home,
+    /// Caret to the end.
     End,
+    /// Page up.
     PgUp,
+    /// Page down.
     PgDn,
     /// Insert / overwrite.
     Ins,
@@ -54,9 +73,12 @@ pub enum InkButton {
 /// n-th character of `sigma_hwr::CHARSET`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum InkMode {
+    /// Sketch: free ink, inserted as a drawing.
     #[default]
     Draw,
+    /// Handwriting in square character boxes.
     Letters,
+    /// Enrolment of the n-th character of `sigma_hwr::CHARSET`.
     Train(usize),
     /// Free writing, Boox-style (v1.5.3, decision 55): candidate bar,
     /// key grid, open writing area.
@@ -74,16 +96,20 @@ pub struct LettersView {
     pub first: usize,
     /// Free: 123 (digits and signs only) and the language key's filter.
     pub digits: bool,
+    /// Free: language code shown on the language key (`None`: no filter).
     pub lang: Option<&'static str>,
 }
 
+/// Where the parts of the writing panel go, in screen pixels.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InkLayout {
     /// The whole panel (white).
     pub panel: Rect,
     /// Where ink goes; touches elsewhere never ink.
     pub area: Rect,
+    /// y of the writing baseline (in Sketch, where the dotted guide goes).
     pub baseline_y: i32,
+    /// Every button and where it is.
     pub buttons: Vec<(Rect, InkButton)>,
     /// Letters / Train (v1.5.2): the square character boxes (ink only
     /// goes in a box); empty in Draw.
@@ -261,8 +287,11 @@ pub fn draw_strokes(c: &mut Canvas, ink: &Ink, width: i32, clip: Rect) {
 /// A 1-bit ink image (v1.5.1): `on[y * w + x]` is an ink pixel.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Raster {
+    /// Width in pixels.
     pub w: u32,
+    /// Height in pixels.
     pub h: u32,
+    /// One flag per pixel, row by row; `true` is ink.
     pub on: Vec<bool>,
 }
 
@@ -889,6 +918,7 @@ impl EditorScreen {
         draw_strokes(c, ink, pen_px(pen), l.area);
     }
 
+    /// The button at (x, y), with a few pixels of slop around each.
     #[must_use]
     pub fn ink_hit(&self, l: &InkLayout, x: i32, y: i32) -> Option<InkButton> {
         l.buttons

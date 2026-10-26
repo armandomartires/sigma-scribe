@@ -45,6 +45,7 @@ impl Metrics {
     const LINE: f32 = 2.5;
     const CONTENT_GAP: f32 = 24.0;
 
+    /// The bar's sizes at `page_scale`, in device pixels.
     #[must_use]
     pub fn new(page_scale: crate::theme::Scale) -> Self {
         let w = page_scale.px(Self::WIDTH).max(8);
@@ -105,10 +106,15 @@ pub fn zone(s: crate::theme::Scale, page: Rect, strip: Rect) -> Rect {
 /// where a finger can grab it, and what a drag or a tap on it means.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Paged {
+    /// The touch target (see [`zone`]).
     pub zone: Rect,
+    /// The track.
     pub strip: Rect,
+    /// The thumb.
     pub thumb: Rect,
+    /// Number of pages.
     pub n: usize,
+    /// The page shown, from 0.
     pub at: usize,
 }
 

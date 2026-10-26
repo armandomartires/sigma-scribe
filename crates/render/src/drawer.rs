@@ -15,14 +15,19 @@ use sigma_core::wrap::{caret_cell, offset_at, wrap, VisualLine};
 use sigma_core::Buffer;
 use sigma_plugin_api::Frame;
 
+/// A pane of the side drawer.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Pane {
+    /// The note's headings.
     Contents,
+    /// The note's to-do items.
     Todos,
+    /// The scratch buffer: a side note kept off the page.
     Scratch,
 }
 
 impl Pane {
+    /// The pane's header label, in English (translated with `tr` when drawn).
     #[must_use]
     pub fn title(self) -> &'static str {
         match self {
@@ -33,12 +38,18 @@ impl Pane {
     }
 }
 
+/// Shown in the Contents pane when the note has no headings.
 pub const EMPTY_CONTENTS: &str = "No headings in this note. Start a line with #.";
+/// Shown in the To-dos pane when the note has no to-dos.
 pub const EMPTY_TODOS: &str = "No to-dos. Start a line with - [ ].";
+/// Shown in an empty Scratch pane unless a plugin frame gives its own placeholder.
 pub const SCRATCH_PLACEHOLDER: &str = "A side note. It stays off the page.";
 
+/// What the drawer shows: which panes are open and their content.
 pub struct DrawerModel<'a> {
+    /// Which edge of the page the drawer sits on.
     pub side: Side,
+    /// The note's headings; `Some` opens the Contents pane.
     pub contents: Option<&'a [Heading]>,
     /// All to-dos and the filter (the layout applies it).
     pub todos: Option<(&'a [TodoItem], Filter)>,
@@ -49,6 +60,7 @@ pub struct DrawerModel<'a> {
     /// host keeps the drawer's background, edge and rules. A Scratch frame
     /// places the text field the host still draws and edits.
     pub plugin: [Option<&'a Frame>; 3],
+    /// Colours to draw with.
     pub theme: Theme,
 }
 
@@ -65,6 +77,7 @@ impl Pane {
 }
 
 impl DrawerModel<'_> {
+    /// The open panes, top to bottom.
     #[must_use]
     pub fn panes(&self) -> Vec<Pane> {
         let mut v = Vec::new();
@@ -81,8 +94,10 @@ impl DrawerModel<'_> {
     }
 }
 
+/// Where the drawer's parts were placed, in device pixels.
 #[derive(Clone, Debug, Default)]
 pub struct DrawerLayout {
+    /// The whole drawer.
     pub rect: Rect,
     /// Pane, header band, body.
     pub panes: Vec<(Pane, Rect, Rect)>,
@@ -90,6 +105,7 @@ pub struct DrawerLayout {
     pub headings: Vec<(Rect, usize)>,
     /// To-do rows: box target, text target, index into the full list.
     pub todos: Vec<(Rect, Rect, usize)>,
+    /// The filter button in the To-dos header.
     pub filter: Option<Rect>,
     /// Rows that did not fit (Contents, To-dos).
     pub hidden: [usize; 2],
@@ -99,11 +115,16 @@ pub struct DrawerLayout {
     pub plugin: Vec<(Pane, Rect)>,
 }
 
+/// What a tap in the drawer landed on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DrawerHit {
+    /// A Contents row: the heading's source line.
     Heading(usize),
+    /// A to-do's checkbox: index into the full to-do list.
     TodoBox(usize),
+    /// A to-do's text: index into the full to-do list.
     TodoOpen(usize),
+    /// The To-dos filter button.
     Filter,
     /// Byte offset in the scratch buffer.
     Scratch(usize),
@@ -112,6 +133,7 @@ pub enum DrawerHit {
     Plugin(Pane),
     /// Inside the drawer but on nothing (swallowed, not the page's).
     Inside,
+    /// Outside the drawer, or no pane is open.
     Outside,
 }
 
@@ -167,6 +189,8 @@ impl EditorScreen {
             .collect()
     }
 
+    /// Lays out the drawer for `m` over the page of `base`. With no open
+    /// panes only `rect` is set.
     #[must_use]
     pub fn drawer_layout(&self, base: &Layout, m: &DrawerModel<'_>) -> DrawerLayout {
         let rect = self.drawer_rect(base, m.side);
@@ -262,6 +286,7 @@ impl EditorScreen {
         (self.ui_px() * 1.45).round() as i32
     }
 
+    /// What the drawer has at (`x`, `y`), in device pixels.
     #[must_use]
     pub fn drawer_hit(&self, base: &Layout, m: &DrawerModel<'_>, x: i32, y: i32) -> DrawerHit {
         let l = self.drawer_layout(base, m);
@@ -305,6 +330,8 @@ impl EditorScreen {
         DrawerHit::Inside
     }
 
+    /// Draws the drawer for `m` over the page of `base` and returns its
+    /// layout.
     #[allow(clippy::too_many_lines)]
     pub fn draw_drawer(&self, c: &mut Canvas, base: &Layout, m: &DrawerModel<'_>) -> DrawerLayout {
         let l = self.drawer_layout(base, m);
