@@ -9,12 +9,17 @@ use std::fs::File;
 use std::io::{self, BufWriter};
 use std::path::Path;
 
+/// The desktop [`Device`]: an in-memory panel driven by
+/// scripted events, used by the emulator and tests.
 pub struct DesktopDevice {
+    /// The screen contents (8-bit grey).
     pub panel: Canvas,
     /// `SIGMA_EINK=1`: 16 grey levels and ~8 % ghosting from fast/partial
     /// refreshes (a full refresh clears it), like `scripts/sim.sh --eink`.
     pub eink: bool,
+    /// Events still to deliver, oldest first.
     pub events: VecDeque<Event>,
+    /// Every refresh drawn so far: its rectangle and mode.
     pub refreshes: Vec<(Rect, Refresh)>,
     /// Every `usb_host` call (v0.8), for tests.
     pub usb_host: Vec<bool>,
@@ -25,6 +30,8 @@ pub struct DesktopDevice {
 }
 
 impl DesktopDevice {
+    /// A white panel of `width` × `height`, with no events, no sensor and
+    /// no light. E-ink emulation follows `SIGMA_EINK`.
     #[must_use]
     pub fn new(width: u32, height: u32) -> Self {
         Self {

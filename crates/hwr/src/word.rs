@@ -41,10 +41,17 @@ pub fn builtin_words() -> Vec<String> {
 /// a character outside the charset are skipped).
 #[derive(Clone, Debug, Default)]
 pub struct Lexicon {
+    /// Each word, lowercased, with its characters as indices into
+    /// [`Model::chars`](crate::Model::chars).
     pub words: Vec<(String, Vec<usize>)>,
 }
 
 impl Lexicon {
+    /// Builds a lexicon from `words` for `rec`'s model.
+    ///
+    /// Words are lowercased and deduplicated; words with a character
+    /// outside the model's charset, or longer than 20 characters, are
+    /// skipped.
     #[must_use]
     pub fn new(rec: &Recogniser, words: &[String]) -> Self {
         let mut seen = std::collections::HashSet::new();

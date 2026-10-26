@@ -8,6 +8,8 @@
 //!   FBInk, with evdev input. It is the one module allowed `unsafe`, for
 //!   the FFI.
 
+#![warn(missing_docs)]
+
 pub mod desktop;
 pub mod evdev;
 #[cfg(target_arch = "arm")]

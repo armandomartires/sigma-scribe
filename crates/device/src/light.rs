@@ -27,6 +27,7 @@ const PREFERRED: [&str; 5] = [
 /// Steps above off (nine stops, 0 to 8).
 pub const MAX_STEP: u8 = 8;
 
+/// One sysfs backlight device, driven in steps of 0 to [`MAX_STEP`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Light {
     dir: PathBuf,

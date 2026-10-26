@@ -10,33 +10,52 @@
 
 use crate::{Event, Phase};
 
+/// Linux `EV_SYN`: synchronisation events (`SYN_REPORT` ends a frame).
 pub const EV_SYN: u16 = 0x00;
+/// Linux `EV_KEY`: key and button events.
 pub const EV_KEY: u16 = 0x01;
+/// Linux `EV_REL`: relative axis events (mice).
 pub const EV_REL: u16 = 0x02;
+/// Linux `EV_ABS`: absolute axis events (touch).
 pub const EV_ABS: u16 = 0x03;
+/// Linux `ABS_X`: single-touch X position.
 pub const ABS_X: u16 = 0x00;
+/// Linux `ABS_Y`: single-touch Y position.
 pub const ABS_Y: u16 = 0x01;
+/// Linux `ABS_MT_POSITION_X`: multi-touch X position.
 pub const ABS_MT_POSITION_X: u16 = 0x35;
+/// Linux `ABS_MT_POSITION_Y`: multi-touch Y position.
 pub const ABS_MT_POSITION_Y: u16 = 0x36;
+/// Linux `ABS_MT_TRACKING_ID`: contact id; -1 means the contact lifted.
 pub const ABS_MT_TRACKING_ID: u16 = 0x39;
+/// Linux `ABS_MT_SLOT`: selects the multi-touch slot that follows.
 pub const ABS_MT_SLOT: u16 = 0x2f;
+/// Linux `ABS_MT_TOUCH_MAJOR`: contact size.
 pub const ABS_MT_TOUCH_MAJOR: u16 = 0x30;
+/// Linux `ABS_MT_PRESSURE`: contact pressure.
 pub const ABS_MT_PRESSURE: u16 = 0x3a;
 /// Moves smaller than this (screen px) are not reported.
 pub const MOVE_EPS: i32 = 3;
+/// Linux `BTN_TOUCH`: finger on (1) or off (0) the panel.
 pub const BTN_TOUCH: u16 = 0x14a;
+/// Linux `KEY_POWER`: the power button.
 pub const KEY_POWER: u16 = 116;
 /// Kobo page-turn buttons (Libra 2 / Forma mapping: 193 back, 194 forward).
 pub const KEY_PAGE_BACK: u16 = 193;
+/// Kobo page-forward button (see [`KEY_PAGE_BACK`]).
 pub const KEY_PAGE_FWD: u16 = 194;
 
 /// `struct input_event` size on 32-bit ARM (two 32-bit timeval fields).
 pub const EVENT_SIZE_ARM32: usize = 16;
 
+/// One evdev `input_event` without its timestamp.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RawEvent {
+    /// Event type (`EV_*`).
     pub kind: u16,
+    /// Event code within the type (`ABS_*`, `KEY_*`, ...).
     pub code: u16,
+    /// Event value: position, key state (0 up, 1 down, 2 repeat), etc.
     pub value: i32,
 }
 
@@ -55,11 +74,15 @@ pub fn decode_arm32(b: &[u8; EVENT_SIZE_ARM32]) -> RawEvent {
 /// (swap XY, mirror X) and must be confirmed on the device (checklist §4).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Transform {
+    /// Swap the raw X and Y axes first.
     pub swap_xy: bool,
+    /// Mirror X (after swapping).
     pub mirror_x: bool,
+    /// Mirror Y (after swapping).
     pub mirror_y: bool,
     /// Raw axis maxima after swapping (from EVIOCGABS), and screen size.
     pub raw_max: (i32, i32),
+    /// Screen size in pixels (width, height).
     pub screen: (i32, i32),
 }
 
@@ -77,6 +100,7 @@ impl Transform {
         }
     }
 
+    /// Maps a raw touch position to screen pixels, clamped to the screen.
     #[must_use]
     pub fn apply(&self, x: i32, y: i32) -> (i32, i32) {
         let (mut x, mut y) = if self.swap_xy { (y, x) } else { (x, y) };
@@ -133,6 +157,7 @@ pub fn contact_major() -> Option<u16> {
 /// Turns a stream of raw events into touches and keys.
 #[derive(Clone, Debug)]
 pub struct Decoder {
+    /// Raw-to-screen coordinate mapping.
     pub transform: Transform,
     x: i32,
     y: i32,
@@ -151,6 +176,7 @@ pub struct Decoder {
 }
 
 impl Decoder {
+    /// A decoder with no finger down.
     #[must_use]
     pub fn new(transform: Transform) -> Self {
         Self {

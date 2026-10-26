@@ -4,13 +4,21 @@
 use crate::evdev::{RawEvent, EV_KEY, EV_REL, EV_SYN};
 use crate::{Button, Event};
 
+/// Linux `REL_X`: horizontal motion.
 pub const REL_X: u16 = 0x00;
+/// Linux `REL_Y`: vertical motion.
 pub const REL_Y: u16 = 0x01;
+/// Linux `REL_WHEEL`: scroll wheel.
 pub const REL_WHEEL: u16 = 0x08;
+/// Linux `BTN_LEFT`: left mouse button.
 pub const BTN_LEFT: u16 = 0x110;
+/// Linux `BTN_RIGHT`: right mouse button.
 pub const BTN_RIGHT: u16 = 0x111;
+/// Linux `BTN_MIDDLE`: middle mouse button.
 pub const BTN_MIDDLE: u16 = 0x112;
 
+/// Collects mouse motion, wheel and buttons until `SYN_REPORT`, then
+/// emits them as events.
 #[derive(Clone, Debug, Default)]
 pub struct PointerDecoder {
     dx: i32,

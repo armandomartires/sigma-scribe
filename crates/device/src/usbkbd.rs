@@ -32,9 +32,11 @@ fn current_layout() -> KeyLayout {
 /// One `/proc/bus/input/devices` entry.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InputDev {
+    /// Device name (`N: Name=`).
     pub name: String,
     /// `eventN` handler number, if any.
     pub event: Option<u32>,
+    /// Reports `EV_KEY` with the A, Z, Space and Enter keys.
     pub keyboard: bool,
     /// Relative pointer: mouse, touchpad, or the mouse half of a combined
     /// device such as a Logitech Unifying receiver (v0.8.1).
@@ -223,6 +225,8 @@ impl KeyMapper {
         self.layout.unwrap_or_else(current_layout)
     }
 
+    /// The modifiers held now. Right Alt counts as Alt only on the US
+    /// layout (elsewhere it is AltGr).
     #[must_use]
     pub fn mods(&self) -> Mods {
         Mods {
