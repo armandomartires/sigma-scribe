@@ -422,6 +422,37 @@ pub fn enrol_samples(font: &str, per: usize, seed: u64) -> Vec<sigma_hwr::Sample
     out
 }
 
+/// Typical ink width of each character of [`CHARSET`] in the training
+/// fonts, as (character, mean of ln width, spread), widths in line units.
+/// Characters no training font has are left out. Written to
+/// `assets/hwr/widths.txt` by `hwr-train widths`; the word decoder's
+/// width prior.
+#[must_use]
+pub fn letter_widths() -> Vec<(char, f32, f32)> {
+    let fonts: Vec<FontFile> = TRAIN_FONTS.iter().map(|f| load_font(f)).collect();
+    CHARSET
+        .chars()
+        .filter_map(|c| {
+            let ws: Vec<f32> = fonts
+                .iter()
+                .filter_map(|f| skeleton(f, c))
+                .map(|sk| {
+                    let (lo, hi) = sk.iter().fold((f32::MAX, f32::MIN), |(lo, hi), (a, b)| {
+                        (lo.min(a.0).min(b.0), hi.max(a.0).max(b.0))
+                    });
+                    (hi - lo).max(0.02).ln()
+                })
+                .collect();
+            if ws.is_empty() {
+                return None;
+            }
+            let m = ws.iter().sum::<f32>() / ws.len() as f32;
+            let v = ws.iter().map(|w| (w - m).powi(2)).sum::<f32>() / ws.len() as f32;
+            Some((c, m, v.sqrt()))
+        })
+        .collect()
+}
+
 /// A synthetic written word (v1.5.3): each letter's skeleton, given a
 /// small jitter of its own, placed after the previous one with a random
 /// gap (sometimes touching or overlapping), then one jitter for the

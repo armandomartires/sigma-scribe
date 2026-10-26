@@ -1,5 +1,6 @@
 //! `cargo run -p hwr-train --release -- train` rebuilds
-//! `assets/hwr/default.hwr`; `-- eval` prints the held-out figures.
+//! `assets/hwr/default.hwr`; `-- widths` rebuilds `assets/hwr/widths.txt`;
+//! `-- eval` prints the held-out figures.
 
 use hwr_train::{score, synth_set, Net, Rng, HELD_OUT_FONTS, TRAIN_FONTS};
 use sigma_hwr::{Model, Recogniser, CHARSET};
@@ -23,6 +24,17 @@ fn main() {
             let bytes = net.model().to_bytes();
             std::fs::write(out, &bytes).expect("write model");
             eprintln!("wrote {} bytes in {:?}", bytes.len(), t.elapsed());
+        }
+        "widths" => {
+            let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../assets/hwr/widths.txt");
+            let mut text = String::from(
+                "# Letter widths for the word decoder: character, mean of ln(ink width in\n\
+                 # line units), spread, over the training fonts. Made by `hwr-train widths`.\n",
+            );
+            for (c, m, sd) in hwr_train::letter_widths() {
+                text.push_str(&format!("{c}\t{m:.3}\t{sd:.3}\n"));
+            }
+            std::fs::write(path, text).expect("write widths");
         }
         "eval" => {
             let m = Model::from_bytes(&std::fs::read(out).expect("model")).expect("parse");

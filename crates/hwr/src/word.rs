@@ -165,9 +165,9 @@ pub fn cuts(segs: &[Seg]) -> Vec<f32> {
     filled
 }
 
-/// Log-probabilities of every hypothesis `[k0, k1)` (k1 - k0 ≤ MAX_SPAN),
-/// `None` when too wide or empty.
-type Hyp = Vec<Vec<Option<Vec<f32>>>>;
+/// Log-probabilities and ink width of every hypothesis `[k0, k1)`
+/// (k1 - k0 ≤ MAX_SPAN), `None` when too wide or empty.
+type Hyp = Vec<Vec<Option<(Vec<f32>, f32)>>>;
 
 fn hypotheses(rec: &Recogniser, segs: &[Seg], cuts: &[f32]) -> Hyp {
     let k = cuts.len();
@@ -194,8 +194,11 @@ fn hypotheses(rec: &Recogniser, segs: &[Seg], cuts: &[f32]) -> Hyp {
             if part.is_empty() {
                 continue;
             }
-            let p = rec.probs(&features(&part));
-            out[a][span] = Some(p.iter().map(|v| v.max(1e-6).ln()).collect());
+            let (lo, hi) = part.iter().fold((f32::MAX, f32::MIN), |(lo, hi), (p, q)| {
+                (lo.min(p.0).min(q.0), hi.max(p.0).max(q.0))
+            });
+            let p = rec.net_probs(&features(&part));
+            out[a][span] = Some((p.iter().map(|v| v.max(1e-6).ln()).collect(), hi - lo));
         }
     }
     out
@@ -206,10 +209,11 @@ fn hypotheses(rec: &Recogniser, segs: &[Seg], cuts: &[f32]) -> Hyp {
 /// words first; the free (open-vocabulary) reading last.
 #[must_use]
 pub fn recognise(rec: &Recogniser, segs: &[Seg], lex: &Lexicon, n: usize) -> Vec<(String, f32)> {
-    recognise_with(rec, segs, lex, n, LETTER_BONUS)
+    recognise_tuned(rec, segs, lex, n, &Tuning::default())
 }
 
-/// [`recognise`] with a given per-letter bonus (tuning).
+/// [`recognise`] with a given per-letter bonus and the default width
+/// prior (tuning).
 #[must_use]
 pub fn recognise_with(
     rec: &Recogniser,
@@ -218,6 +222,95 @@ pub fn recognise_with(
     n: usize,
     bonus: f32,
 ) -> Vec<(String, f32)> {
+    recognise_tuned(
+        rec,
+        segs,
+        lex,
+        n,
+        &Tuning {
+            bonus,
+            ..Tuning::default()
+        },
+    )
+}
+
+/// Decoder settings. [`Tuning::default`] is what the app uses.
+#[derive(Clone, Debug)]
+pub struct Tuning {
+    /// See [`LETTER_BONUS`].
+    pub bonus: f32,
+    /// Typical ink width of each character as (character, mean of ln
+    /// width in line units, spread); see [`builtin_widths`].
+    pub widths: Vec<(char, f32, f32)>,
+    /// Weight of the width prior (0 turns it off); see [`WIDTH_WEIGHT`].
+    pub width_weight: f32,
+}
+
+impl Default for Tuning {
+    fn default() -> Self {
+        Self {
+            bonus: LETTER_BONUS,
+            widths: builtin_widths().to_vec(),
+            width_weight: WIDTH_WEIGHT,
+        }
+    }
+}
+
+/// The letter widths of the training fonts (`assets/hwr/widths.txt`,
+/// made by `hwr-train widths`).
+#[must_use]
+pub fn builtin_widths() -> &'static [(char, f32, f32)] {
+    static W: std::sync::OnceLock<Vec<(char, f32, f32)>> = std::sync::OnceLock::new();
+    W.get_or_init(|| {
+        include_str!("../../../assets/hwr/widths.txt")
+            .lines()
+            .filter(|l| !l.starts_with("# "))
+            .filter_map(|l| {
+                let mut f = l.split('\t');
+                let c = f.next()?.chars().next()?;
+                Some((c, f.next()?.parse().ok()?, f.next()?.parse().ok()?))
+            })
+            .collect()
+    })
+}
+
+/// The width prior, per model character: (mean of ln width, spread), the
+/// spread at least [`MIN_WIDTH_SPREAD`]. `None` for a character with no
+/// width or when the prior is off.
+fn width_table(rec: &Recogniser, t: &Tuning) -> Vec<Option<(f32, f32)>> {
+    rec.model
+        .chars
+        .iter()
+        .map(|c| {
+            if t.width_weight <= 0.0 {
+                return None;
+            }
+            let &(_, m, sd) = t.widths.iter().find(|w| w.0 == *c)?;
+            Some((m, sd.max(MIN_WIDTH_SPREAD)))
+        })
+        .collect()
+}
+
+/// Log-likelihood of ink width `w` for a character with prior `p`.
+fn width_term(p: Option<(f32, f32)>, weight: f32, w: f32) -> f32 {
+    p.map_or(0.0, |(m, sd)| {
+        let z = (w.max(0.02).ln() - m) / sd;
+        -0.5 * weight * z * z
+    })
+}
+
+/// [`recognise`] with given [`Tuning`].
+#[must_use]
+pub fn recognise_tuned(
+    rec: &Recogniser,
+    segs: &[Seg],
+    lex: &Lexicon,
+    n: usize,
+    t: &Tuning,
+) -> Vec<(String, f32)> {
+    let bonus = t.bonus;
+    let wt = width_table(rec, t);
+    let wterm = |c: usize, w: f32| width_term(wt[c], t.width_weight, w);
     let cuts = cuts(segs);
     if cuts.len() < 2 {
         return Vec::new();
@@ -254,12 +347,13 @@ pub fn recognise_with(
                     if prev == f32::MIN {
                         continue;
                     }
-                    if let Some(lp) = &hyp[a][span] {
-                        let mut v = lp[ix[j - 1]];
+                    if let Some((lp, wd)) = &hyp[a][span] {
+                        let mut v = lp[ix[j - 1]] + wterm(ix[j - 1], *wd);
                         if j == 1 {
                             if let Some(u) = upper[ix[0]] {
-                                if lp[u] > v + CAP_MARGIN && a == 0 {
-                                    v = lp[u];
+                                let vu = lp[u] + wterm(u, *wd);
+                                if vu > v + CAP_MARGIN && a == 0 {
+                                    v = vu;
                                     cap = true;
                                 }
                             }
@@ -291,12 +385,12 @@ pub fn recognise_with(
             if best[a].0 == f32::MIN {
                 continue;
             }
-            if let Some(lp) = &hyp[a][span] {
+            if let Some((lp, wd)) = &hyp[a][span] {
                 let (ci, v) = lp
                     .iter()
                     .enumerate()
-                    .max_by(|x, y| x.1.total_cmp(y.1))
-                    .map(|(i, v)| (i, *v))
+                    .map(|(i, v)| (i, v + wterm(i, *wd)))
+                    .max_by(|x, y| x.1.total_cmp(&y.1))
                     .unwrap_or((0, f32::MIN));
                 let t = best[a].0 + v + OPEN_BONUS;
                 if t > best[c].0 {
@@ -337,8 +431,19 @@ pub fn recognise_with(
 
 /// Added per letter to a lexicon word's total log-probability, so longer
 /// readings that explain the ink letter by letter are not out-scored by
-/// short words of a few wide hypotheses (tuned on the training fonts).
-pub const LETTER_BONUS: f32 = 8.0;
+/// short words of a few wide hypotheses. Tuned with the width prior on
+/// `hwr-train words` (7 with weight 0.5: lower CER than 8 without the
+/// prior on every set, training and held-out fonts).
+pub const LETTER_BONUS: f32 = 7.0;
+/// Weight of the letter-width prior: a reading that gives a letter a piece
+/// much wider or narrower than that letter usually is loses log-likelihood
+/// (a Gaussian on ln width, from [`builtin_widths`]). A weight of 1 helps
+/// the held-out fonts a little more but costs the training fonts about
+/// 3 points; 0.5 helps both.
+pub const WIDTH_WEIGHT: f32 = 0.5;
+/// Smallest spread of the width prior (ln units): the training fonts
+/// agree closely on some marks (".": 0.01), handwriting does not.
+pub const MIN_WIDTH_SPREAD: f32 = 0.2;
 /// Letter bonus of the free reading (lower: it has no lexicon to keep it
 /// from cutting the ink into many small letters).
 pub const OPEN_BONUS: f32 = 0.0;
@@ -382,6 +487,27 @@ mod tests {
             Lexicon::words_in("Le chat, le chien; a b le", 2),
             vec!["le".to_string(), "chat".to_string()]
         );
+    }
+
+    #[test]
+    fn width_prior_covers_the_charset_and_prefers_typical_widths() {
+        let r = Recogniser::new(Model::default_model());
+        let t = Tuning::default();
+        let wt = width_table(&r, &t);
+        assert!(wt.iter().all(Option::is_some), "a character has no width");
+        let ix = |c| r.model.chars.iter().position(|&m| m == c).unwrap();
+        let (m, i) = (wt[ix('m')], wt[ix('i')]);
+        assert!(m.unwrap().0 > i.unwrap().0, "m is wider than i");
+        // A wide piece suits "m" better than "i", a narrow one the reverse.
+        let w = t.width_weight;
+        assert!(width_term(m, w, 0.45) > width_term(i, w, 0.45));
+        assert!(width_term(i, w, 0.04) > width_term(m, w, 0.04));
+        // Turned off, it costs nothing.
+        let off = Tuning {
+            width_weight: 0.0,
+            ..Tuning::default()
+        };
+        assert!(width_table(&r, &off).iter().all(Option::is_none));
     }
 
     #[test]
