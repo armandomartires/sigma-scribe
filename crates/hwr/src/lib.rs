@@ -25,6 +25,12 @@ pub mod word;
 pub const CHARSET: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\
 àâçéèêëîïôùûüœæáãõóíúÀÂÇÉÈÊËÎÏÔÙÛÜŒÆÁÃÕÓÍÚ.,;:!?'\"-()/@&%+=*#€«»";
 
+/// The model's "not a letter" class: a piece of a word that is half a
+/// letter or more than one. A model may end its characters with it; the
+/// word decoder reads it as a low score for every letter, and
+/// [`Recogniser::probs`] leaves it out, so letters never show it.
+pub const NOT_A_LETTER: char = '\u{FFFD}';
+
 /// The guide line in a box, as a fraction of its height from the top.
 pub const BASELINE: f32 = 0.7;
 
@@ -291,6 +297,25 @@ impl Model {
             .then_some(m)
     }
 
+    /// Index of [`NOT_A_LETTER`] in [`Model::chars`], if the model has it.
+    #[must_use]
+    pub fn not_a_letter(&self) -> Option<usize> {
+        self.chars.iter().position(|&c| c == NOT_A_LETTER)
+    }
+
+    /// The piece model shipped in the binary (`assets/hwr/pieces.hwr`,
+    /// `hwr-train train-pieces`): the word decoder's network, trained on
+    /// letters and on pieces cut from synthetic words, with
+    /// [`NOT_A_LETTER`].
+    ///
+    /// # Panics
+    /// If the bundled file is corrupt (caught by tests).
+    #[must_use]
+    pub fn pieces_model() -> Self {
+        Self::from_bytes(include_bytes!("../../../assets/hwr/pieces.hwr"))
+            .expect("bundled piece model")
+    }
+
     /// The model shipped in the binary (`assets/hwr/default.hwr`).
     #[must_use]
     pub fn default_model() -> Self {
@@ -358,6 +383,10 @@ pub struct Recogniser {
     adapted: Option<(Vec<f32>, Vec<f32>)>,
     /// Fine-tuning passes over the samples (0 turns it off).
     pub adapt_epochs: usize,
+    /// The piece model for words (see [`Recogniser::with_pieces`]).
+    pieces: Option<Model>,
+    /// Its output layer fine-tuned on the user's samples, if any.
+    adapted_pieces: Option<(Vec<f32>, Vec<f32>)>,
 }
 
 impl Recogniser {
@@ -372,7 +401,23 @@ impl Recogniser {
             user_sigma: USER_SIGMA,
             adapted: None,
             adapt_epochs: ADAPT_EPOCHS,
+            pieces: None,
+            adapted_pieces: None,
         }
+    }
+
+    /// Adds a piece model for the word decoder: a network trained on
+    /// pieces of words, with [`NOT_A_LETTER`] after the letter model's
+    /// characters ([`Model::pieces_model`]). Letters keep the letter
+    /// model. A model whose characters do not start with the letter
+    /// model's is not used.
+    #[must_use]
+    pub fn with_pieces(mut self, pieces: Model) -> Self {
+        if pieces.chars.starts_with(&self.model.chars) {
+            self.pieces = Some(pieces);
+            self.adapt();
+        }
+        self
     }
 
     /// Replaces the user samples (characters outside the charset are
@@ -393,49 +438,11 @@ impl Recogniser {
     /// (hidden layer fixed), pulled back towards the default weights so a
     /// few samples cannot wreck the other characters.
     fn adapt(&mut self) {
-        self.adapted = None;
-        if self.user.is_empty() || self.adapt_epochs == 0 {
-            return;
-        }
-        let o = &self.model.out;
-        let mut w: Vec<f32> = (0..o.rows * o.cols)
-            .map(|i| f32::from(o.w[i]) * o.scale[i / o.cols])
-            .collect();
-        let w0 = w.clone();
-        let mut b = o.bias.clone();
-        let hs: Vec<(usize, Vec<f32>)> = self
-            .user
-            .iter()
-            .map(|(c, f)| {
-                let mut h = Vec::new();
-                self.model.hidden.run(f, &mut h);
-                h.iter_mut().for_each(|x| *x = x.max(0.0));
-                (*c, h)
-            })
-            .collect();
-        let (rows, cols) = (o.rows, o.cols);
-        let mut out = vec![0.0f32; rows];
-        for ep in 0..self.adapt_epochs {
-            let lr = 0.01 / (1.0 + ep as f32 * 0.1);
-            for (c, h) in &hs {
-                for r in 0..rows {
-                    let row = &w[r * cols..(r + 1) * cols];
-                    out[r] = row.iter().zip(h).map(|(a, x)| a * x).sum::<f32>() + b[r];
-                }
-                softmax(&mut out);
-                out[*c] -= 1.0;
-                for r in 0..rows {
-                    let g = out[r];
-                    let row = &mut w[r * cols..(r + 1) * cols];
-                    let row0 = &w0[r * cols..(r + 1) * cols];
-                    for j in 0..cols {
-                        row[j] -= lr * (g * h[j] + 0.01 * (row[j] - row0[j]));
-                    }
-                    b[r] -= lr * g;
-                }
-            }
-        }
-        self.adapted = Some((w, b));
+        self.adapted = adapt_layer(&self.model, &self.user, self.adapt_epochs);
+        self.adapted_pieces = self
+            .pieces
+            .as_ref()
+            .and_then(|m| adapt_layer(m, &self.user, self.adapt_epochs));
     }
 
     /// Number of user samples in use (those inside the charset).
@@ -467,10 +474,17 @@ impl Recogniser {
     }
 
     /// Probabilities over `model.chars` (network, fine-tuned layer and
-    /// user samples blended).
+    /// user samples blended), 0 for [`NOT_A_LETTER`].
     #[must_use]
     pub fn probs(&self, f: &[f32]) -> Vec<f32> {
         let mut p = self.net_probs(f);
+        if let Some(g) = self.model.not_a_letter() {
+            p[g] = 0.0;
+            let s: f32 = p.iter().sum();
+            if s > 0.0 {
+                p.iter_mut().for_each(|x| *x /= s);
+            }
+        }
         if !self.user.is_empty() && self.user_weight > 0.0 {
             let mut best = vec![f32::MAX; p.len()];
             for (c, u) in &self.user {
@@ -498,29 +512,104 @@ impl Recogniser {
     /// two letters, which cost word mode about 6 points of CER.
     #[must_use]
     pub fn net_probs(&self, f: &[f32]) -> Vec<f32> {
-        match &self.adapted {
-            None => self.model.probs(f),
-            Some((w, b)) => {
-                let mut h = Vec::new();
-                self.model.hidden.run(f, &mut h);
-                let cols = h.len();
-                let mut o: Vec<f32> = b
-                    .iter()
-                    .enumerate()
-                    .map(|(r, bias)| {
-                        w[r * cols..(r + 1) * cols]
-                            .iter()
-                            .zip(&h)
-                            .map(|(a, x)| a * x.max(0.0))
-                            .sum::<f32>()
-                            + bias
-                    })
-                    .collect();
-                softmax(&mut o);
-                o
+        model_probs(&self.model, self.adapted.as_ref(), f)
+    }
+
+    /// The model the word decoder reads pieces with: the piece model when
+    /// there is one (see [`Recogniser::with_pieces`]), else the letter model.
+    #[must_use]
+    pub fn word_model(&self) -> &Model {
+        self.pieces.as_ref().unwrap_or(&self.model)
+    }
+
+    /// Probabilities of each of [`Recogniser::word_model`]'s characters for
+    /// a piece of a word: [`Recogniser::net_probs`] with the piece model
+    /// (fine-tuned on the user's samples too) when there is one. Includes
+    /// [`NOT_A_LETTER`] when that model has it.
+    #[must_use]
+    pub fn piece_probs(&self, f: &[f32]) -> Vec<f32> {
+        match &self.pieces {
+            Some(m) => model_probs(m, self.adapted_pieces.as_ref(), f),
+            None => self.net_probs(f),
+        }
+    }
+}
+
+/// `model`'s probabilities for features `f`, with its output layer
+/// replaced by the fine-tuned `adapted` one when given.
+fn model_probs(model: &Model, adapted: Option<&(Vec<f32>, Vec<f32>)>, f: &[f32]) -> Vec<f32> {
+    let Some((w, b)) = adapted else {
+        return model.probs(f);
+    };
+    let mut h = Vec::new();
+    model.hidden.run(f, &mut h);
+    let cols = h.len();
+    let mut o: Vec<f32> = b
+        .iter()
+        .enumerate()
+        .map(|(r, bias)| {
+            w[r * cols..(r + 1) * cols]
+                .iter()
+                .zip(&h)
+                .map(|(a, x)| a * x.max(0.0))
+                .sum::<f32>()
+                + bias
+        })
+        .collect();
+    softmax(&mut o);
+    o
+}
+
+/// Fine-tunes a float copy of `model`'s output layer on `user` samples
+/// (hidden layer fixed), pulled back towards the default weights so a few
+/// samples cannot wreck the other characters. `None` with no samples or
+/// no passes.
+fn adapt_layer(
+    model: &Model,
+    user: &[(usize, Vec<f32>)],
+    epochs: usize,
+) -> Option<(Vec<f32>, Vec<f32>)> {
+    if user.is_empty() || epochs == 0 {
+        return None;
+    }
+    let o = &model.out;
+    let mut w: Vec<f32> = (0..o.rows * o.cols)
+        .map(|i| f32::from(o.w[i]) * o.scale[i / o.cols])
+        .collect();
+    let w0 = w.clone();
+    let mut b = o.bias.clone();
+    let hs: Vec<(usize, Vec<f32>)> = user
+        .iter()
+        .map(|(c, f)| {
+            let mut h = Vec::new();
+            model.hidden.run(f, &mut h);
+            h.iter_mut().for_each(|x| *x = x.max(0.0));
+            (*c, h)
+        })
+        .collect();
+    let (rows, cols) = (o.rows, o.cols);
+    let mut out = vec![0.0f32; rows];
+    for ep in 0..epochs {
+        let lr = 0.01 / (1.0 + ep as f32 * 0.1);
+        for (c, h) in &hs {
+            for r in 0..rows {
+                let row = &w[r * cols..(r + 1) * cols];
+                out[r] = row.iter().zip(h).map(|(a, x)| a * x).sum::<f32>() + b[r];
+            }
+            softmax(&mut out);
+            out[*c] -= 1.0;
+            for r in 0..rows {
+                let g = out[r];
+                let row = &mut w[r * cols..(r + 1) * cols];
+                let row0 = &w0[r * cols..(r + 1) * cols];
+                for j in 0..cols {
+                    row[j] -= lr * (g * h[j] + 0.01 * (row[j] - row0[j]));
+                }
+                b[r] -= lr * g;
             }
         }
     }
+    Some((w, b))
 }
 
 /// Samples file (`notes/.handwriting/samples.txt`): one sample per line,
@@ -623,6 +712,34 @@ mod tests {
         let t = samples_to_text(&s);
         assert_eq!(samples_from_text(&t), s);
         assert!(samples_from_text("ab\t1,2\nx\tnope\n").is_empty());
+    }
+
+    #[test]
+    fn the_piece_model_serves_words_and_letters_never_show_not_a_letter() {
+        let letters = Model::default_model();
+        let pieces = Model::pieces_model();
+        assert!(letters.not_a_letter().is_none());
+        let g = pieces.not_a_letter().expect("piece model has the class");
+        assert_eq!(g, letters.chars.len(), "letters first, then the class");
+        let r = Recogniser::new(letters.clone()).with_pieces(pieces);
+        assert_eq!(r.word_model().chars.len(), g + 1);
+        // Pieces are scored over the piece model's characters; letters over
+        // the letter model's, so they never show "not a letter".
+        let ink = vec![
+            vec![(0.1, 0.3), (0.1, 0.7)],
+            vec![(0.1, 0.5), (0.35, 0.5)],
+            vec![(0.6, 0.3), (0.9, 0.3), (0.6, 0.7), (0.9, 0.7)],
+        ];
+        let f = features(&segments(&ink));
+        let p = r.piece_probs(&f);
+        assert_eq!(p.len(), g + 1);
+        assert_eq!(r.probs(&f).len(), letters.chars.len());
+        assert!(r.recognise(&ink, 5).iter().all(|(c, _)| *c != NOT_A_LETTER));
+        // A piece model for other characters is not used.
+        let mut other = Model::pieces_model();
+        other.chars.swap(0, 1);
+        let r2 = Recogniser::new(letters).with_pieces(other);
+        assert!(r2.word_model().not_a_letter().is_none());
     }
 
     #[test]

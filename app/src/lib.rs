@@ -225,7 +225,8 @@ impl Hwr {
             .map(|t| sigma_hwr::samples_from_text(&t))
             .unwrap_or_default();
         self.samples = samples.len();
-        let base = sigma_hwr::Recogniser::new(sigma_hwr::Model::default_model());
+        let base = sigma_hwr::Recogniser::new(sigma_hwr::Model::default_model())
+            .with_pieces(sigma_hwr::Model::pieces_model());
         if samples.is_empty() {
             self.rec = Some(base);
             self.job = None;

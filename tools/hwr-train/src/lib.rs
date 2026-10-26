@@ -349,8 +349,12 @@ impl Net {
 
     #[must_use]
     pub fn model(&self) -> Model {
+        let mut chars: Vec<char> = CHARSET.chars().collect();
+        if self.c > chars.len() {
+            chars.push(sigma_hwr::NOT_A_LETTER);
+        }
         Model {
-            chars: CHARSET.chars().collect(),
+            chars,
             hidden: Layer::quantise(self.h, DIM, &self.w1, &self.b1),
             out: Layer::quantise(self.c, self.h, &self.w2, &self.b2),
         }
@@ -460,10 +464,22 @@ pub fn letter_widths() -> Vec<(char, f32, f32)> {
 /// the font lacks a letter.
 #[must_use]
 pub fn synth_word(font: &FontFile, word: &str, rng: &mut Rng) -> Option<Vec<Seg>> {
+    synth_word_labelled(font, word, rng).map(|(segs, _)| segs)
+}
+
+/// [`synth_word`] with, for each segment, the position in `word` of the
+/// letter it belongs to. Uses `rng` exactly as [`synth_word`] does.
+#[must_use]
+pub fn synth_word_labelled(
+    font: &FontFile,
+    word: &str,
+    rng: &mut Rng,
+) -> Option<(Vec<Seg>, Vec<usize>)> {
     let mut out = Vec::new();
+    let mut labels = Vec::new();
     let mut pen = 0.0f32;
     let gap_base = rng.range(-0.01, 0.08);
-    for ch in word.chars() {
+    for (li, ch) in word.chars().enumerate() {
         let sk = skeleton(font, ch)?;
         let mut r2 = Rng::new(rng.next_u64());
         let sk = mild(&sk, &mut r2);
@@ -477,6 +493,7 @@ pub fn synth_word(font: &FontFile, word: &str, rng: &mut Rng) -> Option<Vec<Seg>
             .fold(f32::MIN, f32::max);
         let dx = pen - x0;
         out.extend(sk.iter().map(|&(a, b)| ((a.0 + dx, a.1), (b.0 + dx, b.1))));
+        labels.resize(out.len(), li);
         pen += (x1 - x0) + gap_base + rng.range(-0.03, 0.05);
     }
     // Whole-word jitter around the word's middle.
@@ -486,7 +503,101 @@ pub fn synth_word(font: &FontFile, word: &str, rng: &mut Rng) -> Option<Vec<Seg>
         .map(|&(a, b)| ((a.0 - mid + 0.5, a.1), (b.0 - mid + 0.5, b.1)))
         .collect();
     let j = jitter(&centred, rng);
-    Some(j)
+    Some((j, labels))
+}
+
+/// A piece counts as one letter when that letter is at least this share
+/// of the piece's ink and the piece holds at least this share of the
+/// letter's ink.
+const PIECE_ONE: f32 = 0.85;
+/// A piece counts as "not a letter" when its main letter is below this
+/// share of its ink, or it holds below this share of that letter. Pieces
+/// in between are left out (neither label is clearly right).
+const PIECE_NONE: f32 = 0.6;
+
+/// Pieces of synthetic letter strings, cut as the word decoder cuts
+/// words ([`sigma_hwr::word::piece_indices`]): a piece that is one letter
+/// is labelled with it (the letter seen with its neighbours' edges), a
+/// piece that is part of a letter or several letters with `not_letter`.
+/// `per` strings of 2–8 random letters per font (not lexicon words, so
+/// the word figures stay unseen); at most `max_none` "not a letter"
+/// pieces per font, picked at random.
+#[must_use]
+pub fn piece_set(fonts: &[&str], per: usize, max_none: usize, seed: u64, not_letter: usize) -> Set {
+    use sigma_hwr::word::{cuts, piece_indices};
+    let letters: Vec<char> = CHARSET.chars().filter(|c| c.is_alphabetic()).collect();
+    let lower: Vec<char> = letters
+        .iter()
+        .copied()
+        .filter(|c| c.is_lowercase())
+        .collect();
+    let index = |c: char| CHARSET.chars().position(|m| m == c);
+    let len = |s: &Seg| ((s.1 .0 - s.0 .0).powi(2) + (s.1 .1 - s.0 .1).powi(2)).sqrt();
+    let mut rng = Rng::new(seed);
+    let mut out = Vec::new();
+    for name in fonts {
+        let f = load_font(name);
+        let mut none = Vec::new();
+        let mut done = 0;
+        while done < per {
+            let n = 2 + rng.below(7);
+            let word: String = (0..n)
+                .map(|i| {
+                    if i == 0 && rng.below(5) == 0 {
+                        letters[rng.below(letters.len())]
+                    } else {
+                        lower[rng.below(lower.len())]
+                    }
+                })
+                .collect();
+            let Some((segs, labels)) = synth_word_labelled(&f, &word, &mut rng) else {
+                continue;
+            };
+            done += 1;
+            let chars: Vec<char> = word.chars().collect();
+            let mut total = vec![0.0f32; chars.len()];
+            for (s, &l) in segs.iter().zip(&labels) {
+                total[l] += len(s);
+            }
+            let cut = cuts(&segs);
+            for (a, span, ix) in piece_indices(&segs, &cut) {
+                let mut mine = vec![0.0f32; chars.len()];
+                for &i in &ix {
+                    mine[labels[i]] += len(&segs[i]);
+                }
+                let ink: f32 = mine.iter().sum();
+                let (l, own) = mine
+                    .iter()
+                    .enumerate()
+                    .max_by(|x, y| x.1.total_cmp(y.1))
+                    .map_or((0, 0.0), |(l, v)| (l, *v));
+                if ink <= 0.0 || total[l] <= 0.0 {
+                    continue;
+                }
+                let (share, cover) = (own / ink, own / total[l]);
+                let mid = (cut[a] + cut[a + span]) / 2.0;
+                let part: Vec<Seg> = ix
+                    .iter()
+                    .map(|&i| {
+                        let (p, q) = segs[i];
+                        ((p.0 - mid + 0.5, p.1), (q.0 - mid + 0.5, q.1))
+                    })
+                    .collect();
+                if share >= PIECE_ONE && cover >= PIECE_ONE {
+                    if let Some(ci) = index(chars[l]) {
+                        out.push((features(&part), ci));
+                    }
+                } else if share < PIECE_NONE || cover < PIECE_NONE {
+                    none.push(features(&part));
+                }
+            }
+        }
+        for _ in 0..max_none.min(none.len()) {
+            let i = rng.below(none.len());
+            out.push((none.swap_remove(i), not_letter));
+        }
+    }
+    out
 }
 
 /// Small per-letter jitter (size ±8 %, slant ±0.08, shift ±0.03).

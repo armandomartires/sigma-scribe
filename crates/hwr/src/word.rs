@@ -10,9 +10,9 @@
 use crate::{features, Recogniser, Seg};
 
 /// Longest run of pieces one character may take.
-const MAX_SPAN: usize = 6;
+pub const MAX_SPAN: usize = 6;
 /// Widest character hypothesis (line units).
-const MAX_W: f32 = 1.1;
+pub const MAX_W: f32 = 1.1;
 const COL: f32 = 0.02;
 const MAX_CUTS: usize = 64;
 /// No two neighbouring cuts further apart than this (touching letters
@@ -170,8 +170,45 @@ pub fn cuts(segs: &[Seg]) -> Vec<f32> {
 type Hyp = Vec<Vec<Option<(Vec<f32>, f32)>>>;
 
 fn hypotheses(rec: &Recogniser, segs: &[Seg], cuts: &[f32]) -> Hyp {
+    let mut out: Hyp = vec![vec![None; MAX_SPAN + 1]; cuts.len()];
+    for (a, span, part) in pieces(segs, cuts) {
+        let (lo, hi) = part.iter().fold((f32::MAX, f32::MIN), |(lo, hi), (p, q)| {
+            (lo.min(p.0).min(q.0), hi.max(p.0).max(q.0))
+        });
+        let p = rec.piece_probs(&features(&part));
+        out[a][span] = Some((p.iter().map(|v| v.max(1e-6).ln()).collect(), hi - lo));
+    }
+    out
+}
+
+/// Every character hypothesis of a word: start cut `a`, `span` (end cut
+/// `a + span`, at most [`MAX_SPAN`]) and the segments between the two
+/// cuts (by midpoint), moved so the hypothesis is centred at x 0.5 like a
+/// Letters box. Hypotheses wider than [`MAX_W`] or with no ink are left
+/// out. The trainer cuts its synthetic words with this too.
+#[must_use]
+pub fn pieces(segs: &[Seg], cuts: &[f32]) -> Vec<(usize, usize, Vec<Seg>)> {
+    piece_indices(segs, cuts)
+        .into_iter()
+        .map(|(a, span, ix)| {
+            let mid = (cuts[a] + cuts[a + span]) / 2.0;
+            let part = ix
+                .iter()
+                .map(|&i| {
+                    let (p, q) = segs[i];
+                    ((p.0 - mid + 0.5, p.1), (q.0 - mid + 0.5, q.1))
+                })
+                .collect();
+            (a, span, part)
+        })
+        .collect()
+}
+
+/// [`pieces`] as indices into `segs`, unmoved.
+#[must_use]
+pub fn piece_indices(segs: &[Seg], cuts: &[f32]) -> Vec<(usize, usize, Vec<usize>)> {
     let k = cuts.len();
-    let mut out: Hyp = vec![vec![None; MAX_SPAN + 1]; k];
+    let mut out = Vec::new();
     for a in 0..k {
         for span in 1..=MAX_SPAN {
             let b = a + span;
@@ -182,23 +219,18 @@ fn hypotheses(rec: &Recogniser, segs: &[Seg], cuts: &[f32]) -> Hyp {
             if xb - xa > MAX_W {
                 break;
             }
-            let mid = (xa + xb) / 2.0;
-            let part: Vec<Seg> = segs
+            let ix: Vec<usize> = segs
                 .iter()
-                .filter(|(p, q)| {
+                .enumerate()
+                .filter(|(_, (p, q))| {
                     let m = (p.0 + q.0) / 2.0;
                     m >= xa && m < xb
                 })
-                .map(|&(p, q)| ((p.0 - mid + 0.5, p.1), (q.0 - mid + 0.5, q.1)))
+                .map(|(i, _)| i)
                 .collect();
-            if part.is_empty() {
-                continue;
+            if !ix.is_empty() {
+                out.push((a, span, ix));
             }
-            let (lo, hi) = part.iter().fold((f32::MAX, f32::MIN), |(lo, hi), (p, q)| {
-                (lo.min(p.0).min(q.0), hi.max(p.0).max(q.0))
-            });
-            let p = rec.net_probs(&features(&part));
-            out[a][span] = Some((p.iter().map(|v| v.max(1e-6).ln()).collect(), hi - lo));
         }
     }
     out
@@ -311,6 +343,7 @@ pub fn recognise_tuned(
     let bonus = t.bonus;
     let wt = width_table(rec, t);
     let wterm = |c: usize, w: f32| width_term(wt[c], t.width_weight, w);
+    let not_letter = rec.word_model().not_a_letter();
     let cuts = cuts(segs);
     if cuts.len() < 2 {
         return Vec::new();
@@ -389,6 +422,7 @@ pub fn recognise_tuned(
                 let (ci, v) = lp
                     .iter()
                     .enumerate()
+                    .filter(|(i, _)| Some(*i) != not_letter)
                     .map(|(i, v)| (i, v + wterm(i, *wd)))
                     .max_by(|x, y| x.1.total_cmp(&y.1))
                     .unwrap_or((0, f32::MIN));
