@@ -25,7 +25,12 @@ impl Rect {
     /// are outside.
     #[must_use]
     pub fn contains(&self, x: i32, y: i32) -> bool {
-        x >= self.x && y >= self.y && x < self.x + self.w && y < self.y + self.h
+        // In i64 so a rectangle reaching past i32::MAX cannot overflow.
+        let (x, y) = (i64::from(x), i64::from(y));
+        x >= i64::from(self.x)
+            && y >= i64::from(self.y)
+            && x < i64::from(self.x) + i64::from(self.w)
+            && y < i64::from(self.y) + i64::from(self.h)
     }
 
     /// The smallest rectangle covering both. When `self` is empty the result
@@ -75,12 +80,18 @@ pub struct Canvas {
 
 impl Canvas {
     /// A `width` × `height` canvas with every pixel set to `fill`.
+    ///
+    /// # Panics
+    /// If `width * height` does not fit in `usize`.
     #[must_use]
     pub fn new(width: u32, height: u32, fill: u8) -> Self {
+        let len = (width as usize)
+            .checked_mul(height as usize)
+            .expect("canvas size overflows usize");
         Self {
             width,
             height,
-            pixels: vec![fill; (width * height) as usize],
+            pixels: vec![fill; len],
         }
     }
 
@@ -293,6 +304,15 @@ pub const MIN_REGION: i32 = 16;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn contains_does_not_overflow_near_i32_max() {
+        let r = Rect::new(i32::MAX - 10, i32::MAX - 10, 20, 20);
+        assert!(r.contains(i32::MAX, i32::MAX));
+        assert!(r.contains(i32::MAX - 10, i32::MAX - 10));
+        assert!(!r.contains(i32::MAX - 11, i32::MAX));
+        assert!(!Rect::new(0, 0, 0, 5).contains(0, 0));
+    }
 
     #[test]
     fn thin_regions_are_padded_inside_the_canvas() {
