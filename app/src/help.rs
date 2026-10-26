@@ -153,3 +153,11 @@ impl App {
         })
     }
 }
+
+/// The Help sheet (v0.7): the page shown and its laid-out text.
+#[derive(Clone, Debug)]
+pub struct HelpState {
+    pub page: HelpPage,
+    pub doc: Option<Doc>,
+    pub at: usize,
+}

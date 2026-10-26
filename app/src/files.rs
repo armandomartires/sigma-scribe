@@ -390,3 +390,15 @@ impl App {
         Some(Refresh::Partial)
     }
 }
+
+#[derive(Clone, Debug, Default)]
+pub struct FilesState {
+    pub folder: NotePath,
+    pub entries: Vec<Entry>,
+    pub more: Option<usize>,
+    pub armed: Option<usize>,
+    pub moving: Option<NotePath>,
+    pub targets: Vec<NotePath>,
+    pub message: Option<String>,
+    pub first: usize,
+}

@@ -113,3 +113,10 @@ impl App {
         }
     }
 }
+
+/// Preview mode (v0.3): the laid-out note and the page shown. Read-only.
+#[derive(Clone, Debug, Default)]
+pub struct PreviewState {
+    pub doc: Doc,
+    pub page: usize,
+}

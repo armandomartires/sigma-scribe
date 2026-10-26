@@ -348,3 +348,23 @@ impl App {
         }
     }
 }
+
+const SETTINGS: &str = ".sigma-settings";
+
+pub(crate) fn load_settings(root: &std::path::Path) -> Settings {
+    std::fs::read_to_string(root.join(SETTINGS))
+        .map(|s| Settings::parse(&s))
+        .unwrap_or_default()
+}
+
+/// The interface language (v1.5.5, decision 57): the Kobo's unless
+/// Settings → Language → Override system language is on.
+pub(crate) fn resolve_lang(
+    s: &Settings,
+    system: sigma_render::i18n::Lang,
+) -> sigma_render::i18n::Lang {
+    if !s.lang_override {
+        return system;
+    }
+    sigma_render::i18n::Lang::from_locale(s.ui_lang.code())
+}
