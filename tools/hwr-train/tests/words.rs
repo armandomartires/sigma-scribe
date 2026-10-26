@@ -2,14 +2,15 @@
 //! word accuracy and time per word on synthetic words, the gate of
 //! `sprints/S15.3-word-mode.md` (G1 CER ≤ 15 % on unseen fonts after
 //! enrolment; G2 ≤ 180 ms p95 here ≈ 1 s on the A9). Word mode failed
-//! G1, so this test only guards against regressions.
+//! G1 until the piece model (`assets/hwr/pieces.hwr`); the floors below
+//! keep that gain, with room for the small samples (40–60 words).
 
 use hwr_train::{enrol_samples, word_score, HELD_OUT_FONTS, TRAIN_FONTS};
 use sigma_hwr::{word::builtin_words, Model, Recogniser};
 
 #[test]
 fn word_mode_gate_figures() {
-    let r = Recogniser::new(Model::default_model());
+    let r = Recogniser::new(Model::default_model()).with_pieces(Model::pieces_model());
     let words = builtin_words();
     let seen = word_score(&r, TRAIN_FONTS, &words, 6, 11);
     println!("words, training fonts (new jitter): {seen:?}");
@@ -34,7 +35,7 @@ fn word_mode_gate_figures() {
         if g2 { "pass" } else { "FAIL" },
         p95 / 1000.0
     );
-    assert!(seen.cer < 0.25, "{seen:?}");
-    assert!(worst < 0.40, "worst held-out CER {worst}");
+    assert!(seen.cer < 0.18, "{seen:?}");
+    assert!(worst < 0.20, "worst held-out CER {worst}");
     assert!(g2, "p95 {p95} us");
 }

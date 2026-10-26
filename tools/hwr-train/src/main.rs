@@ -1,6 +1,9 @@
 //! `cargo run -p hwr-train --release -- train` rebuilds
-//! `assets/hwr/default.hwr`; `-- widths` rebuilds `assets/hwr/widths.txt`;
-//! `-- eval` prints the held-out figures.
+//! `assets/hwr/default.hwr` (letters); `-- train-pieces` rebuilds
+//! `assets/hwr/pieces.hwr` (the word decoder's model); `-- widths` rebuilds
+//! `assets/hwr/widths.txt`; `-- eval`, `-- words` and `-- free` print the
+//! held-out figures. `HWR_MODEL` / `HWR_PIECES_MODEL` point at other model
+//! files (experiments).
 
 use hwr_train::{score, synth_set, Net, Rng, HELD_OUT_FONTS, TRAIN_FONTS};
 use sigma_hwr::{Model, Recogniser, CHARSET};
@@ -9,22 +12,57 @@ use std::time::Instant;
 const HIDDEN: usize = 192;
 const PER: usize = 60;
 const EPOCHS: usize = 12;
+/// Hidden units of the piece model: more than the letter model, which
+/// keeps its letter accuracy while it also learns "not a letter".
+const PIECES_HIDDEN: usize = 256;
+/// Random letter strings per training font cut into pieces (see
+/// `piece_set`).
+const PIECES_PER: usize = 400;
+/// "Not a letter" pieces kept per training font.
+const MAX_NONE: usize = 3000;
+
+fn path(var: &str, file: &str) -> String {
+    std::env::var(var)
+        .unwrap_or_else(|_| format!("{}/../../assets/hwr/{file}", env!("CARGO_MANIFEST_DIR")))
+}
+
+/// Trains a network on the isolated letters of the training fonts, and
+/// with `pieces` also on pieces of synthetic words with a "not a letter"
+/// class, and writes it to `out`.
+fn train(out: &str, hidden: usize, pieces: bool) {
+    let t = Instant::now();
+    let mut set = synth_set(TRAIN_FONTS, PER, 1);
+    let letters = CHARSET.chars().count();
+    let classes = if pieces {
+        let p = hwr_train::piece_set(TRAIN_FONTS, PIECES_PER, MAX_NONE, 2, letters);
+        let none = p.iter().filter(|(_, c)| *c == letters).count();
+        eprintln!("pieces: {} letters, {none} not a letter", p.len() - none);
+        set.extend(p);
+        letters + 1
+    } else {
+        letters
+    };
+    eprintln!("{} training samples in {:?}", set.len(), t.elapsed());
+    let mut rng = Rng::new(7);
+    let mut net = Net::new(hidden, classes, &mut rng);
+    net.train(&set, EPOCHS, &mut rng);
+    let bytes = net.model().to_bytes();
+    std::fs::write(out, &bytes).expect("write model");
+    eprintln!("wrote {} bytes in {:?}", bytes.len(), t.elapsed());
+}
+
+fn load(path: &str) -> Model {
+    Model::from_bytes(&std::fs::read(path).expect("model")).expect("parse")
+}
 
 fn main() {
     let cmd = std::env::args().nth(1).unwrap_or_default();
-    let out = concat!(env!("CARGO_MANIFEST_DIR"), "/../../assets/hwr/default.hwr");
+    let out = path("HWR_MODEL", "default.hwr");
+    let out = out.as_str();
+    let pieces = path("HWR_PIECES_MODEL", "pieces.hwr");
     match cmd.as_str() {
-        "train" => {
-            let t = Instant::now();
-            let set = synth_set(TRAIN_FONTS, PER, 1);
-            eprintln!("{} training samples in {:?}", set.len(), t.elapsed());
-            let mut rng = Rng::new(7);
-            let mut net = Net::new(HIDDEN, CHARSET.chars().count(), &mut rng);
-            net.train(&set, EPOCHS, &mut rng);
-            let bytes = net.model().to_bytes();
-            std::fs::write(out, &bytes).expect("write model");
-            eprintln!("wrote {} bytes in {:?}", bytes.len(), t.elapsed());
-        }
+        "train" => train(out, HIDDEN, false),
+        "train-pieces" => train(&pieces, PIECES_HIDDEN, true),
         "widths" => {
             let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../assets/hwr/widths.txt");
             let mut text = String::from(
@@ -37,8 +75,7 @@ fn main() {
             std::fs::write(path, text).expect("write widths");
         }
         "eval" => {
-            let m = Model::from_bytes(&std::fs::read(out).expect("model")).expect("parse");
-            let r = Recogniser::new(m);
+            let r = Recogniser::new(load(out));
             let seen = synth_set(TRAIN_FONTS, 10, 1001);
             let unseen = synth_set(HELD_OUT_FONTS, 20, 2002);
             println!("held-out jitter, training fonts: {:?}", score(&r, &seen));
@@ -73,8 +110,7 @@ fn main() {
             );
         }
         "words" => {
-            let m = Model::from_bytes(&std::fs::read(out).expect("model")).expect("parse");
-            let r = Recogniser::new(m);
+            let r = Recogniser::new(load(out)).with_pieces(load(&pieces));
             let words = sigma_hwr::word::builtin_words();
             let seen = hwr_train::word_score(&r, TRAIN_FONTS, &words, 30, 11);
             println!("words, training fonts (new jitter): {seen:?}");
@@ -87,8 +123,7 @@ fn main() {
             }
         }
         "free" => {
-            let m = Model::from_bytes(&std::fs::read(out).expect("model")).expect("parse");
-            let r = Recogniser::new(m);
+            let r = Recogniser::new(load(out)).with_pieces(load(&pieces));
             let printed = (0.06, 0.16);
             let touching = (-0.02, 0.05);
             println!(
