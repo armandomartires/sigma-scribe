@@ -36,7 +36,7 @@ pub struct Cand {
 /// A pinyin dictionary: words by their syllables, and the known syllables.
 /// Its contents are private to this module.
 #[derive(Default)]
-pub struct Dict {
+pub(crate) struct Dict {
     /// Words by pinyin key (syllables joined by one space), best first.
     words: HashMap<String, Vec<(String, u32)>>,
     syls: HashSet<String>,
