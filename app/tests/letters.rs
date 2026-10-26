@@ -250,3 +250,104 @@ fn stray_reports_outside_the_box_do_not_draw_lines_to_its_corners() {
         stroke.points
     );
 }
+
+fn learned(root: &std::path::Path) -> Vec<sigma_hwr::Sample> {
+    std::fs::read_to_string(sigma_scribe::learned_path(root))
+        .map(|t| sigma_hwr::samples_from_text(&t))
+        .unwrap_or_default()
+}
+
+#[test]
+fn a_letter_fixed_with_a_candidate_is_learned_once_and_capped() {
+    let mut r = Rig::new("learn");
+    let root = r.app.library.root().to_path_buf();
+    r.app.change(Change::InkBoxes(true));
+    r.tap("Write");
+    r.write(0, &circle());
+    r.tick(LETTER_MS + 100);
+    let cands = r.app.ink.as_ref().unwrap().cands.clone();
+    // Reading accepted as typed: nothing learned.
+    assert!(learned(&root).is_empty());
+    r.tap("Cand1");
+    let got = learned(&root);
+    assert_eq!(got.len(), 1);
+    assert_eq!(got[0].ch.to_string(), cands[1]);
+    // Picking again for the same reading replaces what it taught.
+    r.tap("Cand2");
+    let got = learned(&root);
+    assert_eq!(got.len(), 1, "{got:?}");
+    assert_eq!(got[0].ch.to_string(), cands[2]);
+    // The same correction many times keeps only the newest few.
+    for i in 0..sigma_scribe::LEARN_PER_CHAR + 2 {
+        r.write(i % 2, &circle());
+        r.tick(LETTER_MS + 100);
+        r.tap("Cand2");
+    }
+    let got = learned(&root);
+    let mut per = std::collections::HashMap::new();
+    for s in &got {
+        *per.entry(s.ch).or_insert(0usize) += 1;
+    }
+    assert!(
+        per.values().all(|&n| n <= sigma_scribe::LEARN_PER_CHAR),
+        "{per:?}"
+    );
+    // The recogniser is fitted again on them, in the background.
+    r.app.hwr.poll(true);
+    assert_eq!(r.app.hwr.samples, got.len());
+    // Settings → Delete samples removes the learned ones too.
+    r.app.change(Change::DeleteSamples);
+    assert!(!sigma_scribe::learned_path(&root).exists());
+}
+
+#[test]
+fn learning_off_keeps_corrections_out_of_the_samples() {
+    let mut r = Rig::new("nolearn");
+    let root = r.app.library.root().to_path_buf();
+    r.app.change(Change::InkBoxes(true));
+    r.app.change(Change::InkLearn(false));
+    r.tap("Write");
+    r.write(0, &circle());
+    r.tick(LETTER_MS + 100);
+    r.tap("Cand1");
+    assert!(!sigma_scribe::learned_path(&root).exists());
+}
+
+#[test]
+fn a_free_area_letter_fixed_with_a_candidate_is_learned() {
+    let mut r = Rig::new("learnfree");
+    let root = r.app.library.root().to_path_buf();
+    r.tap("Write");
+    let a = r.app.letter_box(0).expect("area");
+    for (i, s) in [circle(), bar(), circle()].into_iter().enumerate() {
+        for st in at(0.1 + 0.16 * i as f32, s) {
+            for (k, &(x, y)) in st.iter().enumerate() {
+                let (px, py) = (a.x + (x * a.h as f32) as i32, a.y + (y * a.h as f32) as i32);
+                r.touch(if k == 0 { Phase::Down } else { Phase::Move }, px, py);
+            }
+            let &(x, y) = st.last().unwrap();
+            let (px, py) = (a.x + (x * a.h as f32) as i32, a.y + (y * a.h as f32) as i32);
+            r.touch(Phase::Up, px, py);
+        }
+    }
+    r.tick(1300);
+    let cands = r.app.ink.as_ref().unwrap().cands.clone();
+    let typed: Vec<char> = cands[0].chars().collect();
+    // An alternative that changes one letter of the reading.
+    let (k, ch) = cands
+        .iter()
+        .enumerate()
+        .skip(1)
+        .find_map(|(k, c)| {
+            let c: Vec<char> = c.chars().collect();
+            let d: Vec<usize> = (0..c.len())
+                .filter(|&i| c.len() == typed.len() && c[i] != typed[i])
+                .collect();
+            (d.len() == 1).then(|| (k, c[d[0]]))
+        })
+        .expect("a one-letter alternative");
+    r.tap(&format!("Cand{k}"));
+    let got = learned(&root);
+    assert_eq!(got.len(), 1, "{got:?}");
+    assert_eq!(got[0].ch, ch);
+}

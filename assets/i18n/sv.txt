@@ -727,6 +727,12 @@ Word mode (experimental)
 Read every word against a word list; off is more accurate
 = Jämför varje ord med en ordlista; av är mer exakt
 
+Learn from corrections
+= Lär av rättelser
+
+A letter you fix with a candidate teaches it your writing
+= En bokstav du rättar med ett förslag lär den din handstil
+
 Override system language
 = Åsidosätt systemspråk
 

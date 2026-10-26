@@ -727,6 +727,12 @@ Word mode (experimental)
 Read every word against a word list; off is more accurate
 = Toetst elk woord aan een woordenlijst; uit is nauwkeuriger
 
+Learn from corrections
+= Leren van correcties
+
+A letter you fix with a candidate teaches it your writing
+= Een letter die je met een kandidaat verbetert, leert het je handschrift
+
 Override system language
 = Systeemtaal negeren
 

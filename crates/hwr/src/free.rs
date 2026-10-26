@@ -20,6 +20,32 @@ pub struct Reading {
     pub text: String,
     /// Other readings, without duplicates of `text`.
     pub alts: Vec<String>,
+    /// For each character of the letter-by-letter reading (`text` before a
+    /// lexicon word may replace it): the character read and its ink in box
+    /// units, or `None` for a space or a letter of a word read with the
+    /// lexicon. What the app learns from when a candidate corrects one
+    /// letter ([`learnable`]).
+    pub letters: Vec<Option<(char, Vec<Seg>)>>,
+}
+
+/// The one letter a correction teaches, if it is clear: `typed` (what the
+/// panel typed) and `picked` (the candidate chosen) have the same length
+/// and differ at exactly one position, where `typed` has the character
+/// read from that ink. Returns the picked character and the ink.
+#[must_use]
+pub fn learnable<'a>(r: &'a Reading, typed: &str, picked: &str) -> Option<(char, &'a [Seg])> {
+    let t: Vec<char> = typed.chars().collect();
+    let p: Vec<char> = picked.chars().collect();
+    if t.len() != p.len() || t.len() != r.letters.len() {
+        return None;
+    }
+    let mut diff = (0..t.len()).filter(|&i| t[i] != p[i]);
+    let i = diff.next()?;
+    if diff.next().is_some() {
+        return None;
+    }
+    let (read, ink) = r.letters[i].as_ref()?;
+    (*read == t[i] && !p[i].is_whitespace()).then_some((p[i], ink.as_slice()))
 }
 
 fn bbox(segs: &[Seg]) -> (f32, f32, f32, f32) {
@@ -159,6 +185,7 @@ pub fn read_lex(
         }
     }
     let mut chars: Vec<Vec<(char, f32)>> = Vec::new();
+    let mut inks: Vec<Vec<Seg>> = Vec::new();
     let mut spaces = Vec::new();
     let mut prev_x1: Option<f32> = None;
     for c in &merged {
@@ -174,6 +201,7 @@ pub fn read_lex(
             })
             .collect();
         let mut p = rec.probs(&features(&boxed));
+        inks.push(boxed);
         if let Some(m) = allow {
             for (pi, ok) in p.iter_mut().zip(m) {
                 if !ok {
@@ -212,6 +240,20 @@ pub fn read_lex(
         s
     };
     let text = build(None, None);
+    // The same walk as `build(None, None)`, keeping each letter's ink.
+    let mut letters = Vec::new();
+    for (i, c) in chars.iter().enumerate() {
+        if spaces[i] {
+            letters.push(None);
+        }
+        if let Some(w) = &lex_word[word_of[i]] {
+            if i == 0 || word_of[i - 1] != word_of[i] {
+                letters.extend(w.chars().map(|_| None));
+            }
+            continue;
+        }
+        letters.push(Some((c[0].0, inks[i].clone())));
+    }
     // Alternatives: the 4 least sure characters, each at its runner-up.
     let mut unsure: Vec<usize> = (0..chars.len()).filter(|&i| chars[i].len() > 1).collect();
     unsure.sort_by(|&a, &b| {
@@ -245,7 +287,11 @@ pub fn read_lex(
         new
     });
     alts.truncate(4);
-    Reading { text, alts }
+    Reading {
+        text,
+        alts,
+        letters,
+    }
 }
 
 /// Characters allowed by a language filter (v1.5.3 globe key): `None`
@@ -278,6 +324,31 @@ pub fn allow_lang(rec: &Recogniser, lang: Option<&str>, digits: bool) -> Option<
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn only_a_one_letter_correction_of_read_ink_is_learnable() {
+        let ink = vec![((0.4, 0.3), (0.4, 0.7))];
+        let r = Reading {
+            text: "ab c".into(),
+            alts: Vec::new(),
+            letters: vec![
+                Some(('a', ink.clone())),
+                Some(('b', ink.clone())),
+                None,
+                Some(('c', ink.clone())),
+            ],
+        };
+        assert_eq!(learnable(&r, "ab c", "ab e").map(|x| x.0), Some('e'));
+        assert_eq!(learnable(&r, "ab c", "ob c").map(|x| x.0), Some('o'));
+        // Two letters, a different length, a space, or text that does not
+        // match what was read: nothing.
+        assert!(learnable(&r, "ab c", "ob e").is_none());
+        assert!(learnable(&r, "ab c", "abc").is_none());
+        assert!(learnable(&r, "ab c", "ab  ").is_none());
+        assert!(learnable(&r, "xb c", "ab c").is_none());
+        // A letter of a lexicon word (no ink of its own): nothing.
+        assert!(learnable(&r, "ab c", "abxc").is_none());
+    }
+
     use super::*;
     use crate::Model;
 
