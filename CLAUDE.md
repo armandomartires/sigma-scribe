@@ -23,6 +23,8 @@ cargo test --workspace
 - The MSRV is `rust-version` in `Cargo.toml` (1.88), checked by the `msrv`
   job in CI. Do not use newer language or library features, and do not
   change it, or update a dependency that needs a newer Rust, without asking.
+- After adding or updating a dependency, run `cargo deny check` (the `deny`
+  job in CI); licences must be on the allow list in `deny.toml`.
 - `sigma-plugin-api` is a contract with plugins built elsewhere. Changing the
   encoding means bumping `ABI` and updating `docs/plugins.md` and the
   plugins repository.
