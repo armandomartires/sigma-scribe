@@ -38,6 +38,21 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev
       - run: cargo check --workspace --all-targets --locked
+  deny:
+    # Checks the locked dependencies against deny.toml: RustSec advisories,
+    # licences, banned crates and sources. A new advisory can appear without
+    # any change here, so it does not block the pull request; the other
+    # checks do.
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        checks: [advisories, bans licenses sources]
+    continue-on-error: ${{ matrix.checks == 'advisories' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check ${{ matrix.checks }}
   armv7:
     runs-on: ubuntu-latest
     needs: test

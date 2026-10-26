@@ -1,0 +1,52 @@
+# cargo-deny: checks the locked dependencies (`cargo deny check`).
+# Run in CI by the `deny` job. See CONTRIBUTING.md.
+
+[graph]
+# Only the targets we build: the desktop and the Kobo.
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "armv7-unknown-linux-musleabihf",
+]
+
+[advisories]
+# Fail on any RustSec advisory (vulnerable, unmaintained, unsound, yanked),
+# except these known ones. Each needs a reason; review them when the font
+# stack changes.
+ignore = [
+    # rustybuzz is unmaintained (alternative: harfrust). sigma-render uses it
+    # for shaping; no known vulnerability. Replacing it is a separate change.
+    { id = "RUSTSEC-2026-0206", reason = "font shaping in sigma-render; replacement not yet planned" },
+    # ttf-parser is unmaintained (alternative: skrifa). Comes in through
+    # rustybuzz and fontdue; no known vulnerability. Parses only the bundled
+    # fonts and fonts from installed plugins.
+    { id = "RUSTSEC-2026-0192", reason = "via rustybuzz and fontdue; replacement not yet planned" },
+]
+
+[licenses]
+# Permissive licences compatible with the project's AGPL-3.0-only.
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "MIT",
+    "Zlib",
+]
+confidence-threshold = 0.8
+
+[licenses.private]
+# Our own crates are publish = false and AGPL-3.0-only.
+ignore = true
+
+[bans]
+# Duplicate versions come from upstream (ttf-parser, bitflags, ...); report
+# them without failing.
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

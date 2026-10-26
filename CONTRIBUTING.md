@@ -66,6 +66,17 @@ scripts/sim.sh --headless tests/emu/v1.0-tour.script target/shots
 The first prints the handwriting accuracy and latency figures. The second is
 one emulator script; CI runs every `tests/emu/*.script` this way.
 
+**Dependencies.** The `deny` job in CI runs `cargo deny check` against
+`deny.toml`: RustSec advisories, licences, banned crates and sources. To run
+it locally, install it once with `cargo install --locked cargo-deny`.
+- Licences must be on the allow list in `deny.toml`. All are permissive
+  and compatible with AGPL-3.0-only. Do not add a dependency whose licence
+  is not.
+- A new advisory does not block a pull request, but fix it or add it to
+  `ignore` in `deny.toml` with a reason.
+- `rustybuzz` and `ttf-parser` (the font stack) are unmaintained and listed
+  there. They have no known vulnerability.
+
 A UI change also follows `docs/ui-rulebook.md`. A release follows
 `docs/release/checklist.md`.
 
