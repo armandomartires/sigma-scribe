@@ -25,7 +25,6 @@ extern "C" {
     fn sg_refresh(x: u32, y: u32, w: u32, h: u32, mode: i32) -> i32;
     fn sg_abs_max(fd: i32, code: i32) -> i32;
     fn sg_close() -> i32;
-    fn sg_wait() -> i32;
 }
 
 /// The Kobo Forma: the e-ink panel through FBInk, and touch, buttons,
