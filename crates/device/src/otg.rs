@@ -16,14 +16,17 @@ use std::path::PathBuf;
 /// The Chipidea role file on Clara / Forma-generation Kobos.
 pub const CHIPIDEA_ROLE: &str = "/sys/kernel/debug/ci_hdrc.0/role";
 
+/// The USB OTG role file and whether this app switched it to host.
 #[derive(Clone, Debug)]
 pub struct OtgSwitch {
+    /// The role file (normally [`CHIPIDEA_ROLE`]).
     pub path: PathBuf,
     /// We changed gadget → host and owe a switch back.
     pub switched: bool,
 }
 
 impl OtgSwitch {
+    /// A switch on the role file at `path`, not yet switched.
     #[must_use]
     pub fn new(path: impl Into<PathBuf>) -> Self {
         Self {

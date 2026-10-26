@@ -12,6 +12,8 @@
 //! enrolled samples ([`Sample`]) are matched by nearest neighbour and
 //! blended in; they never leave the device.
 
+#![warn(missing_docs)]
+
 use std::fmt::Write as _;
 
 pub mod free;
@@ -135,10 +137,15 @@ pub fn features(segs: &[Seg]) -> Vec<f32> {
 /// One int8 layer: `out[r] = scale[r] * Σ w[r][i] * x[i] + bias[r]`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Layer {
+    /// Number of outputs.
     pub rows: usize,
+    /// Number of inputs.
     pub cols: usize,
+    /// Dequantisation scale, one per row.
     pub scale: Vec<f32>,
+    /// Bias, one per row.
     pub bias: Vec<f32>,
+    /// Int8 weights, row-major (`rows * cols`).
     pub w: Vec<i8>,
 }
 
@@ -183,8 +190,11 @@ impl Layer {
 /// The default (or any) network.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Model {
+    /// The characters the network scores, in output order.
     pub chars: Vec<char>,
+    /// Hidden layer (ReLU), from the [`DIM`] features.
     pub hidden: Layer,
+    /// Output layer, one row per character in `chars`.
     pub out: Layer,
 }
 
@@ -260,6 +270,10 @@ impl Model {
         out
     }
 
+    /// Reads a model in the [`Model::to_bytes`] format.
+    ///
+    /// Returns `None` if the data is truncated, has the wrong magic or
+    /// version, or its layer sizes do not fit [`DIM`] and the charset.
     #[must_use]
     pub fn from_bytes(mut b: &[u8]) -> Option<Self> {
         if take(&mut b, 4)? != MAGIC || u16_at(&mut b)? != VERSION {
@@ -316,7 +330,9 @@ pub fn softmax(o: &mut [f32]) {
 /// strokes in box units.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Sample {
+    /// The character written.
     pub ch: char,
+    /// The strokes, each a list of points in box units.
     pub strokes: Vec<Vec<(f32, f32)>>,
 }
 
@@ -331,10 +347,12 @@ pub const ADAPT_EPOCHS: usize = 20;
 /// The recogniser: the network plus the user's samples.
 #[derive(Clone, Debug)]
 pub struct Recogniser {
+    /// The network.
     pub model: Model,
     user: Vec<(usize, Vec<f32>)>,
     /// [`USER_WEIGHT`] and [`USER_SIGMA`] (fields so the trainer can tune).
     pub user_weight: f32,
+    /// Feature distance scale for user samples (see [`USER_SIGMA`]).
     pub user_sigma: f32,
     /// Output layer fine-tuned on the user's samples (float), if any.
     adapted: Option<(Vec<f32>, Vec<f32>)>,
@@ -343,6 +361,8 @@ pub struct Recogniser {
 }
 
 impl Recogniser {
+    /// A recogniser for `model` with no user samples and the default
+    /// [`USER_WEIGHT`], [`USER_SIGMA`] and [`ADAPT_EPOCHS`].
     #[must_use]
     pub fn new(model: Model) -> Self {
         Self {
@@ -418,6 +438,7 @@ impl Recogniser {
         self.adapted = Some((w, b));
     }
 
+    /// Number of user samples in use (those inside the charset).
     #[must_use]
     pub fn user_samples(&self) -> usize {
         self.user.len()

@@ -28,6 +28,8 @@ extern "C" {
     fn sg_wait() -> i32;
 }
 
+/// The Kobo Forma: the e-ink panel through FBInk, and touch, buttons,
+/// accelerometer and USB input read from evdev.
 pub struct KoboDevice {
     pointer_updates: u64,
     /// When the last full (flashing) refresh was submitted, for the Debug

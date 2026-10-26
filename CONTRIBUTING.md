@@ -143,11 +143,12 @@ crate is for.
 - Browse them with `cargo doc -p sigma-plugin-api --open`.
 
 **Other crates.**
-- `sigma-core` and `sigma-render` are also fully documented and set
-  `#![warn(missing_docs)]`. Keep them that way.
-- `sigma-device`, `sigma-hwr`, the app and `hwr-train` are not yet fully
-  documented. Document what you add or change. Do not add `missing_docs` to
-  a crate until it is clean.
+- `sigma-core`, `sigma-render`, `sigma-device` and `sigma-hwr` are also
+  fully documented and set `#![warn(missing_docs)]`. Keep them that way.
+- `sigma-device`'s `fbink.rs` is built only for ARM, so the desktop checks
+  do not see it. Document its public items by hand.
+- The app and `hwr-train` are binaries and not fully documented. Document
+  what you add or change.
 
 **User-facing docs.**
 - User-facing behaviour goes in `README.md`, `docs/` and `CHANGELOG.md`

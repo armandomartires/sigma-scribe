@@ -10,9 +10,13 @@
 /// Reading the sensor on the Kobo.
 pub const ENABLED: bool = true;
 
+/// Linux `EV_ABS`: absolute axis events.
 pub const EV_ABS: u16 = 0x03;
+/// Linux `ABS_X`: acceleration along X.
 pub const ABS_X: u16 = 0;
+/// Linux `ABS_Y`: acceleration along Y.
 pub const ABS_Y: u16 = 1;
+/// Linux `ABS_Z`: acceleration along Z.
 pub const ABS_Z: u16 = 2;
 
 /// In-plane gravity below this (0.3 g) is "lying flat": keep the rotation.
@@ -21,10 +25,13 @@ const MIN_IN_PLANE: i32 = 5000;
 /// Which way the device is held, as the sensor reports it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tilt {
+    /// Portrait, page buttons on the right.
     Upright,
     /// Turned a quarter clockwise: the picture is drawn landscape.
     Clockwise,
+    /// Turned half way round: portrait, upside down.
     UpsideDown,
+    /// Turned a quarter counter-clockwise: the picture is drawn landscape.
     CounterClockwise,
 }
 

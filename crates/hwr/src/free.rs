@@ -16,7 +16,9 @@ pub const WIDE: f32 = 0.8;
 /// What the free area reads: the text and up to 4 alternatives.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Reading {
+    /// The best reading.
     pub text: String,
+    /// Other readings, without duplicates of `text`.
     pub alts: Vec<String>,
 }
 
