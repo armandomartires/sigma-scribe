@@ -8,9 +8,13 @@ This binary statically links:
 - FBInk by NiLuJe — GPL-3.0-or-later — https://github.com/NiLuJe/FBInk
   (commit 886f25f1, built with MINIMAL=true IMAGE=true KOBO=true).
   FBInk's own bundled components keep their licences, listed in its source.
-- rustybuzz (MIT, a Rust port of HarfBuzz) and unicode-bidi (MIT / Apache-2.0) and unicode-segmentation (MIT / Apache-2.0), with their
-  dependencies (ttf-parser, unicode-script, unicode-properties, unicode-ccc, bitflags…),
-  for Arabic-script and Hebrew shaping and right-to-left order.
+- harfrust (MIT, a Rust port of HarfBuzz), unicode-bidi (MIT / Apache-2.0) and
+  unicode-segmentation (MIT / Apache-2.0), for Arabic-script, Hebrew, Indic and Thai shaping
+  and right-to-left order.
+- skrifa and read-fonts (MIT / Apache-2.0, from Google Fonts' fontations), which read the
+  fonts, and zeno (MIT / Apache-2.0), which draws their glyphs.
+- Their dependencies: font-types, smallvec, bytemuck, bitflags, once_cell (MIT / Apache-2.0),
+  foldhash (Zlib), and yoke, zerofrom, stable_deref_trait (Unicode-3.0 / MIT / Apache-2.0).
 - wasmi (MIT / Apache-2.0, a WebAssembly interpreter) with its dependencies (wasmi_core,
   wasmi_ir, wasmi_collections, wasmparser, spin, libm), which runs screen plugins such as the
   Graph map in a sandbox. wasmparser: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT.

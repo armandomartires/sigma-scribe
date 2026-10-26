@@ -3,7 +3,7 @@
 //! A row with no right-to-left character takes the plain per-character
 //! path in `fonts.rs` and never comes here. A row with Arabic, Hebrew or
 //! the like is split into bidi runs (`unicode-bidi`), each run into
-//! stretches of one face, and every stretch is shaped (`rustybuzz`), so
+//! stretches of one face, and every stretch is shaped (`harfrust`), so
 //! letters join, marks sit on their letters and the runs read in visual
 //! order. The caret and a tap use the glyphs' cluster positions.
 
@@ -12,7 +12,7 @@ use unicode_bidi::BidiInfo;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Glyph {
-    pub id: u16,
+    pub id: u32,
     pub adv: f32,
     pub dx: f32,
     pub dy: f32,
@@ -152,49 +152,67 @@ impl Fonts {
             glyphs: Vec::new(),
             width: 0.0,
         };
-        let Some(buzz) = self.buzz(face) else {
-            // A font pack: one glyph per character, in run order.
-            let font = self.font(face);
-            let mut chars: Vec<(usize, char)> = text.char_indices().collect();
-            if rtl {
-                chars.reverse();
+        if let Some(font) = self.shaper(face) {
+            if let Some(glyphs) = shape_run(&font, size, text, base, rtl) {
+                seg.width = glyphs.iter().map(|g| g.adv).sum();
+                seg.glyphs = glyphs;
+                return seg;
             }
-            for (i, c) in chars {
-                let adv = font.metrics(c, size).advance_width;
-                seg.glyphs.push(Glyph {
-                    id: font.lookup_glyph_index(c),
-                    adv,
-                    dx: 0.0,
-                    dy: 0.0,
-                    cluster: base + i,
-                });
-                seg.width += adv;
-            }
-            return seg;
-        };
-        let mut buf = rustybuzz::UnicodeBuffer::new();
-        buf.push_str(text);
-        buf.set_direction(if rtl {
-            rustybuzz::Direction::RightToLeft
-        } else {
-            rustybuzz::Direction::LeftToRight
-        });
-        buf.guess_segment_properties();
-        let out = rustybuzz::shape(&buzz, &[], buf);
-        let k = size / f32::from(buzz.units_per_em().max(1) as u16);
-        for (info, pos) in out.glyph_infos().iter().zip(out.glyph_positions()) {
-            let adv = pos.x_advance as f32 * k;
+        }
+        // A font pack, or text the shaper refused: one glyph per
+        // character, in run order.
+        let font = self.font(face);
+        let mut chars: Vec<(usize, char)> = text.char_indices().collect();
+        if rtl {
+            chars.reverse();
+        }
+        for (i, c) in chars {
+            let adv = font.char_advance(c, size);
             seg.glyphs.push(Glyph {
-                id: info.glyph_id as u16,
+                id: font.glyph(c),
                 adv,
-                dx: pos.x_offset as f32 * k,
-                dy: pos.y_offset as f32 * k,
-                cluster: base + info.cluster as usize,
+                dx: 0.0,
+                dy: 0.0,
+                cluster: base + i,
             });
             seg.width += adv;
         }
         seg
     }
+}
+
+/// Shapes one stretch of one face; `None` if the shaper refuses it.
+fn shape_run(
+    font: &harfrust::Font,
+    size: f32,
+    text: &str,
+    base: usize,
+    rtl: bool,
+) -> Option<Vec<Glyph>> {
+    let shaper = harfrust::ShaperFont::new(font);
+    let mut buf = harfrust::Buffer::new();
+    buf.push_str(text);
+    buf.set_direction(if rtl {
+        harfrust::Direction::RightToLeft
+    } else {
+        harfrust::Direction::LeftToRight
+    });
+    buf.guess_segment_properties();
+    harfrust::shape(&shaper, &mut buf, harfrust::ShapeOptions::new()).ok()?;
+    let k = size / f32::from(font.units_per_em().max(1));
+    Some(
+        buf.glyph_infos()
+            .iter()
+            .zip(buf.glyph_positions())
+            .map(|(info, pos)| Glyph {
+                id: info.glyph_id,
+                adv: pos.x_advance as f32 * k,
+                dx: pos.x_offset as f32 * k,
+                dy: pos.y_offset as f32 * k,
+                cluster: base + info.cluster as usize,
+            })
+            .collect(),
+    )
 }
 
 impl Shaped {

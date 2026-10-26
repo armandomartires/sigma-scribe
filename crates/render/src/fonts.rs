@@ -3,7 +3,7 @@
 //! uses real advances ("measure with the real face, not a guess").
 
 use crate::canvas::Canvas;
-use fontdue::{Font, FontSettings};
+use crate::typeface::{FontFile, GlyphMask};
 use std::cell::RefCell;
 use std::collections::HashMap;
 
@@ -54,19 +54,19 @@ pub enum Face {
 }
 
 type GlyphKey = (Face, char, u32);
-/// A rasterised glyph: metrics and coverage.
-type Glyph = (fontdue::Metrics, Vec<u8>);
 
 /// The embedded faces and the optional font pack, with caches of shaped
 /// text and rasterised glyphs.
 pub struct Fonts {
-    faces: [Font; 11],
-    buzz: RefCell<HashMap<Face, Option<std::rc::Rc<rustybuzz::Face<'static>>>>>,
+    faces: [FontFile; 11],
+    shapers: RefCell<HashMap<Face, Option<harfrust::Font>>>,
     shapes: RefCell<HashMap<(Face, u32, String), std::rc::Rc<crate::shape::Shaped>>>,
-    gcache: RefCell<HashMap<(Face, u16, u32), Glyph>>,
+    /// Shaped glyphs by face, glyph id and size.
+    gcache: RefCell<HashMap<(Face, u32, u32), GlyphMask>>,
     /// The font pack, when one is installed (see [`Fonts::load_pack`]).
-    pack: Option<&'static Font>,
-    cache: RefCell<HashMap<GlyphKey, (fontdue::Metrics, Vec<u8>)>>,
+    pack: Option<&'static FontFile>,
+    /// Plain glyphs by face, character and size, with their advance.
+    cache: RefCell<HashMap<GlyphKey, (GlyphMask, f32)>>,
 }
 
 impl Default for Fonts {
@@ -80,8 +80,7 @@ impl Fonts {
     /// Only if an embedded font file is corrupt (caught by tests).
     #[must_use]
     pub fn new() -> Self {
-        let load =
-            |b: &'static [u8]| Font::from_bytes(b, FontSettings::default()).expect("embedded font");
+        let load = |b: &'static [u8]| FontFile::from_static(b, 0).expect("embedded font");
         Self {
             faces: [
                 load(LITERATA),
@@ -96,7 +95,7 @@ impl Fonts {
                 load(TAMIL),
                 load(THAI),
             ],
-            buzz: RefCell::default(),
+            shapers: RefCell::default(),
             shapes: RefCell::default(),
             gcache: RefCell::default(),
             pack: Self::pack(),
@@ -109,14 +108,14 @@ impl Fonts {
     /// beside the app on the Kobo, else the system Noto Sans CJK on a
     /// development machine. None when there is none: the script's
     /// characters then draw as empty boxes and its layout is not offered.
-    fn pack() -> Option<&'static Font> {
+    fn pack() -> Option<&'static FontFile> {
         // Parsed once per process: a development machine's system font is
         // 19 MB, and every `Fonts` (the tests make many) would reparse it.
-        static PACK: std::sync::OnceLock<Option<Font>> = std::sync::OnceLock::new();
+        static PACK: std::sync::OnceLock<Option<FontFile>> = std::sync::OnceLock::new();
         PACK.get_or_init(Self::load_pack).as_ref()
     }
 
-    fn load_pack() -> Option<Font> {
+    fn load_pack() -> Option<FontFile> {
         let env = std::env::var("SIGMA_FONT_PACK").ok();
         // Enabled plugins come before the loose files, so a plugin wins.
         let plugins: Vec<String> = ["fonts/cjk.ttf", "fonts/korean.ttf"]
@@ -136,11 +135,7 @@ impl Fonts {
             let Ok(bytes) = std::fs::read(path) else {
                 continue;
             };
-            let settings = FontSettings {
-                collection_index: index,
-                ..FontSettings::default()
-            };
-            if let Ok(f) = Font::from_bytes(bytes, settings) {
+            if let Some(f) = FontFile::from_owned(bytes, index) {
                 return Some(f);
             }
         }
@@ -153,30 +148,20 @@ impl Fonts {
         self.pack.is_some()
     }
 
-    /// The shaping face of a bundled font (None for a font pack).
-    pub(crate) fn buzz(&self, face: Face) -> Option<std::rc::Rc<rustybuzz::Face<'static>>> {
-        let bytes: &'static [u8] = match face {
-            Face::Literata => LITERATA,
-            Face::Atkinson => ATKINSON,
-            Face::AtkinsonBold => ATKINSON_BOLD,
-            Face::LiterataSemi => LITERATA_SEMI,
-            Face::LiterataItalic => LITERATA_ITALIC,
-            Face::Naskh => NASKH,
-            Face::Hebrew => HEBREW,
-            Face::Devanagari => DEVANAGARI,
-            Face::Bengali => BENGALI,
-            Face::Tamil => TAMIL,
-            Face::Thai => THAI,
-            Face::Pack => return None,
-        };
-        self.buzz
+    /// The shaping font of a bundled face (None for a font pack).
+    pub(crate) fn shaper(&self, face: Face) -> Option<harfrust::Font> {
+        if face == Face::Pack {
+            return None;
+        }
+        let bytes = self.faces[face as usize].bytes();
+        self.shapers
             .borrow_mut()
             .entry(face)
-            .or_insert_with(|| rustybuzz::Face::from_slice(bytes, 0).map(std::rc::Rc::new))
+            .or_insert_with(|| harfrust::Font::new(bytes, 0))
             .clone()
     }
 
-    pub(crate) fn font(&self, face: Face) -> &Font {
+    pub(crate) fn font(&self, face: Face) -> &FontFile {
         match (face, &self.pack) {
             (Face::Pack, Some(p)) => p,
             (Face::Pack, None) => &self.faces[0],
@@ -194,11 +179,9 @@ impl Fonts {
         text.chars()
             .map(|c| {
                 if c == '\t' {
-                    4.0 * f.metrics(' ', size).advance_width
+                    4.0 * f.char_advance(' ', size)
                 } else {
-                    self.font(self.face_for(face, c))
-                        .metrics(c, size)
-                        .advance_width
+                    self.font(self.face_for(face, c)).char_advance(c, size)
                 }
             })
             .sum()
@@ -224,13 +207,12 @@ impl Fonts {
         s
     }
 
-    /// Whether `face` has a real glyph for `c` (v1.4.6): fontdue maps a
-    /// missing character to glyph 0, which draws as an empty box.
+    /// Whether `face` has a real glyph for `c` (v1.4.6): a missing
+    /// character maps to glyph 0, which draws as an empty box.
     #[must_use]
     pub fn has_glyph(&self, face: Face, c: char) -> bool {
         c.is_whitespace()
-            || (face != Face::Pack || self.pack.is_some())
-                && self.font(face).lookup_glyph_index(c) != 0
+            || (face != Face::Pack || self.pack.is_some()) && self.font(face).glyph(c) != 0
     }
 
     /// The face that draws `c` (v1.4.6): `face` when it has the glyph,
@@ -271,9 +253,7 @@ impl Fonts {
     /// Ascent in px for baseline placement.
     #[must_use]
     pub fn ascent(&self, face: Face, size: f32) -> f32 {
-        self.font(face)
-            .horizontal_line_metrics(size)
-            .map_or(size * 0.8, |m| m.ascent)
+        self.font(face).ascent(size).unwrap_or(size * 0.8)
     }
 
     /// Draws `text` with its baseline at `y`, starting at `x`. Returns the end x.
@@ -300,18 +280,12 @@ impl Fonts {
             }
             let fc = self.face_for(face, ch);
             let mut cache = self.cache.borrow_mut();
-            let (m, bitmap) = cache
-                .entry((fc, ch, key_size))
-                .or_insert_with(|| self.font(fc).rasterize(ch, size));
-            let gx = (pen + m.xmin as f32).round() as i32;
-            let gy = (baseline - m.height as f32 - m.ymin as f32).round() as i32;
-            for row in 0..m.height {
-                for col in 0..m.width {
-                    let a = bitmap[row * m.width + col];
-                    c.blend(gx + col as i32, gy + row as i32, ink, a);
-                }
-            }
-            pen += m.advance_width;
+            let (m, adv) = cache.entry((fc, ch, key_size)).or_insert_with(|| {
+                let f = self.font(fc);
+                (f.rasterize_char(ch, size), f.char_advance(ch, size))
+            });
+            blit(c, m, pen, baseline, ink);
+            pen += *adv;
         }
         pen
     }
@@ -335,18 +309,11 @@ impl Fonts {
         for seg in &shaped.segs {
             for g in &seg.glyphs {
                 let mut cache = self.gcache.borrow_mut();
-                let (m, bitmap) = cache.entry((seg.face, g.id, key_size)).or_insert_with(|| {
+                let m = cache.entry((seg.face, g.id, key_size)).or_insert_with(|| {
                     self.font(seg.face)
-                        .rasterize_indexed(g.id, size * crate::shape::face_scale(seg.face))
+                        .rasterize(g.id, size * crate::shape::face_scale(seg.face))
                 });
-                let gx = (pen + g.dx + m.xmin as f32).round() as i32;
-                let gy = (baseline - g.dy - m.height as f32 - m.ymin as f32).round() as i32;
-                for row in 0..m.height {
-                    for col in 0..m.width {
-                        let a = bitmap[row * m.width + col];
-                        c.blend(gx + col as i32, gy + row as i32, ink, a);
-                    }
-                }
+                blit(c, m, pen + g.dx, baseline - g.dy, ink);
                 pen += g.adv;
             }
         }
@@ -361,6 +328,18 @@ impl Fonts {
                 .paragraphs
                 .first()
                 .is_some_and(|p| p.level.is_rtl())
+    }
+}
+
+/// Blends glyph mask `m` in `ink` with its origin at (`x`, `baseline`).
+fn blit(c: &mut Canvas, m: &GlyphMask, x: f32, baseline: f32, ink: u8) {
+    let gx = (x + m.left as f32).round() as i32;
+    let gy = (baseline + m.top as f32).round() as i32;
+    for row in 0..m.height {
+        for col in 0..m.width {
+            let a = m.coverage[row * m.width + col];
+            c.blend(gx + col as i32, gy + row as i32, ink, a);
+        }
     }
 }
 
@@ -469,10 +448,10 @@ mod layout_glyphs {
         // Drawing falls back per character (decision 47), so a glyph
         // missing from Atkinson is fine when Literata has it; Literata
         // itself must cover everything.
-        let lit =
-            fontdue::Font::from_bytes(super::LITERATA, fontdue::FontSettings::default()).unwrap();
+        let load = |b| crate::typeface::FontFile::from_static(b, 0).unwrap();
+        let lit = load(super::LITERATA);
         // Arabic script and Hebrew come from their own faces (v1.8).
-        let others: Vec<fontdue::Font> = [
+        let others: Vec<_> = [
             super::NASKH,
             super::HEBREW,
             super::DEVANAGARI,
@@ -481,16 +460,14 @@ mod layout_glyphs {
             super::THAI,
         ]
         .into_iter()
-        .map(|b| fontdue::Font::from_bytes(b, fontdue::FontSettings::default()).unwrap())
+        .map(load)
         .collect();
         for (name, bytes) in faces {
-            let f = fontdue::Font::from_bytes(bytes, fontdue::FontSettings::default()).unwrap();
+            let f = load(bytes);
             let missing: String = want
                 .iter()
                 .filter(|&&c| {
-                    f.lookup_glyph_index(c) == 0
-                        && lit.lookup_glyph_index(c) == 0
-                        && others.iter().all(|o| o.lookup_glyph_index(c) == 0)
+                    f.glyph(c) == 0 && lit.glyph(c) == 0 && others.iter().all(|o| o.glyph(c) == 0)
                 })
                 .collect();
             assert!(

@@ -26,6 +26,7 @@ pub(crate) mod shape;
 pub mod slider;
 pub mod switch;
 pub mod theme;
+pub mod typeface;
 
 pub use canvas::{Canvas, Rect};
 pub use drawer::{DrawerHit, DrawerModel, Pane};

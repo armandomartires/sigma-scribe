@@ -10,7 +10,6 @@ license = "AGPL-3.0-only"
 authors = ["SIGMArecon"]
 
 [workspace.dependencies]
-fontdue = "0.9"
 png = "0.17"
 
 [workspace.lints.rust]
@@ -33,7 +32,14 @@ opt-level = 3
 [profile.dev.package.hwr-train]
 opt-level = 3
 
-[profile.dev.package.fontdue]
+# Glyph outlines and their rasteriser draw every character in the tests.
+[profile.dev.package.skrifa]
+opt-level = 3
+
+[profile.dev.package.read-fonts]
+opt-level = 3
+
+[profile.dev.package.zeno]
 opt-level = 3
 
 # The WASM interpreter runs plugins (the Graph layout) inside `cargo test`;

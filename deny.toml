@@ -9,18 +9,10 @@ targets = [
 ]
 
 [advisories]
-# Fail on any RustSec advisory (vulnerable, unmaintained, unsound, yanked),
-# except these known ones. Each needs a reason; review them when the font
-# stack changes.
-ignore = [
-    # rustybuzz is unmaintained (alternative: harfrust). sigma-render uses it
-    # for shaping; no known vulnerability. Replacing it is a separate change.
-    { id = "RUSTSEC-2026-0206", reason = "font shaping in sigma-render; replacement not yet planned" },
-    # ttf-parser is unmaintained (alternative: skrifa). Comes in through
-    # rustybuzz and fontdue; no known vulnerability. Parses only the bundled
-    # fonts and fonts from installed plugins.
-    { id = "RUSTSEC-2026-0192", reason = "via rustybuzz and fontdue; replacement not yet planned" },
-]
+# Fail on any RustSec advisory (vulnerable, unmaintained, unsound, yanked).
+# To accept one, add it here with a reason:
+# { id = "RUSTSEC-YYYY-NNNN", reason = "..." }
+ignore = []
 
 [licenses]
 # Permissive licences compatible with the project's AGPL-3.0-only.
@@ -31,6 +23,9 @@ allow = [
     "BSD-2-Clause",
     "BSD-3-Clause",
     "MIT",
+    # yoke and zerofrom (used by harfrust and skrifa); permissive and
+    # GPL-compatible.
+    "Unicode-3.0",
     "Zlib",
 ]
 confidence-threshold = 0.8
@@ -40,7 +35,7 @@ confidence-threshold = 0.8
 ignore = true
 
 [bans]
-# Duplicate versions come from upstream (ttf-parser, bitflags, ...); report
+# Duplicate versions come from upstream (bitflags, miniz_oxide); report
 # them without failing.
 multiple-versions = "warn"
 wildcards = "deny"
