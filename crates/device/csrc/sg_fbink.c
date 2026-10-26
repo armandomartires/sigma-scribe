@@ -37,7 +37,7 @@ int sg_blit(const unsigned char* data, int w, int h, int x, int y)
 
 /* mode 0 = fast (typing), 1 = partial GC16_FAST, 2 = full flashing GC16,
  * 3 = moving pointer (DU, v1.0.3), 4 = pointer cleanup (GL16, v1.0.3).
- * Never waits for completion; sg_wait is not used on the input loop. */
+ * Never waits for completion: the input loop must not block (v1.0.3). */
 int sg_refresh(uint32_t x, uint32_t y, uint32_t w, uint32_t h, int mode)
 {
 	g_cfg.is_flashing = (mode == 2);
@@ -45,11 +45,6 @@ int sg_refresh(uint32_t x, uint32_t y, uint32_t w, uint32_t h, int mode)
 	int r             = fbink_refresh(g_fd, y, x, w, h, &g_cfg);
 	g_cfg.is_flashing = false;
 	return r;
-}
-
-int sg_wait(void)
-{
-	return fbink_wait_for_complete(g_fd, LAST_MARKER);
 }
 
 /* Maximum of an absolute axis (touch range), or -1. */
