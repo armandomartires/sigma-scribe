@@ -12,7 +12,9 @@ use crate::theme::{Scale, Theme};
 
 /// Every size of the switch, in brief px (scaled by `Scale`).
 pub struct Metrics {
+    /// Width of the capsule.
     pub track_w: i32,
+    /// Height of the capsule.
     pub track_h: i32,
     /// Between the track's edge and the knob.
     pub inset: i32,
@@ -25,6 +27,7 @@ pub struct Metrics {
 }
 
 impl Metrics {
+    /// The sizes at scale `s`.
     #[must_use]
     pub fn new(s: Scale) -> Self {
         Self {

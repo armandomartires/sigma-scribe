@@ -18,15 +18,22 @@ use std::borrow::Cow;
 /// One control in a row: a button (with the change it makes) or a value.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Cell {
+    /// Text on the button, or the value.
     pub label: String,
+    /// The change a tap makes; `None` for a value.
     pub change: Option<Change>,
+    /// Whether this is the current choice.
     pub active: bool,
 }
 
+/// A setting as a label, a short hint and its controls.
 #[derive(Clone, Debug, PartialEq)]
 pub struct OptRow {
+    /// The setting's name (English; translated when drawn).
     pub label: &'static str,
+    /// One line on what the setting does; may be empty.
     pub hint: &'static str,
+    /// The controls, left to right.
     pub cells: Vec<Cell>,
 }
 
@@ -335,8 +342,10 @@ fn side_pad(s: crate::theme::Scale, page: crate::theme::Scale) -> i32 {
 /// Where Settings is: the category list, one category, or a choice list.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum SettingsPage {
+    /// The list of categories.
     #[default]
     Root,
+    /// A category's page (index into [`CATEGORIES`]).
     Category(usize),
     /// A row's choice list, inside a category.
     Choice(usize, &'static str),
@@ -356,6 +365,7 @@ pub const PLUGINS_CATEGORY: usize = 6;
 /// The Logging category: a switch and, once it is on, the level.
 pub const LOGGING_CATEGORY: usize = 7;
 
+/// The Settings categories, in order: name, then its sections.
 pub const CATEGORIES: [(&str, &[Section]); 9] = [
     (
         "Writing",
@@ -441,7 +451,12 @@ pub(crate) struct PageHeader {
 pub enum Kind {
     /// Checkbox + "On": tap toggles.
     /// An on/off setting: a toggle switch (`crate::switch`).
-    Check { on: bool, change: Change },
+    Check {
+        /// Whether the setting is on.
+        on: bool,
+        /// The change a tap makes.
+        change: Change,
+    },
     /// Two-way choice: inline buttons.
     Inline(Vec<Cell>),
     /// − value +.
@@ -459,18 +474,23 @@ pub enum Kind {
     /// Stepped slider (v1.4.4, `crate::slider`): one cell per stop, the
     /// thumb's index, and whether it can be moved.
     Slider {
+        /// One cell per stop.
         stops: Vec<Cell>,
+        /// Index of the stop the thumb is on.
         value: usize,
+        /// Whether the thumb can be moved.
         enabled: bool,
         /// Also label the two ends (Backlight, Keyboard size, UI scale).
         ends: bool,
     },
 }
 
+/// A row as Settings draws it: label, control and an optional note.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DRow {
     /// Static for every built-in row; a plugin's name is owned.
     pub label: Cow<'static, str>,
+    /// How the row is shown and what a tap does.
     pub kind: Kind,
     /// A greyed row says why, in small print under its label (rulebook
     /// §5.5 and §5.7); `None` on every row that is live.
@@ -483,10 +503,13 @@ pub struct PluginRow {
     /// The plugin's id, which a switch acts on (the row's place in the list
     /// is only what the page showed).
     pub id: String,
+    /// The name shown.
     pub name: String,
     /// The kind in English ("Screen", "Font", …); translated when drawn.
     pub kind: &'static str,
+    /// The plugin's version, as shown.
     pub version: String,
+    /// Whether the plugin is on.
     pub enabled: bool,
     /// Data packs are read at start, so a change waits for a restart.
     pub restart: bool,
@@ -499,23 +522,31 @@ pub struct PluginRow {
 /// One of a plugin's settings: a choice between a few options.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PluginSetting {
+    /// The setting's name.
     pub label: String,
+    /// The options to choose from.
     pub options: Vec<String>,
     /// Index into `options`.
     pub selected: usize,
 }
 
+/// Everything Settings needs to lay itself out and draw.
 pub struct OptionsModel<'a> {
+    /// The current settings.
     pub settings: &'a Settings,
+    /// Colours to draw in.
     pub theme: Theme,
+    /// The on-screen keyboard (for the editor layout underneath).
     pub keyboard: &'a Keyboard,
     /// What Orientation is doing (v1.2), e.g. "Auto (no sensor) — Portrait".
     pub orientation_status: &'a str,
+    /// The page shown.
     pub page: SettingsPage,
     /// Sub-page when a page has more rows than fit.
     pub sub: usize,
     /// Interface language, as shown (e.g. "English").
     pub language: &'a str,
+    /// The app version, as shown under App info.
     pub version: &'a str,
     /// The slider row that has keyboard focus (v1.4.4), if any.
     pub focus: Option<&'static str>,
@@ -534,22 +565,29 @@ pub struct OptionsModel<'a> {
 /// One drawn line of a page: a section band or a row.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Item {
+    /// A section heading.
     Band(&'static str),
+    /// A setting.
     Row(DRow),
     /// A category on the root page, with its summary.
     Category(usize, String),
-    /// A choice on a choice page.
+    /// A choice on a choice page: its label, the change it makes, and
+    /// whether it is the current one.
     Choice(String, Change, bool),
 }
 
+/// Where everything on a Settings page is, in device pixels.
 #[derive(Clone, Debug, Default)]
 pub struct OptionsLayout {
+    /// The editor layout underneath.
     pub base: Layout,
+    /// The close mark.
     pub close: Rect,
     /// Back arrow (not on the root page).
     pub back: Option<Rect>,
     /// "Page i of n" (tap: next page), when there is more than one.
     pub pager: Option<Rect>,
+    /// Number of sub-pages.
     pub pages: usize,
     /// The scroll bar over the sub-pages (v1.12): track strip and thumb,
     /// when there is more than one page. Display only.
@@ -560,17 +598,24 @@ pub struct OptionsLayout {
     pub items: Vec<(Item, Rect, Vec<Rect>)>,
 }
 
+/// What a tap in Settings landed on.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum OptionsHit {
+    /// The close mark.
     Close,
+    /// The back arrow.
     Back,
     /// Next sub-page.
     Page,
+    /// Go to another Settings page.
     Open(SettingsPage),
+    /// Apply a change.
     Change(Change),
     /// Choose a value and go back to the category.
     Pick(Change),
+    /// Open a Help page (index into `help::MENU`).
     Help(usize),
+    /// Nothing that responds to a tap.
     Nothing,
 }
 
@@ -1235,6 +1280,7 @@ impl EditorScreen {
         }
     }
 
+    /// Lays out the current Settings page and sub-page of `m`.
     #[must_use]
     pub fn options_layout(&self, m: &OptionsModel<'_>) -> OptionsLayout {
         let base = self.layout(false, m.keyboard);
@@ -1346,6 +1392,7 @@ impl EditorScreen {
         }
     }
 
+    /// What a tap at (`x`, `y`) in Settings means.
     #[must_use]
     pub fn options_hit(&self, m: &OptionsModel<'_>, x: i32, y: i32) -> OptionsHit {
         let l = self.options_layout(m);
@@ -1543,6 +1590,7 @@ impl EditorScreen {
         }
     }
 
+    /// Draws the current Settings page and returns its layout.
     pub fn draw_options(&self, c: &mut Canvas, m: &OptionsModel<'_>) -> OptionsLayout {
         let t = m.theme;
         let l = self.options_layout(m);

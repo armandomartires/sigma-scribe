@@ -12,32 +12,43 @@ use crate::i18n::tr;
 use crate::theme::Theme;
 use sigma_core::Keyboard;
 
+/// One note in the Graph list.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GraphRow {
     /// Path from the library root.
     pub name: String,
     /// `→ a, b · ← c`, or `No links`.
     pub detail: String,
+    /// Whether this is the open note (drawn bold, with a bar).
     pub current: bool,
 }
 
+/// What the Graph sheet shows.
 pub struct GraphModel<'a> {
+    /// Every note, one row each.
     pub rows: &'a [GraphRow],
+    /// Index of the first row shown (list view).
     pub first: usize,
     /// Links that reach a note, over the whole library.
     pub edges: usize,
+    /// Colours to draw with.
     pub theme: Theme,
+    /// Keyboard state, passed to the base layout.
     pub keyboard: &'a Keyboard,
     /// `Some` when the map view is shown (v1.0); `None` shows the list.
     pub map: Option<crate::graphmap::MapView<'a>>,
 }
 
+/// Where the Graph sheet's parts were placed, in device pixels.
 #[derive(Clone, Debug, Default)]
 pub struct GraphLayout {
+    /// The underlying screen layout.
     pub base: Layout,
+    /// The Close button.
     pub close: Rect,
     /// Row index and band of each visible row.
     pub rows: Vec<(usize, Rect)>,
+    /// How many list rows fit on one page.
     pub visible: usize,
     /// Where the "N links · page i of n" or empty-state note goes.
     pub foot: Rect,
@@ -49,24 +60,36 @@ pub struct GraphLayout {
     pub nodes: Vec<(usize, Rect)>,
     /// Pixels per layout unit and the layout point at the area's centre.
     pub scale: f64,
+    /// The layout point at the map area's centre (map view).
     pub centre: (f64, f64),
 }
 
+/// What a tap on the Graph sheet landed on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GraphHit {
+    /// The Close button.
     Close,
+    /// A list row: index into the rows.
     Row(usize),
     /// v1.0 map view.
     Map,
+    /// The List toggle.
     List,
+    /// The zoom out button (map view).
     ZoomOut,
+    /// The zoom in button (map view).
     ZoomIn,
+    /// The Open button (map view).
     Open,
+    /// A map node: index into the rows.
     Node(usize),
+    /// Nothing that responds to a tap.
     Nothing,
 }
 
 impl EditorScreen {
+    /// Lays out the Graph sheet for `m`: the list rows, or the map area and
+    /// its nodes when `m.map` is set.
     #[must_use]
     pub fn graph_layout(&self, m: &GraphModel<'_>) -> GraphLayout {
         let base = self.layout(false, m.keyboard);
@@ -114,6 +137,7 @@ impl EditorScreen {
         }
     }
 
+    /// What the Graph sheet has at (`x`, `y`), in device pixels.
     #[must_use]
     pub fn graph_hit(&self, m: &GraphModel<'_>, x: i32, y: i32) -> GraphHit {
         let l = self.graph_layout(m);
@@ -136,6 +160,7 @@ impl EditorScreen {
             .map_or(GraphHit::Nothing, |(i, _)| GraphHit::Row(*i))
     }
 
+    /// Draws the Graph sheet (list or map) and returns its layout.
     pub fn draw_graph(&self, c: &mut Canvas, m: &GraphModel<'_>) -> GraphLayout {
         let t = m.theme;
         let l = self.graph_layout(m);

@@ -15,16 +15,20 @@ use crate::i18n::tr;
 /// Zoom factors over the fitted scale.
 pub const ZOOMS: [f64; 4] = [1.0, 1.6, 2.6, 4.2];
 
+/// The state of the Graph map: positions, links, zoom, pan and selection.
 #[derive(Clone, Copy, Debug)]
 pub struct MapView<'a> {
     /// Layout position of every note (index = row index).
     pub pos: &'a [(f64, f64)],
+    /// Whether each note has no links (index = row index).
     pub orphan: &'a [bool],
     /// Directed links between notes (from, to).
     pub edges: &'a [(usize, usize)],
+    /// Index into [`ZOOMS`].
     pub zoom: usize,
     /// Offset of the view centre from the current note, layout units.
     pub pan: (f64, f64),
+    /// The selected note, if any (index = row index).
     pub selected: Option<usize>,
 }
 

@@ -23,10 +23,14 @@ static BENGALI: &[u8] = include_bytes!("../../../assets/fonts/NotoSansBengali-Re
 static TAMIL: &[u8] = include_bytes!("../../../assets/fonts/NotoSansTamil-Regular.ttf");
 static THAI: &[u8] = include_bytes!("../../../assets/fonts/NotoSansThai-Regular.ttf");
 
+/// A bundled typeface, or the optional font pack.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Face {
+    /// Literata Regular.
     Literata,
+    /// Atkinson Hyperlegible Regular.
     Atkinson,
+    /// Atkinson Hyperlegible Bold.
     AtkinsonBold,
     /// Literata at weight 600 (preview headings and `**strong**`, as the mock).
     LiterataSemi,
@@ -38,8 +42,11 @@ pub enum Face {
     Hebrew,
     /// Noto Sans Devanagari, Bengali, Tamil, Thai (v1.9).
     Devanagari,
+    /// Noto Sans Bengali (v1.9).
     Bengali,
+    /// Noto Sans Tamil (v1.9).
     Tamil,
+    /// Noto Sans Thai (v1.9).
     Thai,
     /// The optional script font pack (Korean, v1.7.1): only ever returned
     /// by [`Fonts::face_for`], for a character no bundled face has.
@@ -50,6 +57,8 @@ type GlyphKey = (Face, char, u32);
 /// A rasterised glyph: metrics and coverage.
 type Glyph = (fontdue::Metrics, Vec<u8>);
 
+/// The embedded faces and the optional font pack, with caches of shaped
+/// text and rasterised glyphs.
 pub struct Fonts {
     faces: [Font; 11],
     buzz: RefCell<HashMap<Face, Option<std::rc::Rc<rustybuzz::Face<'static>>>>>,
@@ -357,8 +366,11 @@ impl Fonts {
 
 /// A `TextMeasure` for one face and size, in whole pixels.
 pub struct Measure<'a> {
+    /// The faces to measure with.
     pub fonts: &'a Fonts,
+    /// The face measured.
     pub face: Face,
+    /// Font size in pixels.
     pub size: f32,
 }
 

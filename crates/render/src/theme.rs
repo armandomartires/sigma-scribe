@@ -2,13 +2,20 @@
 //! the brief's hex values; the Forma is greyscale) and as a scale from the
 //! brief's 1264 px page to the actual panel width.
 
+/// Page colours as 8-bit grey levels (0 is black, 255 white).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Theme {
+    /// Page background.
     pub paper: u8,
+    /// Text and strokes.
     pub ink: u8,
+    /// Thin rules and dividers.
     pub rule: u8,
+    /// Secondary text.
     pub mute: u8,
+    /// Light fill behind highlighted spans and blocks.
     pub wash: u8,
+    /// The desk: the margins beside the text column.
     pub gutter: u8,
 }
 
@@ -50,11 +57,13 @@ pub const BRIEF_WIDTH: f32 = 1264.0;
 pub struct Scale(pub f32);
 
 impl Scale {
+    /// The scale for a panel `width` pixels wide.
     #[must_use]
     pub fn for_width(width: u32) -> Self {
         Self(width as f32 / BRIEF_WIDTH)
     }
 
+    /// Converts a size in brief pixels to whole panel pixels, rounded.
     #[must_use]
     pub fn px(self, brief: f32) -> i32 {
         (brief * self.0).round() as i32

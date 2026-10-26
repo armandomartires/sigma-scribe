@@ -10,59 +10,96 @@ use crate::i18n::tr;
 use crate::theme::Theme;
 use sigma_core::{Buffer, Keyboard};
 
+/// One entry in the Files list: a note or a folder.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Row {
+    /// The name shown on the first line.
     pub name: String,
     /// Second line: word count, or "Folder".
     pub detail: String,
+    /// Whether the entry is a folder (drawn with a folder icon).
     pub folder: bool,
+    /// Whether the entry is the open note (marked and drawn in bold).
     pub current: bool,
 }
 
+/// Everything the Files sheet needs to lay itself out and draw.
 pub struct FilesModel<'a> {
     /// "Files", or "Files / drafts".
     pub title: String,
     /// "Up to Files" when inside a folder.
     pub crumb: Option<String>,
+    /// The entries in the current folder (or the destination folders in
+    /// move mode).
     pub rows: &'a [Row],
+    /// The row whose More actions are open, if any.
     pub more: Option<usize>,
+    /// The row whose Delete has been tapped once; a second tap confirms.
     pub armed: Option<usize>,
     /// Some(name) while choosing where to move `name`; rows are folders.
     pub moving: Option<&'a str>,
+    /// A line shown above the bottom buttons, if any.
     pub message: Option<&'a str>,
+    /// Index of the first row shown.
     pub first: usize,
+    /// Colours to draw in.
     pub theme: Theme,
     /// Rename field in the header (rename or new folder).
     pub rename: Option<&'a Buffer>,
+    /// The on-screen keyboard, shown while renaming.
     pub keyboard: &'a Keyboard,
 }
 
+/// What a tap on the Files sheet landed on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FilesHit {
+    /// The close mark.
     Close,
+    /// The "Up to Files" crumb.
     Up,
+    /// A row: open the note or enter the folder.
     Open(usize),
+    /// A row's More button.
     More(usize),
+    /// Rename, in the open row's actions.
     Rename(usize),
+    /// Move, in the open row's actions.
     Move(usize),
+    /// Delete, in the open row's actions.
     Delete(usize),
+    /// The New note button.
     NewNote,
+    /// The New folder button.
     NewFolder,
+    /// Leave move mode (the close mark or a bottom button while moving).
     CancelMove,
+    /// A key on the on-screen keyboard while renaming.
     Key(sigma_core::keyboard::Key),
+    /// Accept the name being typed.
     RenameOk,
+    /// Drop the name being typed.
     RenameCancel,
+    /// Nothing that responds to a tap.
     Nothing,
 }
 
+/// Where everything on the Files sheet is, in device pixels.
 #[derive(Clone, Debug, Default)]
 pub struct FilesLayout {
+    /// The editor layout underneath (title bar, keyboard).
     pub base: Layout,
+    /// The close mark.
     pub close: Rect,
+    /// The "Up to Files" crumb; empty when not shown.
     pub crumb: Rect,
+    /// Shown rows: index into the model's rows, the row, and its More
+    /// button (empty in move mode).
     pub rows: Vec<(usize, Rect, Rect)>,
+    /// Rename, Move and Delete under the open row, when they fit.
     pub actions: Option<[Rect; 3]>,
+    /// New note and New folder.
     pub bottom: [Rect; 2],
+    /// How many rows are shown.
     pub visible: usize,
 }
 
@@ -71,6 +108,7 @@ impl EditorScreen {
         self.scale().px(v)
     }
 
+    /// Lays out the Files sheet for `m`.
     #[must_use]
     pub fn files_layout(&self, m: &FilesModel<'_>) -> FilesLayout {
         let base = self.layout(m.rename.is_some(), m.keyboard);
@@ -144,6 +182,7 @@ impl EditorScreen {
         }
     }
 
+    /// What a tap at (`x`, `y`) on the Files sheet means.
     #[must_use]
     pub fn files_hit(&self, m: &FilesModel<'_>, x: i32, y: i32) -> FilesHit {
         let l = self.files_layout(m);
@@ -201,6 +240,7 @@ impl EditorScreen {
         FilesHit::Nothing
     }
 
+    /// Draws the Files sheet and returns its layout.
     pub fn draw_files(&self, c: &mut Canvas, m: &FilesModel<'_>) -> FilesLayout {
         let t = m.theme;
         let l = self.files_layout(m);

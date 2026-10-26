@@ -14,14 +14,19 @@ use crate::theme::{Scale, Theme};
 use sigma_core::markdown::{Block, BlockKind, LinkKind, Run, Style};
 use std::ops::Range;
 
+/// Text colour of a piece, taken from the theme when drawn.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tone {
+    /// Normal text.
     Ink,
+    /// Muted text (quotes, missing wiki links, images).
     Mute,
 }
 
+/// How a link is underlined.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Underline {
+    /// A link to a web address or an existing note.
     Solid,
     /// A `[[wiki]]` link to a note that does not exist (yet).
     Dashed,
@@ -30,12 +35,19 @@ pub enum Underline {
 /// A run of same-styled text placed on a line.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Piece {
+    /// Left edge, in px from the left of the text column.
     pub x: i32,
+    /// Font face.
     pub face: Face,
+    /// Font size in px.
     pub size: f32,
+    /// The text to draw.
     pub text: String,
+    /// Text colour.
     pub tone: Tone,
+    /// Link underline, if any.
     pub underline: Option<Underline>,
+    /// Struck through.
     pub strike: bool,
     /// Inline code: wash behind the text.
     pub wash: bool,
@@ -43,24 +55,44 @@ pub struct Piece {
     pub target: Option<String>,
 }
 
+/// A decoration drawn on a line besides its text.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Deco {
     /// Code block background from `x`, `w` wide, the full line height.
-    Wash { x: i32, w: i32 },
+    Wash {
+        /// Left edge, in px from the left of the text column.
+        x: i32,
+        /// Width in px.
+        w: i32,
+    },
     /// Quote bar at `x`.
-    Bar { x: i32 },
+    Bar {
+        /// Left edge, in px from the left of the text column.
+        x: i32,
+    },
     /// Task checkbox: left edge, side, done.
-    Box { x: i32, side: i32, on: bool },
+    Box {
+        /// Left edge, in px from the left of the text column.
+        x: i32,
+        /// Side length in px.
+        side: i32,
+        /// The task is done (box filled).
+        on: bool,
+    },
     /// Horizontal rule across the text width.
     Rule,
 }
 
+/// One laid-out line of a preview, or a spacer between blocks.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Line {
+    /// Height in px.
     pub h: i32,
     /// Baseline from the top of the line.
     pub base: i32,
+    /// The text on the line, left to right.
     pub pieces: Vec<Piece>,
+    /// Decorations drawn on the line.
     pub deco: Vec<Deco>,
     /// Source line of the block this line belongs to.
     pub src: usize,
@@ -73,8 +105,11 @@ pub struct Line {
 /// A laid-out note: lines and the pages they fall into.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Doc {
+    /// Every line, in order.
     pub lines: Vec<Line>,
+    /// Each page as a range of `lines`.
     pub pages: Vec<Range<usize>>,
+    /// Width of the text column the lines were laid out for, in px.
     pub width: i32,
 }
 
@@ -110,8 +145,11 @@ impl Doc {
 /// Typography inputs (the editor's body size and leading, in panel px).
 #[derive(Clone, Copy, Debug)]
 pub struct Type {
+    /// Body text size in px.
     pub body: f32,
+    /// Body line height as a multiple of the size.
     pub leading: f32,
+    /// Screen scale, for fixed-size parts such as task boxes.
     pub scale: Scale,
 }
 

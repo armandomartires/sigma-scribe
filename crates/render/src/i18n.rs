@@ -20,18 +20,29 @@ use std::cell::Cell;
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
+/// An interface language.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Lang {
+    /// English, the source language.
     #[default]
     En,
+    /// French.
     Fr,
+    /// Portuguese.
     Pt,
+    /// German.
     De,
+    /// Spanish.
     Es,
+    /// Italian.
     It,
+    /// Dutch.
     Nl,
+    /// Catalan.
     Ca,
+    /// Danish.
     Da,
+    /// Swedish.
     Sv,
     /// Test only: +40 % length and accents, to catch overflow.
     PseudoLong,
@@ -51,6 +62,8 @@ impl Lang {
             .map_or(Self::En, |r| r.0)
     }
 
+    /// The language code: ISO 639-1 for the real languages, `en-XA` and
+    /// `en-XB` for the two test languages.
     #[must_use]
     pub fn code(self) -> &'static str {
         match self {
@@ -87,10 +100,12 @@ thread_local! {
     static LANG: Cell<Lang> = const { Cell::new(Lang::En) };
 }
 
+/// Sets this thread's interface language.
 pub fn set_lang(l: Lang) {
     LANG.with(|c| c.set(l));
 }
 
+/// This thread's interface language (English until set).
 #[must_use]
 pub fn lang() -> Lang {
     LANG.with(Cell::get)

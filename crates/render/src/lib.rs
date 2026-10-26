@@ -2,6 +2,8 @@
 //! tokens, real fonts, and the v0.1 editor screen. Device-independent: the
 //! FBInk backend blits the canvas to the Forma, the desktop backend writes PNG.
 
+#![warn(missing_docs)]
+
 pub mod canvas;
 pub mod drawer;
 pub mod editor;
