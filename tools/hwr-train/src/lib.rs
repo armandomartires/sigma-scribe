@@ -12,6 +12,7 @@
 #![allow(clippy::needless_range_loop)]
 
 use sigma_hwr::{features, Layer, Model, Seg, BASELINE, CHARSET, DIM};
+use sigma_render::typeface::FontFile;
 use std::path::{Path, PathBuf};
 
 /// Fonts used for training; [`HELD_OUT_FONTS`] are never trained on.
@@ -73,34 +74,33 @@ pub fn font_path(name: &str) -> PathBuf {
 /// # Panics
 /// If the font is missing or does not parse.
 #[must_use]
-pub fn load_font(name: &str) -> fontdue::Font {
+pub fn load_font(name: &str) -> FontFile {
     let b = std::fs::read(font_path(name)).unwrap_or_else(|e| panic!("{name}: {e}"));
-    fontdue::Font::from_bytes(b, fontdue::FontSettings::default())
-        .unwrap_or_else(|e| panic!("{name}: {e}"))
+    FontFile::from_owned(b, 0).unwrap_or_else(|| panic!("{name}: not a font"))
 }
 
 const RES: usize = 96;
 
 /// The skeleton of a glyph in box units, or `None` if the font lacks it.
 #[must_use]
-pub fn skeleton(font: &fontdue::Font, ch: char) -> Option<Vec<Seg>> {
-    if font.lookup_glyph_index(ch) == 0 {
+pub fn skeleton(font: &FontFile, ch: char) -> Option<Vec<Seg>> {
+    if font.glyph(ch) == 0 {
         return None;
     }
     let px = RES as f32 * 0.8;
-    let (m, bmp) = font.rasterize(ch, px);
+    let m = font.rasterize_char(ch, px);
     if m.width == 0 || m.height == 0 {
         return None;
     }
     let base = BASELINE * RES as f32;
-    let top = (base - (m.ymin as f32 + m.height as f32)).round() as i32;
+    let top = (base + m.top as f32).round() as i32;
     let left = ((RES as i32 - m.width as i32) / 2).max(0);
     let pad = 2usize;
     let (w, h) = (m.width + 2 * pad, m.height + 2 * pad);
     let mut on = vec![false; w * h];
     for y in 0..m.height {
         for x in 0..m.width {
-            on[(y + pad) * w + x + pad] = bmp[y * m.width + x] >= 110;
+            on[(y + pad) * w + x + pad] = m.coverage[y * m.width + x] >= 110;
         }
     }
     thin(&mut on, w, h);
@@ -428,7 +428,7 @@ pub fn enrol_samples(font: &str, per: usize, seed: u64) -> Vec<sigma_hwr::Sample
 /// whole word. Line units (height 1, baseline at `BASELINE`). `None` if
 /// the font lacks a letter.
 #[must_use]
-pub fn synth_word(font: &fontdue::Font, word: &str, rng: &mut Rng) -> Option<Vec<Seg>> {
+pub fn synth_word(font: &FontFile, word: &str, rng: &mut Rng) -> Option<Vec<Seg>> {
     let mut out = Vec::new();
     let mut pen = 0.0f32;
     let gap_base = rng.range(-0.01, 0.08);
@@ -555,7 +555,7 @@ pub fn word_score_with(
 /// Returns segments in "pixels" (×100).
 #[must_use]
 pub fn synth_phrase(
-    font: &fontdue::Font,
+    font: &FontFile,
     words: &[&str],
     letter_gap: (f32, f32),
     rng: &mut Rng,

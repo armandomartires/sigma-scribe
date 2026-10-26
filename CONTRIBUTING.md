@@ -74,8 +74,6 @@ it locally, install it once with `cargo install --locked cargo-deny`.
   is not.
 - A new advisory does not block a pull request, but fix it or add it to
   `ignore` in `deny.toml` with a reason.
-- `rustybuzz` and `ttf-parser` (the font stack) are unmaintained and listed
-  there. They have no known vulnerability.
 
 A UI change also follows `docs/ui-rulebook.md`. A release follows
 `docs/release/checklist.md`.

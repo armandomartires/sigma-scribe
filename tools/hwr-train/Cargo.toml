@@ -9,7 +9,7 @@ authors.workspace = true
 publish = false
 
 [dependencies]
-fontdue.workspace = true
+sigma-render = { path = "../../crates/render" }
 sigma-hwr = { path = "../../crates/hwr" }
 
 [lints]
