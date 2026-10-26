@@ -17,8 +17,11 @@ Leaving the app (power button) saves and restarts the Kobo back into the normal 
 ## Keeping the files out of the Kobo library
 Since firmware 4.17 the Kobo library also indexes hidden folders, so Σscribe's `.txt` and `.svg` files would show up as books. The first time you start the app, `launch.sh` adds one line to the Kobo's own config (`.kobo/Kobo/Kobo eReader.conf`, section `[FeatureSettings]`, key `ExcludeSyncFolders`; the original is saved next to it as `Kobo eReader.conf.sigma-bak`). It does this only if you have not set that key yourself. The Kobo must be restarted for it to count (the app restarts it when you leave). Items the library already holds are not removed by the line: remove them in Nickel (Settings → Device information is not needed: long-press the item → Remove) or let a later cleanup delete them. A firmware update can reset the config; starting the app again re-adds the line. To undo: delete that line, or copy the `.sigma-bak` file back.
 
+## Plugins
+The package includes four plugins: the Graph, and the side drawer's Contents, To-dos and Scratch panes. The first start after a new install turns them all on. Turn any of them off in Settings → Plugins; an update keeps that choice.
+
 ## Update
-Same as install: unpacking over an older version replaces the program files only. Your notes in `sigma-scribe/notes/` (and the hidden settings and scratch files there) are not in the package and are kept. If you edited `.adds/sigma-scribe/touch.conf`, back it up first — the package contains the default.
+Same as install: unpacking over an older version replaces the program files only (including the bundled plugins' files, never your plugin on/off choices). Your notes in `sigma-scribe/notes/` (and the hidden settings and scratch files there) are not in the package and are kept. If you edited `.adds/sigma-scribe/touch.conf`, back it up first — the package contains the default.
 
 ## Uninstall
 Delete `.adds/sigma-scribe/` and `.adds/nm/sigma-scribe` from the drive, eject. Your notes stay in `sigma-scribe/notes/` until you delete that folder yourself. Nothing else on the Kobo is changed.

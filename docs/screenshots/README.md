@@ -195,3 +195,13 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.4.6 | [v1.4.6-help-back-to-help.png](v1.4.6/v1.4.6-help-back-to-help.png) | After: "Back to Help" with the icon | [eink](v1.4.6/eink/v1.4.6-help-back-to-help.png) |
 | v1.4.6 | [v1.4.6-before-graph-list-arrows.png](v1.4.6/v1.4.6-before-graph-list-arrows.png) | Before (1.4.5): Graph list link arrows | [eink](v1.4.6/eink/v1.4.6-before-graph-list-arrows.png) |
 | v1.4.6 | [v1.4.6-graph-list-arrows.png](v1.4.6/v1.4.6-graph-list-arrows.png) | After: Graph list arrows via the font fallback | [eink](v1.4.6/eink/v1.4.6-graph-list-arrows.png) |
+| v1.15 | [v1.15-write.png](v1.15/v1.15-write.png) | Editor, Full keyboard | [eink](v1.15/eink/v1.15-write.png) |
+| v1.15 | [v1.15-preview.png](v1.15/v1.15-preview.png) | Markdown preview | [eink](v1.15/eink/v1.15-preview.png) |
+| v1.15 | [v1.15-drawer.png](v1.15/v1.15-drawer.png) | Drawer: Contents and To-dos (plugins) | [eink](v1.15/eink/v1.15-drawer.png) |
+| v1.15 | [v1.15-graph.png](v1.15/v1.15-graph.png) | Graph map (plugin) | [eink](v1.15/eink/v1.15-graph.png) |
+| v1.15 | [v1.15-settings.png](v1.15/v1.15-settings.png) | Settings | [eink](v1.15/eink/v1.15-settings.png) |
+| v1.15 | [v1.15-night.png](v1.15/v1.15-night.png) | Night | [eink](v1.15/eink/v1.15-night.png) |
+| v1.15 | [v1.15-landscape.png](v1.15/v1.15-landscape.png) | Landscape, Centre keyboard | [eink](v1.15/eink/v1.15-landscape.png) |
+| v1.15 | [v1.15-handwriting.png](v1.15/v1.15-handwriting.png) | Free writing read as "note idea", candidate bar | [eink](v1.15/eink/v1.15-handwriting.png) |
+| v1.15 | [v1.15-arabic.png](v1.15/v1.15-arabic.png) | Arabic, right to left | [eink](v1.15/eink/v1.15-arabic.png) |
+| v1.15 | [v1.15-japanese.png](v1.15/v1.15-japanese.png) | Japanese, kanji candidates | [eink](v1.15/eink/v1.15-japanese.png) |

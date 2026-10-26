@@ -20,6 +20,11 @@ This binary statically links:
   Graph map in a sandbox. wasmparser: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT.
 - The Rust standard library and musl libc (MIT / Apache-2.0, MIT).
 
+Bundled plugins (plugins/: graph-map, contents-pane, todo-pane, scratch-pane): by
+SIGMArecon, AGPL-3.0-only like the app, WebAssembly modules built from the
+sigma-scribe-plugins repository (https://github.com/armandomartires/sigma-scribe-plugins)
+at the commit named in each plugin's SOURCE.txt.
+
 Dictionary: SKK-JISYO.L, the large SKK dictionary (dict/skk-jisyo.txt, converted from
 EUC-JP to UTF-8, otherwise unchanged; source https://github.com/skk-dev/dict). Copyright
 the SKK Development Team and contributors (see dict/SKK-JISYO.L-NOTICE.txt); GNU General

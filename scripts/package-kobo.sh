@@ -4,6 +4,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 VER=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+BUNDLED_PLUGINS="graph-map contents-pane todo-pane scratch-pane"
 ./scripts/build-armv7.sh
 OUT="dist/sigma-scribe-$VER-kobo"
 rm -rf "$OUT" && mkdir -p "$OUT"
@@ -15,6 +16,15 @@ mkdir -p "$OUT/.adds/sigma-scribe/dict"
 cp assets/ja/skk-jisyo.txt "$OUT/.adds/sigma-scribe/dict/skk-jisyo.txt"
 cp assets/ja/SKK-JISYO.L-NOTICE.txt "$OUT/.adds/sigma-scribe/dict/"
 cp assets/zh/pinyin-hans.txt assets/zh/pinyin-hant.txt assets/zh/PINYIN-NOTICE.txt assets/zh/LGPL-3.0.txt "$OUT/.adds/sigma-scribe/dict/"
+# The bundled plugins (the Graph and the drawer's three panes), as built from
+# the plugins repository (SOURCE.txt names the commit). No plugins.state: an
+# update must not overwrite the user's on/off choices; launch.sh writes one
+# with these on when there is none (a new install).
+for id in $BUNDLED_PLUGINS; do
+  mkdir -p "$OUT/.adds/sigma-scribe/plugins/$id"
+  cp "app/tests/fixtures/$id/plugin.conf" "app/tests/fixtures/$id/SOURCE.txt" \
+     "app/tests/fixtures/$id/"*.wasm "$OUT/.adds/sigma-scribe/plugins/$id/"
+done
 chmod 755 "$OUT/.adds/sigma-scribe/sigma-scribe" "$OUT/.adds/sigma-scribe/launch.sh"
 ( cd "$OUT" && find . -type f | sort | xargs sha256sum ) > "$OUT.sha256"
 # Reproducible tarball: fixed order, owner, mode and time; gzip without name/time.

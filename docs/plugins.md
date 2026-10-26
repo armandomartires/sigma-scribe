@@ -39,8 +39,15 @@ so a change applies the next time the screen opens. The Graph declares
 **Start on** (Map or List), **Labels** (Auto or All) and **Layout** (Quick or
 Best).
 
-Installing from the plugins repository is not in the app yet: copy a plugin's
-folder to `.adds/sigma-scribe/plugins/<id>/`.
+The release package bundles four plugins (since 1.15.0): `graph-map` (the
+Graph) and the drawer's `contents-pane`, `todo-pane` and `scratch-pane`. On a
+new install `launch.sh` turns them on (it writes `plugins.state` only when
+there is none). The package has no `plugins.state`, so an update keeps your
+on/off choices; it does replace the bundled plugins' files with the versions
+it ships.
+
+Installing other plugins from the plugins repository is not in the app yet:
+copy a plugin's folder to `.adds/sigma-scribe/plugins/<id>/`.
 
 ## Kinds
 

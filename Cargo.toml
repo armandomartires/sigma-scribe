@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/core", "crates/plugin-api", "crates/plugin-host", "crates/render", "crates/device", "crates/hwr", "app", "tools/hwr-train"]
 
 [workspace.package]
-version = "1.11.1"
+version = "1.15.0"
 edition = "2021"
 rust-version = "1.88"
 license = "AGPL-3.0-only"
