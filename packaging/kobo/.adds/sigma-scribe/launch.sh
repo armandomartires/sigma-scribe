@@ -34,6 +34,19 @@ if [ -f "$CONF" ] && ! grep -q '^ExcludeSyncFolders=' "$CONF"; then
   mv "$CONF.new" "$CONF"
   echo "added ExcludeSyncFolders to the Kobo config" >>"$LOG"
 fi
+# A new install: turn the bundled plugins on (the package has no
+# plugins.state, so an update never resets the user's choices). One
+# "id=version,enabled" line per plugin folder with a plugin.conf.
+STATE="$DIR/plugins/plugins.state"
+if [ -d "$DIR/plugins" ] && [ ! -f "$STATE" ]; then
+  for c in "$DIR"/plugins/*/plugin.conf; do
+    [ -f "$c" ] || continue
+    id=$(basename "$(dirname "$c")")
+    v=$(sed -n 's/^version=//p' "$c" | head -1)
+    [ -n "$v" ] && echo "$id=$v,enabled"
+  done >"$STATE.new" && mv "$STATE.new" "$STATE"
+  echo "turned on the bundled plugins" >>"$LOG"
+fi
 "$DIR/sigma-scribe" >>"$LOG" 2>&1
 echo "=== $(date) exit $?" >>"$LOG"
 sync
