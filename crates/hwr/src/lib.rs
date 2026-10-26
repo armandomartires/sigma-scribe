@@ -470,7 +470,35 @@ impl Recogniser {
     /// user samples blended).
     #[must_use]
     pub fn probs(&self, f: &[f32]) -> Vec<f32> {
-        let mut p = match &self.adapted {
+        let mut p = self.net_probs(f);
+        if !self.user.is_empty() && self.user_weight > 0.0 {
+            let mut best = vec![f32::MAX; p.len()];
+            for (c, u) in &self.user {
+                let d: f32 = u.iter().zip(f).map(|(a, b)| (a - b) * (a - b)).sum();
+                best[*c] = best[*c].min(d);
+            }
+            let s2 = self.user_sigma * self.user_sigma;
+            for (pi, d) in p.iter_mut().zip(&best) {
+                if *d < f32::MAX {
+                    *pi += self.user_weight * (-d / s2).exp();
+                }
+            }
+            let s: f32 = p.iter().sum();
+            for x in &mut p {
+                *x /= s;
+            }
+        }
+        p
+    }
+
+    /// Probabilities of each character from the network alone (with the
+    /// output layer fine-tuned on the user's samples, if any), without
+    /// the nearest-sample boost of [`Recogniser::probs`]. The word decoder
+    /// uses this: the boost also lifts pieces that are half a letter or
+    /// two letters, which cost word mode about 6 points of CER.
+    #[must_use]
+    pub fn net_probs(&self, f: &[f32]) -> Vec<f32> {
+        match &self.adapted {
             None => self.model.probs(f),
             Some((w, b)) => {
                 let mut h = Vec::new();
@@ -491,25 +519,7 @@ impl Recogniser {
                 softmax(&mut o);
                 o
             }
-        };
-        if !self.user.is_empty() && self.user_weight > 0.0 {
-            let mut best = vec![f32::MAX; p.len()];
-            for (c, u) in &self.user {
-                let d: f32 = u.iter().zip(f).map(|(a, b)| (a - b) * (a - b)).sum();
-                best[*c] = best[*c].min(d);
-            }
-            let s2 = self.user_sigma * self.user_sigma;
-            for (pi, d) in p.iter_mut().zip(&best) {
-                if *d < f32::MAX {
-                    *pi += self.user_weight * (-d / s2).exp();
-                }
-            }
-            let s: f32 = p.iter().sum();
-            for x in &mut p {
-                *x /= s;
-            }
         }
-        p
     }
 }
 
