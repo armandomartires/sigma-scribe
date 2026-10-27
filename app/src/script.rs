@@ -186,6 +186,7 @@ impl App {
                 || s.starts_with("TodoBox:")
                 || s == "Filter"
                 || s == "DrawerHandle"
+                || s == "DrawerTab"
                 || s == "ScratchPane" =>
             {
                 self.drawer_control(s)
@@ -282,8 +283,15 @@ impl App {
 
     /// Drawer controls for emulator scripts: `Heading:TEXT`, `Todo:TEXT`
     /// (opens), `TodoBox:TEXT` (checks), `Filter`, `DrawerHandle` (the width
-    /// grip), `ScratchPane` (end of the scratch text).
+    /// grip), `DrawerTab` (the closed drawer's tab, v1.16), `ScratchPane`
+    /// (end of the scratch text).
     fn drawer_control(&self, name: &str) -> Option<(i32, i32)> {
+        if name == "DrawerTab" && self.drawer_tab_shown() {
+            let z = self
+                .screen
+                .drawer_tab(&self.drawer_base(), self.settings.drawer);
+            return Some(centre(z));
+        }
         if !self.drawer_visible() {
             return None;
         }
@@ -452,6 +460,13 @@ impl App {
             for (label, r) in self.pane_hits() {
                 add(&label, r);
             }
+        }
+        if self.drawer_tab_shown() {
+            let l = self.drawer_base();
+            add(
+                "drawer tab",
+                self.screen.drawer_tab(&l, self.settings.drawer),
+            );
         }
         out
     }

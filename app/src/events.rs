@@ -86,6 +86,8 @@ impl App {
                 };
                 self.apply(g)
             }
+            // v1.16: the closed drawer's tab (a mouse click or a script tap).
+            Event::Tap { x, y } if self.on_drawer_tab(x, y) => self.reopen_drawer(),
             Event::Key(HwKey::Escape) if self.screen.drawer_menu && self.drawer_allowed() => {
                 self.screen.drawer_menu = false;
                 Some(Refresh::Partial)
@@ -105,7 +107,7 @@ impl App {
                 if let Some(r) = self.ink_touch(phase, x, y, t) {
                     return r;
                 }
-                if let Some(r) = self.handle_touch(phase, x, y) {
+                if let Some(r) = self.handle_touch(phase, x, y, t) {
                     return r;
                 }
                 if let Some(r) = self.bar_touch(phase, x, y) {

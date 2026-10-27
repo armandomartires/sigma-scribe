@@ -174,3 +174,34 @@ fn the_menu_lists_only_panes_on_offer_and_goes_with_the_last_one() {
     );
     assert!(!r.app.screen.drawer_menu, "and no menu");
 }
+
+#[test]
+fn in_preview_closing_from_the_grip_widens_the_page_and_the_tab_narrows_it_again() {
+    let mut r = Rig::new("gripview");
+    r.tap_on("Preview");
+    let full = r.app.preview.as_ref().unwrap().doc.pages.len();
+    r.tap_on("Panels");
+    r.tap_on("Contents");
+    r.tap_on("Panels");
+    let narrow = r.app.preview.as_ref().unwrap().doc.pages.len();
+    let (x, y) = r.at("DrawerHandle");
+    for t in [1000, 1150] {
+        r.send(Event::Touch {
+            phase: Phase::Down,
+            x,
+            y,
+            t,
+        });
+        r.send(Event::Touch {
+            phase: Phase::Up,
+            x,
+            y,
+            t: t + 50,
+        });
+    }
+    assert!(!r.app.drawer_visible());
+    assert_eq!(r.app.preview.as_ref().unwrap().doc.pages.len(), full);
+    r.tap_on("DrawerTab");
+    assert!(r.app.drawer_visible() && r.app.preview.is_some());
+    assert_eq!(r.app.preview.as_ref().unwrap().doc.pages.len(), narrow);
+}

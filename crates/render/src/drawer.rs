@@ -213,6 +213,47 @@ impl EditorScreen {
         c.fill(bar, t.ink);
     }
 
+    /// A grip dragged to screen column `x` closes the drawer (v1.16): the
+    /// finger is nearer the outer edge than half the narrowest drawer.
+    #[must_use]
+    pub fn drawer_closes_at(&self, base: &Layout, side: Side, x: i32) -> bool {
+        let p = base.page;
+        let half = self.drawer_width_at(base, 0) / 2;
+        match side {
+            Side::Left => x < p.x + half,
+            Side::Right => x > p.x + p.w - half,
+        }
+    }
+
+    /// The tab left at the screen edge while the drawer is closed from its
+    /// grip (v1.16): a finger wide, as tall as the grip's area, mid-page,
+    /// inside the page on the drawer's side.
+    #[must_use]
+    pub fn drawer_tab(&self, base: &Layout, side: Side) -> Rect {
+        let p = base.page;
+        let (w, h) = (self.d(44.0), self.d(150.0));
+        let x = match side {
+            Side::Left => p.x,
+            Side::Right => p.x + p.w - w,
+        };
+        Rect::new(x, p.y + (p.h - h) / 2, w, h)
+    }
+
+    /// Draws the tab: the grip's bar tucked against the screen edge, white
+    /// on its inner side so it stays visible over the text and the scroll bar.
+    pub fn draw_drawer_tab(&self, c: &mut Canvas, base: &Layout, side: Side, t: Theme) {
+        let z = self.drawer_tab(base, side);
+        let (bw, bh) = (self.d(10.0), self.d(80.0));
+        let x = match side {
+            Side::Left => z.x,
+            Side::Right => z.x + z.w - bw,
+        };
+        let bar = Rect::new(x, z.y + (z.h - bh) / 2, bw, bh);
+        let pad = self.d(4.0);
+        c.fill(bar.inset(-pad).intersect(&base.page), t.paper);
+        c.fill(bar, t.ink);
+    }
+
     /// The Drawer width stop whose drawer is closest to one whose inner edge
     /// is at screen column `x`.
     #[must_use]

@@ -180,6 +180,10 @@ impl App {
             let base = self.drawer_base();
             self.screen
                 .draw_drawer_handle(&mut c, &base, self.settings.drawer, self.theme());
+        } else if self.drawer_tab_shown() {
+            let base = self.drawer_base();
+            self.screen
+                .draw_drawer_tab(&mut c, &base, self.settings.drawer, self.theme());
         }
         self.draw_drawer_menu(&mut c);
         let v = self.ink_view();

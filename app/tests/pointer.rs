@@ -412,3 +412,21 @@ fn v141_arrow_is_pure_black_on_every_path() {
         check(&r, "after cleanup");
     }
 }
+
+#[test]
+fn a_double_click_on_the_drawer_grip_closes_it_and_a_click_on_the_tab_reopens() {
+    let mut r = Rig::new("grip");
+    r.app.set_builtin_panes(true);
+    r.app.toggle_pane(sigma_render::Pane::Todos);
+    r.send(Event::Tick { t: 1 });
+    let (x, y) = r.app.control_centre("DrawerHandle").unwrap();
+    r.to(x, y);
+    r.click();
+    assert!(r.app.drawer_visible(), "one click does nothing");
+    r.click();
+    assert!(!r.app.drawer_visible(), "a double click closes it");
+    let (x, y) = r.app.control_centre("DrawerTab").unwrap();
+    r.to(x, y);
+    r.click();
+    assert_eq!(r.app.drawer, [false, true, false]);
+}

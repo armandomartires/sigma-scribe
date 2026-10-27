@@ -173,8 +173,14 @@ pub struct App {
     phys: (u32, u32),
     /// Rotated copy of the canvas sent to the panel in landscape.
     phys_canvas: Canvas,
-    /// A finger on the drawer's edge grip: the width stop it would give.
-    handle_drag: Option<u8>,
+    /// A finger on the drawer's edge grip, or on the closed drawer's tab.
+    handle_drag: Option<drawer::GripTouch>,
+    /// When the last tap on the grip lifted: a second one soon after
+    /// closes the drawer (v1.16).
+    grip_tap: Option<u64>,
+    /// The panes (and scratch focus) the grip closed, which the tab at the
+    /// screen edge reopens (v1.16). Not kept across a restart.
+    drawer_stash: Option<([bool; 3], bool)>,
     /// Side drawer (v0.5): open panes (Contents, To-dos, Scratch).
     pub drawer: [bool; 3],
     pub filter: Filter,
@@ -307,6 +313,8 @@ impl App {
             phys: (width, height),
             phys_canvas: Canvas::new(width, height, 255),
             handle_drag: None,
+            grip_tap: None,
+            drawer_stash: None,
             drawer: [false; 3],
             filter: Filter::All,
             scratch_save: Autosave::new(scratch.revision()),

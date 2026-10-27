@@ -13,7 +13,7 @@
 FBInk has **no emulator or preview window**. Its README notes it "works perfectly fine on any kind of Linux framebuffer device" and offers `make linux` (generic `/dev/fb0`, e.g. a Linux text console, no e-ink refresh), plus `make ftrace` (a finger-trail utility for checking Kobo touch translation on the device). Third-party bridges listed there (fbink-xdamage for X11, a Qt5 QPA, InkVT) target devices, not desktops. Hence our own `Device` trait with a window and a headless backend; the FBInk backend is exercised only on the Kobo.
 
 ## Emulator commands added in v0.5
-- `tap-on Panels` (the drawer button; v1.16), then `tap-on Contents|To-dos|Scratch` (rows of the open drawer menu; a tap anywhere else closes it); `pane Contents|To-dos|Scratch` does all three taps (open, tick, close). `tap-on Heading:TEXT`, `tap-on Todo:TEXT`, `tap-on TodoBox:TEXT`, `tap-on Filter`, `tap-on ScratchPane`.
+- `tap-on Panels` (the drawer button; v1.16), then `tap-on Contents|To-dos|Scratch` (rows of the open drawer menu; a tap anywhere else closes it); `pane Contents|To-dos|Scratch` does all three taps (open, tick, close). `press-on DrawerHandle` / `release` twice is a double tap on the grip (closes the drawer); `tap-on DrawerTab` reopens it from the edge tab. `tap-on Heading:TEXT`, `tap-on Todo:TEXT`, `tap-on TodoBox:TEXT`, `tap-on Filter`, `tap-on ScratchPane`.
 - `expect-scratch TEXT`, `expect-file-contains PATH|TEXT`, `expect-line N`.
 - The to-do indexer is settled after every step, so scripts are deterministic.
 

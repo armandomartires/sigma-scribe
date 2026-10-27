@@ -29,7 +29,7 @@ Screenshots from the desktop emulator (`tests/emu/v1.15-readme.script`); e-ink-l
 - A library of notes and folders: new, rename, move, delete (to a `.trash` folder you can copy notes back from). Notes are plain Markdown in `sigma-scribe/notes` on the Kobo drive; nothing else is needed to read them.
 - Markdown preview with pages, turned with the page buttons.
 - Wiki links `[[note]]` with backlinks; renaming or moving a note updates the links to it.
-- A side drawer (its width is adjustable): the note's **Contents**, **To-dos** across all notes (tick them off from the drawer), and a **Scratch** pad.
+- A side drawer (drag its grip to set the width, or to the screen edge to tuck it away): the note's **Contents**, **To-dos** across all notes (tick them off from the drawer), and a **Scratch** pad.
 - The **Graph**: a map of notes and their links, or a list, with its own settings.
 
 **Handwriting** (Write panel)

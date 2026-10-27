@@ -62,6 +62,9 @@ impl App {
             self.pane_slots[i] = found;
             if !on {
                 self.drawer[i] = false;
+                if let Some((open, _)) = &mut self.drawer_stash {
+                    open[i] = false;
+                }
                 self.pane_plugins[i] = None;
                 if i == 2 {
                     self.scratch_focus = false;
@@ -75,6 +78,12 @@ impl App {
         }
         if !self.screen.panes_on() {
             self.screen.drawer_menu = false;
+        }
+        if self
+            .drawer_stash
+            .is_some_and(|(open, _)| !open.iter().any(|&o| o))
+        {
+            self.drawer_stash = None;
         }
     }
 

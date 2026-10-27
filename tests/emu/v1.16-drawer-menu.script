@@ -17,3 +17,15 @@ tap-on Panels
 tap-on To-dos
 tap-on Panels
 shot v1.16-drawer-preview
+# Closing from the grip: a double tap (or a drag to the screen edge) closes
+# the drawer and leaves a tab at the edge; tapping the tab brings the same
+# panes back.
+tap-on Pencil
+expect-mode write
+press-on DrawerHandle
+release
+press-on DrawerHandle
+release
+shot v1.16-drawer-closed-tab
+tap-on DrawerTab
+shot v1.16-drawer-reopened
