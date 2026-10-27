@@ -5,11 +5,11 @@ tap-on Preview
 expect-mode preview
 shot v1.0-preview
 tap-on Preview
-tap-on Contents
-tap-on To-dos
+pane Contents
+pane To-dos
 shot v1.0-drawer
-tap-on Contents
-tap-on To-dos
+pane Contents
+pane To-dos
 tap-on Find
 type list
 expect-mode find

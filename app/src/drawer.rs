@@ -8,6 +8,7 @@ use sigma_core::outline::{Heading, TodoItem};
 use sigma_core::Change;
 use sigma_core::{outline, Buffer, KeyAction, NotePath};
 use sigma_device::{HwKey, Phase, Refresh};
+use sigma_render::drawer_menu::MenuHit;
 use sigma_render::{DrawerHit, DrawerModel, Pane};
 
 impl App {
@@ -187,6 +188,49 @@ impl App {
 
     pub(crate) fn in_drawer(&self, x: i32, y: i32) -> bool {
         self.drawer_hit_at(x, y) != DrawerHit::Outside
+    }
+
+    /// The drawer button (v1.16): opens or closes the drawer menu.
+    pub(crate) fn toggle_drawer_menu(&mut self) -> Refresh {
+        self.screen.drawer_menu = !self.screen.drawer_menu;
+        self.sel_ui = None;
+        Refresh::Partial
+    }
+
+    /// The title-bar layout of the mode on screen (preview has no keys).
+    fn title_layout(&self) -> sigma_render::editor::Layout {
+        let keys = self.preview.is_none() && self.keys_visible();
+        self.screen.layout(keys, &self.keyboard)
+    }
+
+    /// A tap while the drawer menu is open: a row shows or hides its pane
+    /// and the menu stays open; the drawer button or any other place
+    /// closes it, and the tap does nothing else.
+    pub(crate) fn drawer_menu_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
+        let l = self.title_layout();
+        match self.screen.drawer_menu_hit(&l, x, y) {
+            MenuHit::Pane(p) => {
+                let r = self.toggle_pane(p);
+                if self.preview.is_some() {
+                    self.rebuild_preview();
+                }
+                Some(r)
+            }
+            MenuHit::Button | MenuHit::Outside => {
+                self.screen.drawer_menu = false;
+                Some(Refresh::Partial)
+            }
+        }
+    }
+
+    /// Draws the drawer menu when it is open (over the drawer, under the
+    /// ink panel). Leaving write mode and preview closes it.
+    pub(crate) fn draw_drawer_menu(&mut self, c: &mut sigma_render::Canvas) {
+        if !self.drawer_allowed() {
+            self.screen.drawer_menu = false;
+        }
+        let l = self.title_layout();
+        self.screen.draw_drawer_menu(c, &l, self.theme());
     }
 
     /// Opens or closes one drawer pane (no animation, partial refresh).

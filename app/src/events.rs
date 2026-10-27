@@ -74,6 +74,22 @@ impl App {
         let page = self.screen.layout(self.keys_visible(), &self.keyboard).page;
         match e {
             Event::Tilt { .. } => None,
+            // v1.16: the open drawer menu takes every tap and touch.
+            Event::Tap { x, y } if self.screen.drawer_menu && self.drawer_allowed() => {
+                self.drawer_menu_tap(x, y)
+            }
+            Event::Touch { phase, x, y, t } if self.screen.drawer_menu && self.drawer_allowed() => {
+                let g = match phase {
+                    Phase::Down => self.gestures.down(x, y, t),
+                    Phase::Move => self.gestures.moved(x, y, t),
+                    Phase::Up => self.gestures.up(x, y, t),
+                };
+                self.apply(g)
+            }
+            Event::Key(HwKey::Escape) if self.screen.drawer_menu && self.drawer_allowed() => {
+                self.screen.drawer_menu = false;
+                Some(Refresh::Partial)
+            }
             Event::Tap { x, y } if self.paged_bar().is_some_and(|(_, b)| b.zone.contains(x, y)) => {
                 self.bar_tap(x, y).flatten()
             }
@@ -369,7 +385,7 @@ impl App {
                         self.open_graph();
                         Some(Refresh::Full)
                     }
-                    Hit::Drawer(p) => Some(self.toggle_pane(p)),
+                    Hit::DrawerMenu => Some(self.toggle_drawer_menu()),
                     Hit::Candidate(i) => {
                         self.keyboard.composer.pick(&mut self.buffer, i);
                         self.save();

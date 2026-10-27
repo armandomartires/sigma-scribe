@@ -39,6 +39,9 @@ const ICONS: &[&str] = &[
     "indent-increase",
     // v1.13.1 the Settings gear.
     "settings",
+    // v1.16 the drawer button (the panel on the drawer's side).
+    "panel-right",
+    "panel-left",
 ];
 
 /// A touch target is 44 brief units; the glyph is half of it.

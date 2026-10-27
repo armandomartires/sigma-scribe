@@ -39,8 +39,13 @@ impl Rig {
         r
     }
     fn tap_on(&mut self, label: &str) -> Option<Refresh> {
-        let (x, y) = self.app.control_centre(label).expect(label);
-        self.send(Event::Tap { x, y })
+        // A pane is shown or hidden through the drawer menu (v1.16).
+        let mut r = None;
+        for step in self.app.control_steps(label) {
+            let (x, y) = self.app.control_centre(&step).expect(label);
+            r = self.send(Event::Tap { x, y }).or(r);
+        }
+        r
     }
     fn settle(&mut self) {
         self.app.settle();

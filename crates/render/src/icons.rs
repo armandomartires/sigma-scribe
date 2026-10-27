@@ -64,6 +64,10 @@ pub enum Icon {
     Tab,
     /// The Settings button in the title bar (v1.13.1).
     Settings,
+    /// The drawer button with the drawer on the right (v1.16).
+    PanelRight,
+    /// The drawer button with the drawer on the left (v1.16).
+    PanelLeft,
 }
 
 impl Icon {
@@ -98,6 +102,8 @@ impl Icon {
             Self::PageDown => "chevrons-down",
             Self::Tab => "indent-increase",
             Self::Settings => "settings",
+            Self::PanelRight => "panel-right",
+            Self::PanelLeft => "panel-left",
         }
     }
 }
@@ -206,6 +212,8 @@ mod tests {
             Icon::PageDown,
             Icon::Tab,
             Icon::Settings,
+            Icon::PanelRight,
+            Icon::PanelLeft,
         ] {
             for &s in SIZES {
                 let m = ICONS

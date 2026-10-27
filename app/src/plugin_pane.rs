@@ -50,9 +50,10 @@ impl App {
         self.sync_plugin_icons();
     }
 
-    /// Reads which pane plugins are enabled and shows an icon for each pane
-    /// that has one (or all of them with the built-in panes wanted). A pane
-    /// that lost its plugin closes.
+    /// Reads which pane plugins are enabled and offers each pane that has
+    /// one in the drawer menu (or all of them with the built-in panes
+    /// wanted). A pane that lost its plugin closes; with none left, the
+    /// drawer button and its menu go.
     pub(crate) fn sync_pane_slots(&mut self) {
         for i in 0..3 {
             let found = plugins::enabled_pane_in(&self.plugins_root, slot(i))
@@ -71,6 +72,9 @@ impl App {
                 1 => self.screen.todos_on = on,
                 _ => self.screen.scratch_on = on,
             }
+        }
+        if !self.screen.panes_on() {
+            self.screen.drawer_menu = false;
         }
     }
 

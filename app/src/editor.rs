@@ -59,6 +59,15 @@ impl App {
         let page = self.page_rect();
         let on_page = |x: i32, y: i32| page.contains(x, y);
         match g {
+            // v1.16: the open drawer menu turns any touch into a tap (no
+            // drags, no word selection under it).
+            Gesture::Tap { x, y } | Gesture::DoubleTap { x, y } | Gesture::LongPress { x, y }
+                if self.screen.drawer_menu =>
+            {
+                self.drag = None;
+                self.handle(Event::Tap { x, y })
+            }
+            _ if self.screen.drawer_menu => None,
             Gesture::Press { x, y } if self.on_plugin_area(x, y) => {
                 self.drag = None;
                 self.plugin_drag_start(x, y);

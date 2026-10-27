@@ -15,6 +15,26 @@ use sigma_core::wrap::{caret_cell, offset_at, wrap, VisualLine};
 use sigma_core::Buffer;
 use sigma_plugin_api::Frame;
 
+/// A square checkbox in `b`: filled with a paper check mark when `on`,
+/// else an outline `stroke` px wide (to-dos, the drawer menu).
+pub(crate) fn draw_check(c: &mut Canvas, b: Rect, on: bool, stroke: i32, t: Theme) {
+    let side = b.w;
+    if on {
+        c.fill(b, t.ink);
+        // Check mark in paper.
+        for k in 0..side / 2 {
+            let (x0, y0) = (b.x + side / 5 + k / 2, b.y + side / 2 + k / 2);
+            c.fill(Rect::new(x0, y0, 2, 2), t.paper);
+            c.fill(
+                Rect::new(b.x + side / 2 - 2 + k, b.y + side * 3 / 4 - k, 2, 2),
+                t.paper,
+            );
+        }
+    } else {
+        c.stroke(b, stroke, t.ink);
+    }
+}
+
 /// A pane of the side drawer.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Pane {
@@ -517,20 +537,7 @@ impl EditorScreen {
                         let it = &items[*idx];
                         let side = self.d(18.0);
                         let b = Rect::new(bx.x + self.d(4.0), tx.y + self.d(10.0), side, side);
-                        if it.todo.done {
-                            c.fill(b, t.ink);
-                            // Check mark in paper.
-                            for k in 0..side / 2 {
-                                let (x0, y0) = (b.x + side / 5 + k / 2, b.y + side / 2 + k / 2);
-                                c.fill(Rect::new(x0, y0, 2, 2), t.paper);
-                                c.fill(
-                                    Rect::new(b.x + side / 2 - 2 + k, b.y + side * 3 / 4 - k, 2, 2),
-                                    t.paper,
-                                );
-                            }
-                        } else {
-                            c.stroke(b, self.d(1.75).max(2), t.ink);
-                        }
+                        draw_check(c, b, it.todo.done, self.d(1.75).max(2), t);
                         let (ink, line) = if it.todo.done {
                             (t.mute, true)
                         } else {

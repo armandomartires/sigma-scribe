@@ -126,19 +126,24 @@ enum Step {
 fn run(r: &mut Rig, step: &Step) -> Option<Refresh> {
     match step {
         Step::Tap(label) => {
-            let (x, y) = r.app.control_centre(label).unwrap_or_else(|| {
-                panic!(
-                    "no control {label}; scratch {:?}, to-dos {:?}, panes {:?}",
-                    r.app.scratch.text(),
-                    r.app
-                        .todo_list()
-                        .iter()
-                        .map(|t| t.todo.text.clone())
-                        .collect::<Vec<_>>(),
-                    r.app.drawer
-                )
-            });
-            r.send(Event::Tap { x, y })
+            // A pane is shown or hidden through the drawer menu (v1.16).
+            let mut out = None;
+            for step in r.app.control_steps(label) {
+                let (x, y) = r.app.control_centre(&step).unwrap_or_else(|| {
+                    panic!(
+                        "no control {step}; scratch {:?}, to-dos {:?}, panes {:?}",
+                        r.app.scratch.text(),
+                        r.app
+                            .todo_list()
+                            .iter()
+                            .map(|t| t.todo.text.clone())
+                            .collect::<Vec<_>>(),
+                        r.app.drawer
+                    )
+                });
+                out = r.send(Event::Tap { x, y }).or(out);
+            }
+            out
         }
         Step::Type(s) => {
             let mut last = None;

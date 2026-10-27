@@ -181,6 +181,7 @@ impl App {
             self.screen
                 .draw_drawer_handle(&mut c, &base, self.settings.drawer, self.theme());
         }
+        self.draw_drawer_menu(&mut c);
         let v = self.ink_view();
         if let (Some(ink), Some(v)) = (&mut self.ink, v) {
             let l = self.screen.ink_layout_for(ink.mode, &v);

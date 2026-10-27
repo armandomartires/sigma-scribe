@@ -1,0 +1,19 @@
+# v1.16: one drawer button opens the drawer menu; rows show or hide panes
+# and the menu stays open; a tap elsewhere closes it and does nothing else.
+# Run with an empty notes folder:
+# `SIGMA_NOTES=$(mktemp -d) scripts/sim.sh --headless
+# tests/emu/v1.16-drawer-menu.script docs/screenshots/v1.16`.
+open-fixture tests/emu/fixtures/markdown-tour.md
+tap-on Panels
+shot v1.16-drawer-menu
+tap-on Contents
+tap-on To-dos
+shot v1.16-drawer-menu-ticked
+tap-on Panels
+shot v1.16-drawer-two-panes
+tap-on Preview
+expect-mode preview
+tap-on Panels
+tap-on To-dos
+tap-on Panels
+shot v1.16-drawer-preview
