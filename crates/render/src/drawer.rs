@@ -16,6 +16,10 @@ use sigma_core::wrap::{caret_cell, offset_at, wrap, VisualLine};
 use sigma_core::Buffer;
 use sigma_plugin_api::Frame;
 
+/// The grip's fill (v1.16): 50 % grey, an exact level of the panel's 16
+/// (the disabled slider's grey).
+pub const GRIP_FILL: u8 = crate::slider::MUTED;
+
 /// A square checkbox in `b`: filled with a paper check mark when `on`,
 /// else an outline `stroke` px wide (to-dos, the drawer menu).
 pub(crate) fn draw_check(c: &mut Canvas, b: Rect, on: bool, stroke: i32, t: Theme) {
@@ -213,12 +217,14 @@ impl EditorScreen {
     }
 
     /// The grip's look, for the open drawer's grip and the closed one's tab
-    /// (v1.16): a bar with fully rounded ends on a white rim, and three
-    /// white dots down its middle so it reads as something to hold.
+    /// (v1.16): a bar with fully rounded ends on a white rim, a 1 px ink
+    /// outline round a 50 % grey fill, and three white dots down its middle
+    /// so it reads as something to hold.
     fn draw_grip(&self, c: &mut Canvas, bar: Rect, t: Theme) {
         let pad = self.d(4.0);
         fill_round(c, bar.inset(-pad), bar.w / 2 + pad, t.paper);
         fill_round(c, bar, bar.w / 2, t.ink);
+        fill_round(c, bar.inset(1), bar.w / 2 - 1, GRIP_FILL);
         let dot = (bar.w * 2 / 5).max(2);
         let step = dot + self.d(5.0);
         let x = bar.x + (bar.w - dot) / 2;
@@ -713,7 +719,7 @@ mod tests {
     use sigma_core::{Keyboard, NotePath};
 
     #[test]
-    fn the_grip_and_the_tab_are_rounded_with_three_white_dots() {
+    fn the_grip_and_the_tab_are_outlined_grey_and_rounded_with_three_white_dots() {
         let e = EditorScreen::new(1440, 1920);
         let t = Theme::DAY;
         let base = e.layout(true, &Keyboard::default());
@@ -736,13 +742,16 @@ mod tests {
             let bar = Rect::new(x, z.y + (z.h - bh) / 2, bw, bh);
             let (cx, cy) = (bar.x + bar.w / 2, bar.y + bar.h / 2);
             assert_eq!(px(&c, bar.x, bar.y), t.paper, "{tab}: rounded corner");
-            assert_eq!(px(&c, cx, bar.y + 2), t.ink, "{tab}: solid at the top");
-            // Three dots down the middle: white, ink, white, ink, white.
+            assert_eq!(px(&c, cx, bar.y), t.ink, "{tab}: 1 px outline");
+            assert_eq!(px(&c, cx, bar.y + 1), GRIP_FILL, "{tab}: grey inside");
+            assert_eq!(px(&c, bar.x, cy), t.ink, "{tab}: outline at the side");
+            assert_eq!(px(&c, bar.x + 1, cy), GRIP_FILL);
+            // Down the middle: outline, grey, then three white dots on the
+            // grey (six edges), grey, outline.
             let col: Vec<u8> = (bar.y..bar.y + bar.h).map(|y| px(&c, cx, y)).collect();
             let runs = col.windows(2).filter(|w| w[0] != w[1]).count();
-            assert_eq!(runs, 6, "{tab}: three dots make six edges");
+            assert_eq!(runs, 8, "{tab}: outline, three dots, outline");
             assert_eq!(px(&c, cx, cy), t.paper, "{tab}: the middle dot");
-            assert_eq!(px(&c, bar.x + 1, cy), t.ink, "{tab}: beside the dot");
         }
     }
 
