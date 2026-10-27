@@ -1,6 +1,8 @@
 //! Preview mode: the laid-out, read-only note.
 
-use super::*;
+use crate::{stem, App};
+use sigma_device::{Event, HwKey, Refresh};
+use sigma_render::{Doc, Hit};
 
 impl App {
     /// Switches to preview at the page showing the top of the write page.

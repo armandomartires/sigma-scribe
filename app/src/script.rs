@@ -1,6 +1,8 @@
 //! Hooks the emulator scripts and tests use to find and tap controls.
 
-use super::*;
+use crate::{centre, App};
+use sigma_render::editor::Model;
+use sigma_render::{GraphHit, HelpPage, Rect};
 
 impl App {
     /// Centre of the on-screen key with this label (emulator scripts).

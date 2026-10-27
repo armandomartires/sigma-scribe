@@ -1,6 +1,11 @@
 //! The on-screen keyboard: its bar buttons, chords and what follows a key.
 
-use super::*;
+use crate::App;
+use sigma_core::keyboard::{Dir, Key};
+use sigma_core::settings::{Pad, Side};
+use sigma_core::{Change, KeyAction};
+use sigma_device::{HwKey, Mods, Refresh};
+use sigma_render::KbButton;
 
 impl App {
     pub(crate) fn kb_button(&mut self, b: KbButton) -> Option<Refresh> {

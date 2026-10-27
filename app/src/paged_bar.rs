@@ -1,6 +1,7 @@
 //! The paged scroll bar shared by Settings, Help and Preview.
 
-use super::*;
+use crate::App;
+use sigma_device::{Phase, Refresh};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum PagedBar {

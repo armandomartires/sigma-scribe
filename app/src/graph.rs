@@ -1,6 +1,10 @@
 //! The built-in Graph sheet and its map.
 
-use super::*;
+use crate::{stem, App};
+use sigma_core::graphmap::MapLayout;
+use sigma_core::{graphmap, NotePath};
+use sigma_device::Refresh;
+use sigma_render::{GraphHit, GraphModel, GraphRow, MapView, ZOOMS};
 
 impl App {
     /// Forgets the cached map layout (perf measurements).
