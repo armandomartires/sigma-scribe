@@ -154,13 +154,57 @@ impl EditorScreen {
     #[must_use]
     pub fn drawer_rect(&self, base: &Layout, side: Side) -> Rect {
         let p = base.page;
-        let share = sigma_core::settings::drawer_share(self.cfg.drawer_width);
-        let w = ((p.w as f32 * share) as i32).min(self.d(320.0 * share / 0.48));
+        let w = self.drawer_width_at(base, self.cfg.drawer_width);
         let x = match side {
             Side::Left => p.x,
             Side::Right => p.x + p.w - w,
         };
         Rect::new(x, p.y, w, p.h)
+    }
+
+    /// The drawer's width in px at Drawer width stop `stop`.
+    #[must_use]
+    pub fn drawer_width_at(&self, base: &Layout, stop: u8) -> i32 {
+        let share = sigma_core::settings::drawer_share(stop);
+        ((base.page.w as f32 * share) as i32).min(self.d(320.0 * share / 0.48))
+    }
+
+    /// The grip on the drawer's inner edge: the area that starts a width
+    /// drag, centred on the edge, a finger wide, in the middle of the page.
+    #[must_use]
+    pub fn drawer_handle(&self, base: &Layout, side: Side) -> Rect {
+        let r = self.drawer_rect(base, side);
+        let edge = match side {
+            Side::Left => r.x + r.w,
+            Side::Right => r.x,
+        };
+        let (w, h) = (self.d(44.0), self.d(150.0));
+        Rect::new(edge - w / 2, r.y + (r.h - h) / 2, w, h)
+    }
+
+    /// Draws the grip: a short bar on the edge, white around it so it stays
+    /// visible on the page and on the pane, pure black and white.
+    pub fn draw_drawer_handle(&self, c: &mut Canvas, base: &Layout, side: Side, t: Theme) {
+        let z = self.drawer_handle(base, side);
+        let (bw, bh) = (self.d(10.0), self.d(80.0));
+        let bar = Rect::new(z.x + (z.w - bw) / 2, z.y + (z.h - bh) / 2, bw, bh);
+        let pad = self.d(4.0);
+        c.fill(bar.inset(-pad), t.paper);
+        c.fill(bar, t.ink);
+    }
+
+    /// The Drawer width stop whose drawer is closest to one whose inner edge
+    /// is at screen column `x`.
+    #[must_use]
+    pub fn drawer_stop_at(&self, base: &Layout, side: Side, x: i32) -> u8 {
+        let p = base.page;
+        let want = match side {
+            Side::Left => x - p.x,
+            Side::Right => p.x + p.w - x,
+        };
+        (0..sigma_core::settings::DRAWER_WIDTH_STOPS)
+            .min_by_key(|&s| (self.drawer_width_at(base, s) - want).abs())
+            .unwrap_or(sigma_core::settings::DRAWER_WIDTH_DEFAULT)
     }
 
     /// The whole rectangle of each open pane (header included), top to

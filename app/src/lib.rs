@@ -166,6 +166,8 @@ pub struct App {
     phys: (u32, u32),
     /// Rotated copy of the canvas sent to the panel in landscape.
     phys_canvas: Canvas,
+    /// A finger on the drawer's edge grip: the width stop it would give.
+    handle_drag: Option<u8>,
     /// Side drawer (v0.5): open panes (Contents, To-dos, Scratch).
     pub drawer: [bool; 3],
     pub filter: Filter,
@@ -294,6 +296,7 @@ impl App {
             ui_scale_drag: None,
             phys: (width, height),
             phys_canvas: Canvas::new(width, height, 255),
+            handle_drag: None,
             drawer: [false; 3],
             filter: Filter::All,
             scratch_save: Autosave::new(scratch.revision()),
