@@ -33,7 +33,7 @@ impl App {
             let want = match label {
                 "Undo" => InkButton::Undo,
                 "Line" | "Guide" => InkButton::Guide,
-                "Side" | "⇄" => InkButton::Side,
+                "Side" => InkButton::Side,
                 "Redo" => InkButton::Redo,
                 "Clear" => InkButton::Clear,
                 "Pen" => InkButton::Pen,
