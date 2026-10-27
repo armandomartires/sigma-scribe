@@ -217,14 +217,18 @@ impl EditorScreen {
     }
 
     /// The grip's look, for the open drawer's grip and the closed one's tab
-    /// (v1.16): a bar with fully rounded ends on a white rim, a 1 px ink
-    /// outline round a 50 % grey fill, and three white dots down its middle
-    /// so it reads as something to hold.
+    /// (v1.16): a bar with fully rounded ends, an ink outline as wide as the
+    /// scroll bar thumb's round a 50 % grey fill, and three white dots down
+    /// its middle so it reads as something to hold. A white rim at its sides
+    /// keeps text off it; none above or below, so the drawer's edge line
+    /// runs into its ends.
     fn draw_grip(&self, c: &mut Canvas, bar: Rect, t: Theme) {
         let pad = self.d(4.0);
-        fill_round(c, bar.inset(-pad), bar.w / 2 + pad, t.paper);
+        let side = Rect::new(bar.x - pad, bar.y, bar.w + 2 * pad, bar.h);
+        fill_round(c, side, side.w / 2, t.paper);
+        let line = crate::scrollbar::Metrics::new(self.page_scale()).line;
         fill_round(c, bar, bar.w / 2, t.ink);
-        fill_round(c, bar.inset(1), bar.w / 2 - 1, GRIP_FILL);
+        fill_round(c, bar.inset(line), bar.w / 2 - line, GRIP_FILL);
         let dot = (bar.w * 2 / 5).max(2);
         let step = dot + self.d(5.0);
         let x = bar.x + (bar.w - dot) / 2;
@@ -719,14 +723,17 @@ mod tests {
     use sigma_core::{Keyboard, NotePath};
 
     #[test]
-    fn the_grip_and_the_tab_are_outlined_grey_and_rounded_with_three_white_dots() {
+    fn the_grip_is_outlined_like_the_scroll_thumb_grey_with_three_white_dots() {
         let e = EditorScreen::new(1440, 1920);
         let t = Theme::DAY;
         let base = e.layout(true, &Keyboard::default());
         let px = |c: &Canvas, x: i32, y: i32| c.pixels[(y * c.width as i32 + x) as usize];
         let (bw, bh) = (e.d(10.0), e.d(80.0));
+        let line = crate::scrollbar::Metrics::new(e.page_scale()).line;
+        // A colour neither the grip nor its rim uses: what it leaves alone.
+        let bg = 0x40;
         for tab in [false, true] {
-            let mut c = Canvas::new(1440, 1920, t.paper);
+            let mut c = Canvas::new(1440, 1920, bg);
             let z = if tab {
                 e.draw_drawer_tab(&mut c, &base, Side::Right, t);
                 e.drawer_tab(&base, Side::Right)
@@ -741,11 +748,16 @@ mod tests {
             };
             let bar = Rect::new(x, z.y + (z.h - bh) / 2, bw, bh);
             let (cx, cy) = (bar.x + bar.w / 2, bar.y + bar.h / 2);
-            assert_eq!(px(&c, bar.x, bar.y), t.paper, "{tab}: rounded corner");
-            assert_eq!(px(&c, cx, bar.y), t.ink, "{tab}: 1 px outline");
-            assert_eq!(px(&c, cx, bar.y + 1), GRIP_FILL, "{tab}: grey inside");
-            assert_eq!(px(&c, bar.x, cy), t.ink, "{tab}: outline at the side");
-            assert_eq!(px(&c, bar.x + 1, cy), GRIP_FILL);
+            assert_eq!(px(&c, bar.x, bar.y), bg, "{tab}: rounded corner");
+            assert_eq!(px(&c, cx, bar.y - 1), bg, "{tab}: no rim above");
+            assert_eq!(px(&c, cx, bar.y + bar.h), bg, "{tab}: no rim below");
+            assert_eq!(px(&c, bar.x - 1, cy), t.paper, "{tab}: rim at the side");
+            // The outline is as wide as the scroll bar thumb's.
+            assert!(line >= 2);
+            assert_eq!(px(&c, cx, bar.y + line - 1), t.ink, "{tab}: outline");
+            assert_eq!(px(&c, cx, bar.y + line), GRIP_FILL, "{tab}: grey inside");
+            assert_eq!(px(&c, bar.x + line - 1, cy), t.ink, "{tab}: outline");
+            assert_eq!(px(&c, bar.x + line, cy), GRIP_FILL);
             // Down the middle: outline, grey, then three white dots on the
             // grey (six edges), grey, outline.
             let col: Vec<u8> = (bar.y..bar.y + bar.h).map(|y| px(&c, cx, y)).collect();
