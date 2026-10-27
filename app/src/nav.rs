@@ -1,6 +1,9 @@
 //! Wiki links between notes and the Back history.
 
-use super::*;
+use crate::App;
+use sigma_core::links::Graph;
+use sigma_core::{links, NotePath};
+use sigma_device::Refresh;
 
 impl App {
     /// Names a `[[wiki]]` link may use for an existing note: the file name

@@ -1,6 +1,12 @@
 //! The Files sheet and renaming notes and folders in place.
 
-use super::*;
+use crate::App;
+use sigma_core::buffer::TabKind;
+use sigma_core::keyboard::{Dir, Key};
+use sigma_core::library::SCRATCH;
+use sigma_core::{Autosave, Buffer, Entry, KeyAction, Keyboard, Kind, NotePath};
+use sigma_device::{HwKey, Refresh};
+use sigma_render::{FilesHit, FilesModel, Row};
 
 /// Replaces a buffer's text with `new` (undoable), caret kept nearby.
 fn take_text(b: &mut Buffer, new: &str) {

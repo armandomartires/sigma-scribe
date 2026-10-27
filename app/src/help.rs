@@ -1,6 +1,8 @@
 //! The Help sheet and the About page.
 
-use super::*;
+use crate::App;
+use sigma_device::Refresh;
+use sigma_render::{Doc, HelpHit, HelpModel, HelpPage};
 
 impl App {
     /// App info rows: version, licence, author, where notes live, credits.

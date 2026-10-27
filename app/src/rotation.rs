@@ -1,6 +1,10 @@
 //! Tilt sensor, rotation, and mapping between panel and logical coordinates.
 
-use super::*;
+use crate::App;
+use sigma_core::settings::{Orientation, Rotation};
+use sigma_core::Change;
+use sigma_device::{Event, Refresh};
+use sigma_render::Canvas;
 
 impl App {
     #[must_use]
