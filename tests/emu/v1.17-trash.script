@@ -1,0 +1,52 @@
+# v1.17: the Trash in Files. Delete moves a note to the trash; a Trash button
+# appears beside New note and New folder while it holds something; the Trash
+# lists what was deleted (folder and how long ago), a tap selects a note,
+# Restore puts it back (under a free name if its path was taken), and Empty
+# trash (two taps) removes everything for good.
+# Run: `scripts/sim.sh --headless tests/emu/v1.17-trash.script docs/screenshots/v1.17`.
+expect-open field-notes.md
+tap-on Files
+shot v1.17-files-no-trash
+tap-on drafts
+tap-on More:chapter-01.md
+tap-on Delete
+tap-on Delete
+expect-no-file drafts/chapter-01.md
+shot v1.17-files-with-trash
+tap-on Up
+tap-on More:scratch.txt
+tap-on Delete
+tap-on Delete
+expect-no-file scratch.txt
+# Make the two look like they were deleted at different times.
+age-trash 1 200000
+age-trash 0 7500
+tap-on Trash
+shot v1.17-trash
+# Restore with nothing selected says what to do.
+tap-on Restore
+shot v1.17-trash-nothing-selected
+tap-on scratch.txt
+shot v1.17-trash-selected
+tap-on Restore
+expect-file scratch.txt
+shot v1.17-trash-restored
+# The last item: Restore, and the sheet leaves the Trash by itself.
+tap-on chapter-01.md
+tap-on Restore
+expect-file drafts/chapter-01.md
+# Nothing left: back in Files, no Trash button.
+shot v1.17-files-after-restore
+# Delete again, then empty the trash with two taps.
+tap-on drafts
+tap-on More:chapter-01.md
+tap-on Delete
+tap-on Delete
+tap-on Up
+tap-on Trash
+tap-on Empty trash
+shot v1.17-empty-armed
+tap-on Empty trash
+shot v1.17-emptied
+expect-no-file .trash
+expect-no-file drafts/chapter-01.md

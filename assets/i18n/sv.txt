@@ -983,3 +983,48 @@ Up to date
 Remove
 = Ta bort
 
+
+Trash
+= Papperskorg
+
+Trash ({n})
+= Papperskorg ({n})
+
+Restore
+= Återställ
+
+Empty trash
+= Töm papperskorgen
+
+Tap again to empty
+= Tryck igen för att tömma
+
+The trash is empty.
+= Papperskorgen är tom.
+
+Tap a note to restore it
+= Tryck på en anteckning för att återställa den
+
+Restored to {name}
+= Återställd till {name}
+
+Trash emptied
+= Papperskorgen är tömd
+
+in {name}
+= i {name}
+
+Just now
+= Nyss
+
+{n} min ago
+= för {n} min sedan
+
+{n} h ago
+= för {n} tim sedan
+
+Yesterday
+= I går
+
+{n} days ago
+= för {n} dagar sedan

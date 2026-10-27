@@ -984,3 +984,48 @@ Up to date
 Remove
 = Supprimer
 
+
+Trash
+= Corbeille
+
+Trash ({n})
+= Corbeille ({n})
+
+Restore
+= Restaurer
+
+Empty trash
+= Vider la corbeille
+
+Tap again to empty
+= Touchez encore pour vider
+
+The trash is empty.
+= La corbeille est vide.
+
+Tap a note to restore it
+= Touchez une note pour la restaurer
+
+Restored to {name}
+= Restaurée dans {name}
+
+Trash emptied
+= Corbeille vidée
+
+in {name}
+= dans {name}
+
+Just now
+= À l'instant
+
+{n} min ago
+= il y a {n} min
+
+{n} h ago
+= il y a {n} h
+
+Yesterday
+= Hier
+
+{n} days ago
+= il y a {n} jours

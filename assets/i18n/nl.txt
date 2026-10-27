@@ -983,3 +983,48 @@ Up to date
 Remove
 = Verwijderen
 
+
+Trash
+= Prullenbak
+
+Trash ({n})
+= Prullenbak ({n})
+
+Restore
+= Herstel
+
+Empty trash
+= Prullenbak legen
+
+Tap again to empty
+= Tik nogmaals om te legen
+
+The trash is empty.
+= De prullenbak is leeg.
+
+Tap a note to restore it
+= Tik op een notitie om die te herstellen
+
+Restored to {name}
+= Hersteld naar {name}
+
+Trash emptied
+= Prullenbak geleegd
+
+in {name}
+= in {name}
+
+Just now
+= Zojuist
+
+{n} min ago
+= {n} min geleden
+
+{n} h ago
+= {n} u geleden
+
+Yesterday
+= Gisteren
+
+{n} days ago
+= {n} dagen geleden

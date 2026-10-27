@@ -983,3 +983,48 @@ Up to date
 Remove
 = Fjern
 
+
+Trash
+= Papirkurv
+
+Trash ({n})
+= Papirkurv ({n})
+
+Restore
+= Gendan
+
+Empty trash
+= Tøm papirkurv
+
+Tap again to empty
+= Tryk igen for at tømme
+
+The trash is empty.
+= Papirkurven er tom.
+
+Tap a note to restore it
+= Tryk på en note for at gendanne den
+
+Restored to {name}
+= Gendannet til {name}
+
+Trash emptied
+= Papirkurven er tømt
+
+in {name}
+= i {name}
+
+Just now
+= Lige nu
+
+{n} min ago
+= for {n} min. siden
+
+{n} h ago
+= for {n} t. siden
+
+Yesterday
+= I går
+
+{n} days ago
+= for {n} dage siden
