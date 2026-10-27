@@ -14,9 +14,18 @@ mkdir -p "$SIGMA_NOTES"
   cat /mnt/onboard/.kobo/version 2>/dev/null; echo
 } >>"$LOG"
 sync
-# Same list KOReader stops (koreader.sh); sickel is Nickel's watchdog.
-killall -q -TERM nickel hindenburg sickel fickel strickel fontickel adobehost foxitpdf iink dhcpcd-dbus dhcpcd fmon >/dev/null 2>&1
+# Same list KOReader stops (koreader.sh), less dhcpcd: Wi-Fi left on in
+# Nickel stays up for Settings -> Plugins -> Check for plugins (the exit
+# reboots anyway). sickel is Nickel's watchdog.
+killall -q -TERM nickel hindenburg sickel fickel strickel fontickel adobehost foxitpdf iink dhcpcd-dbus fmon >/dev/null 2>&1
 sleep 2
+# The network as the app finds it (Nickel sets INTERFACE and WIFI_MODULE).
+{
+  echo "net: interface ${INTERFACE:-unset}, module ${WIFI_MODULE:-unset}"
+  ifconfig "${INTERFACE:-wlan0}" 2>&1 | grep -E 'inet |Link|UP' | sed 's/^ */net: /'
+  for p in wpa_supplicant dhcpcd udhcpc; do pidof "$p" >/dev/null && echo "net: $p running"; done
+  grep -m1 nameserver /etc/resolv.conf | sed 's/^/net: /'
+} >>"$LOG" 2>&1
 # Keep Σscribe's files out of the Kobo library (v1.11.1). Nickel indexes
 # hidden folders too (firmware 4.17+) unless ExcludeSyncFolders says not to,
 # and it rewrites its config when it is running, so the line is added here,

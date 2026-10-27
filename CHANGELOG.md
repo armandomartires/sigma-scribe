@@ -4,6 +4,8 @@ All notable changes to Σscribe. Versions are tagged after they pass on the Kobo
 
 ## Unreleased
 
+- **Check for plugins works without `curl`.** On the Forma, Check for plugins failed with "No such file or directory": the Kobo has no `curl`. The app now downloads itself (ureq with rustls and the bundled Mozilla root certificates), https only, redirects included, with the same size and sha256 checks. The launcher no longer stops `dhcpcd`, so Wi-Fi turned on in the Kobo's reader stays up while Σscribe runs, and it logs the network it finds (`net:` lines in `sigma-scribe.log`). Tried on the Forma: the index was fetched and a plugin installed from it. New dependency `ureq` (rustls, ring, webpki-roots); ISC and CDLA-Permissive-2.0 added to the licence allow list. Ignored test `live_repository` fetches the real index and a package.
+
 - **Remove a plugin.** Settings → Plugins has a Remove row under each plugin; it is greyed while the plugin is on, and removing deletes its folder and its `plugins.state` line. One new string ("Remove") in the nine catalogs; the "Turn the plugin off first" note is English only, like "Turn the plugin on first".
 
 - **Word mode hint corrected.** Settings → Handwriting → Word mode said "off is more accurate", which stopped being true when word mode got its own piece model (1.15.0). It now says it is best for joined-up writing, in all ten languages.
