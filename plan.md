@@ -191,35 +191,35 @@ User decisions (2026-10-21 21:24): v1.0.1 = pointer trails + reverse scroll + "U
 | S9.1 | Graph map | **v1.0.0** 🔨 | Graph drawn as nodes and links (deterministic cached layout in core), Map / List toggle, tap select / open in preview, drag and page-button pan, 4 zoom levels, mouse wheel/click/drag, 300-note perf — built 2026-10-21; not installed, not tagged |
 | S9.2 | Title bar | **v1.0.0** 🔨 | icons ×2 (glyphs, targets, bar), mockup order, close X at the right, overflow rule, before/after + mockup comparison shots — built 2026-10-21; installed 2026-10-21 with 1.0.0, not tagged |
 | S10 | Pointer, scroll, USB label (+S10.1 test-notes pack) | **v1.0.1** 🔨 | BUILT 2026-10-21 (approved 22:32); not installed, not tagged |
-| S10.3 | Pointer lag fix + drawer in preview | **v1.0.3** 🔨 | BUILT 2026-10-22 (approved); not installed, not tagged |
-| S10.4 | Pointer regression fix | **v1.0.4** 🔨 | BUILT 2026-10-22; not installed, not tagged |
-| S11 | UI scale (default 200 %) + Lucide icons | **v1.1** | BUILT (not installed) |
-| S12 | Orientation (Auto default) | **v1.2** | BUILT (not installed; sensor off pending device check) |
-| S13 | Latin layouts + composer | **v1.3** | BUILT (not installed; accent popup + candidate bar deferred) |
-| S14 | UI languages EN/FR/PT | **v1.4** | INSTALLED 2026-10-22 — **first STABLE release** (not tagged; RTL switch deferred; override added in v1.5.5, decision 57) |
-| S14.1 | Pointer always black | **v1.4.1** | BUILT (not installed, not tagged) |
-| S14.2 | Kobo-style Settings + scroll bar | **v1.4.2** | BUILT (not installed, not tagged) |
-| S14.3 | Keyboard size, decoupled from UI scale | **v1.4.3** | BUILT (not installed, not tagged) |
-| S14.4 | Keyboard size: Auto checkbox + slider | **v1.4.4** | BUILT (not installed, not tagged) |
-| S14.5 | Slider on the page, grey when Auto | **v1.4.5** | BUILT (not installed, not tagged) |
-| S14.6 | Back-arrow icon + glyph audit | **v1.4.6** | BUILT (not installed, not tagged) |
-| S15.0 | Write panel: ink, undo/clear, SVG + strokes | **v1.5.0** | BUILT (emulator/CI only, not installed, not tagged) |
-| S15.1 | Ink in preview, `.ink/` follows rename/move, contact size | **v1.5.1** | BUILT (emulator/CI only, not installed, not tagged) |
-| S15.2 | Letters: per-character boxes, enrolment; wiki links follow rename/move (S15.2a) | **v1.5.2** | BUILT (emulator/CI only, not installed, not tagged) |
-| S15.3 | Word-mode gate (failed → experimental setting); Boox-style panel with free writing area, auto-segmentation, boxes as fallback | **v1.5.3** | BUILT (emulator/CI only, not installed, not tagged) |
-| S15.5 | Override system language (Settings → Language), decision 57 | **v1.5.5** | BUILT (emulator/CI only, not installed, not tagged) |
-| S16.0 | W1: eleven more Latin layouts, decision 58 | **v1.6.0** | BUILT (emulator/CI only, not installed, not tagged) |
-| S16.1 | W1: Russian, Ukrainian, Greek layouts, decision 59 | **v1.6.1** | BUILT (emulator/CI only, not installed, not tagged) |
-| S16.2 | W1: UI languages DE, ES, IT, NL, CA, DA, SV (machine-drafted), decision 60 | **v1.6.2** | BUILT (emulator/CI only, not installed, not tagged) |
-| S17.0 | W2: Vietnamese typing, Telex and VNI | **v1.7.0** | BUILT (emulator/CI only, not installed, not tagged) |
-| S17.1 | W2: Korean typing (Dubeolsik) + optional script font pack | **v1.7.1** | BUILT (emulator/CI only, not installed, not tagged) |
-| S18.0 | W3a: Arabic, Persian, Urdu, Hebrew layouts + right-to-left text in the editor | **v1.8.0** | BUILT (emulator/CI only, not installed, not tagged) |
-| S19.0 | W3b: Hindi/Marathi/Nepali, Bengali, Tamil, Thai + shaping (rustybuzz) | **v1.9.0** | BUILT (emulator/CI only, not installed, not tagged) |
-| S20.0 | W4: Japanese romaji → kana → kanji (SKK-JISYO.L) | **v1.10.0** | BUILT (emulator/CI only, not installed, not tagged) |
-| S20.1 | W4: Japanese conversion by phrase, learning (this run) | **v1.10.1** | INSTALLED on the Forma with the system CJK font; Japanese checks reported fine; not tagged |
-| S21.0 | W4: Chinese pinyin, Simplified and Traditional (Rime dictionaries) | **v1.11.0** | BUILT (emulator/CI only, not installed, not tagged) |
+| S10.3 | Pointer lag fix + drawer in preview | **v1.0.3** | ✅ DONE on the Forma 2026-10-27 (built 2026-10-22, approved; not tagged) |
+| S10.4 | Pointer regression fix | **v1.0.4** | ✅ DONE on the Forma 2026-10-27 (built 2026-10-22; not tagged) |
+| S11 | UI scale (default 200 %) + Lucide icons | **v1.1** | ✅ DONE on the Forma 2026-10-27 (not tagged) |
+| S12 | Orientation (Auto default) | **v1.2** | ✅ DONE on the Forma 2026-10-27 (not tagged) |
+| S13 | Latin layouts + composer | **v1.3** | ✅ DONE on the Forma 2026-10-27 (not tagged; accent popup + candidate bar deferred) |
+| S14 | UI languages EN/FR/PT | **v1.4** | ✅ DONE: installed 2026-10-22, confirmed on the Forma 2026-10-27 — **first STABLE release** (not tagged; RTL switch deferred; override added in v1.5.5, decision 57) |
+| S14.1 | Pointer always black | **v1.4.1** | ✅ DONE on the Forma 2026-10-27 (not tagged) |
+| S14.2 | Kobo-style Settings + scroll bar | **v1.4.2** | ✅ DONE on the Forma 2026-10-27 (not tagged) |
+| S14.3 | Keyboard size, decoupled from UI scale | **v1.4.3** | ✅ DONE on the Forma 2026-10-27 (not tagged) |
+| S14.4 | Keyboard size: Auto checkbox + slider | **v1.4.4** | ✅ DONE on the Forma 2026-10-27 (not tagged) |
+| S14.5 | Slider on the page, grey when Auto | **v1.4.5** | ✅ DONE on the Forma 2026-10-27 (not tagged) |
+| S14.6 | Back-arrow icon + glyph audit | **v1.4.6** | ✅ DONE on the Forma 2026-10-27 (not tagged) |
+| S15.0 | Write panel: ink, undo/clear, SVG + strokes | **v1.5.0** | ✅ DONE 2026-10-27 (not tagged) |
+| S15.1 | Ink in preview, `.ink/` follows rename/move, contact size | **v1.5.1** | ✅ DONE 2026-10-27 (not tagged) |
+| S15.2 | Letters: per-character boxes, enrolment; wiki links follow rename/move (S15.2a) | **v1.5.2** | ✅ DONE 2026-10-27 (not tagged) |
+| S15.3 | Word-mode gate (failed → experimental setting); Boox-style panel with free writing area, auto-segmentation, boxes as fallback | **v1.5.3** | ✅ DONE 2026-10-27 (not tagged) |
+| S15.5 | Override system language (Settings → Language), decision 57 | **v1.5.5** | ✅ DONE 2026-10-27 (not tagged) |
+| S16.0 | W1: eleven more Latin layouts, decision 58 | **v1.6.0** | ✅ DONE 2026-10-27 (native review deferred; not tagged) |
+| S16.1 | W1: Russian, Ukrainian, Greek layouts, decision 59 | **v1.6.1** | ✅ DONE 2026-10-27 (native review deferred; not tagged) |
+| S16.2 | W1: UI languages DE, ES, IT, NL, CA, DA, SV (machine-drafted), decision 60 | **v1.6.2** | ✅ DONE 2026-10-27 (native review deferred; not tagged) |
+| S17.0 | W2: Vietnamese typing, Telex and VNI | **v1.7.0** | ✅ DONE 2026-10-27 (native review deferred; not tagged) |
+| S17.1 | W2: Korean typing (Dubeolsik) + optional script font pack | **v1.7.1** | ✅ DONE 2026-10-27 (native review deferred; not tagged) |
+| S18.0 | W3a: Arabic, Persian, Urdu, Hebrew layouts + right-to-left text in the editor | **v1.8.0** | ✅ DONE 2026-10-27 (native review deferred; not tagged) |
+| S19.0 | W3b: Hindi/Marathi/Nepali, Bengali, Tamil, Thai + shaping (rustybuzz) | **v1.9.0** | ✅ DONE 2026-10-27 (native review deferred; not tagged) |
+| S20.0 | W4: Japanese romaji → kana → kanji (SKK-JISYO.L) | **v1.10.0** | ✅ DONE 2026-10-27 (native review deferred; not tagged) |
+| S20.1 | W4: Japanese conversion by phrase, learning (this run) | **v1.10.1** | ✅ DONE 2026-10-27 (installed on the Forma with the system CJK font, Japanese checks fine; native review deferred; not tagged) |
+| S21.0 | W4: Chinese pinyin, Simplified and Traditional (Rime dictionaries) | **v1.11.0** | ✅ DONE 2026-10-27 (native review deferred; not tagged) |
 | — | Σscribe files kept out of the Kobo library (ExcludeSyncFolders) | **v1.11.1** | BUILT (emulator/CI only, not installed, not tagged) |
-| S15.4 | Gestures: scratch-out, caret tap, line join (flick left), flick right = space | **v1.5.4** | BUILT (emulator/CI only, not installed, not tagged) |
+| S15.4 | Gestures: scratch-out, caret tap, line join (flick left), flick right = space | **v1.5.4** | ✅ DONE 2026-10-27 (not tagged) |
 | S15 | Handwriting input (Latin), v1.5.3 word-mode spike, v1.5.4 gestures | **v1.5** 📝 | PLANNED — §12 |
 | S16 | Farsi + Arabic (RTL) | **v1.6** 📝 | SUPERSEDED — built as S18.0 (v1.8.0) |
 | S17 | Japanese kana + kanji | **v1.7** 📝 | SUPERSEDED — built as S20.0/S20.1 (v1.10) |

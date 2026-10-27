@@ -1,6 +1,6 @@
 # S11 — v1.1: UI scale
 
-> **Status:** BUILT 2026-10-22 (v1.1.0, decision 38, not installed, not tagged). Planned 2026-10-21 21:24 with the user's answers. As built: chrome scales by the % over the device scale (short side / 1264 brief px, equal to the mm base on the Forma; per-ppi mm base deferred); keyboard capped at 42 % / 45 % of the height; Lucide icons baked per step (decision 35). Tests `app/tests/ui_scale.rs`; script `tests/emu/v1.1-ui-scale.script`; shots `docs/screenshots/v1.1/`. Device check still needed.
+> **Status:** ✅ DONE (passed on the Forma, confirmed 2026-10-27); built 2026-10-22 (v1.1.0, decision 38, not tagged). Planned 2026-10-21 21:24 with the user's answers. As built: chrome scales by the % over the device scale (short side / 1264 brief px, equal to the mm base on the Forma; per-ppi mm base deferred); keyboard capped at 42 % / 45 % of the height; Lucide icons baked per step (decision 35). Tests `app/tests/ui_scale.rs`; script `tests/emu/v1.1-ui-scale.script`; shots `docs/screenshots/v1.1/`. Device check still needed.
 
 **Setting:** Options → UI scale 100 / 125 / 150 / 175 / **200 % (default, user decision)**. Scales title bar, icons, sheets (Files, Options, Help, Graph), drawer, Find bar, status bar, keyboard key height and labels, and UI text together; the note text **Size** stays separate. Base sizes are physical mm × panel ppi (Forma 300 ppi = 11.81 px/mm), not "brief px × width/1264", so landscape no longer grows the UI by 1920/1440.
 
