@@ -724,8 +724,8 @@ One character per box instead of free writing
 Word mode (experimental)
 = Woordmodus (experimenteel)
 
-Read every word against a word list; off is more accurate
-= Toetst elk woord aan een woordenlijst; uit is nauwkeuriger
+Read every word against a word list; best for joined-up writing
+= Toetst elk woord aan een woordenlijst; best voor aaneengeschreven schrift
 
 Learn from corrections
 = Leren van correcties

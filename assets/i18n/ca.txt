@@ -724,8 +724,8 @@ One character per box instead of free writing
 Word mode (experimental)
 = Mode paraula (experimental)
 
-Read every word against a word list; off is more accurate
-= Compara cada paraula amb una llista; desactivat és més precís
+Read every word against a word list; best for joined-up writing
+= Compara cada paraula amb una llista; millor per a l'escriptura lligada
 
 Learn from corrections
 = Aprèn de les correccions

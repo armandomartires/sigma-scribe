@@ -275,7 +275,7 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
         },
         OptRow {
             label: "Word mode (experimental)",
-            hint: "Read every word against a word list; off is more accurate",
+            hint: "Read every word against a word list; best for joined-up writing",
             cells: toggle(s.ink_words, Change::InkWords),
         },
         OptRow {
