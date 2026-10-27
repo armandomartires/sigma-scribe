@@ -164,4 +164,28 @@ impl App {
         self.rebuild_repo_rows();
         Refresh::Full
     }
+
+    /// Removes installed plugin number `i` of the list the page showed. A
+    /// plugin that is on is left alone.
+    pub(crate) fn plugin_remove(&mut self, i: usize) -> Refresh {
+        let Some(row) = self.plugin_list.get(i).filter(|p| !p.enabled) else {
+            return Refresh::Partial;
+        };
+        let (id, name) = (row.id.clone(), row.name.clone());
+        match pluginpkg::uninstall_in(&self.plugins_root, &id) {
+            Ok(()) => {
+                sigma_core::info!("plugin", "{id}: removed");
+                self.repo_note(format!("{name} removed"));
+                self.plugin_idle = None;
+            }
+            Err(e) => {
+                sigma_core::warn!("plugin", "{id}: remove failed: {e}");
+                self.repo_note(format!("{name} not removed: {e}"));
+            }
+        }
+        self.refresh_plugin_list();
+        self.sync_plugin_icons();
+        self.rebuild_repo_rows();
+        Refresh::Full
+    }
 }

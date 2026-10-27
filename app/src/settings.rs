@@ -75,6 +75,9 @@ impl App {
         if c == Change::PluginCheck {
             return self.plugin_check();
         }
+        if let Change::PluginRemove(i) = c {
+            return self.plugin_remove(usize::from(i));
+        }
         if let Change::PluginGet(i) = c {
             return self.plugin_get(usize::from(i));
         }

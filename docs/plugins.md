@@ -68,9 +68,11 @@ integrity rests on https.
 
 `SIGMA_PLUGIN_REPO=<folder>` reads `index.json` and the packages (by file
 name) from a folder instead of the network: an offline mirror, and what
-`app/tests/plugin_repo.rs` uses. Removing a plugin is
-`pluginpkg::uninstall_in`; there is no button for it yet, delete the folder
-`.adds/sigma-scribe/plugins/<id>/` by hand.
+`app/tests/plugin_repo.rs` uses.
+
+Each installed plugin also has a **Remove** row (`pluginpkg::uninstall_in`: its
+folder and its `plugins.state` line). It is greyed while the plugin is on, so
+nothing that is running is taken away; switch the plugin off first.
 
 ## Kinds
 

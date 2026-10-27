@@ -110,6 +110,20 @@ fn install_update_and_refuse() {
     assert_eq!(plugins::list_in(&r.plugins).len(), 1);
     assert!(r.app.control_centre("Demo font/Install").is_none());
 
+    // A plugin that is on cannot be removed; switched off, it can, and the
+    // repository offers it again.
+    assert!(r
+        .app
+        .control_centre("Demo font \u{b7} Remove/Remove")
+        .is_none());
+    r.tap_on("Demo font/Off");
+    r.tap_on("Demo font \u{b7} Remove/Remove");
+    assert!(!r.plugins.join("demo").exists());
+    assert!(plugins::list_in(&r.plugins).is_empty());
+    assert!(r.app.control_centre("Demo font/Install").is_some());
+    r.tap_on("Demo font/Install");
+    assert_eq!(plugins::list_in(&r.plugins).len(), 1);
+
     // A newer version in the index offers Update, and keeps the switch.
     plugins::set_enabled_in(&r.plugins, "demo", false).unwrap();
     let v2 = package(&repo, "1.1.0", "1.0.0");
