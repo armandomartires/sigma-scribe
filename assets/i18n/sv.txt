@@ -724,8 +724,8 @@ One character per box instead of free writing
 Word mode (experimental)
 = Ordläge (experimentellt)
 
-Read every word against a word list; off is more accurate
-= Jämför varje ord med en ordlista; av är mer exakt
+Read every word against a word list; best for joined-up writing
+= Jämför varje ord med en ordlista; bäst för skrivstil
 
 Learn from corrections
 = Lär av rättelser

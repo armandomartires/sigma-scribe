@@ -239,7 +239,7 @@ Handwriting samples for letter recognition
 Letter boxes
 One character per box instead of free writing
 Word mode (experimental)
-Read every word against a word list; off is more accurate
+Read every word against a word list; best for joined-up writing
 Override system language
 Choose the app's language instead of the Kobo's
 Used while Override system language is on
