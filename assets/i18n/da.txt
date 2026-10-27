@@ -724,8 +724,8 @@ One character per box instead of free writing
 Word mode (experimental)
 = Ordtilstand (eksperimentel)
 
-Read every word against a word list; off is more accurate
-= Tjekker hvert ord mod en ordliste; fra er mere præcis
+Read every word against a word list; best for joined-up writing
+= Tjekker hvert ord mod en ordliste; bedst til sammenhængende skrift
 
 Learn from corrections
 = Lær af rettelser
