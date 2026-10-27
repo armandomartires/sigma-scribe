@@ -980,3 +980,6 @@ Update
 Up to date
 = Up-to-date
 
+Remove
+= Verwijderen
+

@@ -981,3 +981,6 @@ Update
 Up to date
 = À jour
 
+Remove
+= Supprimer
+

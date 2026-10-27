@@ -1010,6 +1010,22 @@ fn plugin_items(m: &OptionsModel<'_>) -> Vec<Item> {
                 }
             }));
         }
+        // Removing needs the plugin off first, so nothing that is running
+        // is taken away.
+        let label = Cow::Owned(format!("{} \u{b7} Remove", p.name));
+        out.push(Item::Row(if p.enabled {
+            DRow {
+                label,
+                kind: Kind::Muted(String::new()),
+                note: Some(Cow::Borrowed("Turn the plugin off first")),
+            }
+        } else {
+            DRow {
+                label,
+                kind: Kind::Inline(vec![choice("Remove", Change::PluginRemove(i as u8), false)]),
+                note: None,
+            }
+        }));
     }
     out.push(Item::Band("Repository"));
     out.push(Item::Row(DRow {
@@ -1909,7 +1925,7 @@ mod tests {
         let list = SettingsPage::Category(PLUGINS_CATEGORY);
         // On: a switch (to turn it off) and an open row for its page.
         let on = kinds(&[graph_row(true)], list);
-        assert_eq!(on.len(), 3, "switch, its settings, Check for plugins");
+        assert_eq!(on.len(), 4, "switch, settings, Remove, Check for plugins");
         assert!(matches!(
             on[0].1,
             Kind::Check {

@@ -980,3 +980,6 @@ Update
 Up to date
 = Opdateret
 
+Remove
+= Fjern
+
