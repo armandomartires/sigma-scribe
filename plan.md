@@ -62,7 +62,7 @@ GitHub Releases of `sigma-scribe` (AGPL-3.0, SIGMArecon): `sigma-scribe-<ver>-ko
 - Waveform choice for typing (AUTO vs DU) — measure on device.
 - Never update the Forma to firmware 5.x.
 - v0.2.2 touch: the Forma's lift signal (tracking id / pressure) and jitter while resting are unverified; if holds fire late or drags are jumpy, tune `Config` (hold_ms, slop) or the evdev MOVE_EPS. Palm / second-finger contacts are ignored (slot 0 only).
-- Deletes are permanent in v0.2 (armed confirm only). A `.trash/` folder could be added later if wanted.
+- Deletes were permanent in v0.2 (armed confirm only). Since the trash change (Unreleased) they move to `.trash/<time>/` instead; nothing empties it yet.
 - Open from the brief: graph map vs list; Syncthing export later. (Edit-in-preview: decided read-only for v0.3, §10.12.)
 - v0.3 preview speed on the Forma (parse + layout on toggle, on the UI thread) is unmeasured; a 100 KB note lays out in well under 1 s on a desktop debug build.
 
