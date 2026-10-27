@@ -22,6 +22,7 @@ pub mod locale;
 pub mod log;
 pub mod markdown;
 pub mod outline;
+pub mod pluginpkg;
 pub mod plugins;
 pub mod settings;
 pub mod store;

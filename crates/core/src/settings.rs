@@ -477,6 +477,12 @@ pub enum Change {
     /// declared list, and the chosen option's place. Kept in the plugin's own
     /// `settings` file, so `Settings` ignores it and the app applies it.
     PluginSetting(u8, u8, u8),
+    /// Settings → Plugins → Repository: fetch the repository index. The app
+    /// applies it.
+    PluginCheck,
+    /// Install or update the repository's plugin number `i` (its place in
+    /// the list the page showed). The app applies it.
+    PluginGet(u8),
     /// Keyboard size (v1.4.3): 0 = Auto, or a percentage from `KB_SIZES`.
     KbSize(u16),
     /// Keyboard size Auto on / off (v1.4.4). Off keeps the size Auto was
@@ -634,7 +640,11 @@ impl Settings {
             Change::EnhancedKeyboard(on) => self.enhanced_keyboard = on,
             Change::Log(on) => self.log = on,
             Change::LogLevel(l) => self.log_level = l,
-            Change::Backlight(_) | Change::Plugin(..) | Change::PluginSetting(..) => {}
+            Change::Backlight(_)
+            | Change::Plugin(..)
+            | Change::PluginSetting(..)
+            | Change::PluginCheck
+            | Change::PluginGet(_) => {}
             Change::KbAuto(on) => {
                 self.kb_size = if on { 0 } else { self.keyboard_scale() };
             }
