@@ -6,6 +6,7 @@
 
 pub mod canvas;
 pub mod drawer;
+pub mod drawer_menu;
 pub mod editor;
 pub mod files;
 pub mod findbar;

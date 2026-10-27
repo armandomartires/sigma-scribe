@@ -2,11 +2,11 @@
 # Written for the 1.0 layout: run at UI scale 100 % (v1.1 default is 200 %).
 ui-scale 100
 expect-open field-notes.md
-tap-on Contents
+pane Contents
 shot v0.5-contents
 tap-on Heading:Today
 expect-line 5
-tap-on To-dos
+pane To-dos
 shot v0.5-contents-todos
 # Checking a box in another note rewrites only that line on disk.
 tap-on TodoBox:Name the conductor
@@ -22,7 +22,7 @@ tap-on Filter
 shot v0.5-todos-done
 tap-on Filter
 # Scratch: three panes share the height; the keyboard types into it.
-tap-on Scratch
+pane Scratch
 type buy milk
 key Enter
 type - [ ] call mara
@@ -40,7 +40,7 @@ expect-line 6
 shot v0.5-todo-open
 # Scratch survives a note switch and a restart.
 restart
-tap-on Scratch
+pane Scratch
 expect-scratch buy milk
 expect-scratch - [x] call mara
 shot v0.5-scratch-after-restart
@@ -48,7 +48,7 @@ shot v0.5-scratch-after-restart
 tap-on Options
 tap-on Drawer/Left
 tap-on Close
-tap-on Contents
+pane Contents
 shot v0.5-drawer-left
 tap-on Options
 tap-on Orientation/Landscape

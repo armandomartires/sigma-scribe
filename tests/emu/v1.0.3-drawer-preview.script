@@ -7,7 +7,7 @@ ui-scale 100
 tap-on Files
 tap-on test-headings.md
 expect-open _test/test-headings.md
-tap-on Contents
+pane Contents
 tap-on Preview
 expect-mode preview
 shot v1.0.3-preview-contents
@@ -15,13 +15,13 @@ tap-on Heading:Detail 4.2.a
 expect-page 2
 expect-mode preview
 shot v1.0.3-preview-contents-jump
-tap-on Contents
+pane Contents
 # To-dos in preview: tapping a box writes the file and re-renders.
 tap-on Back
 tap-on Files
 tap-on test-todos.md
 expect-open _test/test-todos.md
-tap-on To-dos
+pane To-dos
 tap-on Preview
 expect-mode preview
 shot v1.0.3-preview-todos
@@ -32,7 +32,7 @@ shot v1.0.3-preview-todo-toggled
 tap-on TodoBox:Open task one
 expect-file-contains _test/test-todos.md|- [ ] Open task one
 # Scratch stays editable in preview; the note does not change.
-tap-on Scratch
+pane Scratch
 usb plug
 tap-on ScratchPane
 usb-type in preview
@@ -44,8 +44,8 @@ tap-on Graph
 expect-graph map
 tap-on Close
 # Pointer: moves are DU, hiding runs one GL16 cleanup.
-tap-on To-dos
-tap-on Scratch
+pane To-dos
+pane Scratch
 tap-on Pencil
 pointer plug
 pointer-to 700 900
@@ -60,11 +60,11 @@ tap-on Options
 tap-on Dark mode/On
 tap-on Orientation/Landscape
 tap-on Close
-tap-on Contents
+pane Contents
 tap-on Preview
 shot v1.0.3-preview-landscape-night
 tap-on Pencil
-tap-on Contents
+pane Contents
 tap-on Options
 tap-on Dark mode/Off
 tap-on Orientation/Portrait

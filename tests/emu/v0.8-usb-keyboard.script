@@ -39,11 +39,11 @@ expect-mode write
 type ok
 expect-status saved
 # Scratch takes USB typing too.
-tap-on Scratch
+pane Scratch
 tap-on ScratchPane
 usb-type jot this
 expect-scratch jot this
-tap-on Scratch
+pane Scratch
 # Help page.
 tap-on Help
 tap-on USB keyboard, mouse & export

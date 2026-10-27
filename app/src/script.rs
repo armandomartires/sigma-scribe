@@ -18,6 +18,20 @@ impl App {
             .map(|(r, _)| centre(*r))
     }
 
+    /// The controls to tap, in order, to tap `label`: a drawer pane
+    /// (`Contents`, `To-dos`, `Scratch`) while the drawer menu is closed is
+    /// reached through it (v1.16): the drawer button, the row, the button
+    /// again. Anything else is itself.
+    #[must_use]
+    pub fn control_steps(&self, label: &str) -> Vec<String> {
+        let pane = matches!(label, "Contents" | "To-dos" | "Scratch");
+        if pane && !self.screen.drawer_menu {
+            vec!["Panels".into(), label.into(), "Panels".into()]
+        } else {
+            vec![label.into()]
+        }
+    }
+
     /// Centre of a named control (emulator scripts): `Files`, `Title`,
     /// `OK`, `Cancel`, `Close`, `Up`, `New note`, `New folder`, `Rename`,
     /// `Move`, `Delete`, `More:<row name>`, or a row name.
@@ -151,9 +165,18 @@ impl App {
             "Keys" => Some(centre(l.keys_button)),
             "Write" => Some(centre(l.ink_button)),
             "Options" => Some(centre(l.options_button)),
-            "Contents" if self.screen.contents_on => Some(centre(l.contents_button)),
-            "To-dos" if self.screen.todos_on => Some(centre(l.todos_button)),
-            "Scratch" if self.screen.scratch_on => Some(centre(l.scratch_button)),
+            "Panels" if self.screen.panes_on() => Some(centre(l.drawer_button)),
+            // v1.16: the panes are rows of the open drawer menu.
+            "Contents" | "To-dos" | "Scratch" if self.screen.drawer_menu => {
+                let l = self.screen.layout(
+                    self.preview.is_none() && self.keys_visible(),
+                    &self.keyboard,
+                );
+                let (_, rows) = self.screen.drawer_menu_rows(&l);
+                rows.into_iter()
+                    .find(|(p, _)| p.title() == label)
+                    .map(|(_, r)| centre(r))
+            }
             "Find" => Some(centre(l.find_button)),
             "Graph" if self.screen.graph_on => Some(centre(l.graph_button)),
             "FindField" | "ReplaceField" | "FindClose" | "Prev" | "Next" | "Replace" | "All"
@@ -163,6 +186,7 @@ impl App {
                 || s.starts_with("TodoBox:")
                 || s == "Filter"
                 || s == "DrawerHandle"
+                || s == "DrawerTab"
                 || s == "ScratchPane" =>
             {
                 self.drawer_control(s)
@@ -259,8 +283,15 @@ impl App {
 
     /// Drawer controls for emulator scripts: `Heading:TEXT`, `Todo:TEXT`
     /// (opens), `TodoBox:TEXT` (checks), `Filter`, `DrawerHandle` (the width
-    /// grip), `ScratchPane` (end of the scratch text).
+    /// grip), `DrawerTab` (the closed drawer's tab, v1.16), `ScratchPane`
+    /// (end of the scratch text).
     fn drawer_control(&self, name: &str) -> Option<(i32, i32)> {
+        if name == "DrawerTab" && self.drawer_tab_shown() {
+            let z = self
+                .screen
+                .drawer_tab(&self.drawer_base(), self.settings.drawer);
+            return Some(centre(z));
+        }
         if !self.drawer_visible() {
             return None;
         }
@@ -370,21 +401,20 @@ impl App {
         add("Files", l.files_button);
         add("Preview", l.preview_button);
         add("Find", l.find_button);
+        if self.screen.panes_on() {
+            add("Panels", l.drawer_button);
+        }
+        if self.screen.drawer_menu {
+            for (p, r) in self.screen.drawer_menu_rows(&l).1 {
+                add(p.title(), r);
+            }
+        }
         if self.screen.graph_on {
             add("Graph", l.graph_button);
         }
         add("Options", l.options_button);
         if self.preview.is_some() {
             return out;
-        }
-        for (on, name, r) in [
-            (self.screen.scratch_on, "Scratch", l.scratch_button),
-            (self.screen.todos_on, "To-dos", l.todos_button),
-            (self.screen.contents_on, "Contents", l.contents_button),
-        ] {
-            if on {
-                add(name, r);
-            }
         }
         add("Keys", l.keys_button);
         for (r, k) in &l.keys {
@@ -430,6 +460,13 @@ impl App {
             for (label, r) in self.pane_hits() {
                 add(&label, r);
             }
+        }
+        if self.drawer_tab_shown() {
+            let l = self.drawer_base();
+            add(
+                "drawer tab",
+                self.screen.drawer_tab(&l, self.settings.drawer),
+            );
         }
         out
     }

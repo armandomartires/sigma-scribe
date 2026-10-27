@@ -12,7 +12,9 @@
 //!   v0.4: tap-on Options | tap-on Row/Cell (in Options, e.g. Dark mode/On, Size/+)
 //!   tap-on Split|Full|Centre|Arrows|123|Pad left|Pad right (landscape bar)
 //!   expect-setting KEY=VALUE | expect-words N | expect-screen WxH | restart
-//!   v0.5: tap-on Contents|To-dos|Scratch (icons) | tap-on Heading:TEXT |
+//!   v0.5: tap-on Contents|To-dos|Scratch (v1.16: rows of the drawer menu,
+//!   opened by tap-on Panels) | pane Contents|To-dos|Scratch (open the
+//!   menu, tap the row, close it) | tap-on Heading:TEXT |
 //!   tap-on Todo:TEXT | tap-on TodoBox:TEXT | tap-on Filter | tap-on ScratchPane
 //!   expect-scratch TEXT | expect-file-contains PATH|TEXT | expect-line N
 //!   v0.6: tap-on Find|Graph (icons) | tap-on FindField|ReplaceField|Prev|Next|
@@ -137,6 +139,16 @@ fn main() -> ExitCode {
                 match app.control_centre(arg) {
                     Some((x, y)) => events.push(Event::Tap { x, y }),
                     None => return fail(format!("no control {arg:?} on this screen")),
+                }
+            }
+            // v1.16: `pane Contents|To-dos|Scratch` shows or hides a drawer
+            // pane through the drawer menu: open it, tap the row, close it.
+            "pane" => {
+                for name in app.control_steps(arg) {
+                    match app.control_centre(&name) {
+                        Some((x, y)) => step(&mut app, &mut dev, Event::Tap { x, y }),
+                        None => return fail(format!("no control {name:?} on this screen")),
+                    }
                 }
             }
             "expect-file" => {

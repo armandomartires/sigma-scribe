@@ -22,9 +22,9 @@ tap-on Close
 tap-on Files
 shot v1.1-files-200
 tap-on Close
-tap-on Contents
+pane Contents
 shot v1.1-drawer-200
-tap-on Contents
+pane Contents
 tap-on Options
 tap-on Orientation/Landscape
 tap-on Close

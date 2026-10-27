@@ -8,7 +8,21 @@ use sigma_core::outline::{Heading, TodoItem};
 use sigma_core::Change;
 use sigma_core::{outline, Buffer, KeyAction, NotePath};
 use sigma_device::{HwKey, Phase, Refresh};
+use sigma_render::drawer_menu::MenuHit;
 use sigma_render::{DrawerHit, DrawerModel, Pane};
+
+/// A finger on the drawer's grip or on the closed drawer's tab (v1.16).
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct GripTouch {
+    /// Where it went down.
+    from: (i32, i32),
+    /// The width stop nearest the finger (the saved one until it moves).
+    stop: u8,
+    /// It moved past the tap slop: a drag, not a tap.
+    moved: bool,
+    /// It started on the tab, not on the grip.
+    tab: bool,
+}
 
 impl App {
     pub(crate) fn save_scratch(&mut self) {
@@ -156,37 +170,201 @@ impl App {
 
     /// A finger on the drawer's edge grip drags its width: the stop nearest
     /// the finger is applied when it lifts (one redraw, as for the other
-    /// sliders). `None` when the touch is not the grip's.
-    pub(crate) fn handle_touch(&mut self, phase: Phase, x: i32, y: i32) -> Option<Option<Refresh>> {
+    /// sliders). v1.16: dragged to the screen edge, or tapped twice, the
+    /// grip closes the drawer; while it is closed that way, a tab at the
+    /// screen edge reopens it, tapped or dragged in (to the width where the
+    /// finger lifts). `None` when the touch is not the grip's or the tab's.
+    pub(crate) fn handle_touch(
+        &mut self,
+        phase: Phase,
+        x: i32,
+        y: i32,
+        t: u64,
+    ) -> Option<Option<Refresh>> {
         let (base, side) = (self.drawer_base(), self.settings.drawer);
         match phase {
             Phase::Down => {
-                if !self.drawer_visible() || self.ink.is_some() || self.options {
+                if self.ink.is_some() || self.options {
                     return None;
                 }
-                if !self.screen.drawer_handle(&base, side).contains(x, y) {
+                let tab = if self.drawer_visible()
+                    && self.screen.drawer_handle(&base, side).contains(x, y)
+                {
+                    false
+                } else if self.on_drawer_tab(x, y) {
+                    true
+                } else {
                     return None;
-                }
-                self.handle_drag = Some(self.settings.drawer_width);
+                };
+                self.handle_drag = Some(GripTouch {
+                    from: (x, y),
+                    stop: self.settings.drawer_width,
+                    moved: false,
+                    tab,
+                });
                 Some(None)
             }
             Phase::Move => {
-                self.handle_drag?;
-                self.handle_drag = Some(self.screen.drawer_stop_at(&base, side, x));
+                let slop = self.gestures.cfg.slop;
+                let d = self.handle_drag.as_mut()?;
+                d.moved |= (x - d.from.0).abs().max((y - d.from.1).abs()) > slop;
+                if d.moved {
+                    d.stop = self.screen.drawer_stop_at(&base, side, x);
+                }
                 Some(None)
             }
             Phase::Up => {
-                let stop = self.handle_drag.take()?;
-                if stop == self.settings.drawer_width {
+                let d = self.handle_drag.take()?;
+                let edge = self.screen.drawer_closes_at(&base, side, x);
+                if d.tab {
+                    if d.moved && edge {
+                        return Some(None);
+                    }
+                    let r = self.reopen_drawer();
+                    if d.moved && d.stop != self.settings.drawer_width {
+                        return Some(Some(self.change(Change::DrawerWidth(d.stop))));
+                    }
+                    return Some(r);
+                }
+                if !d.moved {
+                    let double = self
+                        .grip_tap
+                        .is_some_and(|p| t.saturating_sub(p) <= self.gestures.cfg.double_tap_ms);
+                    if double {
+                        self.grip_tap = None;
+                        return Some(Some(self.close_drawer()));
+                    }
+                    self.grip_tap = Some(t);
                     return Some(None);
                 }
-                Some(Some(self.change(Change::DrawerWidth(stop))))
+                if edge {
+                    return Some(Some(self.close_drawer()));
+                }
+                if d.stop == self.settings.drawer_width {
+                    return Some(None);
+                }
+                Some(Some(self.change(Change::DrawerWidth(d.stop))))
             }
         }
     }
 
+    /// Tells the screen which panes are on screen (none while the drawer
+    /// is not drawn): the drawer button's shading and where the note's
+    /// scroll bar runs (beside a drawer on the right) follow it.
+    pub(crate) fn sync_drawer_open(&mut self) {
+        self.screen.drawer_open = if self.drawer_visible() {
+            self.drawer
+        } else {
+            [false; 3]
+        };
+    }
+
+    /// The tab at the screen edge is shown: the grip closed the drawer and
+    /// it could be open here.
+    #[must_use]
+    pub fn drawer_tab_shown(&self) -> bool {
+        self.drawer_stash.is_some()
+            && !self.drawer_visible()
+            && self.drawer_allowed()
+            && self.ink.is_none()
+    }
+
+    /// (`x`, `y`) is on the closed drawer's tab.
+    pub(crate) fn on_drawer_tab(&self, x: i32, y: i32) -> bool {
+        self.drawer_tab_shown()
+            && self
+                .screen
+                .drawer_tab(&self.drawer_base(), self.settings.drawer)
+                .contains(x, y)
+    }
+
+    /// (`x`, `y`) is on the open drawer's grip.
+    pub(crate) fn on_drawer_grip(&self, x: i32, y: i32) -> bool {
+        self.drawer_visible()
+            && self
+                .screen
+                .drawer_handle(&self.drawer_base(), self.settings.drawer)
+                .contains(x, y)
+    }
+
+    /// Closes the whole drawer from its grip (v1.16), remembering its panes
+    /// and the scratch focus for the tab to bring back.
+    pub fn close_drawer(&mut self) -> Refresh {
+        if !self.drawer.iter().any(|&o| o) {
+            return Refresh::Partial;
+        }
+        self.drawer_stash = Some((self.drawer, self.scratch_focus));
+        self.drawer = [false; 3];
+        self.scratch_focus = false;
+        self.save_scratch();
+        self.screen.drawer_menu = false;
+        self.sel_ui = None;
+        if self.preview.is_some() {
+            self.rebuild_preview();
+        }
+        Refresh::Partial
+    }
+
+    /// The tab: the panes the grip closed open again, as they were.
+    pub(crate) fn reopen_drawer(&mut self) -> Option<Refresh> {
+        let (open, focus) = self.drawer_stash.take()?;
+        self.drawer = open;
+        self.scratch_focus = focus && open[2];
+        if open[1] {
+            self.reindex();
+        }
+        self.sel_ui = None;
+        if self.preview.is_some() {
+            self.rebuild_preview();
+        }
+        Some(Refresh::Partial)
+    }
+
     pub(crate) fn in_drawer(&self, x: i32, y: i32) -> bool {
         self.drawer_hit_at(x, y) != DrawerHit::Outside
+    }
+
+    /// The drawer button (v1.16): opens or closes the drawer menu.
+    pub(crate) fn toggle_drawer_menu(&mut self) -> Refresh {
+        self.screen.drawer_menu = !self.screen.drawer_menu;
+        self.sel_ui = None;
+        Refresh::Partial
+    }
+
+    /// The title-bar layout of the mode on screen (preview has no keys).
+    fn title_layout(&self) -> sigma_render::editor::Layout {
+        let keys = self.preview.is_none() && self.keys_visible();
+        self.screen.layout(keys, &self.keyboard)
+    }
+
+    /// A tap while the drawer menu is open: a row shows or hides its pane
+    /// and the menu stays open; the drawer button or any other place
+    /// closes it, and the tap does nothing else.
+    pub(crate) fn drawer_menu_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
+        let l = self.title_layout();
+        match self.screen.drawer_menu_hit(&l, x, y) {
+            MenuHit::Pane(p) => {
+                let r = self.toggle_pane(p);
+                if self.preview.is_some() {
+                    self.rebuild_preview();
+                }
+                Some(r)
+            }
+            MenuHit::Button | MenuHit::Outside => {
+                self.screen.drawer_menu = false;
+                Some(Refresh::Partial)
+            }
+        }
+    }
+
+    /// Draws the drawer menu when it is open (over the drawer, under the
+    /// ink panel). Leaving write mode and preview closes it.
+    pub(crate) fn draw_drawer_menu(&mut self, c: &mut sigma_render::Canvas) {
+        if !self.drawer_allowed() {
+            self.screen.drawer_menu = false;
+        }
+        let l = self.title_layout();
+        self.screen.draw_drawer_menu(c, &l, self.theme());
     }
 
     /// Opens or closes one drawer pane (no animation, partial refresh).
@@ -197,6 +375,8 @@ impl App {
             Pane::Scratch => 2,
         };
         self.drawer[i] = !self.drawer[i];
+        // Showing or hiding a pane by hand forgets what the grip closed.
+        self.drawer_stash = None;
         if p == Pane::Todos && self.drawer[1] {
             self.reindex();
         }

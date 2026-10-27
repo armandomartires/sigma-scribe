@@ -76,11 +76,16 @@ impl Rig {
     }
 
     fn tap_on(&mut self, label: &str) -> Option<Refresh> {
-        let (x, y) = self
-            .app
-            .control_centre(label)
-            .unwrap_or_else(|| panic!("no control {label}"));
-        self.send(Event::Tap { x, y })
+        // A pane is shown or hidden through the drawer menu (v1.16).
+        let mut r = None;
+        for step in self.app.control_steps(label) {
+            let (x, y) = self
+                .app
+                .control_centre(&step)
+                .unwrap_or_else(|| panic!("no control {step}"));
+            r = self.send(Event::Tap { x, y }).or(r);
+        }
+        r
     }
 
     fn open_plugins_page(&mut self) {
@@ -98,11 +103,14 @@ impl Rig {
 }
 
 #[test]
-fn with_the_pane_plugins_installed_each_pane_has_its_icon_and_is_drawn_by_its_plugin() {
+fn with_the_pane_plugins_installed_each_pane_has_its_row_and_is_drawn_by_its_plugin() {
     let mut r = Rig::new("on", true, None);
+    // v1.16: each pane is a row of the drawer menu.
+    r.tap_on("Panels");
     for (_, icon) in PANES {
         assert!(r.app.control_centre(icon).is_some(), "{icon}");
     }
+    r.tap_on("Panels");
     r.tap_on("Contents");
     r.tap_on("To-dos");
     assert!(r.app.drawer[0] && r.app.drawer[1]);
@@ -115,6 +123,7 @@ fn with_the_pane_plugins_installed_each_pane_has_its_icon_and_is_drawn_by_its_pl
 #[test]
 fn without_the_plugins_the_pane_icons_are_gone_and_the_rest_close_up() {
     let mut r = Rig::new("none", false, None);
+    assert!(r.app.control_centre("Panels").is_none(), "no drawer button");
     for (_, icon) in PANES {
         assert!(r.app.control_centre(icon).is_none(), "{icon}");
         assert!(r.app.touch_targets().iter().all(|(n, _)| n != icon));
@@ -143,15 +152,18 @@ fn switching_a_pane_plugin_off_removes_its_icon_and_closes_its_pane() {
     );
     r.tap_on("Scratch/Off");
     r.tap_on("Close");
+    // v1.16: the drawer menu lists only the panes whose plugin is on.
+    r.tap_on("Panels");
     assert!(r.app.control_centre("To-dos").is_none());
     assert!(r.app.control_centre("Scratch").is_none());
     assert!(
         r.app.control_centre("Contents").is_some(),
         "the other stays"
     );
+    r.tap_on("Panels");
     assert!(!r.app.drawer[1] && !r.app.drawer[2], "their panes closed");
     assert!(!r.app.scratch_focus, "the keyboard is the page's again");
-    // On again: the icon is back.
+    // On again: its row is back.
     r.open_plugins_page();
     r.tap_on("To-dos/On");
     r.tap_on("Close");

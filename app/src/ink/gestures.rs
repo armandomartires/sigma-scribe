@@ -231,7 +231,7 @@ impl App {
             | Hit::Options
             | Hit::Find
             | Hit::Graph
-            | Hit::Drawer(_) => {
+            | Hit::DrawerMenu => {
                 let _ = self.read_letter();
                 self.ink = None;
                 return self.handle_inner(Event::Tap { x, y });

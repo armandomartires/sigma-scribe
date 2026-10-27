@@ -92,6 +92,12 @@ impl App {
                     && (x - px).abs() <= DOUBLE_CLICK_PX
                     && (y - py).abs() <= DOUBLE_CLICK_PX
             });
+            // v1.16: a double click on the drawer's grip closes it.
+            if double && self.on_drawer_grip(x, y) {
+                self.pointer.last_press = None;
+                self.pointer.down = None;
+                return Some(self.close_drawer());
+            }
             if double && on_note {
                 self.pointer.last_press = None;
                 self.pointer.down = None;

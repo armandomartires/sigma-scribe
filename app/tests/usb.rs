@@ -101,8 +101,10 @@ fn ctrl_f_opens_find_and_typing_goes_into_the_field() {
 #[test]
 fn scratch_gets_usb_typing() {
     let (mut a, mut m) = (app("scratch"), KeyMapper::default());
-    let (x, y) = a.control_centre("Scratch").unwrap();
-    a.handle(Event::Tap { x, y });
+    for step in a.control_steps("Scratch") {
+        let (x, y) = a.control_centre(&step).unwrap();
+        a.handle(Event::Tap { x, y });
+    }
     let (x, y) = a.control_centre("ScratchPane").unwrap();
     a.handle(Event::Tap { x, y });
     typ(&mut a, &mut m, "jot");
