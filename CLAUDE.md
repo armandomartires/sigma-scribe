@@ -4,6 +4,10 @@ Rust Markdown notebook for the Kobo Forma. Engineering rules, layout and
 conventions are in `CONTRIBUTING.md`; read it before changing code. Folder
 rules (worktrees, never delete, archive) are in `../CLAUDE.md`.
 
+Planning and working documents (plan, design brief, sprints, sprint board
+`GOALS.md`, device-pass runbooks, handovers) are in `.ai/`; new ones go
+there too. `CLAUDE.md` stays at the top level so Claude Code loads it.
+
 ## Checks (what CI runs)
 
 ```sh

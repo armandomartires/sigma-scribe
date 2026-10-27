@@ -23,6 +23,7 @@ sigma-device = { path = "../crates/device" }
 sigma-hwr = { path = "../crates/hwr" }
 sigma-plugin-api = { path = "../crates/plugin-api" }
 sigma-plugin-host = { path = "../crates/plugin-host" }
+ureq = { version = "3", default-features = false, features = ["rustls"] }
 
 [target.'cfg(not(target_arch = "arm"))'.dependencies]
 minifb = { version = "0.27", default-features = false, features = ["x11"] }

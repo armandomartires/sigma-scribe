@@ -81,4 +81,6 @@ Window controls: mouse = touch, PageUp/PageDown = page-turn buttons, keyboard = 
 Rust edition 2021, minimum Rust version in `Cargo.toml` (`rust-version`). Targets: desktop Linux for development and tests, and `armv7-unknown-linux-musleabihf` for the Kobo. Build, check and code conventions are in [`CONTRIBUTING.md`](CONTRIBUTING.md). The handwriting models are built with `tools/hwr-train`.
 
 ## Docs
-`CONTRIBUTING.md` · `plan.md` · `design-brief.md` · `CHANGELOG.md` · `docs/install.md` · `docs/install-plan-forma.md` · `docs/testing.md` · `docs/plugins.md` · `docs/logging.md` · `docs/font-packs.md` · `docs/japanese.md` · `docs/chinese.md` · `docs/usb-keyboard.md` · `docs/perf.md` · `docs/publishing.md` · `docs/release/` · `sprints/` · `tasks/`
+`CONTRIBUTING.md` · `CHANGELOG.md` · `docs/install.md` · `docs/testing.md` · `docs/plugins.md` · `docs/logging.md` · `docs/font-packs.md` · `docs/japanese.md` · `docs/chinese.md` · `docs/usb-keyboard.md` · `docs/perf.md` · `docs/publishing.md` · `docs/release/`
+
+Planning and working notes (the plan, design brief, sprints, sprint board, device-pass runbooks and session handovers) are in [`.ai/`](.ai/README.md).

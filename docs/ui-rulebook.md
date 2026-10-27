@@ -1,6 +1,6 @@
 # UI rulebook
 
-The rules every screen, control and change to Σscribe's interface follows. They come from `design-brief.md` (the page), the Kobo's own interface (`docs/ui-reference/README.md`, the chrome) and what the device taught us (`plan.md` decisions, `docs/device-checklist-prerelease.md`). When a rule here conflicts with a mock, **the rule wins for behaviour and the Kobo reference wins for chrome**; the page itself follows the design brief. A change that breaks a rule says so in its sprint note and in the changelog.
+The rules every screen, control and change to Σscribe's interface follows. They come from `.ai/design-brief.md` (the page), the Kobo's own interface (`docs/ui-reference/README.md`, the chrome) and what the device taught us (`.ai/plan.md` decisions, `docs/device-checklist-prerelease.md`). When a rule here conflicts with a mock, **the rule wins for behaviour and the Kobo reference wins for chrome**; the page itself follows the design brief. A change that breaks a rule says so in its sprint note and in the changelog.
 
 Numbers in "px" are **brief px** (a 1264 px wide page) unless marked *device px*; the renderer scales them (`Scale::px`, 1440 px wide Forma = ×1.139) and multiplies chrome by the UI scale (100–200 %, default 200 %).
 
@@ -94,7 +94,7 @@ Night is the same drawing inverted, never a grey card. Use the `Theme` tokens, n
 5. Tests: layout at 100/150/200 % and both orientations, targets ≥ 44, no overlap, no grey in fast regions, behaviour.
 6. `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test --workspace` and every emulator script pass before the PR.
 7. Add the device checks to `docs/device-checklist-prerelease.md`; there is **one** device pass before the stable release (plan decision 48).
-8. Changelog entry under Unreleased; a decision in `plan.md` when a rule changes.
+8. Changelog entry under Unreleased; a decision in `.ai/plan.md` when a rule changes.
 
 ## 11. Kobo reference patterns not built yet
 
