@@ -68,25 +68,25 @@ Status: Done (accepted 2026-10-27); only the native-speaker review is left, to c
 
 ## Sprint 6 — Plugins and platform (v1.8 – v1.15)
 Goal: Graph and drawer panes as WASM plugins, plus a maintainable codebase
-Status: Done; PRs #76, #77 and #78 await merge
+Status: Done; PRs #76, #77 and #78 merged 2026-10-27
 - [x] Plugin API 4: Graph and drawer-pane plugins, Settings → Plugins, plugin settings pages
 - [x] Logging (Settings → Logging) with levels, rotation and plugin log imports
 - [x] Bundle `graph-map`, `contents-pane`, `todo-pane` and `scratch-pane` in the package (1.15.0)
 - [x] New font stack: harfrust, skrifa and zeno replace rustybuzz and fontdue
 - [x] Document every public item in every library crate; `cargo deny` in CI; MSRV 1.88
 - [x] Split `lib.rs` by feature
-  Branch `split-lib-by-feature`, commit 6a74c46: state moved beside its feature module, `lib.rs` from 781 to 425 lines, no behaviour change. fmt, clippy, doc and the full test suite pass. Not merged yet.
-- [?] Open a pull request for `split-lib-by-feature`
-- [?] Replace `use super::*` with explicit imports, then consider moving `App` out of `lib.rs`
-- [?] Split `ink.rs` (933 lines) into state, gestures, recognition and training
+  Branch `split-lib-by-feature`, commit 6a74c46: state moved beside its feature module, `lib.rs` from 781 to 425 lines, no behaviour change. fmt, clippy, doc and the full test suite pass. Merged (PR #76).
+- [x] Open a pull request for `split-lib-by-feature`
+- [x] Replace `use super::*` with explicit imports, then consider moving `App` out of `lib.rs`
+- [x] Split `ink.rs` (933 lines) into state, gestures, recognition and training
 - [x] Backlight: confirm which sysfs device is the white light on the Forma
   Taken from KOReader's tables, not measured. The first run's `light:` log lines settle it.
 
 ## Sprint 7 — Device verification and next
 Goal: One pass on the Forma over everything built since v1.0.2
-Status: Everything that can be done without the Forma is built and in review (PRs #80 to #83); the rest needs the device. Runbook: `docs/device-pass-s7.md`.
-- [!] Install 1.15.0 on the Forma and run `docs/device-checklist-prerelease.md`
-  Needs the Forma and your yes to install. Install `main` after #80 to #82 merge, so the pass also covers the trash folder and the drawer grip.
+Status: Everything that can be done without the Forma is built and merged to `main` (PRs #80 to #85). `main` (a247885, 1.15.0) was installed on the Forma on 2026-10-27; the device pass is the user's, then the logs are read. Runbook: `docs/device-pass-s7.md`.
+- [>] Install 1.15.0 on the Forma and run `docs/device-checklist-prerelease.md`
+  `main` is installed on the Forma (2026-10-27, backup kept, package checked). Waiting for the user's pass through the checklist.
 - [!] Verify the USB K400 Plus receiver and touchpad, including two-finger scroll
   Needs the receiver on the Forma. Steps in `docs/device-pass-s7.md`.
 - [>] Measure preview layout time on a large note on the device
@@ -94,10 +94,10 @@ Status: Everything that can be done without the Forma is built and in review (PR
 - [!] Backlight colour slider (warm to cool)
   Blocked on one device check: what `tlc5947_bl` (0 to 4096) does when written. Probe in `docs/device-pass-s7.md`. Then: a second slider under Display → Backlight, a `Device` call for it, one string in the nine catalogs, tests.
 - [?] Draggable handle on the drawer edge
-  PR #82: drag the grip, the nearest Drawer width stop applies on lift and is saved. Tests in `app/tests/drawer_handle.rs`. Feel on the e-ink panel still to be tried on the Forma.
-- Install plugins from the plugins repository (copied by hand today)
-  Not started: needs a decision on where the repository is published and how the app fetches it (the Forma has no network access in the app today).
+  Merged (PR #82), installed on the Forma: drag the grip, the nearest Drawer width stop applies on lift and is saved. Tests in `app/tests/drawer_handle.rs`. Feel on the e-ink panel still to be tried on the Forma.
+- [?] Install plugins from the plugins repository (copied by hand today)
+  Merged (PRs #84, #85 and plugins repo #1, #2): Settings → Plugins → Repository → Check for plugins, Install / Update, Remove (off plugins only). Packages are checked against the index's size and sha256 and installed atomically. The index is live at `https://armandomartires.github.io/sigma-scribe-plugins/index.json` (GitHub Pages workflow, 4 plugins). Not yet tried on the Forma: `curl`, https and Wi-Fi there. The index is not signed.
 - Syncthing export
   Not started: undefined. Needs a decision: sync the notes folder with Syncthing on the Kobo, or export for a Syncthing folder on another machine.
 - [?] Trash folder for deleted notes (deletes are permanent today)
-  PR #80: deletes move to `.trash/<time>/<path>`, not listed or indexed, copy back over USB. Nothing empties it yet; a "Restore" or "Empty trash" screen would be a later story.
+  Merged (PR #80), installed on the Forma: deletes move to `.trash/<time>/<path>`, not listed or indexed, copy back over USB. Nothing empties it yet; a "Restore" or "Empty trash" screen would be a later story.
