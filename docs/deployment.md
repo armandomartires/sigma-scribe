@@ -14,10 +14,10 @@ diff "$D.device.sha256" "$D.copy.sha256" && echo BACKUP OK
 Do not open the backup's `KoboReader.sqlite` in place (SQLite creates `-shm`/`-wal` files); copy it first.
 
 ## 2. First install
-NickelMenu v0.6.0 `KoboRoot.tgz` + the `.adds` tree from `scripts/package-kobo.sh`. Exact steps: `docs/install-plan-forma.md`.
+NickelMenu v0.6.0 `KoboRoot.tgz` + the `.adds` tree from `scripts/package-kobo.sh`. Exact steps: `.ai/install-plan-forma.md`.
 
 ## 3. Updating the app
 Build `scripts/package-kobo.sh`, connect USB, replace `.adds/sigma-scribe/sigma-scribe` (and `launch.sh` if changed), `sync`, eject. No reboot or `KoboRoot.tgz` needed; notes are untouched.
 
 ## 4. Rollback
-See the table in `docs/install-plan-forma.md` §4. Notes are plain files under `sigma-scribe/notes/`.
+See the table in `.ai/install-plan-forma.md` §4. Notes are plain files under `sigma-scribe/notes/`.

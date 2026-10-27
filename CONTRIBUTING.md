@@ -18,6 +18,8 @@ in `README.md`; the test layers are in `docs/testing.md`.
 
 No crate is published to crates.io (`publish = false`).
 
+Planning and working notes (plan, design brief, sprints, the sprint board `GOALS.md`, device-pass runbooks, session handovers) live in `.ai/`; see `.ai/README.md`. User and developer documentation stays in `docs/`, `README.md` and this file.
+
 ## Toolchain and targets
 
 - Edition 2021. Day-to-day work and the main CI job use current stable
@@ -38,7 +40,7 @@ No crate is published to crates.io (`publish = false`).
   - **Kobo**: `armv7-unknown-linux-musleabihf`, a static binary linked
     with `rust-lld` against FBInk. Build it with `scripts/build-armv7.sh`.
     It needs the musl cross toolchain and a pinned FBInk build; see
-    `.github/workflows/ci.yml` and `docs/s0-findings.md`.
+    `.github/workflows/ci.yml` and `.ai/s0-findings.md`.
 - Code for the Kobo only sits behind `#[cfg(target_arch = "arm")]`. The
   FBInk backend is never compiled on the desktop, so a desktop build passing
   is not evidence that the ARM build does. CI runs both.
