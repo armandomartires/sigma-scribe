@@ -85,21 +85,21 @@ Status: Done; PRs #76, #77 and #78 merged 2026-10-27
 ## Sprint 7 — Device verification and next
 Goal: One pass on the Forma over everything built since v1.0.2
 Status: Everything that can be done without the Forma is built and merged to `main` (PRs #80 to #85, #89); and the drawer button (PR #90). `main` (a247885, 1.15.0) was installed on the Forma on 2026-10-27; the device pass is the user's, then the logs are read. Runbook: `.ai/device-pass-s7.md`.
-- [>] Install 1.15.0 on the Forma and run `docs/device-checklist-prerelease.md`
-  `main` is installed on the Forma (2026-10-27, backup kept, package checked). Waiting for the user's pass through the checklist.
-- [!] Verify the USB K400 Plus receiver and touchpad, including two-finger scroll
-  Needs the receiver on the Forma. Steps in `.ai/device-pass-s7.md`.
+- [x] Install 1.15.0 on the Forma and run `docs/device-checklist-prerelease.md`
+  `main` is installed on the Forma (2026-10-27, backup kept, package checked). Closed by the user 2026-10-28: the tests that matter were done on the device during the sprint; the checklist is not run.
+- [x] Verify the USB K400 Plus receiver and touchpad, including two-finger scroll
+  Done by the user several times on the Forma: the K400 types and the touchpad is acceptable for an e-ink device (2026-10-28).
 - [>] Measure preview layout time on a large note on the device
-  Desktop done: about 0.65 ms per KB (100 KB in 60 ms), see `docs/perf.md`. The app now logs the time at Debug level, so one preview of a large note on the Forma settles it.
-- [!] Backlight colour slider (warm to cool)
-  Blocked on one device check: what `tlc5947_bl` (0 to 4096) does when written. Probe in `.ai/device-pass-s7.md`. Then: a second slider under Display → Backlight, a `Device` call for it, one string in the nine catalogs, tests.
+  2026-10-28: 100 KB and 500 KB test notes being generated (session `preview-perf-notes`), to copy to the Forma (user's go-ahead given) and open in preview. Desktop done: about 0.65 ms per KB (100 KB in 60 ms), see `docs/perf.md`. The app now logs the time at Debug level, so one preview of a large note on the Forma settles it.
+- [>] Backlight colour slider (warm to cool)
+  In progress (2026-10-28, session `backlight-warmth`). Lead: KOReader drives the Forma's warmth through `tlc5947_bl/color` (0 to 10, inverted), to confirm on the device. Was blocked on one device check: what `tlc5947_bl` (0 to 4096) does when written. Probe in `.ai/device-pass-s7.md`. Then: a second slider under Display → Backlight, a `Device` call for it, one string in the nine catalogs, tests.
 - [x] Draggable handle on the drawer edge
   Merged (PR #82): drag the grip, the nearest Drawer width stop applies on lift and is saved. Tests in `app/tests/drawer_handle.rs`. Used on the Forma 2026-10-27 (width changes in the log): OK.
 - [x] Install plugins from the plugins repository (copied by hand today)
   Merged (PR #84 and plugins repo #1, #2; Remove is #85): Settings → Plugins → Repository → Check for plugins, Install / Update, Remove (off plugins only). Packages are checked against the index's size and sha256 and installed atomically. The index is live at `https://armandomartires.github.io/sigma-scribe-plugins/index.json` (GitHub Pages workflow, 4 plugins). On the Forma (2026-10-27) Remove worked, Check for plugins failed: the Kobo has no `curl`, and the launcher stopped `dhcpcd`. Branch `plugin-fetch-on-device`: in-app https (ureq + rustls), the launcher keeps Wi-Fi and logs `net:` lines; tried on the Forma 2026-10-27 18:48: Wi-Fi kept (eth0 192.168.99.244, dhcpcd running), index fetched (4 plugins), scratch-pane installed from the repository and loaded in 72 ms. Merged (PR #89). The index is not signed.
 - [x] One drawer button with a menu to show or hide each pane
   Branch `drawer-menu`: one title-bar button (Lucide panel on the drawer's side) replaces the Contents, To-dos and Scratch icons; a tap opens a menu with a checkbox per pane, rows toggle panes and the menu stays open, a tap elsewhere or Escape closes it and does nothing else. Write mode and preview. Tests in `app/tests/drawer_menu.rs`, screenshots in `docs/screenshots/v1.16/`. Same branch, asked for after: a double tap on the grip or a drag to the screen edge closes the drawer and a tab left of the scroll bar reopens the same panes (tests in `app/tests/drawer_handle.rs`); the scroll bar keeps its strip and a drawer on the right ends left of it; the grip is outlined, grey, with three dots. Tried on the Forma 2026-10-27 (06618b8): all OK. Merged (PR #90).
-- Syncthing export
-  Not started: undefined. Needs a decision: sync the notes folder with Syncthing on the Kobo, or export for a Syncthing folder on another machine.
-- [?] Trash folder for deleted notes (deletes are permanent today)
-  Merged (PR #80), installed on the Forma: deletes move to `.trash/<time>/<path>`, not listed or indexed, copy back over USB. Nothing empties it yet; a "Restore" or "Empty trash" screen would be a later story.
+- [>] Syncthing export
+  Decided 2026-10-28: Syncthing runs on the Kobo. Bundle an ARMv7 binary, Σscribe starts it while open (Wi-Fi kept), it syncs the notes folder, Settings shows device ID and status. In progress (session `syncthing-kobo`).
+- [>] Trash folder for deleted notes (deletes are permanent today)
+  Merged (PR #80), installed on the Forma: deletes move to `.trash/<time>/<path>`, not listed or indexed, copy back over USB. The user saw no trash in the app (2026-10-28), so a Trash screen in Files is being built (session `trash-screen`): list with deletion time, Restore to the old path, Empty trash (two taps).
