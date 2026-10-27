@@ -107,6 +107,7 @@ impl App {
         }
         sigma_core::debug!("settings", "{c:?}");
         self.screen.ink_words = self.settings.word_mode();
+        self.panel_prefs();
         if c == Change::LangOverride(true) {
             // Start from the language in use, so turning it on changes nothing.
             use sigma_core::settings::UiLang;

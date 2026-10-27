@@ -227,8 +227,12 @@ pub struct EditorScreen {
     pub scratch_on: bool,
     /// Settings → Word mode is on (v1.5.3): Letters offers Words.
     pub ink_words: bool,
-    /// Sketch: the dotted guide line is shown (v1.13.1).
+    /// The writing panel's dotted guide line is shown (Sketch v1.13.1, every
+    /// mode v1.16): across the writing area, or through the letter boxes.
     pub sketch_guide: bool,
+    /// The writing panel's key block is on the right (v1.16; left by
+    /// default). `ink_keys=`.
+    pub ink_keys_right: bool,
     s: Scale,
     /// Keyboard scale (v1.4.3): page scale × `Settings::keyboard_scale`.
     k: Scale,
@@ -298,6 +302,7 @@ impl EditorScreen {
             scratch_on: true,
             ink_words: false,
             sketch_guide: true,
+            ink_keys_right: false,
             drawer_open: [false; 3],
             find_open: false,
             cand_reserve: false,

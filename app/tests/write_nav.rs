@@ -112,8 +112,8 @@ fn the_free_panel_has_the_nav_keys_and_undo_within_reach() {
                     "{b:?} off the panel at {at}"
                 );
                 assert!(
-                    rect.y + rect.h <= l.area.y,
-                    "{b:?} runs into the writing area at {at}"
+                    rect.x + rect.w <= l.area.x || rect.x >= l.area.x + l.area.w,
+                    "{b:?} runs into the writing side at {at}"
                 );
             }
             assert!(
@@ -262,7 +262,7 @@ fn the_letters_panel_has_a_second_row_with_the_nav_keys() {
                 "{b:?} off the width in {o:?}"
             );
             assert!(
-                rect.y + rect.h <= l.area.y,
+                rect.x + rect.w <= l.area.x || rect.x >= l.area.x + l.area.w,
                 "{b:?} runs into the boxes in {o:?}"
             );
         }
@@ -293,35 +293,69 @@ fn the_title_bar_stays_live_with_the_panel_open() {
     }
 }
 
-/// v1.13: letter boxes: Words on the left, Train and Done on the right,
-/// the edit keys centred between them.
+/// v1.16: every mode of the panel has its keys in one block, about a
+/// third of the width, starting with the mode switch, ⇄ and Done, and has
+/// Line; ⇄ moves the block to the other side and Line hides the dotted
+/// guide, both saved.
 #[test]
-fn letter_boxes_put_words_left_train_done_right_keys_centre() {
-    let mut r = Rig::new("boxes-layout");
-    r.app.change(Change::InkBoxes(true));
+fn the_keys_sit_in_one_block_that_moves_sides() {
+    for mode in [
+        InkMode::Free,
+        InkMode::Letters,
+        InkMode::Draw,
+        InkMode::Train(0),
+    ] {
+        for right in [false, true] {
+            let mut r = Rig::new("block");
+            if right {
+                r.app
+                    .change(Change::InkKeys(sigma_core::settings::Side::Right));
+            }
+            r.app.open_ink();
+            r.app.ink.as_mut().unwrap().mode = mode;
+            let l = r.app.panel_layout().unwrap();
+            let w = l.panel.w;
+            let block: Vec<_> = l
+                .buttons
+                .iter()
+                .filter(|(_, b)| {
+                    !matches!(b, InkButton::Cand(_) | InkButton::Prev | InkButton::Next)
+                })
+                .collect();
+            let lo = block.iter().map(|(r, _)| r.x).min().unwrap();
+            let hi = block.iter().map(|(r, _)| r.x + r.w).max().unwrap();
+            assert!(hi - lo <= w * 35 / 100, "{mode:?}: block {lo}..{hi} of {w}");
+            if right {
+                assert!(
+                    lo > l.area.x + l.area.w && hi > w * 90 / 100,
+                    "{mode:?} right"
+                );
+            } else {
+                assert!(hi < l.area.x && lo < w / 10, "{mode:?} left");
+            }
+            assert!(
+                l.area.w >= w * 60 / 100,
+                "{mode:?}: writing side {}",
+                l.area.w
+            );
+            let at = |b: InkButton| l.buttons.iter().find(|(_, k)| *k == b).map(|x| x.0);
+            let (side, done) = (at(InkButton::Side).unwrap(), at(InkButton::Cancel).unwrap());
+            assert_eq!(side.y, done.y, "{mode:?}: ⇄ and Done share the first row");
+            assert!(at(InkButton::Guide).is_some(), "{mode:?}: Line");
+        }
+    }
+    // ⇄ and Line act and are saved.
+    let mut r = Rig::new("block-keys");
     r.app.open_ink();
-    let l = r.app.panel_layout().unwrap();
-    let at = |b: InkButton| l.buttons.iter().find(|(_, k)| *k == b).unwrap().0;
-    let (mode, done, train) = (
-        at(InkButton::Mode),
-        at(InkButton::Cancel),
-        at(InkButton::Train),
-    );
-    assert!(mode.x < 100 && done.x + done.w > l.panel.w - 100);
-    assert!(train.x > l.panel.w / 2 && done.x > train.x);
-    let keys = [
-        InkButton::Undo,
-        InkButton::Redo,
-        InkButton::Back,
-        InkButton::Enter,
-        InkButton::Space,
-    ];
-    let mid: Vec<_> = keys.iter().map(|b| at(*b)).collect();
+    r.tap("Side");
+    assert_eq!(r.app.settings.ink_keys, sigma_core::settings::Side::Right);
+    assert!(r.app.screen.ink_keys_right);
+    r.tap("Line");
+    assert!(!r.app.settings.ink_guide && !r.app.screen.sketch_guide);
+    r.app.ink = None;
+    r.app.open_ink();
     assert!(
-        mid.windows(2).all(|p| p[0].x < p[1].x),
-        "Undo, Redo, Erase, Return order"
+        r.app.screen.ink_keys_right && !r.app.screen.sketch_guide,
+        "kept"
     );
-    let (lo, hi) = (mid[0].x, mid[4].x + mid[4].w);
-    assert!(lo > mode.x + mode.w && hi < train.x);
-    assert!(((lo + hi) / 2 - l.panel.w / 2).abs() < 80, "centred");
 }

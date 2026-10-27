@@ -205,3 +205,11 @@ Installed on the Forma: **local build of `v1.13.1-write-fixes` (PR 48), head `a3
 - Not a gate: the special-language sections wait for native users' feedback (see the top of this file).
 
 New versions append their checks above this line, under their own heading. The assistant fills this file in as builds are installed and tried (user, 2026-10-25); items are ticked only on the user's word or the device log, with the source named.
+
+## Writing panel key block (v1.16)
+- [ ] Write, Letter boxes, Train and Sketch all show the keys in one block about a third of the width; the rest of the panel is for writing and feels roomier than before (portrait and landscape).
+- [ ] The keys are grouped (panel, editing, typing, moving) with a hairline between groups, in the same order in every mode; every key is easy to hit at 200 %.
+- [ ] ⇄ moves the block to the other side in every mode, and the choice is still there after closing the panel and after a restart.
+- [ ] Line hides and shows the dotted guide in every mode (across the Write area, through the letter boxes, across the sketch); the choice is kept.
+- [ ] Train opens from Write as well as from the letter boxes; Done returns to the mode it came from.
+- [ ] No grey is left after strokes or key taps (DU), and the block and the hairlines stay crisp.
