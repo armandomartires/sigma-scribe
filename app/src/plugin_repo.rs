@@ -1,9 +1,9 @@
 //! Settings → Plugins → Repository: fetch the plugins index, install and
 //! update plugins from it.
 //!
-//! The index and every package are fetched with the device's `curl` (the
-//! app links no TLS stack), only from [`plugins::trusted_source`] URLs and
-//! over https. `SIGMA_PLUGIN_REPO=<folder>` reads `index.json` and the
+//! The index and every package are fetched in the app (ureq with rustls and
+//! the bundled webpki roots: the Kobo has no `curl`), only from
+//! [`plugins::trusted_source`] URLs and over https, redirects included. `SIGMA_PLUGIN_REPO=<folder>` reads `index.json` and the
 //! packages (by file name) from a folder instead: an offline mirror, and
 //! what the tests use. Every package is checked against the size and sha256
 //! in the index before anything is unpacked ([`sigma_core::pluginpkg`]).
@@ -16,7 +16,7 @@ use sigma_device::Refresh;
 use sigma_render::options::{RepoRow, RepoState};
 use std::io::{Error, ErrorKind, Result};
 use std::path::PathBuf;
-use std::process::Command;
+use std::time::Duration;
 
 /// Largest index the app reads.
 const MAX_INDEX: u64 = 256 * 1024;
@@ -40,22 +40,41 @@ fn fetch(url: &str, max: u64) -> Result<Vec<u8>> {
         }
         std::fs::read(dir.join(name))?
     } else {
-        let out = Command::new("curl")
-            .args(["-fsSL", "--proto", "=https", "--proto-redir", "=https"])
-            .args(["--max-time", "120", "--max-filesize", &max.to_string(), url])
-            .output()?;
-        if !out.status.success() {
-            return Err(Error::new(
-                ErrorKind::NotConnected,
-                "download failed (is Wi-Fi on?)",
-            ));
-        }
-        out.stdout
+        download(url, max)?
     };
     if body.len() as u64 > max {
         return Err(Error::new(ErrorKind::InvalidData, "download too large"));
     }
     Ok(body)
+}
+
+/// `url` over https, following redirects only to https, at most `max`
+/// bytes, two minutes at most.
+fn download(url: &str, max: u64) -> Result<Vec<u8>> {
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .https_only(true)
+        .timeout_global(Some(Duration::from_secs(120)))
+        .build()
+        .into();
+    let failed = |e: ureq::Error| match e {
+        ureq::Error::StatusCode(c) => {
+            Error::new(ErrorKind::NotFound, format!("download failed (HTTP {c})"))
+        }
+        ureq::Error::Io(e) => Error::new(ErrorKind::NotConnected, format!("no network: {e}")),
+        ureq::Error::HostNotFound => {
+            Error::new(ErrorKind::NotConnected, "no network (is Wi-Fi on?)")
+        }
+        e => Error::other(format!("download failed: {e}")),
+    };
+    let mut response = agent.get(url).call().map_err(failed)?;
+    response
+        .body_mut()
+        .with_config()
+        // One byte over: ureq refuses a body that reaches its limit, and
+        // `fetch` refuses one over `max`.
+        .limit(max + 1)
+        .read_to_vec()
+        .map_err(failed)
 }
 
 fn app_version() -> plugins::Version {
@@ -187,5 +206,25 @@ impl App {
         self.sync_plugin_icons();
         self.rebuild_repo_rows();
         Refresh::Full
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Fetches the live index and its first package over the network:
+    /// `cargo test -p sigma-scribe --lib live_repository -- --ignored`.
+    #[test]
+    #[ignore = "needs the network"]
+    fn live_repository() {
+        let ix = Index::parse(&String::from_utf8_lossy(
+            &fetch(plugins::INDEX_URL, MAX_INDEX).unwrap(),
+        ));
+        let e = ix.entries.first().expect("an entry");
+        let bytes = fetch(&e.url, e.size).unwrap();
+        pluginpkg::verify(e, &bytes).unwrap();
+        let err = download("http://armandomartires.github.io/", 1024).unwrap_err();
+        assert!(err.to_string().contains("download failed"), "{err}");
     }
 }

@@ -95,8 +95,8 @@ Status: Everything that can be done without the Forma is built and merged to `ma
   Blocked on one device check: what `tlc5947_bl` (0 to 4096) does when written. Probe in `docs/device-pass-s7.md`. Then: a second slider under Display → Backlight, a `Device` call for it, one string in the nine catalogs, tests.
 - [?] Draggable handle on the drawer edge
   Merged (PR #82), installed on the Forma: drag the grip, the nearest Drawer width stop applies on lift and is saved. Tests in `app/tests/drawer_handle.rs`. Feel on the e-ink panel still to be tried on the Forma.
-- [?] Install plugins from the plugins repository (copied by hand today)
-  Merged (PR #84 and plugins repo #1, #2; Remove is PR #85, open): Settings → Plugins → Repository → Check for plugins, Install / Update, Remove (off plugins only). Packages are checked against the index's size and sha256 and installed atomically. The index is live at `https://armandomartires.github.io/sigma-scribe-plugins/index.json` (GitHub Pages workflow, 4 plugins). Not yet tried on the Forma: `curl`, https and Wi-Fi there. The index is not signed.
+- [!] Install plugins from the plugins repository (copied by hand today)
+  Merged (PR #84 and plugins repo #1, #2; Remove is #85): Settings → Plugins → Repository → Check for plugins, Install / Update, Remove (off plugins only). Packages are checked against the index's size and sha256 and installed atomically. The index is live at `https://armandomartires.github.io/sigma-scribe-plugins/index.json` (GitHub Pages workflow, 4 plugins). On the Forma (2026-10-27) Remove worked, Check for plugins failed: the Kobo has no `curl`, and the launcher stopped `dhcpcd`. Branch `plugin-fetch-on-device`: in-app https (ureq + rustls), the launcher keeps Wi-Fi and logs `net:` lines; to try on the Forma with Wi-Fi on before launching. The index is not signed.
 - Syncthing export
   Not started: undefined. Needs a decision: sync the notes folder with Syncthing on the Kobo, or export for a Syncthing folder on another machine.
 - [?] Trash folder for deleted notes (deletes are permanent today)

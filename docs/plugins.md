@@ -51,9 +51,13 @@ it ships.
 Settings → Plugins → **Repository** → **Check for plugins** fetches the index
 (`INDEX_URL` in `crates/core/src/plugins.rs`) and lists what it offers, each
 with **Install**, **Update** or "Up to date" (or "Needs a newer app"). The
-Kobo's Wi-Fi must be on; the app has no TLS of its own and downloads with the
-device's `curl`, over https, from the plugins repository only
-(`plugins::trusted_source`). A fetch blocks the screen until it ends.
+Kobo's Wi-Fi must be on in the Kobo's own reader before Σscribe starts: the
+launcher keeps the network Nickel brought up (it does not bring Wi-Fi up
+itself) and logs it as `net:` lines in `.adds/sigma-scribe/sigma-scribe.log`.
+The app downloads in-process (ureq, rustls, the bundled Mozilla roots; the
+Kobo has no `curl`), over https only, redirects included, from the plugins
+repository only (`plugins::trusted_source`). A fetch blocks the screen until
+it ends.
 
 A package is an uncompressed ustar archive of regular files with
 `plugin.conf` at its root (`scripts/make-index.sh` in the plugins repository
