@@ -483,6 +483,9 @@ pub enum Change {
     /// Install or update the repository's plugin number `i` (its place in
     /// the list the page showed). The app applies it.
     PluginGet(u8),
+    /// Remove the installed plugin number `i`, which must be off. The app
+    /// applies it.
+    PluginRemove(u8),
     /// Keyboard size (v1.4.3): 0 = Auto, or a percentage from `KB_SIZES`.
     KbSize(u16),
     /// Keyboard size Auto on / off (v1.4.4). Off keeps the size Auto was
@@ -644,7 +647,8 @@ impl Settings {
             | Change::Plugin(..)
             | Change::PluginSetting(..)
             | Change::PluginCheck
-            | Change::PluginGet(_) => {}
+            | Change::PluginGet(_)
+            | Change::PluginRemove(_) => {}
             Change::KbAuto(on) => {
                 self.kb_size = if on { 0 } else { self.keyboard_scale() };
             }
