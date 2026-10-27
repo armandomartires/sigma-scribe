@@ -72,6 +72,12 @@ impl App {
         if let Change::Plugin(i, on) = c {
             return self.set_plugin(i, on);
         }
+        if c == Change::PluginCheck {
+            return self.plugin_check();
+        }
+        if let Change::PluginGet(i) = c {
+            return self.plugin_get(usize::from(i));
+        }
         if let Change::PluginSetting(p, s, o) = c {
             return self.set_plugin_setting(usize::from(p), usize::from(s), usize::from(o));
         }
@@ -194,6 +200,8 @@ impl App {
             light: self.light_have.then_some(self.light_step),
             ui_scale_pending: self.ui_scale_drag,
             plugins: &self.plugin_list,
+            repository: &self.repo_rows,
+            repo_note: &self.repo_note,
         }
     }
 

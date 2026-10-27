@@ -525,6 +525,30 @@ pub struct PluginRow {
     pub settings: Vec<PluginSetting>,
 }
 
+/// What the repository offers for one plugin.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RepoState {
+    /// Not installed: the row offers Install.
+    Install,
+    /// A newer version than the installed one: the row offers Update.
+    Update,
+    /// Installed and current.
+    Current,
+    /// Needs a newer app.
+    Incompatible,
+}
+
+/// A plugin the repository index lists, as the Plugins page shows it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RepoRow {
+    /// The name shown.
+    pub name: String,
+    /// Kind, version and size, as the small print.
+    pub note: String,
+    /// What the row offers.
+    pub state: RepoState,
+}
+
 /// One of a plugin's settings: a choice between a few options.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PluginSetting {
@@ -566,6 +590,11 @@ pub struct OptionsModel<'a> {
     pub ui_scale_pending: Option<u16>,
     /// The installed plugins, for Settings → Plugins.
     pub plugins: &'a [PluginRow],
+    /// What the plugins repository lists, once checked (v1.16).
+    pub repository: &'a [RepoRow],
+    /// How the last check went, in small print under "Check for plugins";
+    /// empty before the first.
+    pub repo_note: &'a str,
 }
 
 /// One drawn line of a page: a section band or a row.
@@ -933,7 +962,8 @@ fn summary(m: &OptionsModel<'_>, cat: usize) -> String {
     }
 }
 
-/// The Plugins page: one switch per installed plugin.
+/// The Plugins page: one switch per installed plugin, then what the
+/// repository offers.
 fn plugin_items(m: &OptionsModel<'_>) -> Vec<Item> {
     let mut out = vec![Item::Band("Installed")];
     if m.plugins.is_empty() {
@@ -942,7 +972,6 @@ fn plugin_items(m: &OptionsModel<'_>) -> Vec<Item> {
             kind: Kind::Info(String::new()),
             note: Some(Cow::Borrowed("Put plugins in .adds/sigma-scribe/plugins")),
         }));
-        return out;
     }
     for (i, p) in m.plugins.iter().enumerate() {
         let mut note = format!("{} \u{b7} {}", p.kind, p.version);
@@ -981,6 +1010,34 @@ fn plugin_items(m: &OptionsModel<'_>) -> Vec<Item> {
                 }
             }));
         }
+    }
+    out.push(Item::Band("Repository"));
+    out.push(Item::Row(DRow {
+        label: Cow::Borrowed("Check for plugins"),
+        kind: Kind::Inline(vec![choice("Check", Change::PluginCheck, false)]),
+        note: (!m.repo_note.is_empty()).then(|| Cow::Owned(m.repo_note.to_owned())),
+    }));
+    for (i, r) in m.repository.iter().enumerate() {
+        let kind = match r.state {
+            RepoState::Install => {
+                Kind::Inline(vec![choice("Install", Change::PluginGet(i as u8), false)])
+            }
+            RepoState::Update => {
+                Kind::Inline(vec![choice("Update", Change::PluginGet(i as u8), false)])
+            }
+            RepoState::Current => Kind::Muted(tr("Up to date").into_owned()),
+            RepoState::Incompatible => Kind::Muted(String::new()),
+        };
+        let note = if r.state == RepoState::Incompatible {
+            format!("{} \u{b7} Needs a newer app", r.note)
+        } else {
+            r.note.clone()
+        };
+        out.push(Item::Row(DRow {
+            label: Cow::Owned(r.name.clone()),
+            kind,
+            note: Some(Cow::Owned(note)),
+        }));
     }
     out
 }
@@ -1809,6 +1866,8 @@ mod tests {
             light: None,
             ui_scale_pending: None,
             plugins: &[],
+            repository: &[],
+            repo_note: "",
         }
     }
 
@@ -1835,6 +1894,8 @@ mod tests {
         let kinds = |rows: &[PluginRow], page| -> Vec<(String, Kind)> {
             let m = OptionsModel {
                 plugins: rows,
+                repository: &[],
+                repo_note: "",
                 ..model(&st, &k, page, 0)
             };
             page_items(&m)
@@ -1848,7 +1909,7 @@ mod tests {
         let list = SettingsPage::Category(PLUGINS_CATEGORY);
         // On: a switch (to turn it off) and an open row for its page.
         let on = kinds(&[graph_row(true)], list);
-        assert_eq!(on.len(), 2);
+        assert_eq!(on.len(), 3, "switch, its settings, Check for plugins");
         assert!(matches!(
             on[0].1,
             Kind::Check {

@@ -962,3 +962,21 @@ Log file
 Drawer width
 = Breedte van de lade
 
+Repository
+= Repository
+
+Check for plugins
+= Zoeken naar plug-ins
+
+Check
+= Zoeken
+
+Install
+= Installeren
+
+Update
+= Bijwerken
+
+Up to date
+= Up-to-date
+

@@ -30,6 +30,7 @@ mod nav;
 mod paged_bar;
 mod perf;
 mod plugin_pane;
+mod plugin_repo;
 mod plugin_screen;
 mod pointer;
 mod preview;
@@ -123,6 +124,12 @@ pub struct App {
     /// The installed plugins, as Settings → Plugins lists them (refreshed
     /// whenever Settings opens or a switch is flipped).
     plugin_list: Vec<sigma_render::options::PluginRow>,
+    /// What the plugins repository listed at the last check.
+    repo_index: Option<sigma_core::plugins::Index>,
+    /// Its rows for Settings → Plugins.
+    repo_rows: Vec<sigma_render::options::RepoRow>,
+    /// How the last check or install went.
+    repo_note: String,
     /// Where plugins are installed.
     plugins_root: PathBuf,
     /// A plugin failed: the built-in Graph serves the rest of the session.
@@ -267,6 +274,9 @@ impl App {
             plugin_screen: None,
             plugin_idle: None,
             plugin_list: Vec::new(),
+            repo_index: None,
+            repo_rows: Vec::new(),
+            repo_note: String::new(),
             plugins_root: sigma_core::plugins::plugins_root(),
             plugin_failed: false,
             pane_slots: [None, None, None],
