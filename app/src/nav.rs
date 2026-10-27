@@ -86,3 +86,16 @@ impl App {
         Some(Refresh::Full)
     }
 }
+
+/// Navigation history cap (v1.0.2).
+pub const HISTORY_CAP: usize = 50;
+
+/// Where the user was before a jump (v1.0.2 Back).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HistEntry {
+    pub note: NotePath,
+    /// Preview page, or `None` for write mode.
+    pub preview: Option<usize>,
+    pub caret: usize,
+    pub scroll: usize,
+}

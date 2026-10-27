@@ -248,3 +248,14 @@ impl App {
         self.find_key(key)
     }
 }
+
+/// The Find bar (v0.6). The query is not persisted (brief §8).
+#[derive(Clone, Debug, Default)]
+pub struct FindState {
+    pub query: Buffer,
+    pub replace: Buffer,
+    /// Field the keyboard types into; `None` when the page has the caret.
+    pub focus: Option<FindField>,
+    /// Aa: match case (off by default).
+    pub case: bool,
+}

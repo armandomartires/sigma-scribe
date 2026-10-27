@@ -137,3 +137,8 @@ impl App {
         out
     }
 }
+
+/// Auto orientation: a reading must hold this long before it is applied.
+pub const TILT_STABLE_MS: u64 = 600;
+/// Auto orientation waits this long after typing or touching.
+pub const TILT_TYPING_PAUSE_MS: u64 = 1000;
