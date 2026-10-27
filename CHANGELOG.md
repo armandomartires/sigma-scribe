@@ -3,6 +3,7 @@
 All notable changes to Σscribe. Versions are tagged after they pass on the Kobo Forma.
 
 ## Unreleased
+- **Preview layout time is logged and measured.** Entering preview logs `preview layout of <note> (<bytes> bytes): <n> ms` at Debug level (Settings → Logging). New ignored test `app/tests/preview_perf.rs` and a table in `docs/perf.md`: about 0.65 ms per KB on the desktop (100 KB in 60 ms, 500 KB in 337 ms). No change in behaviour.
 - **Deleting a note or folder moves it to a trash.** Files → Delete (second tap) now moves the item to `.trash/<unix seconds>/<its path>` in the notes folder, with a note's ink beside it, instead of removing it. Nothing in the trash is listed, searched or indexed, and the last note still cannot be deleted. To get something back, copy it out of `sigma-scribe/notes/.trash/` over USB. Nothing empties the trash yet, so delete the folder by hand when it grows. New `Library::trash`; test `trash_moves_instead_of_deleting`.
 
 ## 1.15.0 — 2026-10-27 (tagged; release built by CI; not yet tested on the Forma as a whole)

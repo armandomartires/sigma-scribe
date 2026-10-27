@@ -13,7 +13,15 @@ impl App {
         self.sel_ui = None;
         self.drag = None;
         self.sync_preview_drawer(true);
+        let started = std::time::Instant::now();
         let doc = self.preview_doc();
+        sigma_core::debug!(
+            "app",
+            "preview layout of {} ({} bytes): {} ms",
+            self.current.as_str(),
+            self.buffer.text().len(),
+            started.elapsed().as_millis()
+        );
         let page = self.page_rect();
         let top = self.screen.top_source_line(&self.buffer, page);
         let page = doc.page_of_line(top);
