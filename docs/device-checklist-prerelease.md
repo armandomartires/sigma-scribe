@@ -201,10 +201,10 @@ Installed on the Forma: **local build of `v1.13.1-write-fixes` (PR 48), head `a3
 - [x] Landscape with Line length on: the desk beside the page has a fine grain; the page margins elsewhere are plain paper — user pass; everything reported done on 2026-10-25.
 
 ## Drawer button and menu (Unreleased, v1.16)
-- [ ] One panel button in the title bar where the three pane icons were; a tap opens the menu under it, the rows are full finger targets and the menu redraws cleanly (no ghost of it after it closes).
-- [ ] Ticking two panes keeps the menu open; a tap on the page or a key only closes it (no caret move, no letter); the button is shaded while a pane is open. Same in preview.
-- [ ] A double tap on the drawer's grip closes the drawer and leaves a tab where its outer edge was (left of the scroll bar); dragging the grip to the edge does the same. Tapping the tab brings back the same panes; dragging it in reopens at that width. Two slow taps do not close it. With the touchpad, a double click on the grip closes it.
-- [ ] With the drawer open on the right, the scroll bar stays at the screen edge and works; the gap between the drawer and the bar matches the bar's margin to the edge. Same in preview (the page bar).
+- [x] One panel button in the title bar where the three pane icons were; a tap opens the menu under it, the rows are full finger targets and the menu redraws cleanly (no ghost of it after it closes).
+- [x] Ticking two panes keeps the menu open; a tap on the page or a key only closes it (no caret move, no letter); the button is shaded while a pane is open. Same in preview.
+- [x] A double tap on the drawer's grip closes the drawer and leaves a tab where its outer edge was (left of the scroll bar); dragging the grip to the edge does the same. Tapping the tab brings back the same panes; dragging it in reopens at that width. Two slow taps do not close it. With the touchpad, a double click on the grip closes it.
+- [x] With the drawer open on the right, the scroll bar stays at the screen edge and works; the gap between the drawer and the bar matches the bar's margin to the edge. Same in preview (the page bar). — user pass 2026-10-27 (06618b8): all OK.
 
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist). Still open; the local-build installs above were updates over the previous binary.
