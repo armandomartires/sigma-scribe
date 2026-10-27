@@ -342,8 +342,8 @@ impl App {
             FilesHit::Delete(i) => {
                 if was_armed == Some(i) {
                     let p = f.entries.get(i)?.path.clone();
-                    match lib.delete(&p) {
-                        Ok(()) => {
+                    match lib.trash(&p) {
+                        Ok(_) => {
                             let gone = self.current.within(&p);
                             self.refresh_files();
                             if gone {

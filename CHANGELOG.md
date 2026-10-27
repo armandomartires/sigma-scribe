@@ -3,6 +3,7 @@
 All notable changes to Σscribe. Versions are tagged after they pass on the Kobo Forma.
 
 ## Unreleased
+- **Deleting a note or folder moves it to a trash.** Files → Delete (second tap) now moves the item to `.trash/<unix seconds>/<its path>` in the notes folder, with a note's ink beside it, instead of removing it. Nothing in the trash is listed, searched or indexed, and the last note still cannot be deleted. To get something back, copy it out of `sigma-scribe/notes/.trash/` over USB. Nothing empties the trash yet, so delete the folder by hand when it grows. New `Library::trash`; test `trash_moves_instead_of_deleting`.
 
 ## 1.15.0 — 2026-10-27 (tagged; release built by CI; not yet tested on the Forma as a whole)
 - **The package bundles the Graph and the drawer panes.** `graph-map`, `contents-pane`, `todo-pane` and `scratch-pane` are in `.adds/sigma-scribe/plugins/` (built from the plugins repository, commit in each `SOURCE.txt`). A new install turns them on: `launch.sh` writes `plugins.state` only when there is none, and the package has none, so an update keeps your on/off choices. Before, a fresh install had no Graph and no drawer panes. `check-package.sh` requires them and refuses a `plugins.state`.
