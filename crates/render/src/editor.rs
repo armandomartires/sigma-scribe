@@ -800,32 +800,15 @@ impl EditorScreen {
     #[must_use]
     pub fn scroll_bar_zone(&self, buffer: &Buffer, page: Rect) -> Option<(Rect, Rect)> {
         let rows = self.rows(buffer, page).len();
-        let bar = self.bar_page(page);
-        let (strip, thumb) = self.scroll_bar(bar, rows, self.visible_rows(page))?;
-        Some((crate::scrollbar::zone(self.page_s, bar, strip), thumb))
-    }
-
-    /// The part of the page the note's scroll bar runs down the right of:
-    /// the page, or with the drawer open on the right in write mode, the
-    /// page left of the drawer, so the drawer does not hide the bar (v1.16).
-    fn bar_page(&self, page: Rect) -> Rect {
-        let open = self.drawer_open.iter().any(|&o| o);
-        if !open || self.cfg.drawer != sigma_core::settings::Side::Right {
-            return page;
-        }
-        let base = Layout {
-            page,
-            ..Layout::default()
-        };
-        let d = self.drawer_rect(&base, sigma_core::settings::Side::Right);
-        Rect::new(page.x, page.y, (d.x - page.x).max(1), page.h)
+        let (strip, thumb) = self.scroll_bar(page, rows, self.visible_rows(page))?;
+        Some((crate::scrollbar::zone(self.page_s, page, strip), thumb))
     }
 
     /// Drag: the thumb's centre follows the finger at `y`.
     pub fn scroll_bar_to(&mut self, buffer: &mut Buffer, page: Rect, y: i32) {
         let rows = self.rows(buffer, page).len();
         let visible = self.visible_rows(page);
-        let Some((strip, thumb)) = self.scroll_bar(self.bar_page(page), rows, visible) else {
+        let Some((strip, thumb)) = self.scroll_bar(page, rows, visible) else {
             return;
         };
         let span = (strip.h - thumb.h).max(1) as f32;
@@ -840,7 +823,7 @@ impl EditorScreen {
     pub fn scroll_bar_step(&mut self, buffer: &mut Buffer, page: Rect, y: i32) {
         let rows = self.rows(buffer, page).len();
         let visible = self.visible_rows(page);
-        let Some((_, thumb)) = self.scroll_bar(self.bar_page(page), rows, visible) else {
+        let Some((_, thumb)) = self.scroll_bar(page, rows, visible) else {
             return;
         };
         let n = visible.saturating_sub(1).max(1);
@@ -878,7 +861,7 @@ impl EditorScreen {
     }
 
     fn draw_scroll_bar(&self, c: &mut Canvas, page: Rect, total: usize, visible: usize, t: Theme) {
-        if let Some(b) = self.scroll_bar(self.bar_page(page), total, visible) {
+        if let Some(b) = self.scroll_bar(page, total, visible) {
             // On the desk beside a locked column, else on the paper.
             crate::scrollbar::draw_bar(c, self.page_s, b, t, self.bar_bg(t));
         }
@@ -1390,7 +1373,15 @@ impl EditorScreen {
                 }
             }
         }
-        // Over the text: beside an open drawer, rows run under the bar.
+        // v1.16: a drawer on the right stops short of the bar's strip; the
+        // rows it covers would show in that strip, so it is cleared.
+        if self.drawer_open.iter().any(|&o| o)
+            && self.cfg.drawer == sigma_core::settings::Side::Right
+        {
+            let r = crate::scrollbar::reserve(self.page_s);
+            let p = l.page;
+            c.fill(Rect::new(p.x + p.w - r, p.y, r, p.h), self.bar_bg(t));
+        }
         self.draw_scroll_bar(c, l.page, rows.len(), self.visible_rows(l.page), t);
         if let Some((cands, sel)) = model.keyboard.composer.candidates() {
             self.draw_cands(c, l.page, cands, sel, t);
@@ -2818,7 +2809,7 @@ mod scroll_bar_tests {
     use super::*;
 
     #[test]
-    fn beside_an_open_drawer_on_the_right_the_bar_runs_down_its_edge() {
+    fn a_drawer_on_the_right_stops_short_of_the_bars_strip() {
         use sigma_core::settings::Side;
         let mut e = EditorScreen::new(1440, 1920);
         let b = Buffer::new("line\n".repeat(300));
@@ -2831,11 +2822,17 @@ mod scroll_bar_tests {
             ..Layout::default()
         };
         let d = e.drawer_rect(&base, Side::Right);
-        let (zone, thumb) = e.scroll_bar_zone(&b, page).unwrap();
-        assert_eq!(zone.x + zone.w, d.x, "ends where the drawer starts");
-        assert!(thumb.x + thumb.w <= d.x && thumb.x > page.x);
-        // On the left the drawer does not cover the bar: it stays put.
+        let (zone, _) = e.scroll_bar_zone(&b, page).unwrap();
+        assert_eq!(zone, alone, "the bar does not move");
+        assert_eq!(
+            d.x + d.w,
+            zone.x,
+            "the drawer ends where the bar's zone starts"
+        );
+        assert_eq!(zone.w, crate::scrollbar::reserve(e.page_s));
+        // On the left the drawer never meets the bar: flush with the page.
         e.cfg.drawer = Side::Left;
+        assert_eq!(e.drawer_rect(&base, Side::Left).x, page.x);
         assert_eq!(e.scroll_bar_zone(&b, page).unwrap().0, alone);
     }
 

@@ -207,18 +207,21 @@ fn in_preview_closing_from_the_grip_widens_the_page_and_the_tab_narrows_it_again
 }
 
 #[test]
-fn the_scroll_bar_stays_in_view_and_works_beside_the_open_drawer() {
+fn the_scroll_bar_keeps_its_strip_beside_the_open_drawer() {
     let mut r = Rig::new("bar");
     r.tap_on("Panels");
     r.tap_on("Contents");
     r.tap_on("Panels");
     let page = r.app.page_rect();
     let grip = r.at("DrawerHandle");
-    let edge = page.x + page.w - r.app.drawer_width_px();
-    // Just left of the drawer, well below the grip: the bar's lower half.
-    let (x, y) = (edge - 10, (grip.1 + page.y + page.h) / 2 + 100);
+    // At the screen edge, right of the drawer, below the thumb.
+    let (x, y) = (page.x + page.w - 10, (grip.1 + page.y + page.h) / 2 + 100);
     assert_eq!(r.app.screen.scroll, 0);
     r.send(Event::Tap { x, y });
     assert!(r.app.screen.scroll > 0, "a tap below the thumb pages down");
     assert!(r.app.drawer_visible(), "the drawer stays open");
+    assert!(
+        page.x + page.w - r.app.drawer_width_px() > grip.0,
+        "the drawer ends short of the screen edge"
+    );
 }

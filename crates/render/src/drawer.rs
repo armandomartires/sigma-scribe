@@ -177,7 +177,7 @@ impl EditorScreen {
         let w = self.drawer_width_at(base, self.cfg.drawer_width);
         let x = match side {
             Side::Left => p.x,
-            Side::Right => p.x + p.w - w,
+            Side::Right => self.drawer_right(base) - w,
         };
         Rect::new(x, p.y, w, p.h)
     }
@@ -221,7 +221,7 @@ impl EditorScreen {
         let half = self.drawer_width_at(base, 0) / 2;
         match side {
             Side::Left => x < p.x + half,
-            Side::Right => x > p.x + p.w - half,
+            Side::Right => x > self.drawer_right(base) - half,
         }
     }
 
@@ -254,6 +254,14 @@ impl EditorScreen {
         c.fill(bar, t.ink);
     }
 
+    /// Where a drawer on the right ends (v1.16): left of the scroll bar's
+    /// strip, which stays the bar's (the bar is on the right in every
+    /// language; a drawer on the left never meets it).
+    fn drawer_right(&self, base: &Layout) -> i32 {
+        let p = base.page;
+        p.x + p.w - crate::scrollbar::reserve(self.page_scale())
+    }
+
     /// The Drawer width stop whose drawer is closest to one whose inner edge
     /// is at screen column `x`.
     #[must_use]
@@ -261,7 +269,7 @@ impl EditorScreen {
         let p = base.page;
         let want = match side {
             Side::Left => x - p.x,
-            Side::Right => p.x + p.w - x,
+            Side::Right => self.drawer_right(base) - x,
         };
         (0..sigma_core::settings::DRAWER_WIDTH_STOPS)
             .min_by_key(|&s| (self.drawer_width_at(base, s) - want).abs())
