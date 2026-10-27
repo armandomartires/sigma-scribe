@@ -725,8 +725,8 @@ One character per box instead of free writing
 Word mode (experimental)
 = Mode mots (expérimental)
 
-Read every word against a word list; off is more accurate
-= Lit chaque mot avec une liste de mots ; désactivé, c'est plus précis
+Read every word against a word list; best for joined-up writing
+= Lit chaque mot avec une liste de mots ; idéal pour l'écriture liée
 
 Learn from corrections
 = Apprendre des corrections

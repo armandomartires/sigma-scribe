@@ -724,8 +724,8 @@ One character per box instead of free writing
 Word mode (experimental)
 = Wortmodus (experimentell)
 
-Read every word against a word list; off is more accurate
-= Jedes Wort mit einer Wortliste abgleichen; aus ist genauer
+Read every word against a word list; best for joined-up writing
+= Jedes Wort mit einer Wortliste abgleichen; am besten für Schreibschrift
 
 Learn from corrections
 = Aus Korrekturen lernen
