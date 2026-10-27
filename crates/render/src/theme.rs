@@ -1,4 +1,4 @@
-//! Design tokens from design-brief.md §2, as 8-bit grey (Rec. 601 luma of
+//! Design tokens from .ai/design-brief.md §2, as 8-bit grey (Rec. 601 luma of
 //! the brief's hex values; the Forma is greyscale) and as a scale from the
 //! brief's 1264 px page to the actual panel width.
 
