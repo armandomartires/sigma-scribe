@@ -176,6 +176,11 @@ impl App {
                     .draw_drawer(&mut c, &l, &self.drawer_model(&hs, &todos));
             }
         }
+        if self.drawer_visible() {
+            let base = self.drawer_base();
+            self.screen
+                .draw_drawer_handle(&mut c, &base, self.settings.drawer, self.theme());
+        }
         let v = self.ink_view();
         if let (Some(ink), Some(v)) = (&mut self.ink, v) {
             let l = self.screen.ink_layout_for(ink.mode, &v);

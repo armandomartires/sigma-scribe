@@ -89,6 +89,9 @@ impl App {
                 if let Some(r) = self.ink_touch(phase, x, y, t) {
                     return r;
                 }
+                if let Some(r) = self.handle_touch(phase, x, y) {
+                    return r;
+                }
                 if let Some(r) = self.bar_touch(phase, x, y) {
                     return r;
                 }
