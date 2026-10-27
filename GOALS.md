@@ -84,14 +84,20 @@ Status: Done; PRs #76, #77 and #78 await merge
 
 ## Sprint 7 — Device verification and next
 Goal: One pass on the Forma over everything built since v1.0.2
-Status: To do
-- [ ] Install 1.15.0 on the Forma and run `docs/device-checklist-prerelease.md`
-  Follow the install routine: keep plugin on/off state, settings and notes, and read the device logs.
-- [ ] Verify the USB K400 Plus receiver and touchpad, including two-finger scroll
-- [ ] Measure preview layout time on a large note on the device
-- Backlight colour slider (warm to cool)
-  The Forma's ComfortLight has a second channel; `tlc5947_bl` (0 to 4096) is probably the warm LED, not yet verified. Needs: confirm what `tlc5947_bl` does on the Forma, a second slider under Display → Backlight, and a test.
-- Draggable handle on the drawer edge
+Status: Everything that can be done without the Forma is built and in review (PRs #80 to #83); the rest needs the device. Runbook: `docs/device-pass-s7.md`.
+- [!] Install 1.15.0 on the Forma and run `docs/device-checklist-prerelease.md`
+  Needs the Forma and your yes to install. Install `main` after #80 to #82 merge, so the pass also covers the trash folder and the drawer grip.
+- [!] Verify the USB K400 Plus receiver and touchpad, including two-finger scroll
+  Needs the receiver on the Forma. Steps in `docs/device-pass-s7.md`.
+- [>] Measure preview layout time on a large note on the device
+  Desktop done: about 0.65 ms per KB (100 KB in 60 ms), see `docs/perf.md`. The app now logs the time at Debug level, so one preview of a large note on the Forma settles it.
+- [!] Backlight colour slider (warm to cool)
+  Blocked on one device check: what `tlc5947_bl` (0 to 4096) does when written. Probe in `docs/device-pass-s7.md`. Then: a second slider under Display → Backlight, a `Device` call for it, one string in the nine catalogs, tests.
+- [?] Draggable handle on the drawer edge
+  PR #82: drag the grip, the nearest Drawer width stop applies on lift and is saved. Tests in `app/tests/drawer_handle.rs`. Feel on the e-ink panel still to be tried on the Forma.
 - Install plugins from the plugins repository (copied by hand today)
+  Not started: needs a decision on where the repository is published and how the app fetches it (the Forma has no network access in the app today).
 - Syncthing export
-- Trash folder for deleted notes (deletes are permanent today)
+  Not started: undefined. Needs a decision: sync the notes folder with Syncthing on the Kobo, or export for a Syncthing folder on another machine.
+- [?] Trash folder for deleted notes (deletes are permanent today)
+  PR #80: deletes move to `.trash/<time>/<path>`, not listed or indexed, copy back over USB. Nothing empties it yet; a "Restore" or "Empty trash" screen would be a later story.
