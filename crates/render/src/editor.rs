@@ -2824,12 +2824,17 @@ mod scroll_bar_tests {
         let d = e.drawer_rect(&base, Side::Right);
         let (zone, _) = e.scroll_bar_zone(&b, page).unwrap();
         assert_eq!(zone, alone, "the bar does not move");
+        let (strip, _) = e.scroll_bar(page, 300, 10).unwrap();
+        let edge_gap = page.x + page.w - (strip.x + strip.w);
         assert_eq!(
-            d.x + d.w,
-            zone.x,
-            "the drawer ends where the bar's zone starts"
+            strip.x - (d.x + d.w),
+            edge_gap,
+            "as far from the drawer as from the edge"
         );
-        assert_eq!(zone.w, crate::scrollbar::reserve(e.page_s));
+        assert!(d.x + d.w < zone.x, "the drawer is off the bar's touch zone");
+        // Closed from the grip: the tab stays where the drawer's edge was.
+        let tab = e.drawer_tab(&base, Side::Right);
+        assert_eq!(tab.x + tab.w, d.x + d.w, "left of the bar and its margin");
         // On the left the drawer never meets the bar: flush with the page.
         e.cfg.drawer = Side::Left;
         assert_eq!(e.drawer_rect(&base, Side::Left).x, page.x);

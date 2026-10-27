@@ -93,11 +93,13 @@ pub fn bar(
     Some((strip, thumb(strip, total, visible, at, m.min_thumb)))
 }
 
-/// The width the bar's touch zone takes at the right of a page (v1.16): a
-/// drawer on the right stays left of it, so it never covers the bar.
+/// The width kept for the bar at the right of a page (v1.16): the strip
+/// with its margin on both sides, so a drawer on the right ends as far from
+/// the bar as the bar is from the screen edge, and never covers it.
 #[must_use]
 pub fn reserve(s: crate::theme::Scale) -> i32 {
-    Metrics::new(s).clearance() + s.px(4.0)
+    let m = Metrics::new(s);
+    m.clearance() + m.margin
 }
 
 /// Where a finger grabs a bar: the strip widened to a touch target, out to

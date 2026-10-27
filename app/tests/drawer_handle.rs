@@ -114,7 +114,9 @@ fn a_double_tap_on_the_grip_closes_the_drawer_and_the_tab_brings_it_back() {
         .control_centre("DrawerTab")
         .expect("the tab at the edge");
     let page = app.page_rect();
-    assert!(tab.0 > page.x + page.w * 9 / 10, "on the right edge");
+    assert!(tab.0 > page.x + page.w * 8 / 10, "on the right");
+    let edge = page.x + page.w - app.drawer_width_px();
+    assert!(tab.0 > edge, "where the drawer's outer edge was");
     tap_at(&mut app, &mut dev, tab, 3000);
     assert_eq!(app.drawer, [true, false, true], "the same panes");
     assert!(app.scratch_focus, "and the same focus");

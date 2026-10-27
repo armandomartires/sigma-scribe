@@ -7,6 +7,7 @@
 use crate::canvas::{Canvas, Rect};
 use crate::editor::{EditorScreen, Layout};
 use crate::fonts::{Face, Measure};
+use crate::graphmap::fill_round;
 use crate::i18n::tr;
 use crate::theme::Theme;
 use sigma_core::outline::{Filter, Heading, TodoItem};
@@ -208,9 +209,24 @@ impl EditorScreen {
         let z = self.drawer_handle(base, side);
         let (bw, bh) = (self.d(10.0), self.d(80.0));
         let bar = Rect::new(z.x + (z.w - bw) / 2, z.y + (z.h - bh) / 2, bw, bh);
+        self.draw_grip(c, bar, t);
+    }
+
+    /// The grip's look, for the open drawer's grip and the closed one's tab
+    /// (v1.16): a bar with fully rounded ends on a white rim, and three
+    /// white dots down its middle so it reads as something to hold.
+    fn draw_grip(&self, c: &mut Canvas, bar: Rect, t: Theme) {
         let pad = self.d(4.0);
-        c.fill(bar.inset(-pad), t.paper);
-        c.fill(bar, t.ink);
+        fill_round(c, bar.inset(-pad), bar.w / 2 + pad, t.paper);
+        fill_round(c, bar, bar.w / 2, t.ink);
+        let dot = (bar.w * 2 / 5).max(2);
+        let step = dot + self.d(5.0);
+        let x = bar.x + (bar.w - dot) / 2;
+        let y0 = bar.y + bar.h / 2 - dot / 2 - step;
+        for i in 0..3 {
+            let r = Rect::new(x, y0 + i * step, dot, dot);
+            fill_round(c, r, dot / 2, t.paper);
+        }
     }
 
     /// A grip dragged to screen column `x` closes the drawer (v1.16): the
@@ -225,22 +241,23 @@ impl EditorScreen {
         }
     }
 
-    /// The tab left at the screen edge while the drawer is closed from its
-    /// grip (v1.16): a finger wide, as tall as the grip's area, mid-page,
-    /// inside the page on the drawer's side.
+    /// The tab left where the drawer's outer edge was while it is closed
+    /// from its grip (v1.16): on the right, left of the scroll bar's strip
+    /// (and its margin), never on the bar; on the left, at the screen edge.
+    /// A finger wide, as tall as the grip's area, mid-page.
     #[must_use]
     pub fn drawer_tab(&self, base: &Layout, side: Side) -> Rect {
         let p = base.page;
         let (w, h) = (self.d(44.0), self.d(150.0));
         let x = match side {
             Side::Left => p.x,
-            Side::Right => p.x + p.w - w,
+            Side::Right => self.drawer_right(base) - w,
         };
         Rect::new(x, p.y + (p.h - h) / 2, w, h)
     }
 
-    /// Draws the tab: the grip's bar tucked against the screen edge, white
-    /// on its inner side so it stays visible over the text and the scroll bar.
+    /// Draws the tab: the grip's bar against the drawer's outer edge, white
+    /// on its inner side so it stays visible over the text.
     pub fn draw_drawer_tab(&self, c: &mut Canvas, base: &Layout, side: Side, t: Theme) {
         let z = self.drawer_tab(base, side);
         let (bw, bh) = (self.d(10.0), self.d(80.0));
@@ -249,13 +266,11 @@ impl EditorScreen {
             Side::Right => z.x + z.w - bw,
         };
         let bar = Rect::new(x, z.y + (z.h - bh) / 2, bw, bh);
-        let pad = self.d(4.0);
-        c.fill(bar.inset(-pad).intersect(&base.page), t.paper);
-        c.fill(bar, t.ink);
+        self.draw_grip(c, bar, t);
     }
 
     /// Where a drawer on the right ends (v1.16): left of the scroll bar's
-    /// strip, which stays the bar's (the bar is on the right in every
+    /// strip and a margin as wide as the bar's own, which stay the bar's (the bar is on the right in every
     /// language; a drawer on the left never meets it).
     fn drawer_right(&self, base: &Layout) -> i32 {
         let p = base.page;
@@ -696,6 +711,40 @@ mod tests {
     use super::*;
     use sigma_core::outline::{headings, Todo};
     use sigma_core::{Keyboard, NotePath};
+
+    #[test]
+    fn the_grip_and_the_tab_are_rounded_with_three_white_dots() {
+        let e = EditorScreen::new(1440, 1920);
+        let t = Theme::DAY;
+        let base = e.layout(true, &Keyboard::default());
+        let px = |c: &Canvas, x: i32, y: i32| c.pixels[(y * c.width as i32 + x) as usize];
+        let (bw, bh) = (e.d(10.0), e.d(80.0));
+        for tab in [false, true] {
+            let mut c = Canvas::new(1440, 1920, t.paper);
+            let z = if tab {
+                e.draw_drawer_tab(&mut c, &base, Side::Right, t);
+                e.drawer_tab(&base, Side::Right)
+            } else {
+                e.draw_drawer_handle(&mut c, &base, Side::Right, t);
+                e.drawer_handle(&base, Side::Right)
+            };
+            let x = if tab {
+                z.x + z.w - bw
+            } else {
+                z.x + (z.w - bw) / 2
+            };
+            let bar = Rect::new(x, z.y + (z.h - bh) / 2, bw, bh);
+            let (cx, cy) = (bar.x + bar.w / 2, bar.y + bar.h / 2);
+            assert_eq!(px(&c, bar.x, bar.y), t.paper, "{tab}: rounded corner");
+            assert_eq!(px(&c, cx, bar.y + 2), t.ink, "{tab}: solid at the top");
+            // Three dots down the middle: white, ink, white, ink, white.
+            let col: Vec<u8> = (bar.y..bar.y + bar.h).map(|y| px(&c, cx, y)).collect();
+            let runs = col.windows(2).filter(|w| w[0] != w[1]).count();
+            assert_eq!(runs, 6, "{tab}: three dots make six edges");
+            assert_eq!(px(&c, cx, cy), t.paper, "{tab}: the middle dot");
+            assert_eq!(px(&c, bar.x + 1, cy), t.ink, "{tab}: beside the dot");
+        }
+    }
 
     fn items() -> Vec<TodoItem> {
         (0..30)
