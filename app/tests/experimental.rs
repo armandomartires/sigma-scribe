@@ -30,6 +30,8 @@ fn rows(s: &Settings, page: SettingsPage) -> Vec<&'static str> {
         light: None,
         ui_scale_pending: None,
         plugins: &[],
+        repository: &[],
+        repo_note: "",
     };
     page_items(&m)
         .into_iter()
@@ -142,6 +144,8 @@ fn the_switch_is_a_checkbox_row() {
         light: None,
         ui_scale_pending: None,
         plugins: &[],
+        repository: &[],
+        repo_note: "",
     };
     let row = display_row(&m, "Experimental features").unwrap();
     assert!(matches!(row.kind, Kind::Check { on: false, .. }));
@@ -171,6 +175,8 @@ fn display_rows(light: Option<u8>) -> Vec<(&'static str, Option<usize>)> {
         light,
         ui_scale_pending: None,
         plugins: &[],
+        repository: &[],
+        repo_note: "",
     };
     page_items(&m)
         .into_iter()

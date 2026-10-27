@@ -46,8 +46,31 @@ there is none). The package has no `plugins.state`, so an update keeps your
 on/off choices; it does replace the bundled plugins' files with the versions
 it ships.
 
-Installing other plugins from the plugins repository is not in the app yet:
-copy a plugin's folder to `.adds/sigma-scribe/plugins/<id>/`.
+## Installing from the repository
+
+Settings → Plugins → **Repository** → **Check for plugins** fetches the index
+(`INDEX_URL` in `crates/core/src/plugins.rs`) and lists what it offers, each
+with **Install**, **Update** or "Up to date" (or "Needs a newer app"). The
+Kobo's Wi-Fi must be on; the app has no TLS of its own and downloads with the
+device's `curl`, over https, from the plugins repository only
+(`plugins::trusted_source`). A fetch blocks the screen until it ends.
+
+A package is an uncompressed ustar archive of regular files with
+`plugin.conf` at its root (`scripts/make-index.sh` in the plugins repository
+builds them and the index). Nothing is unpacked until its size and sha256
+match the index and its `plugin.conf` agrees with the index on id and version
+(`crates/core/src/pluginpkg.rs`). The plugin is written to a scratch folder
+and renamed into place, so a failed install leaves the old version. A new
+plugin starts on; an update keeps its on/off choice and its settings. An
+index older than the last one seen (`plugins/index.serial`) and a package
+older than the installed version are refused. The index is not signed; its
+integrity rests on https.
+
+`SIGMA_PLUGIN_REPO=<folder>` reads `index.json` and the packages (by file
+name) from a folder instead of the network: an offline mirror, and what
+`app/tests/plugin_repo.rs` uses. Removing a plugin is
+`pluginpkg::uninstall_in`; there is no button for it yet, delete the folder
+`.adds/sigma-scribe/plugins/<id>/` by hand.
 
 ## Kinds
 

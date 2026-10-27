@@ -963,3 +963,21 @@ Log file
 Drawer width
 = Largeur du panneau
 
+Repository
+= Dépôt
+
+Check for plugins
+= Rechercher des extensions
+
+Check
+= Rechercher
+
+Install
+= Installer
+
+Update
+= Mettre à jour
+
+Up to date
+= À jour
+

@@ -962,3 +962,21 @@ Log file
 Drawer width
 = Ancho del panel
 
+Repository
+= Repositorio
+
+Check for plugins
+= Buscar complementos
+
+Check
+= Buscar
+
+Install
+= Instalar
+
+Update
+= Actualizar
+
+Up to date
+= Al día
+
