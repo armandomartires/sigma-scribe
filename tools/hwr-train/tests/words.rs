@@ -1,6 +1,6 @@
 //! v1.5.3 word-mode gate figures (runs in CI with `--nocapture`): CER,
 //! word accuracy and time per word on synthetic words, the gate of
-//! `sprints/S15.3-word-mode.md` (G1 CER ≤ 15 % on unseen fonts after
+//! `.ai/sprints/S15.3-word-mode.md` (G1 CER ≤ 15 % on unseen fonts after
 //! enrolment; G2 ≤ 180 ms p95 here ≈ 1 s on the A9). Word mode failed
 //! G1 until the piece model (`assets/hwr/pieces.hwr`); the floors below
 //! keep that gain, with room for the small samples (40–60 words).
