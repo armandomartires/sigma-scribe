@@ -3,7 +3,8 @@
 //! The Kobo exposes its light as one or more `/sys/class/backlight/*`
 //! devices, each with `brightness` and `max_brightness`. Which of them is
 //! the white light differs by model, so [`Light::find`] takes the first
-//! device from a short preference list (the Forma's `lm3630a_ledb` first),
+//! device from a short preference list (on the Forma it ends up with
+//! `mxc_msp430.0`, confirmed on the device),
 //! else any device that has both files, and logs every device it sees.
 //! `SIGMA_LIGHT_DEVICE=<name>` picks one by hand. The light keeps its
 //! level when the app leaves, as it does for the stock reader.
