@@ -3,6 +3,7 @@
 All notable changes to Σscribe. Versions are tagged after they pass on the Kobo Forma.
 
 ## Unreleased
+- **Backlight device confirmed on the Forma.** The Forma has two backlight devices, `mxc_msp430.0` (0 to 100) and `tlc5947_bl` (0 to 4096). The app drives `mxc_msp430.0`, and Display → Backlight changes the brightness there (device log and a hands-on check, 2026-10-27). The earlier "not yet tried" note no longer applies. A warm/cool colour slider is not built yet.
 
 ## 1.15.0 — 2026-10-27 (tagged; release built by CI; not yet tested on the Forma as a whole)
 - **The package bundles the Graph and the drawer panes.** `graph-map`, `contents-pane`, `todo-pane` and `scratch-pane` are in `.adds/sigma-scribe/plugins/` (built from the plugins repository, commit in each `SOURCE.txt`). A new install turns them on: `launch.sh` writes `plugins.state` only when there is none, and the package has none, so an update keeps your on/off choices. Before, a fresh install had no Graph and no drawer panes. `check-package.sh` requires them and refuses a `plugins.state`.

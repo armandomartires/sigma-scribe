@@ -68,7 +68,7 @@ Status: Done (accepted 2026-10-27); only the native-speaker review is left, to c
 
 ## Sprint 6 — Plugins and platform (v1.8 – v1.15)
 Goal: Graph and drawer panes as WASM plugins, plus a maintainable codebase
-Status: In progress; 6.1–6.6 done (bundled in 1.15.0), cleanups and the backlight check open
+Status: Done; PRs #76, #77 and #78 await merge
 - [x] Plugin API 4: Graph and drawer-pane plugins, Settings → Plugins, plugin settings pages
 - [x] Logging (Settings → Logging) with levels, rotation and plugin log imports
 - [x] Bundle `graph-map`, `contents-pane`, `todo-pane` and `scratch-pane` in the package (1.15.0)
@@ -76,10 +76,10 @@ Status: In progress; 6.1–6.6 done (bundled in 1.15.0), cleanups and the backli
 - [x] Document every public item in every library crate; `cargo deny` in CI; MSRV 1.88
 - [x] Split `lib.rs` by feature
   Branch `split-lib-by-feature`, commit 6a74c46: state moved beside its feature module, `lib.rs` from 781 to 425 lines, no behaviour change. fmt, clippy, doc and the full test suite pass. Not merged yet.
-- [>] Open a pull request for `split-lib-by-feature`
-- [ ] Replace `use super::*` with explicit imports, then consider moving `App` out of `lib.rs`
-- [ ] Split `ink.rs` (933 lines) into state, gestures, recognition and training
-- [ ] Backlight: confirm which sysfs device is the white light on the Forma
+- [?] Open a pull request for `split-lib-by-feature`
+- [?] Replace `use super::*` with explicit imports, then consider moving `App` out of `lib.rs`
+- [?] Split `ink.rs` (933 lines) into state, gestures, recognition and training
+- [x] Backlight: confirm which sysfs device is the white light on the Forma
   Taken from KOReader's tables, not measured. The first run's `light:` log lines settle it.
 
 ## Sprint 7 — Device verification and next
@@ -89,6 +89,8 @@ Status: To do
   Follow the install routine: keep plugin on/off state, settings and notes, and read the device logs.
 - [ ] Verify the USB K400 Plus receiver and touchpad, including two-finger scroll
 - [ ] Measure preview layout time on a large note on the device
+- Backlight colour slider (warm to cool)
+  The Forma's ComfortLight has a second channel; `tlc5947_bl` (0 to 4096) is probably the warm LED, not yet verified. Needs: confirm what `tlc5947_bl` does on the Forma, a second slider under Display → Backlight, and a test.
 - Draggable handle on the drawer edge
 - Install plugins from the plugins repository (copied by hand today)
 - Syncthing export
