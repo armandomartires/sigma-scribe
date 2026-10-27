@@ -9,6 +9,7 @@ impl App {
     /// Applies one event; returns the refresh it needs (or `None`).
     pub fn handle(&mut self, e: Event) -> Option<Refresh> {
         self.sync_pane_plugins();
+        self.sync_drawer_open();
         match e {
             Event::Tilt { tilt, t } => {
                 self.now = self.now.max(t);

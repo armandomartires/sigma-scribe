@@ -93,6 +93,7 @@ impl App {
         }
         self.pointer_fast = false;
         self.screen.back_on = !self.history.is_empty();
+        self.sync_drawer_open();
         let mut c = std::mem::replace(&mut self.canvas, Canvas::new(1, 1, 0));
         if self.options {
             self.screen.draw_options(&mut c, &self.options_model());
@@ -112,11 +113,6 @@ impl App {
                 save: &self.autosave.state,
                 keyboard: &self.keyboard,
                 theme: self.theme(),
-            };
-            self.screen.drawer_open = if self.drawer_visible() {
-                self.drawer
-            } else {
-                [false; 3]
             };
             let l = self.screen.draw_preview(&mut c, &m);
             if self.drawer_visible() {
@@ -148,11 +144,6 @@ impl App {
                 } else {
                     None
                 },
-            };
-            self.screen.drawer_open = if self.drawer_visible() {
-                self.drawer
-            } else {
-                [false; 3]
             };
             let l = self.screen.draw(&mut c, &model);
             if let Some(f) = &self.find {

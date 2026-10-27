@@ -248,6 +248,17 @@ impl App {
         }
     }
 
+    /// Tells the screen which panes are on screen (none while the drawer
+    /// is not drawn): the drawer button's shading and where the note's
+    /// scroll bar runs (beside a drawer on the right) follow it.
+    pub(crate) fn sync_drawer_open(&mut self) {
+        self.screen.drawer_open = if self.drawer_visible() {
+            self.drawer
+        } else {
+            [false; 3]
+        };
+    }
+
     /// The tab at the screen edge is shown: the grip closed the drawer and
     /// it could be open here.
     #[must_use]
