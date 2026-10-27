@@ -206,6 +206,17 @@ Installed on the Forma: **local build of `v1.13.1-write-fixes` (PR 48), head `a3
 - [x] A double tap on the drawer's grip closes the drawer and leaves a tab where its outer edge was (left of the scroll bar); dragging the grip to the edge does the same. Tapping the tab brings back the same panes; dragging it in reopens at that width. Two slow taps do not close it. With the touchpad, a double click on the grip closes it.
 - [x] With the drawer open on the right, the scroll bar stays at the screen edge and works; the gap between the drawer and the bar matches the bar's margin to the edge. Same in preview (the page bar). — user pass 2026-10-27 (06618b8): all OK.
 
+## Sync (Unreleased, v1.16): not tried on the Forma yet
+The full list, with what to measure, is `docs/sync.md` §12. In short:
+- [ ] The package has `.adds/sigma-scribe/syncthing/syncthing` (static ARM, 32 MB) and its notices; `syncthing --version` runs on the Forma (v2.1.7).
+- [ ] Settings → Sync → On: *Starting* then *No devices yet* within a minute; a 63-character device ID in two lines. Time the first start.
+- [ ] Add the Kobo on a computer by that ID: it appears under *Waiting for you*; Accept; Accept the folder; notes sync both ways.
+- [ ] Notes folder on vfat: no errors in `.adds/sigma-scribe/log/syncthing.log`; `.trash`, `.sigma-settings`, `.handwriting` stay on the Kobo.
+- [ ] A note open on the Kobo, edited on the computer: the new text shows within seconds. Edited on both: a `note.conflict-…md` appears and nothing is lost.
+- [ ] Wi-Fi off: *No device connected*, no hang. Power button: the app exits and `syncthing` is not left running.
+- [ ] Measure: Syncthing's resident memory idle and while syncing, battery over an hour with sync on, size of `syncthing-home/`; check typing latency (`perf:` lines) during a first sync of a few hundred notes.
+- [ ] TLS: no `x509` errors in the Syncthing log (global discovery, relays); if there are, see `docs/sync.md` §12.9.
+
 ## Release gates (S9)
 - [ ] Install from the release tarball; update keeps notes; uninstall clean (S9 checklist). Still open; the local-build installs above were updates over the previous binary.
 - Not a gate: the special-language sections wait for native users' feedback (see the top of this file).

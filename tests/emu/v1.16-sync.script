@@ -1,0 +1,51 @@
+# v1.16: Settings → Sync (docs/sync.md). No Syncthing runs here: `sync-demo`
+# puts what it would report on the page. Run with an empty notes folder:
+# `SIGMA_NOTES=$(mktemp -d) scripts/sim.sh --headless
+# tests/emu/v1.16-sync.script target/shots`.
+open-fixture tests/emu/fixtures/markdown-tour.md
+tap-on Options
+shot v1.16-settings-root
+tap-on Sync
+shot v1.16-sync-off
+# On: with no Syncthing installed (the desktop), the page says so. This is the
+# real supervisor, not a demo state: it finds no binary and reports it.
+tap-on Sync notes/On
+expect-setting sync=on
+wait 600
+expect-sync NotInstalled
+shot v1.16-sync-missing
+sync-demo starting
+shot v1.16-sync-starting
+# Running with nobody paired: the ID to type on the computer.
+sync-demo alone
+expect-sync NoDevices
+shot v1.16-sync-alone
+# The computer tried to connect: Accept or Ignore.
+sync-demo pending-device
+expect-sync-pending 1,0
+shot v1.16-sync-pending-device
+tap-on Laptop/Accept
+expect-sync-pending 0,0
+# Then it offers its folder.
+sync-demo pending-folder
+expect-sync-pending 0,1
+shot v1.16-sync-pending-folder
+tap-on Notes/Ignore
+expect-sync-pending 0,0
+sync-demo syncing
+expect-sync Syncing
+shot v1.16-sync-syncing
+sync-demo idle
+expect-sync UpToDate
+shot v1.16-sync-idle
+sync-demo offline
+expect-sync NotConnected
+sync-demo failed
+expect-sync Failed
+shot v1.16-sync-failed
+# Off again.
+tap-on Sync notes/Off
+expect-setting sync=off
+shot v1.16-sync-off-again
+esc
+esc

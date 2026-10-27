@@ -25,7 +25,14 @@ for id in $BUNDLED_PLUGINS; do
   cp "app/tests/fixtures/$id/plugin.conf" "app/tests/fixtures/$id/SOURCE.txt" \
      "app/tests/fixtures/$id/"*.wasm "$OUT/.adds/sigma-scribe/plugins/$id/"
 done
-chmod 755 "$OUT/.adds/sigma-scribe/sigma-scribe" "$OUT/.adds/sigma-scribe/launch.sh"
+# Syncthing for Settings -> Sync (docs/sync.md): the pinned release's binary,
+# unmodified, with its licence (MPL-2.0) and the notice from packaging/. No
+# syncthing-home/: that is the device's identity and database, kept across
+# updates.
+ST=$(./scripts/fetch-syncthing.sh)
+mkdir -p "$OUT/.adds/sigma-scribe/syncthing"
+cp "$ST/syncthing" "$ST/LICENSE.txt" "$ST/AUTHORS.txt" "$OUT/.adds/sigma-scribe/syncthing/"
+chmod 755 "$OUT/.adds/sigma-scribe/sigma-scribe" "$OUT/.adds/sigma-scribe/launch.sh" "$OUT/.adds/sigma-scribe/syncthing/syncthing"
 ( cd "$OUT" && find . -type f | sort | xargs sha256sum ) > "$OUT.sha256"
 # Reproducible tarball: fixed order, owner, mode and time; gzip without name/time.
 tar -C "$OUT" --sort=name --owner=0 --group=0 --numeric-owner \

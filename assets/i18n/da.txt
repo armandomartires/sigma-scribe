@@ -983,3 +983,92 @@ Up to date
 Remove
 = Fjern
 
+
+# Settings -> Sync (v1.16)
+
+Sync
+= Synkronisering
+
+Sync notes
+= Synkronisér noter
+
+Keeps the notes in step with your computers while Σscribe is open
+= Holder noterne ajour med dine computere, mens Σscribe er åben
+
+Status
+= Status
+
+Devices
+= Enheder
+
+Last sync
+= Seneste synkronisering
+
+Conflicts
+= Konflikter
+
+Look for conflict in the Files list
+= Søg efter conflict i fillisten
+
+Device ID
+= Enheds-ID
+
+Waiting for you
+= Venter på dig
+
+Pairing
+= Parring
+
+Add this device on your computer
+= Tilføj denne enhed på din computer
+
+In Syncthing there choose Add Remote Device and enter the ID above
+= Vælg Tilføj fjernenhed i Syncthing dér, og skriv ID'et ovenfor
+
+Accept
+= Acceptér
+
+Ignore
+= Ignorér
+
+New device
+= Ny enhed
+
+Never
+= Aldrig
+
+Folder from
+= Mappe fra
+
+Syncthing is not installed
+= Syncthing er ikke installeret
+
+Starting
+= Starter
+
+Stopped
+= Stoppet
+
+No devices yet
+= Ingen enheder endnu
+
+No device connected
+= Ingen enhed forbundet
+
+Scanning
+= Scanner
+
+Syncing {n} files
+= Synkroniserer {n} filer
+
+{n} of {m} connected
+= {n} af {m} forbundet
+
+{n} files
+= {n} filer
+
+{n} KB
+= {n} KB
+
+{n} MB
+= {n} MB

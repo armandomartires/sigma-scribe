@@ -26,6 +26,7 @@ pub mod pluginpkg;
 pub mod plugins;
 pub mod settings;
 pub mod store;
+pub mod sync;
 pub mod text;
 pub mod viet;
 pub mod wrap;

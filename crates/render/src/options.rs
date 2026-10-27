@@ -370,8 +370,11 @@ pub const PLUGINS_CATEGORY: usize = 6;
 /// The Logging category: a switch and, once it is on, the level.
 pub const LOGGING_CATEGORY: usize = 7;
 
+/// The Sync category: its rows come from what Syncthing reports.
+pub const SYNC_CATEGORY: usize = 8;
+
 /// The Settings categories, in order: name, then its sections.
-pub const CATEGORIES: [(&str, &[Section]); 9] = [
+pub const CATEGORIES: [(&str, &[Section]); 10] = [
     (
         "Writing",
         &[
@@ -426,6 +429,7 @@ pub const CATEGORIES: [(&str, &[Section]); 9] = [
     ),
     ("Plugins", &[]),
     ("Logging", &[("Log file", &["Logging", "Level"])]),
+    ("Sync", &[]),
     (
         "Help & about",
         &[(
@@ -475,6 +479,8 @@ pub enum Kind {
     Open(SettingsPage),
     /// Read-only value.
     Info(String),
+    /// Text across the whole row, centred, with no label (the device ID).
+    Block(String),
     /// A disabled choice (v1.5.5): its value in the slider's grey, no tap.
     Muted(String),
     /// Stepped slider (v1.4.4, `crate::slider`): one cell per stop, the
@@ -595,6 +601,8 @@ pub struct OptionsModel<'a> {
     /// How the last check went, in small print under "Check for plugins";
     /// empty before the first.
     pub repo_note: &'a str,
+    /// What Syncthing last reported, for Settings → Sync (v1.16).
+    pub sync: &'a sigma_core::sync::View,
 }
 
 /// One drawn line of a page: a section band or a row.
@@ -958,8 +966,167 @@ fn summary(m: &OptionsModel<'_>, cat: usize) -> String {
                 on_off(false)
             }
         }
+        SYNC_CATEGORY => {
+            if s.sync {
+                sync_status_text(&m.sync.status())
+            } else {
+                on_off(false)
+            }
+        }
         _ => m.version.to_owned(),
     }
+}
+
+/// A size as the Sync page writes it: KB, or MB from 1 MB.
+fn size_text(bytes: u64) -> String {
+    if bytes >= 1024 * 1024 {
+        format!("{} MB", bytes.div_ceil(1024 * 1024))
+    } else {
+        format!("{} KB", bytes.div_ceil(1024))
+    }
+}
+
+/// The one line for the state of sync, in the interface language.
+fn sync_status_text(st: &sigma_core::sync::Status) -> String {
+    use sigma_core::sync::Status;
+    match st {
+        Status::Off => tr("Off").into_owned(),
+        Status::NotInstalled => tr("Syncthing is not installed").into_owned(),
+        Status::Starting => tr("Starting").into_owned(),
+        Status::Failed(why) => format!("{} \u{b7} {why}", tr("Stopped")),
+        Status::NoDevices => tr("No devices yet").into_owned(),
+        Status::NotConnected => tr("No device connected").into_owned(),
+        Status::Scanning => tr("Scanning").into_owned(),
+        Status::Syncing(files, bytes) => format!(
+            "{} \u{b7} {}",
+            tr(&format!("Syncing {files} files")),
+            tr(&size_text(*bytes))
+        ),
+        Status::UpToDate => tr("Up to date").into_owned(),
+        Status::Error(why) => format!("{} \u{b7} {why}", tr("Error")),
+    }
+}
+
+fn info_row(label: &'static str, value: String) -> Item {
+    Item::Row(DRow {
+        label: Cow::Borrowed(label),
+        kind: Kind::Info(value),
+        note: None,
+    })
+}
+
+fn accept_ignore(accept: Change, ignore: Change) -> Kind {
+    Kind::Inline(vec![
+        choice("Accept", accept, false),
+        choice("Ignore", ignore, false),
+    ])
+}
+
+/// The Sync page: the switch, and while it is on, the state of things, this
+/// device's ID, and whatever waits to be accepted.
+fn sync_items(m: &OptionsModel<'_>) -> Vec<Item> {
+    let v = m.sync;
+    let mut out = vec![
+        Item::Band("Syncthing"),
+        Item::Row(DRow {
+            label: Cow::Borrowed("Sync notes"),
+            kind: Kind::Check {
+                on: m.settings.sync,
+                change: Change::Sync(!m.settings.sync),
+            },
+            note: Some(Cow::Borrowed(
+                "Keeps the notes in step with your computers while Σscribe is open",
+            )),
+        }),
+    ];
+    if !m.settings.sync {
+        return out;
+    }
+    out.push(Item::Band("Status"));
+    out.push(info_row("Status", sync_status_text(&v.status())));
+    if !v.peers.is_empty() {
+        out.push(info_row(
+            "Devices",
+            tr(&format!("{} of {} connected", v.connected(), v.peers.len())).into_owned(),
+        ));
+    }
+    out.push(info_row(
+        "Last sync",
+        v.last_sync
+            .clone()
+            .unwrap_or_else(|| tr("Never").into_owned()),
+    ));
+    if v.conflicts > 0 {
+        out.push(Item::Row(DRow {
+            label: Cow::Borrowed("Conflicts"),
+            kind: Kind::Info(tr(&format!("{} files", v.conflicts)).into_owned()),
+            note: Some(Cow::Borrowed("Look for conflict in the Files list")),
+        }));
+    }
+    if !v.device_id.is_empty() {
+        out.push(Item::Band("Device ID"));
+        for line in sigma_core::sync::model::id_lines(&v.device_id) {
+            out.push(Item::Row(DRow {
+                label: Cow::Borrowed("Device ID"),
+                kind: Kind::Block(line),
+                note: None,
+            }));
+        }
+    }
+    if !v.pending_devices.is_empty() || !v.pending_folders.is_empty() {
+        out.push(Item::Band("Waiting for you"));
+    }
+    for (i, d) in v.pending_devices.iter().enumerate() {
+        let name = if d.name.is_empty() {
+            tr("New device").into_owned()
+        } else {
+            d.name.clone()
+        };
+        let first = d.id.split('-').next().unwrap_or(&d.id);
+        out.push(Item::Row(DRow {
+            label: Cow::Owned(name),
+            kind: accept_ignore(
+                Change::SyncAcceptDevice(i as u8),
+                Change::SyncIgnoreDevice(i as u8),
+            ),
+            note: Some(Cow::Owned(if d.address.is_empty() {
+                first.to_owned()
+            } else {
+                format!("{first} \u{b7} {}", d.address)
+            })),
+        }));
+    }
+    for (i, f) in v.pending_folders.iter().enumerate() {
+        let from = if f.device_name.is_empty() {
+            f.device.split('-').next().unwrap_or(&f.device)
+        } else {
+            &f.device_name
+        };
+        out.push(Item::Row(DRow {
+            label: Cow::Owned(if f.label.is_empty() {
+                f.id.clone()
+            } else {
+                f.label.clone()
+            }),
+            kind: accept_ignore(
+                Change::SyncAcceptFolder(i as u8),
+                Change::SyncIgnoreFolder(i as u8),
+            ),
+            note: Some(Cow::Owned(format!("{} {from}", tr("Folder from")))),
+        }));
+    }
+    // Pairing help points at the ID above, so it waits for the ID.
+    if !v.device_id.is_empty() && v.peers.is_empty() && v.pending_devices.is_empty() {
+        out.push(Item::Band("Pairing"));
+        out.push(Item::Row(DRow {
+            label: Cow::Borrowed("Add this device on your computer"),
+            kind: Kind::Info(String::new()),
+            note: Some(Cow::Borrowed(
+                "In Syncthing there choose Add Remote Device and enter the ID above",
+            )),
+        }));
+    }
+    out
 }
 
 /// The Plugins page: one switch per installed plugin, then what the
@@ -1098,6 +1265,7 @@ pub fn page_items(m: &OptionsModel<'_>) -> Vec<Item> {
             .map(|i| Item::Category(i, summary(m, i)))
             .collect(),
         SettingsPage::Category(PLUGINS_CATEGORY) => plugin_items(m),
+        SettingsPage::Category(SYNC_CATEGORY) => sync_items(m),
         SettingsPage::Plugin(i) => plugin_setting_items(m, i),
         SettingsPage::Category(c) => {
             let mut out = Vec::new();
@@ -1506,7 +1674,7 @@ impl EditorScreen {
                         },
                         Kind::Link(i) => OptionsHit::Help(*i),
                         Kind::Open(p) => OptionsHit::Open(*p),
-                        Kind::Info(_) | Kind::Muted(_) => OptionsHit::Nothing,
+                        Kind::Info(_) | Kind::Muted(_) | Kind::Block(_) => OptionsHit::Nothing,
                         Kind::Slider { stops, enabled, .. } => {
                             if !*enabled {
                                 return OptionsHit::Nothing;
@@ -1568,7 +1736,7 @@ impl EditorScreen {
                     Kind::Pick(_) | Kind::Link(_) | Kind::Open(_) => {
                         out.push((d.label.to_string(), cells[0]));
                     }
-                    Kind::Info(_) | Kind::Muted(_) => {}
+                    Kind::Info(_) | Kind::Muted(_) | Kind::Block(_) => {}
                     Kind::Slider { stops, .. } => {
                         out.push((d.label.to_string(), cells[0]));
                         for (i, (cell, r)) in stops.iter().zip(&cells[1..]).enumerate() {
@@ -1744,6 +1912,13 @@ impl EditorScreen {
                     crate::radio::draw(c, s, cells[0], *on, t);
                 }
                 Item::Row(d) => {
+                    if let Kind::Block(text) = &d.kind {
+                        let tw = self.fonts.width(Face::AtkinsonBold, ui, text);
+                        let x = band.x as f32 + (band.w as f32 - tw) / 2.0;
+                        self.fonts
+                            .draw(c, Face::AtkinsonBold, ui, x, base, text, t.ink);
+                        continue;
+                    }
                     if let Some(note) = &d.note {
                         // Label up, the reason in small print under it.
                         let nb = mid + ui * 1.0;
@@ -1792,6 +1967,8 @@ impl EditorScreen {
                         Kind::Pick(v) => italic(c, &tr(v), t.ink),
                         Kind::Link(_) | Kind::Open(_) => italic(c, &tr("Open"), t.ink),
                         Kind::Info(v) => italic(c, v, t.mute),
+                        // Drawn above, across the row.
+                        Kind::Block(_) => {}
                         Kind::Muted(v) => italic(c, v, crate::slider::MUTED),
                         Kind::Slider {
                             stops,
@@ -1884,6 +2061,7 @@ mod tests {
             plugins: &[],
             repository: &[],
             repo_note: "",
+            sync: &sigma_core::sync::model::NO_SYNC,
         }
     }
 

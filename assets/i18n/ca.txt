@@ -983,3 +983,92 @@ Up to date
 Remove
 = Elimina
 
+
+# Settings -> Sync (v1.16)
+
+Sync
+= Sincronització
+
+Sync notes
+= Sincronitza les notes
+
+Keeps the notes in step with your computers while Σscribe is open
+= Manté les notes al dia amb els teus ordinadors mentre Σscribe és obert
+
+Status
+= Estat
+
+Devices
+= Dispositius
+
+Last sync
+= Última sincronització
+
+Conflicts
+= Conflictes
+
+Look for conflict in the Files list
+= Cerca conflict a la llista de fitxers
+
+Device ID
+= ID del dispositiu
+
+Waiting for you
+= Esperant la teva resposta
+
+Pairing
+= Aparellament
+
+Add this device on your computer
+= Afegeix aquest dispositiu al teu ordinador
+
+In Syncthing there choose Add Remote Device and enter the ID above
+= A Syncthing tria Afegeix un dispositiu remot i introdueix l'ID de dalt
+
+Accept
+= Accepta
+
+Ignore
+= Ignora
+
+New device
+= Dispositiu nou
+
+Never
+= Mai
+
+Folder from
+= Carpeta de
+
+Syncthing is not installed
+= Syncthing no està instal·lat
+
+Starting
+= Iniciant
+
+Stopped
+= Aturat
+
+No devices yet
+= Encara no hi ha dispositius
+
+No device connected
+= Cap dispositiu connectat
+
+Scanning
+= Analitzant
+
+Syncing {n} files
+= Sincronitzant {n} fitxers
+
+{n} of {m} connected
+= {n} de {m} connectats
+
+{n} files
+= {n} fitxers
+
+{n} KB
+= {n} KB
+
+{n} MB
+= {n} MB

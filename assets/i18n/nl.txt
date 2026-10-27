@@ -983,3 +983,92 @@ Up to date
 Remove
 = Verwijderen
 
+
+# Settings -> Sync (v1.16)
+
+Sync
+= Synchronisatie
+
+Sync notes
+= Notities synchroniseren
+
+Keeps the notes in step with your computers while Σscribe is open
+= Houdt de notities gelijk met je computers zolang Σscribe open is
+
+Status
+= Status
+
+Devices
+= Apparaten
+
+Last sync
+= Laatste synchronisatie
+
+Conflicts
+= Conflicten
+
+Look for conflict in the Files list
+= Zoek conflict in de bestandenlijst
+
+Device ID
+= Apparaat-ID
+
+Waiting for you
+= Wacht op jou
+
+Pairing
+= Koppelen
+
+Add this device on your computer
+= Voeg dit apparaat toe op je computer
+
+In Syncthing there choose Add Remote Device and enter the ID above
+= Kies daar in Syncthing Extern apparaat toevoegen en voer het ID hierboven in
+
+Accept
+= Accepteren
+
+Ignore
+= Negeren
+
+New device
+= Nieuw apparaat
+
+Never
+= Nooit
+
+Folder from
+= Map van
+
+Syncthing is not installed
+= Syncthing is niet geïnstalleerd
+
+Starting
+= Starten
+
+Stopped
+= Gestopt
+
+No devices yet
+= Nog geen apparaten
+
+No device connected
+= Geen apparaat verbonden
+
+Scanning
+= Scannen
+
+Syncing {n} files
+= {n} bestanden synchroniseren
+
+{n} of {m} connected
+= {n} van {m} verbonden
+
+{n} files
+= {n} bestanden
+
+{n} KB
+= {n} KB
+
+{n} MB
+= {n} MB

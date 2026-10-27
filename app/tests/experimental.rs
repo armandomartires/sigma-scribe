@@ -32,6 +32,7 @@ fn rows(s: &Settings, page: SettingsPage) -> Vec<&'static str> {
         plugins: &[],
         repository: &[],
         repo_note: "",
+        sync: &sigma_core::sync::model::NO_SYNC,
     };
     page_items(&m)
         .into_iter()
@@ -146,6 +147,7 @@ fn the_switch_is_a_checkbox_row() {
         plugins: &[],
         repository: &[],
         repo_note: "",
+        sync: &sigma_core::sync::model::NO_SYNC,
     };
     let row = display_row(&m, "Experimental features").unwrap();
     assert!(matches!(row.kind, Kind::Check { on: false, .. }));
@@ -177,6 +179,7 @@ fn display_rows(light: Option<u8>) -> Vec<(&'static str, Option<usize>)> {
         plugins: &[],
         repository: &[],
         repo_note: "",
+        sync: &sigma_core::sync::model::NO_SYNC,
     };
     page_items(&m)
         .into_iter()

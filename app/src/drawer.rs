@@ -27,8 +27,15 @@ pub(crate) struct GripTouch {
 impl App {
     pub(crate) fn save_scratch(&mut self) {
         let rev = self.scratch.revision();
+        let dirty = self.scratch_save.dirty(rev);
+        if dirty && self.guard_scratch_write() {
+            return;
+        }
         self.scratch_save
             .sync(&mut self.store, SCRATCH, self.scratch.text(), rev);
+        if dirty && self.scratch_save.state == sigma_core::SaveState::Saved {
+            self.remember_scratch_stamp();
+        }
     }
 
     /// The drawer is drawn and takes taps: write mode or preview, never

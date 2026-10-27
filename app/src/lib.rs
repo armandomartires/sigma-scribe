@@ -39,6 +39,7 @@ mod rotation;
 mod script;
 mod settings;
 mod splash;
+mod sync;
 
 use crate::files::RenameTarget;
 use crate::ink::ReadInk;
@@ -61,6 +62,7 @@ pub use pointer::{
 pub use preview::PreviewState;
 pub use rotation::{TILT_STABLE_MS, TILT_TYPING_PAUSE_MS};
 pub use splash::Splash;
+pub use sync::{sync_config, syncthing_binary, syncthing_home};
 
 fn merge(a: Option<Refresh>, b: Option<Refresh>) -> Option<Refresh> {
     match (a, b) {
@@ -146,6 +148,22 @@ pub struct App {
     panes_builtin: bool,
     /// Where the log file goes while Settings → Logging is on.
     log_dir: PathBuf,
+    /// Syncthing, while Settings → Sync is on (`docs/sync.md`), how to run
+    /// it, and what it last reported (`sync_gen` counts the supervisor's
+    /// changes the app has taken in).
+    sync: Option<sigma_core::sync::Supervisor>,
+    sync_cfg: sigma_core::sync::Config,
+    sync_view: sigma_core::sync::View,
+    sync_gen: u64,
+    /// The open note's and the scratch pad's files as the app last read or
+    /// wrote them, to notice a change made by someone else.
+    note_stamp: Option<sync::Stamp>,
+    scratch_stamp: Option<sync::Stamp>,
+    /// Hashes of the text those files held then.
+    note_hash: u64,
+    scratch_hash: u64,
+    /// When the stamps are next compared, ms.
+    watch_at: u64,
     /// Show the Graph icon even with the Graph plugin off, and open the
     /// built-in Graph (the reference the plugin is tested against, and the
     /// emulator's Graph). Off in the app.
@@ -290,6 +308,15 @@ impl App {
             pane_failed: [false; 3],
             panes_builtin: false,
             log_dir: log_dir(),
+            sync: None,
+            sync_cfg: sync::sync_config(&root, &log_dir()),
+            sync_view: sigma_core::sync::View::default(),
+            sync_gen: 0,
+            note_stamp: None,
+            scratch_stamp: None,
+            note_hash: 0,
+            scratch_hash: 0,
+            watch_at: 0,
             graph_builtin: false,
             preview: None,
             canvas: Canvas::new(lw, lh, 255),
@@ -339,6 +366,8 @@ impl App {
             perf: Perf::default(),
             running: true,
         };
+        app.remember_note_stamp();
+        app.remember_scratch_stamp();
         app.set_gsensor(false);
         app.sync_keyboard_style();
         app.sync_plugin_icons();
@@ -358,12 +387,21 @@ impl App {
             return;
         }
         let rev = self.buffer.revision();
+        let dirty = self.autosave.dirty(rev);
+        // Syncthing may have delivered a newer version of this note since
+        // it was read: never write over it (docs/sync.md §9).
+        if dirty && self.guard_note_write() {
+            return;
+        }
         self.autosave.sync(
             &mut self.store,
             self.current.as_str(),
             self.buffer.text(),
             rev,
         );
+        if dirty && self.autosave.state == sigma_core::SaveState::Saved {
+            self.remember_note_stamp();
+        }
     }
 
     /// Saves the open note and opens another.
@@ -378,6 +416,7 @@ impl App {
         if unreadable {
             self.autosave.failed("could not read the note");
         }
+        self.remember_note_stamp();
         self.screen.scroll = 0;
         let _ = self.library.set_last_opened(p);
         if self.drawer[1] {
