@@ -3,6 +3,7 @@
 All notable changes to Σscribe. Versions are tagged after they pass on the Kobo Forma.
 
 ## Unreleased
+- **Preview layout time is logged and measured.** Entering preview logs `preview layout of <note> (<bytes> bytes): <n> ms` at Debug level (Settings → Logging). New ignored test `app/tests/preview_perf.rs` and a table in `docs/perf.md`: about 0.65 ms per KB on the desktop (100 KB in 60 ms, 500 KB in 337 ms). No change in behaviour.
 - **Deleting a note or folder moves it to a trash.** Files → Delete (second tap) now moves the item to `.trash/<unix seconds>/<its path>` in the notes folder, with a note's ink beside it, instead of removing it. Nothing in the trash is listed, searched or indexed, and the last note still cannot be deleted. To get something back, copy it out of `sigma-scribe/notes/.trash/` over USB. Nothing empties the trash yet, so delete the folder by hand when it grows. New `Library::trash`; test `trash_moves_instead_of_deleting`.
 - **Backlight device confirmed on the Forma.** The Forma has two backlight devices, `mxc_msp430.0` (0 to 100) and `tlc5947_bl` (0 to 4096). The app drives `mxc_msp430.0`, and Display → Backlight changes the brightness there (device log and a hands-on check, 2026-10-27). The earlier "not yet tried" note no longer applies. A warm/cool colour slider is not built yet.
 
