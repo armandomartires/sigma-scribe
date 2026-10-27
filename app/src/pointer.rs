@@ -1,6 +1,8 @@
 //! The USB mouse pointer and scroll wheel.
 
-use super::*;
+use crate::{merge, App};
+use sigma_device::{Button, Event, Refresh};
+use sigma_render::{Rect, SelUi};
 
 impl App {
     /// Redraw for the pointer, at most every `POINTER_THROTTLE_MS`.

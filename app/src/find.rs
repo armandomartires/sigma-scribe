@@ -1,6 +1,11 @@
 //! The Find and replace bar.
 
-use super::*;
+use crate::App;
+use sigma_core::buffer::TabKind;
+use sigma_core::keyboard::{Dir, Key};
+use sigma_core::{Buffer, KeyAction};
+use sigma_device::{HwKey, Refresh};
+use sigma_render::{FindField, FindHit};
 
 impl App {
     pub(crate) fn find_typing(&self) -> bool {

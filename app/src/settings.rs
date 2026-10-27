@@ -1,6 +1,12 @@
 //! Settings: applying a change, saving, logging, language, and the Settings sheet.
 
-use super::*;
+use crate::handwriting::{samples_path, Hwr};
+use crate::{logical_size, App};
+use sigma_core::linefit::Anchor;
+use sigma_core::{Change, Keyboard, Settings};
+use sigma_device::{Device, Phase, Refresh};
+use sigma_render::{Canvas, OptionsHit, OptionsModel, Theme};
+use std::path::PathBuf;
 
 impl App {
     /// Applies Settings → Logging: the log file on or off, and its level.

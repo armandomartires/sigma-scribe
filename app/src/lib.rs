@@ -3,27 +3,14 @@
 //! keyboard and autosave. Generic over the device so the Forma, the desktop
 //! window and the headless emulator run the same code.
 
-use sigma_core::buffer::TabKind;
-use sigma_core::gesture::{Gesture, Recognizer};
-use sigma_core::graphmap::{self, MapLayout};
-use sigma_core::keyboard::{Dir, Key};
+use sigma_core::gesture::Recognizer;
+use sigma_core::graphmap::MapLayout;
 use sigma_core::library::SCRATCH;
-use sigma_core::linefit::Anchor;
-use sigma_core::links::{self, Graph};
-use sigma_core::outline::{self, Filter, Heading, Indexer, TodoItem};
-use sigma_core::settings::{Orientation, Pad, Rotation, Side};
-use sigma_core::{
-    Autosave, Buffer, Change, Entry, FsNoteStore, KeyAction, Keyboard, Kind, Library, NotePath,
-    NoteStore, Settings,
-};
-use sigma_device::{Button, Device, Event, HwKey, Mods, Phase, Refresh};
-use sigma_render::editor::Model;
-use sigma_render::{
-    BarAction, Canvas, Doc, DrawerHit, DrawerModel, EditorScreen, FilesHit, FilesModel, FindField,
-    FindHit, FindModel, GraphHit, GraphModel, GraphRow, HelpHit, HelpModel, HelpPage, Hit,
-    KbButton, MapView, OptionsHit, OptionsModel, Pane, PreviewModel, Rect, Row, SelUi, Theme,
-    ZOOMS,
-};
+use sigma_core::outline::{Filter, Indexer, TodoItem};
+use sigma_core::settings::Rotation;
+use sigma_core::{Autosave, Buffer, FsNoteStore, Keyboard, Library, NotePath, NoteStore, Settings};
+use sigma_device::Refresh;
+use sigma_render::{Canvas, EditorScreen, GraphRow, Rect, SelUi};
 use std::path::PathBuf;
 
 // `App` and its state live here; its methods are split by concern across
@@ -52,10 +39,10 @@ mod script;
 mod settings;
 mod splash;
 
+use crate::files::RenameTarget;
+use crate::ink::ReadInk;
+use crate::settings::{load_settings, resolve_lang};
 use editor::Drag;
-use files::RenameTarget;
-use ink::ReadInk;
-use settings::{load_settings, resolve_lang};
 
 pub use bootstrap::{log_dir, notes_dir, NOTE, SEED, SEED_FILES};
 pub use files::FilesState;

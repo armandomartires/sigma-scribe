@@ -1,6 +1,10 @@
 //! The ink panel and handwriting recognition.
 
-use super::*;
+use crate::handwriting::samples_path;
+use crate::App;
+use sigma_core::Change;
+use sigma_device::{Event, Mods, Phase, Refresh};
+use sigma_render::{Hit, Rect};
 
 /// A stroke's points in panel pixels (v1.5.4 gestures).
 fn stroke_pts(s: &sigma_core::ink::Stroke) -> Vec<(f32, f32)> {

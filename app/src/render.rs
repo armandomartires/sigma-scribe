@@ -1,6 +1,10 @@
 //! Drawing the frame and sending it to the panel.
 
-use super::*;
+use crate::{App, RenameTarget};
+use sigma_core::settings::Rotation;
+use sigma_device::{Device, Refresh};
+use sigma_render::editor::Model;
+use sigma_render::{Canvas, FindModel, PreviewModel, Rect};
 
 /// Grows a region to at least 16×16 (refresh rule), inside `b`.
 fn min16(r: Rect, b: Rect) -> Rect {

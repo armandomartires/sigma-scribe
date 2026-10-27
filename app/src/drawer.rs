@@ -1,6 +1,13 @@
 //! The side drawer: Contents, To-dos and the scratch pad.
 
-use super::*;
+use crate::preview::PreviewState;
+use crate::App;
+use sigma_core::keyboard::Key;
+use sigma_core::library::SCRATCH;
+use sigma_core::outline::{Heading, TodoItem};
+use sigma_core::{outline, Buffer, KeyAction, NotePath};
+use sigma_device::{HwKey, Refresh};
+use sigma_render::{DrawerHit, DrawerModel, Pane};
 
 impl App {
     pub(crate) fn save_scratch(&mut self) {

@@ -1,6 +1,10 @@
 //! Touch gestures in the editor, its scroll bar and its action bar.
 
-use super::*;
+use crate::{rank, App};
+use sigma_core::gesture::Gesture;
+use sigma_device::{Event, Refresh};
+use sigma_render::editor::Model;
+use sigma_render::{BarAction, Hit, SelUi};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Drag {
