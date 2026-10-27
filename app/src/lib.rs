@@ -3,42 +3,32 @@
 //! keyboard and autosave. Generic over the device so the Forma, the desktop
 //! window and the headless emulator run the same code.
 
-use sigma_core::buffer::TabKind;
-use sigma_core::gesture::{Gesture, Recognizer};
-use sigma_core::graphmap::{self, MapLayout};
-use sigma_core::keyboard::{Dir, Key};
+use sigma_core::gesture::Recognizer;
+use sigma_core::graphmap::MapLayout;
 use sigma_core::library::SCRATCH;
-use sigma_core::linefit::Anchor;
-use sigma_core::links::{self, Graph};
-use sigma_core::outline::{self, Filter, Heading, Indexer, TodoItem};
-use sigma_core::settings::{Orientation, Pad, Rotation, Side};
-use sigma_core::{
-    Autosave, Buffer, Change, Entry, FsNoteStore, KeyAction, Keyboard, Kind, Library, NotePath,
-    NoteStore, Settings,
-};
-use sigma_device::{Button, Device, Event, HwKey, Mods, Phase, Refresh};
-use sigma_render::editor::Model;
-use sigma_render::{
-    BarAction, Canvas, Doc, DrawerHit, DrawerModel, EditorScreen, FilesHit, FilesModel, FindField,
-    FindHit, FindModel, GraphHit, GraphModel, GraphRow, HelpHit, HelpModel, HelpPage, Hit,
-    KbButton, MapView, OptionsHit, OptionsModel, Pane, PreviewModel, Rect, Row, SelUi, Theme,
-    ZOOMS,
-};
+use sigma_core::outline::{Filter, Indexer, TodoItem};
+use sigma_core::settings::Rotation;
+use sigma_core::{Autosave, Buffer, FsNoteStore, Keyboard, Library, NotePath, NoteStore, Settings};
+use sigma_device::Refresh;
+use sigma_render::{Canvas, EditorScreen, GraphRow, Rect, SelUi};
 use std::path::PathBuf;
 
 // `App` and its state live here; its methods are split by concern across
 // these child modules, each with its own `impl App` block.
+mod bootstrap;
 mod drawer;
 mod editor;
 mod events;
 mod files;
 mod find;
 mod graph;
+mod handwriting;
 mod help;
 mod ink;
 mod keyboard;
 mod nav;
 mod paged_bar;
+mod perf;
 mod plugin_pane;
 mod plugin_screen;
 mod pointer;
@@ -49,97 +39,27 @@ mod script;
 mod settings;
 mod splash;
 
+use crate::files::RenameTarget;
+use crate::ink::ReadInk;
+use crate::settings::{load_settings, resolve_lang};
 use editor::Drag;
-use files::RenameTarget;
+
+pub use bootstrap::{log_dir, notes_dir, NOTE, SEED, SEED_FILES};
+pub use files::FilesState;
+pub use find::FindState;
+pub use graph::{GraphState, MAP_SEED};
+pub use handwriting::{all_samples, learned_path, samples_path, Hwr, LEARN_PER_CHAR};
+pub use help::HelpState;
+pub use ink::{InkState, INK_CLEANUP_MS, LETTER_MS, WORD_MS};
+pub use nav::{HistEntry, HISTORY_CAP};
+pub use perf::Perf;
 pub use plugin_screen::{IdlePlugin, PluginScreen, GRAPH_PLUGIN};
+pub use pointer::{
+    MouseDown, PointerState, DOUBLE_CLICK_MS, DOUBLE_CLICK_PX, POINTER_HIDE_MS, POINTER_THROTTLE_MS,
+};
+pub use preview::PreviewState;
+pub use rotation::{TILT_STABLE_MS, TILT_TYPING_PAUSE_MS};
 pub use splash::Splash;
-
-pub const NOTE: &str = "field-notes.md";
-pub const SEED: &str = include_str!("../seed/field-notes.md");
-pub const SEED_FILES: [(&str, &str); 4] = [
-    (NOTE, SEED),
-    (
-        "drafts/chapter-01.md",
-        include_str!("../seed/drafts/chapter-01.md"),
-    ),
-    ("scratch.txt", include_str!("../seed/scratch.txt")),
-    (SCRATCH, ""),
-];
-
-/// Where notes live: `SIGMA_NOTES`, else `/mnt/onboard/sigma-scribe/notes`
-/// on the Kobo (visible over USB), else `./target/emu-notes` on a desktop.
-#[must_use]
-pub fn notes_dir() -> PathBuf {
-    if let Ok(p) = std::env::var("SIGMA_NOTES") {
-        return p.into();
-    }
-    if cfg!(target_arch = "arm") {
-        "/mnt/onboard/sigma-scribe/notes".into()
-    } else {
-        "target/emu-notes".into()
-    }
-}
-
-/// Where the log file goes (Settings → Logging): `SIGMA_LOG_DIR`, else
-/// `.adds/sigma-scribe/log` on the Kobo, else `./target/emu-log` on a
-/// desktop.
-#[must_use]
-pub fn log_dir() -> PathBuf {
-    if let Ok(p) = std::env::var("SIGMA_LOG_DIR") {
-        return p.into();
-    }
-    if cfg!(target_arch = "arm") {
-        "/mnt/onboard/.adds/sigma-scribe/log".into()
-    } else {
-        "target/emu-log".into()
-    }
-}
-
-/// Pointer redraws at most this often (ms): e-ink friendly (v0.8.1).
-pub const POINTER_THROTTLE_MS: u64 = 150;
-/// The pointer hides after this long without movement (ms).
-pub const POINTER_HIDE_MS: u64 = 3000;
-/// Auto orientation: a reading must hold this long before it is applied.
-pub const TILT_STABLE_MS: u64 = 600;
-/// Auto orientation waits this long after typing or touching.
-pub const TILT_TYPING_PAUSE_MS: u64 = 1000;
-/// Two presses within this time and distance are a double-click.
-pub const DOUBLE_CLICK_MS: u64 = 400;
-pub const DOUBLE_CLICK_PX: i32 = 8;
-
-/// A left button held down (v0.8.1).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct MouseDown {
-    pub x: i32,
-    pub y: i32,
-    /// Text offset under the press, when it was on the note.
-    pub anchor: Option<usize>,
-    pub dragged: bool,
-}
-
-/// USB mouse / touchpad state (v0.8.1).
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct PointerState {
-    pub live: bool,
-    pub x: i32,
-    pub y: i32,
-    pub visible: bool,
-    pub last_move: u64,
-    pub last_draw: u64,
-    /// Moved since the last redraw (throttled); flushed on the tick.
-    pub pending: bool,
-    pub down: Option<MouseDown>,
-    pub last_press: Option<(i32, i32, u64)>,
-    /// Screen area the arrow has covered since the last cleanup (v1.0.1).
-    pub trail: Option<Rect>,
-    /// A cleanup refresh over `trail` is due (the arrow just hid).
-    pub cleanup: bool,
-    /// Where the arrow is on the panel now (v1.0.4 fast path).
-    pub drawn: Option<Rect>,
-    /// Latest tick time: idle is measured in processing time, so a
-    /// backlog of old move events cannot hide the arrow (v1.0.4).
-    pub last_tick: u64,
-}
 
 fn merge(a: Option<Refresh>, b: Option<Refresh>) -> Option<Refresh> {
     match (a, b) {
@@ -156,270 +76,6 @@ fn rank(r: Refresh) -> u8 {
         Refresh::Partial => 2,
         Refresh::Full => 3,
     }
-}
-
-/// The writing panel while open (v1.5.0, plan §12.3).
-#[derive(Clone, Debug, Default)]
-pub struct InkState {
-    pub ink: sigma_core::ink::Ink,
-    /// Segments drawn into the canvas since the last ink frame.
-    pending: Option<Rect>,
-    /// Everything inked since the last GL16 cleanup.
-    dirty: Option<Rect>,
-    /// When the last stroke lifted (ms).
-    last_up: Option<u64>,
-    /// The next render is an ink-only frame.
-    fast: bool,
-    /// The next `PointerCleanup` render is the ink cleanup pass.
-    cleanup: bool,
-    /// A button pressed on Down, acted on at Up over the same button.
-    press: Option<sigma_render::ink::InkButton>,
-    /// Write errors are shown in the status line.
-    pub error: Option<String>,
-    /// Draw, Letters or Train (v1.5.2).
-    pub mode: sigma_render::ink::InkMode,
-    /// Letters: the box the pending strokes are in.
-    pub boxi: Option<usize>,
-    /// Letters: candidates for the last letter, and that it was typed by
-    /// recognition (so a candidate tap may replace it).
-    pub cands: Vec<String>,
-    replace_ok: bool,
-    /// Words: characters typed for the last word (with its space), so a
-    /// candidate can replace it; and the lexicon for this panel.
-    last_len: usize,
-    lex: Option<sigma_hwr::word::Lexicon>,
-    /// Free (v1.5.3): first candidate shown, 123, language filter.
-    pub first: usize,
-    pub digits: bool,
-    pub lang: Option<&'static str>,
-    /// Train: samples saved this session.
-    pub saved: usize,
-    /// The ink of the last reading, to learn from if a candidate corrects
-    /// it.
-    read_ink: Option<ReadInk>,
-    /// The learned-samples line the last reading taught, replaced if
-    /// another candidate is picked for the same reading.
-    learned: Option<String>,
-    /// v1.5.4: where a touch above the panel went down (caret tap).
-    tap_at: Option<(i32, i32)>,
-}
-
-/// What the last reading was made from (learning from corrections).
-#[derive(Clone, Debug)]
-enum ReadInk {
-    /// A Letters box: its strokes in box units.
-    Letter(Vec<Vec<(f32, f32)>>),
-    /// The free area: the reading, with each letter's ink.
-    Free(sigma_hwr::free::Reading),
-}
-
-/// Letters: idle time after a stroke before the box is read (ms).
-pub const LETTER_MS: u64 = 800;
-/// Words (v1.5.3): idle time before the line is read (ms).
-pub const WORD_MS: u64 = 1200;
-
-/// The user's handwriting samples, inside the notes folder (hidden).
-#[must_use]
-pub fn samples_path(root: &std::path::Path) -> std::path::PathBuf {
-    root.join(".handwriting").join("samples.txt")
-}
-
-/// Samples learned from corrections: the ink of a letter the user fixed
-/// by picking a candidate, labelled with the pick. Same format as
-/// [`samples_path`], at most [`LEARN_PER_CHAR`] per character, oldest
-/// first.
-#[must_use]
-pub fn learned_path(root: &std::path::Path) -> std::path::PathBuf {
-    root.join(".handwriting").join("learned.txt")
-}
-
-/// Learned samples kept per character: the newest replace the oldest, so
-/// a correction made by mistake soon ages out.
-pub const LEARN_PER_CHAR: usize = 3;
-
-/// The enrolled and the learned samples.
-#[must_use]
-pub fn all_samples(root: &std::path::Path) -> Vec<sigma_hwr::Sample> {
-    [samples_path(root), learned_path(root)]
-        .iter()
-        .flat_map(|p| {
-            std::fs::read_to_string(p)
-                .map(|t| sigma_hwr::samples_from_text(&t))
-                .unwrap_or_default()
-        })
-        .collect()
-}
-
-/// The recogniser and its background fine-tuning (v1.5.2).
-#[derive(Default)]
-pub struct Hwr {
-    pub rec: Option<sigma_hwr::Recogniser>,
-    job: Option<std::thread::JoinHandle<sigma_hwr::Recogniser>>,
-    /// Enrolled and learned samples.
-    pub samples: usize,
-    /// A refit was asked for while one was running: run one more after it.
-    again: Option<std::path::PathBuf>,
-}
-
-impl Hwr {
-    /// Loads the model and the samples; fine-tuning on the samples runs
-    /// on a thread, the plain model answers meanwhile.
-    pub fn load(&mut self, root: &std::path::Path) {
-        self.rec = Some(Self::base());
-        self.job = None;
-        self.refit(root);
-    }
-
-    fn base() -> sigma_hwr::Recogniser {
-        sigma_hwr::Recogniser::new(sigma_hwr::Model::default_model())
-            .with_pieces(sigma_hwr::Model::pieces_model())
-    }
-
-    /// Fine-tunes again on the samples now on disk (after a correction was
-    /// learned), on a thread; the current recogniser answers meanwhile. If
-    /// a fit is already running, one more follows it.
-    pub fn refit(&mut self, root: &std::path::Path) {
-        if self.job.is_some() {
-            self.again = Some(root.to_path_buf());
-            return;
-        }
-        let samples = all_samples(root);
-        self.samples = samples.len();
-        if samples.is_empty() {
-            self.rec = Some(Self::base());
-            return;
-        }
-        let mut tuned = Self::base();
-        self.job = Some(std::thread::spawn(move || {
-            tuned.set_samples(&samples);
-            tuned
-        }));
-    }
-
-    /// Takes the fine-tuned recogniser once ready (`wait`: block for it).
-    pub fn poll(&mut self, wait: bool) {
-        if self.job.as_ref().is_some_and(|j| wait || j.is_finished()) {
-            if let Some(Ok(r)) = self.job.take().map(std::thread::JoinHandle::join) {
-                self.rec = Some(r);
-            }
-            if let Some(root) = self.again.take() {
-                self.refit(&root);
-                if wait {
-                    self.poll(true);
-                }
-            }
-        }
-    }
-}
-
-/// Idle time after a stroke before the GL16 cleanup (plan §12.4).
-pub const INK_CLEANUP_MS: u64 = 600;
-
-#[derive(Clone, Debug, Default)]
-pub struct FilesState {
-    pub folder: NotePath,
-    pub entries: Vec<Entry>,
-    pub more: Option<usize>,
-    pub armed: Option<usize>,
-    pub moving: Option<NotePath>,
-    pub targets: Vec<NotePath>,
-    pub message: Option<String>,
-    pub first: usize,
-}
-
-/// The Find bar (v0.6). The query is not persisted (brief §8).
-#[derive(Clone, Debug, Default)]
-pub struct FindState {
-    pub query: Buffer,
-    pub replace: Buffer,
-    /// Field the keyboard types into; `None` when the page has the caret.
-    pub focus: Option<FindField>,
-    /// Aa: match case (off by default).
-    pub case: bool,
-}
-
-/// The Graph sheet (v0.6): rows built when it opens.
-#[derive(Clone, Debug, Default)]
-pub struct GraphState {
-    pub notes: Vec<NotePath>,
-    pub rows: Vec<GraphRow>,
-    pub edges: usize,
-    pub first: usize,
-    /// v1.0 map view (default) or the list.
-    pub map: bool,
-    /// Links between notes (from, to) and their layout.
-    pub links: Vec<(usize, usize)>,
-    pub layout: std::sync::Arc<MapLayout>,
-    pub zoom: usize,
-    pub pan: (f64, f64),
-    pub selected: Option<usize>,
-    /// Layout time in microseconds (0 when it came from the cache).
-    pub layout_us: u64,
-}
-
-/// Seed of the map layout: fixed, so the same notes give the same picture.
-pub const MAP_SEED: u64 = 0x5349_474d_414d_4150;
-
-/// The Help sheet (v0.7): the page shown and its laid-out text.
-#[derive(Clone, Debug)]
-pub struct HelpState {
-    pub page: HelpPage,
-    pub doc: Option<Doc>,
-    pub at: usize,
-}
-
-/// Keystroke-to-present timings (v0.7 perf report): microseconds from an
-/// input event to the end of its refresh call, for key presses.
-#[derive(Clone, Debug, Default)]
-pub struct Perf {
-    pub samples: Vec<u32>,
-    /// Pointer moves: event to the end of the (never waited) submit, µs
-    /// (v1.0.3).
-    pub pointer: Vec<u32>,
-}
-
-impl Perf {
-    /// (count, p50, p95, max) in milliseconds.
-    #[must_use]
-    pub fn summary(&self) -> Option<(usize, f64, f64, f64)> {
-        Self::stats(&self.samples)
-    }
-
-    /// (count, p50, p95, max) of the pointer samples, in milliseconds.
-    #[must_use]
-    pub fn pointer_summary(&self) -> Option<(usize, f64, f64, f64)> {
-        Self::stats(&self.pointer)
-    }
-
-    fn stats(samples: &[u32]) -> Option<(usize, f64, f64, f64)> {
-        if samples.is_empty() {
-            return None;
-        }
-        let mut v = samples.to_vec();
-        v.sort_unstable();
-        let at = |q: f64| f64::from(v[((v.len() - 1) as f64 * q).round() as usize]) / 1000.0;
-        Some((v.len(), at(0.5), at(0.95), at(1.0)))
-    }
-}
-
-/// Navigation history cap (v1.0.2).
-pub const HISTORY_CAP: usize = 50;
-
-/// Where the user was before a jump (v1.0.2 Back).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct HistEntry {
-    pub note: NotePath,
-    /// Preview page, or `None` for write mode.
-    pub preview: Option<usize>,
-    pub caret: usize,
-    pub scroll: usize,
-}
-
-/// Preview mode (v0.3): the laid-out note and the page shown. Read-only.
-#[derive(Clone, Debug, Default)]
-pub struct PreviewState {
-    pub doc: Doc,
-    pub page: usize,
 }
 
 pub struct App {
@@ -510,6 +166,8 @@ pub struct App {
     phys: (u32, u32),
     /// Rotated copy of the canvas sent to the panel in landscape.
     phys_canvas: Canvas,
+    /// A finger on the drawer's edge grip: the width stop it would give.
+    handle_drag: Option<u8>,
     /// Side drawer (v0.5): open panes (Contents, To-dos, Scratch).
     pub drawer: [bool; 3],
     pub filter: Filter,
@@ -638,6 +296,7 @@ impl App {
             ui_scale_drag: None,
             phys: (width, height),
             phys_canvas: Canvas::new(width, height, 255),
+            handle_drag: None,
             drawer: [false; 3],
             filter: Filter::All,
             scratch_save: Autosave::new(scratch.revision()),
@@ -714,14 +373,6 @@ impl App {
     }
 }
 
-const SETTINGS: &str = ".sigma-settings";
-
-fn load_settings(root: &std::path::Path) -> Settings {
-    std::fs::read_to_string(root.join(SETTINGS))
-        .map(|s| Settings::parse(&s))
-        .unwrap_or_default()
-}
-
 /// Screen size for an orientation on a panel of `phys` size.
 fn logical_size(phys: (u32, u32), r: Rotation) -> (u32, u32) {
     let (short, long) = (phys.0.min(phys.1), phys.0.max(phys.1));
@@ -742,8 +393,6 @@ fn centre(r: Rect) -> (i32, i32) {
     (r.x + r.w / 2, r.y + r.h / 2)
 }
 
-impl App {}
-
 /// A note path without its extension (link labels).
 fn stem(s: &str) -> &str {
     s.rsplit_once('.').map_or(s, |(a, _)| a)
@@ -763,19 +412,4 @@ fn load_note(store: &FsNoteStore, p: &NotePath) -> (String, bool) {
         Ok(b) => (b.unwrap_or_default(), false),
         Err(_) => (String::new(), true),
     }
-}
-
-/// Help sheet and perf (v0.7).
-impl App {}
-
-/// Touch-target audit (v0.7, brief: 44 px targets at the Forma scale).
-impl App {}
-
-/// The interface language (v1.5.5, decision 57): the Kobo's unless
-/// Settings → Language → Override system language is on.
-fn resolve_lang(s: &Settings, system: sigma_render::i18n::Lang) -> sigma_render::i18n::Lang {
-    if !s.lang_override {
-        return system;
-    }
-    sigma_render::i18n::Lang::from_locale(s.ui_lang.code())
 }

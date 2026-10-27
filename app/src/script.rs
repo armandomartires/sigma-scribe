@@ -1,6 +1,8 @@
 //! Hooks the emulator scripts and tests use to find and tap controls.
 
-use super::*;
+use crate::{centre, App};
+use sigma_render::editor::Model;
+use sigma_render::{GraphHit, HelpPage, Rect};
 
 impl App {
     /// Centre of the on-screen key with this label (emulator scripts).
@@ -161,6 +163,7 @@ impl App {
                 || s.starts_with("Todo:")
                 || s.starts_with("TodoBox:")
                 || s == "Filter"
+                || s == "DrawerHandle"
                 || s == "ScratchPane" =>
             {
                 self.drawer_control(s)
@@ -224,6 +227,15 @@ impl App {
             .map(centre)
     }
 
+    /// The drawer's width in px at the current Drawer width setting
+    /// (tests, emulator).
+    #[must_use]
+    pub fn drawer_width_px(&self) -> i32 {
+        self.screen
+            .drawer_rect(&self.drawer_base(), self.settings.drawer)
+            .w
+    }
+
     /// Labels of the action bar buttons, and their centres.
     #[must_use]
     pub fn bar_buttons(&self) -> Vec<(&'static str, (i32, i32))> {
@@ -247,11 +259,17 @@ impl App {
     }
 
     /// Drawer controls for emulator scripts: `Heading:TEXT`, `Todo:TEXT`
-    /// (opens), `TodoBox:TEXT` (checks), `Filter`, `ScratchPane` (end of
-    /// the scratch text).
+    /// (opens), `TodoBox:TEXT` (checks), `Filter`, `DrawerHandle` (the width
+    /// grip), `ScratchPane` (end of the scratch text).
     fn drawer_control(&self, name: &str) -> Option<(i32, i32)> {
         if !self.drawer_visible() {
             return None;
+        }
+        if name == "DrawerHandle" {
+            let z = self
+                .screen
+                .drawer_handle(&self.drawer_base(), self.settings.drawer);
+            return Some(centre(z));
         }
         let (hs, todos) = (self.drawer_headings(), self.todo_list());
         let base = self.drawer_base();
@@ -406,6 +424,10 @@ impl App {
             if let Some(f) = d.filter {
                 add("Filter", f);
             }
+            add(
+                "drawer handle",
+                self.screen.drawer_handle(&l, self.settings.drawer),
+            );
             for (label, r) in self.pane_hits() {
                 add(&label, r);
             }

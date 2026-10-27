@@ -1,6 +1,10 @@
 //! The built-in Graph sheet and its map.
 
-use super::*;
+use crate::{stem, App};
+use sigma_core::graphmap::MapLayout;
+use sigma_core::{graphmap, NotePath};
+use sigma_device::Refresh;
+use sigma_render::{GraphHit, GraphModel, GraphRow, MapView, ZOOMS};
 
 impl App {
     /// Forgets the cached map layout (perf measurements).
@@ -255,3 +259,25 @@ impl App {
         })
     }
 }
+
+/// The Graph sheet (v0.6): rows built when it opens.
+#[derive(Clone, Debug, Default)]
+pub struct GraphState {
+    pub notes: Vec<NotePath>,
+    pub rows: Vec<GraphRow>,
+    pub edges: usize,
+    pub first: usize,
+    /// v1.0 map view (default) or the list.
+    pub map: bool,
+    /// Links between notes (from, to) and their layout.
+    pub links: Vec<(usize, usize)>,
+    pub layout: std::sync::Arc<MapLayout>,
+    pub zoom: usize,
+    pub pan: (f64, f64),
+    pub selected: Option<usize>,
+    /// Layout time in microseconds (0 when it came from the cache).
+    pub layout_us: u64,
+}
+
+/// Seed of the map layout: fixed, so the same notes give the same picture.
+pub const MAP_SEED: u64 = 0x5349_474d_414d_4150;

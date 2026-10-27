@@ -1,6 +1,9 @@
 //! The event loop: dispatching device events and the run loop.
 
-use super::*;
+use crate::{merge, App, RenameTarget};
+use sigma_device::{Device, Event, HwKey, Mods, Phase, Refresh};
+use sigma_render::editor::Model;
+use sigma_render::Hit;
 
 impl App {
     /// Applies one event; returns the refresh it needs (or `None`).
@@ -84,6 +87,9 @@ impl App {
             }
             Event::Touch { phase, x, y, t } => {
                 if let Some(r) = self.ink_touch(phase, x, y, t) {
+                    return r;
+                }
+                if let Some(r) = self.handle_touch(phase, x, y) {
                     return r;
                 }
                 if let Some(r) = self.bar_touch(phase, x, y) {

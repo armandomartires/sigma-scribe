@@ -1,6 +1,8 @@
 //! The USB mouse pointer and scroll wheel.
 
-use super::*;
+use crate::{merge, App};
+use sigma_device::{Button, Event, Refresh};
+use sigma_render::{Rect, SelUi};
 
 impl App {
     /// Redraw for the pointer, at most every `POINTER_THROTTLE_MS`.
@@ -165,4 +167,46 @@ impl App {
         self.sel_ui = None;
         Some(Refresh::Partial)
     }
+}
+
+/// Pointer redraws at most this often (ms): e-ink friendly (v0.8.1).
+pub const POINTER_THROTTLE_MS: u64 = 150;
+/// The pointer hides after this long without movement (ms).
+pub const POINTER_HIDE_MS: u64 = 3000;
+/// Two presses within this time and distance are a double-click.
+pub const DOUBLE_CLICK_MS: u64 = 400;
+pub const DOUBLE_CLICK_PX: i32 = 8;
+
+/// A left button held down (v0.8.1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MouseDown {
+    pub x: i32,
+    pub y: i32,
+    /// Text offset under the press, when it was on the note.
+    pub anchor: Option<usize>,
+    pub dragged: bool,
+}
+
+/// USB mouse / touchpad state (v0.8.1).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct PointerState {
+    pub live: bool,
+    pub x: i32,
+    pub y: i32,
+    pub visible: bool,
+    pub last_move: u64,
+    pub last_draw: u64,
+    /// Moved since the last redraw (throttled); flushed on the tick.
+    pub pending: bool,
+    pub down: Option<MouseDown>,
+    pub last_press: Option<(i32, i32, u64)>,
+    /// Screen area the arrow has covered since the last cleanup (v1.0.1).
+    pub trail: Option<Rect>,
+    /// A cleanup refresh over `trail` is due (the arrow just hid).
+    pub cleanup: bool,
+    /// Where the arrow is on the panel now (v1.0.4 fast path).
+    pub drawn: Option<Rect>,
+    /// Latest tick time: idle is measured in processing time, so a
+    /// backlog of old move events cannot hide the arrow (v1.0.4).
+    pub last_tick: u64,
 }

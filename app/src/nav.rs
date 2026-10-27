@@ -1,6 +1,9 @@
 //! Wiki links between notes and the Back history.
 
-use super::*;
+use crate::App;
+use sigma_core::links::Graph;
+use sigma_core::{links, NotePath};
+use sigma_device::Refresh;
 
 impl App {
     /// Names a `[[wiki]]` link may use for an existing note: the file name
@@ -85,4 +88,17 @@ impl App {
         self.open(&p);
         Some(Refresh::Full)
     }
+}
+
+/// Navigation history cap (v1.0.2).
+pub const HISTORY_CAP: usize = 50;
+
+/// Where the user was before a jump (v1.0.2 Back).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HistEntry {
+    pub note: NotePath,
+    /// Preview page, or `None` for write mode.
+    pub preview: Option<usize>,
+    pub caret: usize,
+    pub scroll: usize,
 }

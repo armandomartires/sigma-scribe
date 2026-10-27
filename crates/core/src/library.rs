@@ -16,6 +16,8 @@ use std::path::{Path, PathBuf};
 /// [`NotePath::parse`] accepts).
 pub const SCRATCH: &str = ".scratchpad.md";
 const STATE: &str = ".sigma-last-opened";
+/// Folder under the library root that deleted notes are moved into.
+pub const TRASH: &str = ".trash";
 
 /// A validated path relative to the library root ("" = root folder).
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -436,6 +438,47 @@ impl Library {
         }
     }
 
+    /// Moves a note or a folder into the trash instead of deleting it:
+    /// `.trash/<unix seconds>/<its path>` under the library root, with the
+    /// note's ink beside it. Nothing is listed or indexed there, and the
+    /// files can be copied back over USB. Refuses what [`Library::delete`]
+    /// refuses.
+    ///
+    /// # Errors
+    /// The scratch file, the last note, or a filesystem error.
+    pub fn trash(&self, p: &NotePath) -> io::Result<PathBuf> {
+        self.guard(p)?;
+        let remaining = self
+            .all_notes()?
+            .into_iter()
+            .filter(|n| !n.within(p))
+            .count();
+        if remaining == 0 {
+            return Err(invalid("the last note cannot be deleted".into()));
+        }
+        let secs = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs());
+        let base = self.root.join(TRASH);
+        let mut bin = base.join(secs.to_string());
+        let mut n = 2;
+        while bin.exists() {
+            bin = base.join(format!("{secs}-{n}"));
+            n += 1;
+        }
+        let from = self.fs_path(p);
+        let to = bin.join(p.as_str());
+        if let Some(d) = to.parent() {
+            fs::create_dir_all(d)?;
+        }
+        let was_dir = from.is_dir();
+        fs::rename(&from, &to)?;
+        if !was_dir {
+            crate::ink::carry(&from, &to)?;
+        }
+        Ok(to)
+    }
+
     /// After `old` (a note or folder) became `new` (v1.5.2): rewrites
     /// `[[wiki]]` links in every note and the scratch pad that pointed at a
     /// moved note (`links::rewrite`), instead of leaving them broken.
@@ -732,6 +775,40 @@ mod tests {
             "scratch is undeletable"
         );
         assert!(l.delete(&r).is_err());
+    }
+
+    #[test]
+    fn trash_moves_instead_of_deleting() {
+        let l = lib("trash");
+        let r = NotePath::root();
+        let a = l.create_note(&r, "a").unwrap();
+        let f = l.create_folder(&r, "f").unwrap();
+        let b = l.create_note(&f, "b").unwrap();
+        fs::write(l.fs_path(&b), "keep me").unwrap();
+        let to = l.trash(&b).unwrap();
+        assert!(!l.exists(&b));
+        assert_eq!(fs::read_to_string(&to).unwrap(), "keep me");
+        assert!(to.starts_with(l.fs_path(&r).join(TRASH)));
+        assert!(to.ends_with("f/b.md"));
+        assert_eq!(
+            l.all_notes().unwrap(),
+            vec![a.clone()],
+            "trash is not listed"
+        );
+        // The same path trashed twice does not collide.
+        let b2 = l.create_note(&f, "b").unwrap();
+        let to2 = l.trash(&b2).unwrap();
+        assert_ne!(to, to2);
+        // A folder goes with everything in it.
+        let g = l.create_folder(&r, "g").unwrap();
+        l.create_note(&g, "c").unwrap();
+        let tg = l.trash(&g).unwrap();
+        assert!(tg.join("c.md").is_file());
+        // The same refusals as delete.
+        assert!(l.trash(&a).is_err(), "last note");
+        assert!(l.trash(&r).is_err());
+        fs::write(l.fs_path(&r).join(SCRATCH), "").unwrap();
+        assert!(l.trash(&NotePath::parse(SCRATCH).unwrap()).is_err());
     }
 
     #[test]

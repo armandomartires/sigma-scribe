@@ -1,6 +1,10 @@
 //! Drawing the frame and sending it to the panel.
 
-use super::*;
+use crate::{App, RenameTarget};
+use sigma_core::settings::Rotation;
+use sigma_device::{Device, Refresh};
+use sigma_render::editor::Model;
+use sigma_render::{Canvas, FindModel, PreviewModel, Rect};
 
 /// Grows a region to at least 16×16 (refresh rule), inside `b`.
 fn min16(r: Rect, b: Rect) -> Rect {
@@ -171,6 +175,11 @@ impl App {
                 self.screen
                     .draw_drawer(&mut c, &l, &self.drawer_model(&hs, &todos));
             }
+        }
+        if self.drawer_visible() {
+            let base = self.drawer_base();
+            self.screen
+                .draw_drawer_handle(&mut c, &base, self.settings.drawer, self.theme());
         }
         let v = self.ink_view();
         if let (Some(ink), Some(v)) = (&mut self.ink, v) {

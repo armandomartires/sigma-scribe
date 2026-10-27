@@ -1,6 +1,8 @@
 //! The Help sheet and the About page.
 
-use super::*;
+use crate::App;
+use sigma_device::Refresh;
+use sigma_render::{Doc, HelpHit, HelpModel, HelpPage};
 
 impl App {
     /// App info rows: version, licence, author, where notes live, credits.
@@ -152,4 +154,12 @@ impl App {
             Refresh::Partial
         })
     }
+}
+
+/// The Help sheet (v0.7): the page shown and its laid-out text.
+#[derive(Clone, Debug)]
+pub struct HelpState {
+    pub page: HelpPage,
+    pub doc: Option<Doc>,
+    pub at: usize,
 }

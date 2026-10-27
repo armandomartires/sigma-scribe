@@ -1,6 +1,12 @@
 //! Settings: applying a change, saving, logging, language, and the Settings sheet.
 
-use super::*;
+use crate::handwriting::{samples_path, Hwr};
+use crate::{logical_size, App};
+use sigma_core::linefit::Anchor;
+use sigma_core::{Change, Keyboard, Settings};
+use sigma_device::{Device, Phase, Refresh};
+use sigma_render::{Canvas, OptionsHit, OptionsModel, Theme};
+use std::path::PathBuf;
 
 impl App {
     /// Applies Settings → Logging: the log file on or off, and its level.
@@ -348,4 +354,24 @@ impl App {
             }
         }
     }
+}
+
+const SETTINGS: &str = ".sigma-settings";
+
+pub(crate) fn load_settings(root: &std::path::Path) -> Settings {
+    std::fs::read_to_string(root.join(SETTINGS))
+        .map(|s| Settings::parse(&s))
+        .unwrap_or_default()
+}
+
+/// The interface language (v1.5.5, decision 57): the Kobo's unless
+/// Settings → Language → Override system language is on.
+pub(crate) fn resolve_lang(
+    s: &Settings,
+    system: sigma_render::i18n::Lang,
+) -> sigma_render::i18n::Lang {
+    if !s.lang_override {
+        return system;
+    }
+    sigma_render::i18n::Lang::from_locale(s.ui_lang.code())
 }

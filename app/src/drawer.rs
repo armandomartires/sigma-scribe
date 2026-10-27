@@ -1,6 +1,14 @@
 //! The side drawer: Contents, To-dos and the scratch pad.
 
-use super::*;
+use crate::preview::PreviewState;
+use crate::App;
+use sigma_core::keyboard::Key;
+use sigma_core::library::SCRATCH;
+use sigma_core::outline::{Heading, TodoItem};
+use sigma_core::Change;
+use sigma_core::{outline, Buffer, KeyAction, NotePath};
+use sigma_device::{HwKey, Phase, Refresh};
+use sigma_render::{DrawerHit, DrawerModel, Pane};
 
 impl App {
     pub(crate) fn save_scratch(&mut self) {
@@ -144,6 +152,37 @@ impl App {
         let base = self.drawer_base();
         self.screen
             .drawer_hit(&base, &self.drawer_model(&hs, &todos), x, y)
+    }
+
+    /// A finger on the drawer's edge grip drags its width: the stop nearest
+    /// the finger is applied when it lifts (one redraw, as for the other
+    /// sliders). `None` when the touch is not the grip's.
+    pub(crate) fn handle_touch(&mut self, phase: Phase, x: i32, y: i32) -> Option<Option<Refresh>> {
+        let (base, side) = (self.drawer_base(), self.settings.drawer);
+        match phase {
+            Phase::Down => {
+                if !self.drawer_visible() || self.ink.is_some() || self.options {
+                    return None;
+                }
+                if !self.screen.drawer_handle(&base, side).contains(x, y) {
+                    return None;
+                }
+                self.handle_drag = Some(self.settings.drawer_width);
+                Some(None)
+            }
+            Phase::Move => {
+                self.handle_drag?;
+                self.handle_drag = Some(self.screen.drawer_stop_at(&base, side, x));
+                Some(None)
+            }
+            Phase::Up => {
+                let stop = self.handle_drag.take()?;
+                if stop == self.settings.drawer_width {
+                    return Some(None);
+                }
+                Some(Some(self.change(Change::DrawerWidth(stop))))
+            }
+        }
     }
 
     pub(crate) fn in_drawer(&self, x: i32, y: i32) -> bool {

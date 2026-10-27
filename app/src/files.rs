@@ -1,6 +1,12 @@
 //! The Files sheet and renaming notes and folders in place.
 
-use super::*;
+use crate::App;
+use sigma_core::buffer::TabKind;
+use sigma_core::keyboard::{Dir, Key};
+use sigma_core::library::SCRATCH;
+use sigma_core::{Autosave, Buffer, Entry, KeyAction, Keyboard, Kind, NotePath};
+use sigma_device::{HwKey, Refresh};
+use sigma_render::{FilesHit, FilesModel, Row};
 
 /// Replaces a buffer's text with `new` (undoable), caret kept nearby.
 fn take_text(b: &mut Buffer, new: &str) {
@@ -336,8 +342,8 @@ impl App {
             FilesHit::Delete(i) => {
                 if was_armed == Some(i) {
                     let p = f.entries.get(i)?.path.clone();
-                    match lib.delete(&p) {
-                        Ok(()) => {
+                    match lib.trash(&p) {
+                        Ok(_) => {
                             let gone = self.current.within(&p);
                             self.refresh_files();
                             if gone {
@@ -389,4 +395,16 @@ impl App {
         }
         Some(Refresh::Partial)
     }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct FilesState {
+    pub folder: NotePath,
+    pub entries: Vec<Entry>,
+    pub more: Option<usize>,
+    pub armed: Option<usize>,
+    pub moving: Option<NotePath>,
+    pub targets: Vec<NotePath>,
+    pub message: Option<String>,
+    pub first: usize,
 }

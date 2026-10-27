@@ -1,6 +1,8 @@
 //! Preview mode: the laid-out, read-only note.
 
-use super::*;
+use crate::{stem, App};
+use sigma_device::{Event, HwKey, Refresh};
+use sigma_render::{Doc, Hit};
 
 impl App {
     /// Switches to preview at the page showing the top of the write page.
@@ -11,7 +13,15 @@ impl App {
         self.sel_ui = None;
         self.drag = None;
         self.sync_preview_drawer(true);
+        let started = std::time::Instant::now();
         let doc = self.preview_doc();
+        sigma_core::debug!(
+            "app",
+            "preview layout of {} ({} bytes): {} ms",
+            self.current.as_str(),
+            self.buffer.text().len(),
+            started.elapsed().as_millis()
+        );
         let page = self.page_rect();
         let top = self.screen.top_source_line(&self.buffer, page);
         let page = doc.page_of_line(top);
@@ -112,4 +122,11 @@ impl App {
             _ => None,
         }
     }
+}
+
+/// Preview mode (v0.3): the laid-out note and the page shown. Read-only.
+#[derive(Clone, Debug, Default)]
+pub struct PreviewState {
+    pub doc: Doc,
+    pub page: usize,
 }

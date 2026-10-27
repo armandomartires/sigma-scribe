@@ -1,6 +1,10 @@
 //! Tilt sensor, rotation, and mapping between panel and logical coordinates.
 
-use super::*;
+use crate::App;
+use sigma_core::settings::{Orientation, Rotation};
+use sigma_core::Change;
+use sigma_device::{Event, Refresh};
+use sigma_render::Canvas;
 
 impl App {
     #[must_use]
@@ -137,3 +141,8 @@ impl App {
         out
     }
 }
+
+/// Auto orientation: a reading must hold this long before it is applied.
+pub const TILT_STABLE_MS: u64 = 600;
+/// Auto orientation waits this long after typing or touching.
+pub const TILT_TYPING_PAUSE_MS: u64 = 1000;

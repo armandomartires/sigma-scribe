@@ -1,6 +1,9 @@
 //! The splash screen, drawn before the library and settings load.
 
-use super::*;
+use crate::{load_settings, logical_size};
+use sigma_core::settings::Rotation;
+use sigma_device::{Device, Refresh};
+use sigma_render::{Canvas, Rect, Theme};
 
 /// The splash screen: drawn the moment the panel is open, before the
 /// library, dictionaries and settings are loaded, so the Forma shows the
