@@ -8,7 +8,7 @@
 use super::json::Json;
 use super::model::{self, Run, View};
 use super::rest::Client;
-use super::{count_conflicts, ensure_ignore, percent_encode, random_key};
+use super::{count_conflicts, ensure_ignore, percent_encode, random_folder_id, random_key};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
@@ -537,7 +537,15 @@ fn apply(cfg: &Config, client: &Client, c: &Cmd) -> io::Result<()> {
             d.set("addresses", Json::Arr(vec![Json::string("dynamic")]));
             d.set("autoAcceptFolders", Json::Bool(false));
             d.set("introducer", Json::Bool(false));
-            client.send("POST", "/rest/config/devices", &d.render())
+            client.send("POST", "/rest/config/devices", &d.render())?;
+            // A device that was only added (a phone that scanned the code)
+            // offers no folder, so the notes folder is offered to it. A
+            // failure leaves the device added and is logged, not returned:
+            // the log line for the command says it was accepted.
+            if let Err(e) = share_notes(cfg, client, id) {
+                crate::warn!("sync", "share notes with {}: {e}", short(id));
+            }
+            Ok(())
         }
         Cmd::IgnoreDevice { id } => client.send(
             "DELETE",
@@ -559,53 +567,170 @@ fn apply(cfg: &Config, client: &Client, c: &Cmd) -> io::Result<()> {
         Cmd::AcceptFolder { id, label, device } => {
             ensure_ignore(&cfg.notes)?;
             let folders = client.get_json("/rest/config/folders")?;
-            if let Some(f) = folders
-                .items()
-                .iter()
-                .find(|f| f.get("id").and_then(Json::as_str) == Some(id))
-            {
+            if let Some(f) = find_folder(&folders, id) {
                 // Already the notes folder: share it with one more device.
-                let mut f = f.clone();
-                let mut devices = f
-                    .get("devices")
-                    .map_or_else(Vec::new, |d| d.items().to_vec());
-                if !devices
-                    .iter()
-                    .any(|d| d.get("deviceID").and_then(Json::as_str) == Some(device))
-                {
-                    devices.push(device_entry(device));
+                return share_folder(client, f, device);
+            }
+            match folder_at(&folders, &cfg.notes) {
+                None => create_notes_folder(cfg, client, id, label, vec![device_entry(device)]),
+                Some(old) if made_here(cfg, &old) => {
+                    let old = find_folder(&folders, &old).ok_or_else(|| {
+                        io::Error::other("the notes folder is not in the configuration")
+                    })?;
+                    replace_notes_folder(cfg, client, old, id, label, device)
                 }
-                f.set("devices", Json::Arr(devices));
-                return client.send(
-                    "PUT",
-                    &format!("/rest/config/folders/{}", percent_encode(id)),
-                    &f.render(),
-                );
-            }
-            if folder_at(&folders, &cfg.notes).is_some() {
-                return Err(io::Error::other(
+                Some(_) => Err(io::Error::other(
                     "the notes folder is already shared under another folder ID",
-                ));
+                )),
             }
-            let mut f = client.get_json("/rest/config/defaults/folder")?;
-            f.set("id", Json::string(id.as_str()));
-            f.set(
-                "label",
-                Json::string(if label.is_empty() { id } else { label }.as_str()),
-            );
-            f.set("path", Json::string(cfg.notes.to_string_lossy()));
-            f.set("type", Json::string("sendreceive"));
-            f.set("devices", Json::Arr(vec![device_entry(device)]));
-            f.set("fsWatcherEnabled", Json::Bool(true));
-            f.set("fsWatcherDelayS", Json::Num(10.0));
-            f.set("rescanIntervalS", Json::Num(3600.0));
-            // The Kobo's volume is FAT: no permission bits, 2 s time stamps.
-            f.set("ignorePerms", Json::Bool(true));
-            f.set("modTimeWindowS", Json::Num(2.0));
-            f.set("maxConflicts", Json::Num(5.0));
-            client.send("POST", "/rest/config/folders", &f.render())
         }
     }
+}
+
+/// The configured folder with this ID.
+fn find_folder<'a>(folders: &'a Json, id: &str) -> Option<&'a Json> {
+    folders
+        .items()
+        .iter()
+        .find(|f| f.get("id").and_then(Json::as_str) == Some(id))
+}
+
+/// The first block of a device ID: enough for the log, and not a name.
+fn short(id: &str) -> &str {
+    id.split('-').next().unwrap_or(id)
+}
+
+/// Shares folder `f` (a configuration object) with `device`, once.
+fn share_folder(client: &Client, f: &Json, device: &str) -> io::Result<()> {
+    let id = f.get("id").and_then(Json::as_str).unwrap_or_default();
+    let mut f = f.clone();
+    let mut devices = f
+        .get("devices")
+        .map_or_else(Vec::new, |d| d.items().to_vec());
+    if !devices
+        .iter()
+        .any(|d| d.get("deviceID").and_then(Json::as_str) == Some(device))
+    {
+        devices.push(device_entry(device));
+    }
+    f.set("devices", Json::Arr(devices));
+    client.send(
+        "PUT",
+        &format!("/rest/config/folders/{}", percent_encode(id)),
+        &f.render(),
+    )
+}
+
+/// Shares the notes folder with `device`: adds it to the folder at the notes
+/// path, or makes that folder (with an ID of its own) when there is none.
+fn share_notes(cfg: &Config, client: &Client, device: &str) -> io::Result<()> {
+    ensure_ignore(&cfg.notes)?;
+    let folders = client.get_json("/rest/config/folders")?;
+    crate::info!("sync", "share notes with {}", short(device));
+    if let Some(f) = folder_at(&folders, &cfg.notes).and_then(|id| find_folder(&folders, &id)) {
+        return share_folder(client, f, device);
+    }
+    let id = random_folder_id();
+    create_notes_folder(cfg, client, &id, NOTES_LABEL, vec![device_entry(device)])?;
+    // Remember that this one is ours, so a computer's own offer can replace it.
+    if let Err(e) = write_marker(cfg, &id) {
+        crate::warn!("sync", "notes folder marker: {e}");
+    }
+    crate::info!("sync", "notes folder {id} created");
+    Ok(())
+}
+
+/// The notes folder as Syncthing is told about it: one function for the
+/// folder the Kobo makes and the folder it accepts.
+fn create_notes_folder(
+    cfg: &Config,
+    client: &Client,
+    id: &str,
+    label: &str,
+    devices: Vec<Json>,
+) -> io::Result<()> {
+    let mut f = client.get_json("/rest/config/defaults/folder")?;
+    f.set("id", Json::string(id));
+    f.set(
+        "label",
+        Json::string(if label.is_empty() { id } else { label }),
+    );
+    f.set("path", Json::string(cfg.notes.to_string_lossy()));
+    f.set("type", Json::string("sendreceive"));
+    f.set("devices", Json::Arr(devices));
+    f.set("fsWatcherEnabled", Json::Bool(true));
+    f.set("fsWatcherDelayS", Json::Num(10.0));
+    f.set("rescanIntervalS", Json::Num(3600.0));
+    // The Kobo's volume is FAT: no permission bits, 2 s time stamps.
+    f.set("ignorePerms", Json::Bool(true));
+    f.set("modTimeWindowS", Json::Num(2.0));
+    f.set("maxConflicts", Json::Num(5.0));
+    client.send("POST", "/rest/config/folders", &f.render())
+}
+
+/// Makes folder `id`, offered by `device`, the notes folder in place of the
+/// one the Kobo made: same path and devices, plus the offerer. Removing a
+/// folder from the configuration leaves its files alone. If the new one is
+/// refused, the old one is put back.
+fn replace_notes_folder(
+    cfg: &Config,
+    client: &Client,
+    old: &Json,
+    id: &str,
+    label: &str,
+    device: &str,
+) -> io::Result<()> {
+    let old_id = old.get("id").and_then(Json::as_str).unwrap_or_default();
+    let mut devices = old
+        .get("devices")
+        .map_or_else(Vec::new, |d| d.items().to_vec());
+    if !devices
+        .iter()
+        .any(|d| d.get("deviceID").and_then(Json::as_str) == Some(device))
+    {
+        devices.push(device_entry(device));
+    }
+    client.send(
+        "DELETE",
+        &format!("/rest/config/folders/{}", percent_encode(old_id)),
+        "",
+    )?;
+    if let Err(e) = create_notes_folder(cfg, client, id, label, devices) {
+        if let Err(back) = client.send("POST", "/rest/config/folders", &old.render()) {
+            crate::warn!("sync", "putting notes folder {old_id} back: {back}");
+        }
+        return Err(e);
+    }
+    forget_marker(cfg);
+    crate::info!(
+        "sync",
+        "notes folder now {id} (offered by {})",
+        short(device)
+    );
+    Ok(())
+}
+
+/// The label of the folder the Kobo makes.
+const NOTES_LABEL: &str = "Σscribe notes";
+
+/// The file in `--home` that names the notes folder the Kobo made itself.
+fn marker_path(cfg: &Config) -> PathBuf {
+    cfg.home.join("notes-folder-made-here")
+}
+
+fn write_marker(cfg: &Config, id: &str) -> io::Result<()> {
+    std::fs::create_dir_all(&cfg.home)?;
+    crate::store::write_atomic(&marker_path(cfg), id)
+}
+
+fn forget_marker(cfg: &Config) {
+    let _ = std::fs::remove_file(marker_path(cfg));
+}
+
+/// Whether the notes folder `id` is one the Kobo made (not one that came from
+/// a device's offer).
+fn made_here(cfg: &Config, id: &str) -> bool {
+    std::fs::read_to_string(marker_path(cfg)).is_ok_and(|t| t.trim() == id)
 }
 
 /// Reads Syncthing's state into the view; remembers what it last complained
@@ -652,13 +777,16 @@ impl Poller {
         };
         let pending_devices =
             model::parse_pending_devices(&client.get_json("/rest/cluster/pending/devices")?);
-        // Offers fit only while there is no notes folder, or for that folder.
+        // Offers fit only while there is no notes folder, or for that folder;
+        // or while the notes folder is one the Kobo made, which an offer
+        // replaces.
+        let ours = folder_id.as_deref().is_some_and(|f| made_here(cfg, f));
         let pending_folders = model::parse_pending_folders(
             &client.get_json("/rest/cluster/pending/folders")?,
             &peers,
         )
         .into_iter()
-        .filter(|p| folder_id.as_deref().is_none_or(|f| f == p.id))
+        .filter(|p| ours || folder_id.as_deref().is_none_or(|f| f == p.id))
         .collect();
         if self
             .conflicts_at

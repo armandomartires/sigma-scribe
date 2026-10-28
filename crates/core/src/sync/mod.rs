@@ -123,6 +123,26 @@ pub fn random_key() -> String {
     b.iter().map(|v| format!("{v:02x}")).collect()
 }
 
+/// A folder ID the way Syncthing makes them: ten lower-case base32 letters
+/// and digits in two groups, `xxxxx-xxxxx`.
+#[must_use]
+pub fn random_folder_id() -> String {
+    const ALPHABET: &[u8; 32] = b"abcdefghijklmnopqrstuvwxyz234567";
+    let key = random_key();
+    let mut id = String::with_capacity(11);
+    for (i, pair) in key.as_bytes().chunks(2).take(10).enumerate() {
+        if i == 5 {
+            id.push('-');
+        }
+        let byte = std::str::from_utf8(pair)
+            .ok()
+            .and_then(|h| u8::from_str_radix(h, 16).ok())
+            .unwrap_or(0);
+        id.push(char::from(ALPHABET[usize::from(byte % 32)]));
+    }
+    id
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -188,5 +208,18 @@ mod tests {
         assert_eq!(a.len(), 64);
         assert!(a.bytes().all(|c| c.is_ascii_hexdigit()));
         assert_ne!(a, b);
+    }
+
+    #[test]
+    fn folder_ids_look_like_syncthings() {
+        let id = random_folder_id();
+        let ok = |g: &str| {
+            g.len() == 5
+                && g.bytes()
+                    .all(|c| c.is_ascii_lowercase() || (b'2'..=b'7').contains(&c))
+        };
+        let (a, b) = id.split_once('-').unwrap();
+        assert!(ok(a) && ok(b), "{id}");
+        assert_ne!(id, random_folder_id());
     }
 }

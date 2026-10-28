@@ -1137,3 +1137,6 @@ Show QR code
 
 QR code
 = Code QR
+
+Not shared yet
+= Pas encore partagé

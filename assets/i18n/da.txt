@@ -1136,3 +1136,6 @@ Show QR code
 
 QR code
 = QR-kode
+
+Not shared yet
+= Endnu ikke delt

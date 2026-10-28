@@ -216,14 +216,37 @@ At every start:
   work), the bandwidth limits are left alone. Global discovery and relays stay on,
   the Syncthing defaults, so a computer on another network can still reach
   the Kobo.
-- The notes folder, when the reader accepts a folder (§7): `id` and `label`
-  as offered, `path` = the notes folder, `type: sendreceive`,
+- The notes folder, made in one of two ways (§7), always with the same
+  settings: `path` = the notes folder, `type: sendreceive`,
   `fsWatcherEnabled: true`, `fsWatcherDelayS: 10`, `rescanIntervalS: 3600`,
-  `ignorePerms: true`, `modTimeWindowS: 2`, `maxConflicts: 5`, shared with the
-  offering device. No other folder is ever created. An offer for another
-  folder ID is not listed once the notes folder exists; an offer for the
-  notes folder's own ID (a second computer) is, and Accept adds that device
-  to the folder.
+  `ignorePerms: true`, `modTimeWindowS: 2`, `maxConflicts: 5`, plus the
+  `.stignore` (§5).
+  - *Accepting a device* shares the notes folder with it. If a folder is
+    already at the notes path the device is added to it (a `PUT` of that
+    folder). Otherwise the Kobo makes the folder: a new random ID in
+    Syncthing's own style (`xxxxx-xxxxx`, lower-case base32) and the label
+    "Σscribe notes". The remote device then sees "… wants to share folder
+    Σscribe notes". This is what makes a phone that only scanned the QR code
+    (§7) receive the notes: it offers no folder, so without this nothing
+    would ever be shared.
+  - *Accepting a folder offer* creates the folder with the offered `id` and
+    `label`, shared with the offering device, or adds the device if that
+    folder is already the notes folder.
+  - The folder the Kobo makes itself is remembered in
+    `syncthing-home/notes-folder-made-here` (its ID). While the notes folder
+    is that one, an offer of **any** folder ID is listed, because a computer
+    that ticked its own folder when it added the Kobo offers it under its own
+    ID; accepting it **replaces** the Kobo's folder: the folder is removed
+    from Syncthing's configuration and made again under the offered ID, at the
+    same path, with the devices already on it plus the offerer (the marker is
+    deleted). Removing a folder from the configuration does not delete its
+    files (it only stops syncing it; the REST page says nothing either way,
+    Syncthing's remove-folder dialog says files stay, and the app never
+    deletes a note itself). If Syncthing refuses the new folder the old one is
+    put back. A folder that came from an offer has no marker, and keeps the
+    old rule: an offer for another folder ID is not listed, an offer for the
+    notes folder's own ID (a second computer) is, and Accept adds that device.
+  No other folder is ever created.
 - A device, when the reader accepts it: `addresses: ["dynamic"]`, not an
   introducer, `autoAcceptFolders: false`.
 
@@ -242,17 +265,22 @@ and the Kobo has no copy and paste out. So the Kobo is the one that is
    the global discovery servers). The Kobo has not heard of it, so
    Syncthing reports a **pending device**. Settings → Sync lists it under
    *Waiting for you* with its name and address and **Accept / Ignore**.
-4. Accept adds the device. The computer's folder offer then shows as a
-   **pending folder** (label, who offered it); **Accept** creates the folder
-   at the notes path (§6), and syncing starts. **Ignore** dismisses the offer
-   for now (`DELETE …/pending/…`); it can come back on the next connection.
+4. Accept adds the device **and shares the notes folder with it** (§6). If
+   the computer ticked its own folder in step 2, its offer also shows as a
+   **pending folder** (label, who offered it); **Accept** makes that the
+   notes folder in place of the Kobo's own (§6) and syncing starts.
+   **Ignore** dismisses the offer for now (`DELETE …/pending/…`); it can
+   come back on the next connection. If the computer ticked nothing, it sees
+   "<Kobo name> wants to share folder Σscribe notes" and accepts that.
 
 **Pairing by scanning.** Under the ID, **Show QR code** opens a full page
 with the ID as a QR code (the plain ID string with its dashes, which is what
 Syncthing's own GUI encodes and what the Android app's scanner reads). On the
-phone: Syncthing app → Devices → + → scan. The phone then adds the Kobo; the
-computer can be added to the Kobo the usual way (above) or the phone can
-introduce it. The code is black on white with a 4-module quiet zone whatever
+phone: Syncthing app → Devices → + → scan. The phone then adds the Kobo and
+the Kobo lists the phone under *Waiting for you*. The whole phone flow:
+scan the code, **Accept** the phone on the Kobo (which shares the notes
+folder with it), then accept "Σscribe notes" on the phone. A computer can
+be added to the Kobo the usual way (above), or the phone can introduce it. The code is black on white with a 4-module quiet zone whatever
 the Night setting, whole pixels per module, up to 14 px: about 39 mm across at
 the Forma's 300 dpi (the ID is upper case, digits and dashes, so it fits QR
 version 4, 33 modules, at error correction M). It is made by the `qrcodegen`
@@ -319,7 +347,7 @@ lost at the next keystroke. With sync that is not acceptable, so:
 | Row | Source |
 |---|---|
 | Sync (On / Off) | the setting |
-| Status | *Starting…*, *Not installed*, *Stopped: <reason>*, *No device connected*, *Syncing 3 files (120 KB)*, *Scanning*, *Up to date*, or the first folder error |
+| Status | *Starting…*, *Not installed*, *Stopped: <reason>*, *No devices yet*, *No device connected*, *Not shared yet* (a device is connected but no folder is at the notes path: the folder is being made, could not be made, or the offer was ignored; never "Up to date"), *Syncing 3 files (120 KB)*, *Scanning*, *Up to date*, or the first folder error |
 | Devices | `connections`: "1 of 2 connected" |
 | Last sync | `stats/folder` → `lastFile.at`, shown as `2026-10-28 14:05` |
 | Conflicts | count of `*.sync-conflict-*` and `*.conflict-*` files in the notes folder (a walk of at most 20,000 entries, once a minute, dotted folders skipped) |
@@ -368,8 +396,9 @@ did not touch the device. For `docs/device-checklist-prerelease.md`:
    within a minute on the first start (key generation on one core: time it);
    the page shows a 63-character device ID.
 3. Add the Kobo on a computer by that ID. The computer appears under
-   *Waiting for you* within about a minute on the same Wi-Fi. Accept; accept
-   the folder. Both directions: edit a note on the computer, see it on the
+   *Waiting for you* within about a minute on the same Wi-Fi. Accept (this
+   also shares the notes folder with it); accept the folder it offers, or the
+   Kobo's "Σscribe notes" on the computer (§12.13). Both directions: edit a note on the computer, see it on the
    Kobo; edit on the Kobo, see it on the computer.
 4. **The notes folder on vfat**: no permission errors, no endless rescans, no
    case or name errors in `.adds/sigma-scribe/log/syncthing.log`; a note named
@@ -400,6 +429,22 @@ did not touch the device. For `docs/device-checklist-prerelease.md`:
     (Devices → + → scan) reads it from the Forma's screen at normal reading
     distance, in the room's light, and offers the right device ID. Try Night
     mode too (the code must stay black on white).
+13. Sharing on Accept (not yet tried): (a) phone: scan the code, then on the
+    Kobo Accept the phone under *Waiting for you*; within about a minute the
+    phone shows "<Kobo name> wants to share folder Σscribe notes"; accept it
+    there and the notes arrive. `syncthing.log`/`sigma-scribe.log` show
+    `sync: share notes with <id>` and `sync: notes folder xxxxx-xxxxx created`;
+    `syncthing-home/notes-folder-made-here` holds that ID. (b) computer that
+    ticked the notes folder when it added the Kobo: Accept the device, then
+    its folder offer appears; Accept it; the log shows
+    `sync: notes folder now <id> (offered by …)`, the marker is gone, no note
+    was lost. (c) computer that ticked nothing: it is offered "Σscribe notes"
+    like the phone. (d) a second device after (a): Accept adds it to the same
+    folder. While a device is connected and the folder does not exist yet the
+    status is *Not shared yet*, not *Up to date* (found on the Forma
+    2026-10-28: it said *Up to date* with no folder).
+14. Expected in `syncthing.log`, harmless: Syncthing warns that it "should not
+    run as a privileged or system user"; the Kobo runs everything as root.
 11. Loopback (found on the Forma, fix not yet tried there): the launcher log has
     `net: lo has no 127.0.0.1, bringing it up` then a `net: lo: inet …` line;
     `.adds/sigma-scribe/log/syncthing.log` has no "cannot assign requested

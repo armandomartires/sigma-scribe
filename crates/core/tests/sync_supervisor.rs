@@ -251,6 +251,23 @@ fn the_view_follows_the_rest_answers() {
 }
 
 #[test]
+fn a_connected_device_and_no_notes_folder_is_not_up_to_date() {
+    let dir = tmp("noshare");
+    let (port, fake) = serve();
+    let cfg = config(&dir, port, "exec sleep 120");
+    basic_routes(&fake, &cfg.notes, false);
+    let sup = Supervisor::start(cfg);
+    let v = until(&sup, "a view with a device", |v| {
+        v.run == Run::Running && !v.peers.is_empty()
+    });
+    assert_eq!(v.connected(), 1);
+    assert!(v.folder.is_none());
+    assert_eq!(v.status(), Status::NotShared);
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn the_ca_file_reaches_syncthing_as_ssl_cert_file() {
     let dir = tmp("ca");
     let (port, fake) = serve();
@@ -341,7 +358,10 @@ fn accepting_posts_the_documented_objects() {
         "the template is kept"
     );
 
-    let f = Json::parse(&seen(&fake, "POST /rest/config/folders")[0]).unwrap();
+    // The accepted device was also offered the notes folder (see below);
+    // the accepted folder is the second one made.
+    assert_eq!(seen(&fake, "POST /rest/config/folders").len(), 2);
+    let f = Json::parse(&seen(&fake, "POST /rest/config/folders")[1]).unwrap();
     assert_eq!(f.get("id").unwrap().as_str(), Some("abcde-fghij"));
     assert_eq!(
         f.get("path").unwrap().as_str(),
@@ -400,6 +420,235 @@ fn a_folder_offer_for_the_notes_folder_shares_it_once_more() {
         .filter_map(|d| d.get("deviceID")?.as_str())
         .collect();
     assert_eq!(ids, [ME, "AAAAAAA-BBBBBBB"]);
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+fn wait_for(fake: &Shared, key: &str, n: usize) {
+    let end = Instant::now() + Duration::from_secs(10);
+    while seen(fake, key).len() < n {
+        assert!(Instant::now() < end, "no {key} (wanted {n})");
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
+fn device_ids(f: &Json) -> Vec<&str> {
+    f.get("devices")
+        .unwrap()
+        .items()
+        .iter()
+        .filter_map(|d| d.get("deviceID")?.as_str())
+        .collect()
+}
+
+fn folder_defaults(f: &Shared) {
+    route(
+        f,
+        "GET /rest/config/defaults/device",
+        r#"{"deviceID":"","name":""}"#,
+    );
+    route(
+        f,
+        "GET /rest/config/defaults/folder",
+        r#"{"id":"","path":"~","type":"sendreceive","devices":[]}"#,
+    );
+    route(f, "POST /rest/config/devices", "");
+    route(f, "POST /rest/config/folders", "");
+}
+
+#[test]
+fn accepting_a_device_with_no_notes_folder_makes_one_shared_with_it() {
+    let dir = tmp("dev-new");
+    let (port, fake) = serve();
+    let cfg = config(&dir, port, "exec sleep 120");
+    let (notes, home) = (cfg.notes.clone(), cfg.home.clone());
+    basic_routes(&fake, &notes, false);
+    folder_defaults(&fake);
+    let sup = Supervisor::start(cfg);
+    until(&sup, "running", |v| v.run == Run::Running);
+    sup.command(Cmd::AcceptDevice {
+        id: JOE.into(),
+        name: "Phone".into(),
+    });
+    wait_for(&fake, "POST /rest/config/folders", 1);
+
+    let f = Json::parse(&seen(&fake, "POST /rest/config/folders")[0]).unwrap();
+    let id = f.get("id").unwrap().as_str().unwrap();
+    let (a, b) = id.split_once('-').expect(id);
+    assert!(
+        [a, b].iter().all(|g| g.len() == 5
+            && g.bytes()
+                .all(|c| c.is_ascii_lowercase() || (b'2'..=b'7').contains(&c))),
+        "{id}"
+    );
+    assert_eq!(f.get("label").unwrap().as_str(), Some("Σscribe notes"));
+    assert_eq!(
+        f.get("path").unwrap().as_str(),
+        Some(notes.to_str().unwrap())
+    );
+    assert_eq!(f.get("type").unwrap().as_str(), Some("sendreceive"));
+    assert_eq!(f.get("fsWatcherEnabled").unwrap().as_bool(), Some(true));
+    assert_eq!(f.get("ignorePerms").unwrap().as_bool(), Some(true));
+    assert_eq!(f.get("modTimeWindowS").unwrap().as_u64(), Some(2));
+    assert_eq!(f.get("maxConflicts").unwrap().as_u64(), Some(5));
+    assert_eq!(device_ids(&f), [JOE]);
+    assert!(notes.join(".stignore").exists());
+    // The device came first, and the folder is remembered as the Kobo's own.
+    let order: Vec<String> = fake
+        .lock()
+        .unwrap()
+        .seen
+        .iter()
+        .map(|s| s.0.clone())
+        .filter(|k| k.starts_with("POST /rest/config/"))
+        .collect();
+    assert_eq!(
+        order,
+        ["POST /rest/config/devices", "POST /rest/config/folders"]
+    );
+    assert_eq!(
+        std::fs::read_to_string(home.join("notes-folder-made-here"))
+            .unwrap()
+            .trim(),
+        id
+    );
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn accepting_a_device_adds_it_to_the_folder_already_at_the_notes_path() {
+    let dir = tmp("dev-add");
+    let (port, fake) = serve();
+    let cfg = config(&dir, port, "exec sleep 120");
+    let notes = cfg.notes.clone();
+    basic_routes(&fake, &notes, true);
+    folder_defaults(&fake);
+    route(&fake, "PUT /rest/config/folders/notes", "");
+    let sup = Supervisor::start(cfg);
+    until(&sup, "running", |v| v.run == Run::Running);
+    sup.command(Cmd::AcceptDevice {
+        id: JOE.into(),
+        name: "Phone".into(),
+    });
+    wait_for(&fake, "PUT /rest/config/folders/notes", 1);
+    let f = Json::parse(&seen(&fake, "PUT /rest/config/folders/notes")[0]).unwrap();
+    assert_eq!(device_ids(&f), [ME, JOE]);
+    assert_eq!(
+        f.get("path")
+            .unwrap()
+            .as_str()
+            .map(|p| p.trim_end_matches('/')),
+        notes.to_str()
+    );
+    assert!(seen(&fake, "POST /rest/config/folders").is_empty());
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A notes folder the Kobo made (its marker names it) and a computer that
+/// offers its own folder `other`.
+fn kobo_made_folder_and_an_offer(tag: &str, marked: bool) -> (PathBuf, u16, Shared, Config) {
+    let dir = tmp(tag);
+    let (port, fake) = serve();
+    let cfg = config(&dir, port, "exec sleep 120");
+    basic_routes(&fake, &cfg.notes, true);
+    folder_defaults(&fake);
+    route(&fake, "DELETE /rest/config/folders/notes", "");
+    route(
+        &fake,
+        "GET /rest/cluster/pending/folders",
+        r#"{"other":{"offeredBy":{"AAAAAAA-BBBBBBB":{"label":"Computer notes"}}}}"#,
+    );
+    if marked {
+        std::fs::create_dir_all(&cfg.home).unwrap();
+        std::fs::write(cfg.home.join("notes-folder-made-here"), "notes\n").unwrap();
+    }
+    (dir, port, fake, cfg)
+}
+
+#[test]
+fn an_offer_of_another_id_replaces_a_folder_the_kobo_made() {
+    let (dir, _, fake, cfg) = kobo_made_folder_and_an_offer("replace", true);
+    let (notes, home) = (cfg.notes.clone(), cfg.home.clone());
+    std::fs::write(notes.join("keep.md"), "mine").unwrap();
+    let sup = Supervisor::start(cfg);
+    let v = until(&sup, "the offer", |v| !v.pending_folders.is_empty());
+    assert_eq!(v.pending_folders[0].id, "other");
+    sup.command(Cmd::AcceptFolder {
+        id: "other".into(),
+        label: "Computer notes".into(),
+        device: "AAAAAAA-BBBBBBB".into(),
+    });
+    wait_for(&fake, "POST /rest/config/folders", 1);
+    assert_eq!(seen(&fake, "DELETE /rest/config/folders/notes").len(), 1);
+    let f = Json::parse(&seen(&fake, "POST /rest/config/folders")[0]).unwrap();
+    assert_eq!(f.get("id").unwrap().as_str(), Some("other"));
+    assert_eq!(f.get("label").unwrap().as_str(), Some("Computer notes"));
+    assert_eq!(
+        f.get("path").unwrap().as_str(),
+        Some(notes.to_str().unwrap())
+    );
+    // The devices already on the folder stay, and the offerer joins them.
+    assert_eq!(device_ids(&f), [ME, "AAAAAAA-BBBBBBB"]);
+    // The folder is no longer the Kobo's own, and no note was touched.
+    let end = Instant::now() + Duration::from_secs(10);
+    while home.join("notes-folder-made-here").exists() {
+        assert!(Instant::now() < end, "the marker stayed");
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    assert_eq!(
+        std::fs::read_to_string(notes.join("keep.md")).unwrap(),
+        "mine"
+    );
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn a_refused_replacement_puts_the_kobo_made_folder_back() {
+    let (dir, _, fake, cfg) = kobo_made_folder_and_an_offer("replace-fails", true);
+    let home = cfg.home.clone();
+    {
+        let mut g = fake.lock().unwrap();
+        g.routes.retain(|r| r.0 != "POST /rest/config/folders");
+        g.routes
+            .push(("POST /rest/config/folders".into(), 500, "nope".into()));
+    }
+    let sup = Supervisor::start(cfg);
+    until(&sup, "the offer", |v| !v.pending_folders.is_empty());
+    sup.command(Cmd::AcceptFolder {
+        id: "other".into(),
+        label: "Computer notes".into(),
+        device: "AAAAAAA-BBBBBBB".into(),
+    });
+    wait_for(&fake, "POST /rest/config/folders", 2);
+    let back = Json::parse(&seen(&fake, "POST /rest/config/folders")[1]).unwrap();
+    assert_eq!(back.get("id").unwrap().as_str(), Some("notes"));
+    assert!(home.join("notes-folder-made-here").exists());
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn an_offer_of_another_id_stays_hidden_over_a_folder_that_came_from_an_offer() {
+    // The same setup, but nothing says the Kobo made the folder.
+    let (dir, _, fake, cfg) = kobo_made_folder_and_an_offer("hidden", false);
+    let sup = Supervisor::start(cfg);
+    until(&sup, "a running view", |v| {
+        v.run == Run::Running && v.folder.is_some()
+    });
+    std::thread::sleep(Duration::from_millis(1500));
+    assert!(sup.view().pending_folders.is_empty());
+    // Asking anyway is refused: nothing is removed or created.
+    sup.command(Cmd::AcceptFolder {
+        id: "other".into(),
+        label: "Computer notes".into(),
+        device: "AAAAAAA-BBBBBBB".into(),
+    });
+    std::thread::sleep(Duration::from_millis(1500));
+    assert!(seen(&fake, "DELETE /rest/config/folders/notes").is_empty());
+    assert!(seen(&fake, "POST /rest/config/folders").is_empty());
     sup.stop();
     let _ = std::fs::remove_dir_all(&dir);
 }
