@@ -292,6 +292,7 @@ fn accepting_posts_the_documented_objects() {
     let cfg = config(&dir, port, "exec sleep 120");
     let notes = cfg.notes.clone();
     basic_routes(&fake, &notes, false);
+    only_me(&fake);
     route(
         &fake,
         "GET /rest/config/defaults/device",
@@ -441,6 +442,15 @@ fn device_ids(f: &Json) -> Vec<&str> {
         .collect()
 }
 
+/// Only this device is configured: nothing to share the notes with at start.
+fn only_me(f: &Shared) {
+    route(
+        f,
+        "GET /rest/config/devices",
+        &format!(r#"[{{"deviceID":"{ME}","name":"forma"}}]"#),
+    );
+}
+
 fn folder_defaults(f: &Shared) {
     route(
         f,
@@ -464,6 +474,7 @@ fn accepting_a_device_with_no_notes_folder_makes_one_shared_with_it() {
     let (notes, home) = (cfg.notes.clone(), cfg.home.clone());
     basic_routes(&fake, &notes, false);
     folder_defaults(&fake);
+    only_me(&fake);
     let sup = Supervisor::start(cfg);
     until(&sup, "running", |v| v.run == Run::Running);
     sup.command(Cmd::AcceptDevice {
@@ -541,6 +552,76 @@ fn a_refused_new_folder_leaves_no_marker() {
     // The command is finished once the supervisor answers the next poll.
     std::thread::sleep(Duration::from_millis(1500));
     assert!(!home.join("notes-folder-made-here").exists());
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn a_device_accepted_earlier_gets_a_notes_folder_at_start() {
+    let dir = tmp("earlier");
+    let (port, fake) = serve();
+    let cfg = config(&dir, port, "exec sleep 120");
+    let (notes, home) = (cfg.notes.clone(), cfg.home.clone());
+    // JOE is configured (basic_routes), there is no notes folder. A stale
+    // marker from a crash is replaced.
+    basic_routes(&fake, &notes, false);
+    folder_defaults(&fake);
+    std::fs::create_dir_all(&home).unwrap();
+    std::fs::write(home.join("notes-folder-made-here"), "gone\n").unwrap();
+    let sup = Supervisor::start(cfg);
+    until(&sup, "running", |v| v.run == Run::Running);
+    wait_for(&fake, "POST /rest/config/folders", 1);
+    std::thread::sleep(Duration::from_millis(1500));
+    let posts = seen(&fake, "POST /rest/config/folders");
+    assert_eq!(posts.len(), 1, "one folder, once");
+    let f = Json::parse(&posts[0]).unwrap();
+    // Shared with the configured device, not with this one.
+    assert_eq!(device_ids(&f), [JOE]);
+    assert_eq!(f.get("label").unwrap().as_str(), Some("Σscribe notes"));
+    assert_eq!(
+        f.get("path").unwrap().as_str(),
+        Some(notes.to_str().unwrap())
+    );
+    let id = f.get("id").unwrap().as_str().unwrap();
+    assert_eq!(
+        std::fs::read_to_string(home.join("notes-folder-made-here"))
+            .unwrap()
+            .trim(),
+        id
+    );
+    assert!(notes.join(".stignore").exists());
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn nothing_is_made_at_start_when_a_folder_is_there_or_no_device_is() {
+    // A folder is at the notes path (JOE is configured): no POST, no marker.
+    let dir = tmp("earlier-folder");
+    let (port, fake) = serve();
+    let cfg = config(&dir, port, "exec sleep 120");
+    let home = cfg.home.clone();
+    basic_routes(&fake, &cfg.notes, true);
+    folder_defaults(&fake);
+    let sup = Supervisor::start(cfg);
+    until(&sup, "a folder", |v| v.folder.is_some());
+    std::thread::sleep(Duration::from_millis(1500));
+    assert!(seen(&fake, "POST /rest/config/folders").is_empty());
+    assert!(!home.join("notes-folder-made-here").exists());
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+
+    // No folder and no device but this one: nothing to share with.
+    let dir = tmp("earlier-alone");
+    let (port, fake) = serve();
+    let cfg = config(&dir, port, "exec sleep 120");
+    basic_routes(&fake, &cfg.notes, false);
+    folder_defaults(&fake);
+    only_me(&fake);
+    let sup = Supervisor::start(cfg);
+    until(&sup, "running", |v| v.run == Run::Running);
+    std::thread::sleep(Duration::from_millis(1500));
+    assert!(seen(&fake, "POST /rest/config/folders").is_empty());
     sup.stop();
     let _ = std::fs::remove_dir_all(&dir);
 }

@@ -246,6 +246,14 @@ At every start:
     put back. A folder that came from an offer has no marker, and keeps the
     old rule: an offer for another folder ID is not listed, an offer for the
     notes folder's own ID (a second computer) is, and Accept adds that device.
+  - *At start*, for devices accepted by a build that shared nothing: if no
+    folder is at the notes path and a device other than this one is
+    configured, the Kobo makes the folder as above, shared with all of them
+    (log `sync: share notes with … (accepted earlier)`). With a folder at
+    the notes path, whoever made it, nothing is done. A marker that names no
+    folder (a crash, or the folder removed from the computer) is stale and is
+    replaced. Removing the folder on the computer therefore brings it back at
+    the next start while another device is configured.
   No other folder is ever created.
 - A device, when the reader accepts it: `addresses: ["dynamic"]`, not an
   introducer, `autoAcceptFolders: false`.
@@ -443,7 +451,11 @@ did not touch the device. For `docs/device-checklist-prerelease.md`:
     folder. While a device is connected and the folder does not exist yet the
     status is *Not shared yet*, not *Up to date* (found on the Forma
     2026-10-28: it said *Up to date* with no folder).
-14. Expected in `syncthing.log`, harmless: Syncthing warns that it "should not
+14. A device accepted before this existed (the phone accepted under 1.15.x)
+    and no notes folder: restart sync (Off, On). The log shows
+    `sync: share notes with <id> (accepted earlier)` then
+    `notes folder … created`; the phone is offered "Σscribe notes".
+15. Expected in `syncthing.log`, harmless: Syncthing warns that it "should not
     run as a privileged or system user"; the Kobo runs everything as root.
 11. Loopback (found on the Forma, fix not yet tried there): the launcher log has
     `net: lo has no 127.0.0.1, bringing it up` then a `net: lo: inet …` line;

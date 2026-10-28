@@ -391,6 +391,9 @@ fn session(cfg: &Config, sh: &Shared, rx: &Receiver<Msg>) -> Ended {
     if let Err(e) = ensure_ignore(&cfg.notes) {
         crate::warn!("sync", ".stignore: {e}");
     }
+    if let Err(e) = share_with_accepted(cfg, &client) {
+        crate::warn!("sync", "share notes with accepted devices: {e}");
+    }
     poller.poll(cfg, &client, sh);
     loop {
         let wait = if sh.fast.load(Ordering::Relaxed) {
@@ -630,18 +633,56 @@ fn share_notes(cfg: &Config, client: &Client, device: &str) -> io::Result<()> {
     if let Some(f) = folder_at(&folders, &cfg.notes).and_then(|id| find_folder(&folders, &id)) {
         return share_folder(client, f, device);
     }
+    make_kobo_folder(cfg, client, vec![device_entry(device)])
+}
+
+/// Makes the notes folder under an ID of the Kobo's own, shared with
+/// `devices`.
+fn make_kobo_folder(cfg: &Config, client: &Client, devices: Vec<Json>) -> io::Result<()> {
     let id = random_folder_id();
     // Remembered as the Kobo's own before it exists, so a crash between the
     // two never leaves a Kobo-made folder unmarked; taken back if it is refused.
     if let Err(e) = write_marker(cfg, &id) {
         crate::warn!("sync", "notes folder marker: {e}");
     }
-    if let Err(e) = create_notes_folder(cfg, client, &id, NOTES_LABEL, vec![device_entry(device)]) {
+    if let Err(e) = create_notes_folder(cfg, client, &id, NOTES_LABEL, devices) {
         forget_marker(cfg);
         return Err(e);
     }
     crate::info!("sync", "notes folder {id} created");
     Ok(())
+}
+
+/// At start: devices accepted by an earlier build (which shared nothing) are
+/// still configured, and there is no notes folder to give them. Makes it,
+/// shared with all of them. Does nothing when a folder is at the notes path,
+/// whoever made it, or when no other device is configured. A marker left with
+/// no folder is stale (a crash, or a folder removed from the computer) and
+/// is replaced.
+fn share_with_accepted(cfg: &Config, client: &Client) -> io::Result<()> {
+    let folders = client.get_json("/rest/config/folders")?;
+    if folder_at(&folders, &cfg.notes).is_some() {
+        return Ok(());
+    }
+    let me = model::parse_my_id(&client.get_json("/rest/system/status")?).unwrap_or_default();
+    let devices = client.get_json("/rest/config/devices")?;
+    let ids: Vec<&str> = devices
+        .items()
+        .iter()
+        .filter_map(|d| d.get("deviceID")?.as_str())
+        .filter(|d| *d != me)
+        .collect();
+    if ids.is_empty() {
+        return Ok(());
+    }
+    ensure_ignore(&cfg.notes)?;
+    let shorts: Vec<&str> = ids.iter().map(|d| short(d)).collect();
+    crate::info!(
+        "sync",
+        "share notes with {} (accepted earlier)",
+        shorts.join(", ")
+    );
+    make_kobo_folder(cfg, client, ids.into_iter().map(device_entry).collect())
 }
 
 /// The notes folder as Syncthing is told about it: one function for the
