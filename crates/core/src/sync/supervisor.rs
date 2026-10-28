@@ -785,9 +785,92 @@ struct Poller {
     last_error: String,
     conflicts: usize,
     conflicts_at: Option<Instant>,
+    /// The last time (Unix seconds) the notes folder was in sync with a
+    /// connected device, for the folder `in_sync_for`; kept in
+    /// [`IN_SYNC_FILE`].
+    in_sync_at: Option<u64>,
+    in_sync_for: Option<String>,
+    /// What the file holds, and when it was last written.
+    in_sync_saved: Option<u64>,
+    in_sync_saved_at: Option<Instant>,
+    /// Whether the last poll found the folder in sync.
+    was_in_sync: bool,
+}
+
+/// The file in `--home` with the folder ID and the Unix seconds of the last
+/// time a connected device was in sync with it: Syncthing's own "last file"
+/// only moves when this device receives, so a Kobo that only sends would
+/// never get a "Last sync".
+const IN_SYNC_FILE: &str = "last-in-sync";
+
+/// How often the file is rewritten while the folder stays in sync (it is
+/// also written when the folder falls out of sync, and the first time).
+const IN_SYNC_SAVE_EVERY: Duration = Duration::from_secs(600);
+
+fn now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
 }
 
 impl Poller {
+    /// The text for "Last sync": the later of the last file received and the
+    /// last time the folder was in sync with a connected device. The second
+    /// is remembered across restarts in [`IN_SYNC_FILE`], at most once in
+    /// [`IN_SYNC_SAVE_EVERY`] while it keeps moving.
+    fn last_in_sync(
+        &mut self,
+        cfg: &Config,
+        folder: Option<&str>,
+        in_sync: bool,
+        received: Option<u64>,
+    ) -> Option<String> {
+        let now = now_secs();
+        let path = cfg.home.join(IN_SYNC_FILE);
+        if self.in_sync_for.as_deref() != folder {
+            // A new folder (or the first look): what is remembered is for
+            // the folder named in the file only.
+            self.in_sync_for = folder.map(str::to_owned);
+            self.in_sync_at = None;
+            self.in_sync_saved = None;
+            self.was_in_sync = false;
+            if let (Some(id), Ok(text)) = (folder, std::fs::read_to_string(&path)) {
+                if let Some((fid, secs)) = text.trim().split_once(' ') {
+                    if fid == id {
+                        self.in_sync_at = secs.parse().ok();
+                        self.in_sync_saved = self.in_sync_at;
+                    }
+                }
+            }
+        }
+        let folder = folder?;
+        if in_sync && now >= model::CLOCK_SET {
+            self.in_sync_at = Some(now);
+        }
+        let due = self
+            .in_sync_saved_at
+            .is_none_or(|t| t.elapsed() >= IN_SYNC_SAVE_EVERY);
+        let fell_out = self.was_in_sync && !in_sync;
+        if self.in_sync_at.is_some() && self.in_sync_at != self.in_sync_saved && (due || fell_out) {
+            let secs = self.in_sync_at.unwrap_or_default();
+            let wrote = std::fs::create_dir_all(&cfg.home)
+                .and_then(|()| crate::store::write_atomic(&path, &format!("{folder} {secs}\n")));
+            match wrote {
+                Ok(()) => {
+                    self.in_sync_saved = self.in_sync_at;
+                    self.in_sync_saved_at = Some(Instant::now());
+                }
+                Err(e) => {
+                    crate::warn!("sync", "{IN_SYNC_FILE}: {e}");
+                    // Not again for a while.
+                    self.in_sync_saved_at = Some(Instant::now());
+                }
+            }
+        }
+        self.was_in_sync = in_sync;
+        model::last_sync_text(received, self.in_sync_at, now)
+    }
+
     fn poll(&mut self, cfg: &Config, client: &Client, sh: &Shared) {
         match self.read(cfg, client, sh) {
             Ok(()) => self.last_error.clear(),
@@ -808,20 +891,22 @@ impl Poller {
         let peers = model::parse_peers(&devices, &conns, &id);
         let folders = client.get_json("/rest/config/folders")?;
         let folder_id = folder_at(&folders, &cfg.notes);
-        let (folder, last_sync) = match &folder_id {
+        let (folder, received) = match &folder_id {
             Some(fid) => {
                 let db =
                     client.get_json(&format!("/rest/db/status?folder={}", percent_encode(fid)))?;
                 let stats = client.get_json("/rest/stats/folder")?;
                 (
                     Some(model::parse_folder(fid, &db)),
-                    model::parse_last_sync(fid, &stats),
+                    model::parse_last_received(fid, &stats),
                 )
             }
             None => (None, None),
         };
-        // Connected devices on the folder that have not accepted it back.
+        // Connected devices on the folder: those that have not accepted it
+        // back, and whether any needs nothing more from this one.
         let mut waiting = Vec::new();
+        let mut peer_in_sync = false;
         if let Some(f) = folder_id.as_deref().and_then(|f| find_folder(&folders, f)) {
             let fid = f.get("id").and_then(Json::as_str).unwrap_or_default();
             let on_folder: Vec<&str> = f
@@ -840,11 +925,25 @@ impl Poller {
                     percent_encode(&p.id)
                 );
                 // An answer that cannot be read means "not known to wait".
-                if client.get_json(&path).is_ok_and(|j| model::not_sharing(&j)) {
+                let c = client
+                    .get_json(&path)
+                    .map(|j| model::parse_completion(&j))
+                    .unwrap_or_default();
+                if c.not_sharing {
                     waiting.push(p.name.clone());
                 }
+                peer_in_sync |= c.in_sync;
             }
         }
+        let local_done = folder
+            .as_ref()
+            .is_some_and(|f| f.need_files == 0 && f.errors == 0 && !f.state.starts_with("sync"));
+        let last_sync = self.last_in_sync(
+            cfg,
+            folder_id.as_deref(),
+            peer_in_sync && local_done,
+            received,
+        );
         let pending_devices =
             model::parse_pending_devices(&client.get_json("/rest/cluster/pending/devices")?);
         // Offers fit only while there is no notes folder, or for that folder;

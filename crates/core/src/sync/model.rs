@@ -201,15 +201,6 @@ impl View {
     }
 }
 
-/// Whether `/rest/db/completion?folder=…&device=…` says the device has not
-/// accepted the folder: `remoteState` is `notSharing` (Syncthing 1.20 and
-/// later; the other values are `unknown` for a device that is not connected,
-/// `paused` and `valid`). An answer without it counts as accepted.
-#[must_use]
-pub fn not_sharing(completion: &Json) -> bool {
-    completion.get("remoteState").and_then(Json::as_str) == Some("notSharing")
-}
-
 /// `YYYY-MM-DD HH:MM` from an RFC 3339 time (the part Syncthing writes
 /// before the seconds); `None` for the zero time or anything else.
 #[must_use]
@@ -290,10 +281,95 @@ pub fn parse_folder(id: &str, db: &Json) -> FolderView {
     }
 }
 
-/// When a file last arrived in folder `id`: `/rest/stats/folder`.
+/// When a file last arrived in folder `id` (`/rest/stats/folder`), in Unix
+/// seconds. Syncthing sets it only when this device receives a file, so a
+/// device that has only sent stays at `None`.
 #[must_use]
-pub fn parse_last_sync(id: &str, stats: &Json) -> Option<String> {
-    short_time(stats.get(id)?.get("lastFile")?.get("at")?.as_str()?)
+pub fn parse_last_received(id: &str, stats: &Json) -> Option<u64> {
+    rfc3339_secs(stats.get(id)?.get("lastFile")?.get("at")?.as_str()?)
+}
+
+/// What `/rest/db/completion?folder=…&device=…` says about one device.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Completion {
+    /// The device has not accepted the folder (`remoteState` is
+    /// `notSharing`; Syncthing 1.20 and later).
+    pub not_sharing: bool,
+    /// The device shares the folder and needs nothing from this one
+    /// (`remoteState` is `valid`, `needItems` and `needBytes` are 0).
+    pub in_sync: bool,
+}
+
+/// Reads one completion answer. `remoteState` is `unknown` for a device
+/// that is not connected, `paused`, `notSharing` or `valid`.
+#[must_use]
+pub fn parse_completion(j: &Json) -> Completion {
+    let state = j.get("remoteState").and_then(Json::as_str);
+    let none_needed = |k: &str| j.get(k).and_then(Json::as_u64) == Some(0);
+    Completion {
+        not_sharing: state == Some("notSharing"),
+        in_sync: state == Some("valid") && none_needed("needItems") && none_needed("needBytes"),
+    }
+}
+
+/// Unix seconds before which the clock is taken to be unset (2020-01-01;
+/// a Kobo without a battery clock starts in 1970).
+pub const CLOCK_SET: u64 = 1_577_836_800;
+
+/// The time Settings → Sync shows for the last sync: the later of the last
+/// file received and the last moment a peer was in sync with the folder, as
+/// `YYYY-MM-DD HH:MM` (UTC, the device clock). A time ahead of `now` is
+/// held back to `now`, as long as the clock is set. `None` when neither is
+/// known.
+#[must_use]
+pub fn last_sync_text(received: Option<u64>, in_sync: Option<u64>, now: u64) -> Option<String> {
+    let t = received.max(in_sync)?;
+    let t = if now >= CLOCK_SET { t.min(now) } else { t };
+    (t >= CLOCK_SET).then(|| crate::log::timestamp(t)[..16].to_owned())
+}
+
+/// Unix seconds from an RFC 3339 time (`2026-10-28T14:05:33.3+01:00`);
+/// `None` for anything else and for Syncthing's "never" (year 1).
+#[must_use]
+pub fn rfc3339_secs(t: &str) -> Option<u64> {
+    short_time(t)?;
+    let b = t.as_bytes();
+    let num = |a: usize, z: usize| t.get(a..z)?.parse::<i64>().ok();
+    let (y, m, d) = (num(0, 4)?, num(5, 7)?, num(8, 10)?);
+    let secs = if b.get(16) == Some(&b':') {
+        num(17, 19)?
+    } else {
+        0
+    };
+    // The offset follows the optional fraction of a second.
+    let mut k = if b.get(16) == Some(&b':') { 19 } else { 16 };
+    if b.get(k) == Some(&b'.') {
+        k += 1;
+        while b.get(k).is_some_and(u8::is_ascii_digit) {
+            k += 1;
+        }
+    }
+    let offset = match b.get(k) {
+        None | Some(b'Z') => 0,
+        Some(&sign @ (b'+' | b'-')) => {
+            let o = num(k + 1, k + 3)? * 3600 + num(k + 4, k + 6)? * 60;
+            if sign == b'+' {
+                o
+            } else {
+                -o
+            }
+        }
+        _ => return None,
+    };
+    // Days from 1970-01-01 to the date (Howard Hinnant's algorithm).
+    let yy = y - i64::from(m <= 2);
+    let era = yy.div_euclid(400);
+    let yoe = yy.rem_euclid(400);
+    let doy = (153 * (if m > 2 { m - 3 } else { m + 9 }) + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let days = era * 146_097 + doe - 719_468;
+    let total = days * 86_400 + num(11, 13)? * 3600 + num(14, 16)? * 60 + secs - offset;
+    u64::try_from(total).ok()
 }
 
 /// `/rest/cluster/pending/devices`, at most [`MAX_PENDING`].
@@ -438,27 +514,81 @@ mod tests {
         let stats = j(
             r#"{"notes": {"lastScan": "x", "lastFile": {"filename": "a.md", "at": "2026-10-28T14:05:33.3066971+01:00"}}}"#,
         );
+        // 14:05:33 at +01:00 is 13:05:33 UTC.
         assert_eq!(
-            parse_last_sync("notes", &stats).as_deref(),
-            Some("2026-10-28 14:05")
+            parse_last_received("notes", &stats),
+            rfc3339_secs("2026-10-28T13:05:33Z")
+        );
+        assert_eq!(
+            crate::log::timestamp(parse_last_received("notes", &stats).unwrap()),
+            "2026-10-28 13:05:33Z"
         );
         let never = j(r#"{"notes": {"lastFile": {"at": "0001-01-01T00:00:00Z"}}}"#);
-        assert_eq!(parse_last_sync("notes", &never), None);
-        assert_eq!(parse_last_sync("other", &stats), None);
+        assert_eq!(parse_last_received("notes", &never), None);
+        assert_eq!(parse_last_received("other", &stats), None);
         assert_eq!(short_time("yesterday"), None);
         assert_eq!(short_time("2026-1x-28T14:05"), None);
     }
 
     #[test]
-    fn remote_state_not_sharing_is_the_only_waiting_one() {
-        let j = |t: &str| Json::parse(t).unwrap();
-        assert!(not_sharing(&j(
-            r#"{"completion":100,"remoteState":"notSharing"}"#
-        )));
-        for state in ["valid", "unknown", "paused"] {
-            assert!(!not_sharing(&j(&format!(r#"{{"remoteState":"{state}"}}"#))));
+    fn completion_tells_waiting_from_in_sync() {
+        let c = |t: &str| parse_completion(&Json::parse(t).unwrap());
+        let waiting = c(r#"{"completion":100,"remoteState":"notSharing"}"#);
+        assert!(waiting.not_sharing && !waiting.in_sync);
+        let done = c(r#"{"completion":100,"needItems":0,"needBytes":0,"remoteState":"valid"}"#);
+        assert!(!done.not_sharing && done.in_sync);
+        // Still needing something, or not connected, or no state at all.
+        assert!(!c(r#"{"needItems":2,"needBytes":0,"remoteState":"valid"}"#).in_sync);
+        assert!(!c(r#"{"needItems":0,"needBytes":9,"remoteState":"valid"}"#).in_sync);
+        for state in ["unknown", "paused"] {
+            let x = c(&format!(
+                r#"{{"needItems":0,"needBytes":0,"remoteState":"{state}"}}"#
+            ));
+            assert_eq!(x, Completion::default(), "{state}");
         }
-        assert!(!not_sharing(&j(r#"{"completion":100}"#)));
+        assert_eq!(c(r#"{"needItems":0,"needBytes":0}"#), Completion::default());
+    }
+
+    #[test]
+    fn rfc3339_times_become_unix_seconds() {
+        // 2026-10-28T00:00:00Z is 20,754 days after the epoch.
+        let day = 20_754 * 86_400;
+        assert_eq!(rfc3339_secs("2026-10-28T00:00:00Z"), Some(day));
+        assert_eq!(
+            rfc3339_secs("2026-10-28T01:30:15+01:00"),
+            Some(day + 1800 + 15)
+        );
+        assert_eq!(rfc3339_secs("2026-10-27T22:00:00.123456-02:00"), Some(day));
+        assert_eq!(
+            rfc3339_secs("2026-10-28T14:05"),
+            Some(day + 14 * 3600 + 300)
+        );
+        assert_eq!(rfc3339_secs("0001-01-01T00:00:00Z"), None);
+        assert_eq!(rfc3339_secs("yesterday"), None);
+        assert_eq!(rfc3339_secs("2026-10-28T14:05:33*"), None);
+    }
+
+    #[test]
+    fn the_last_sync_is_the_later_time_and_never_in_the_future() {
+        let t = rfc3339_secs;
+        let (early, late) = (t("2026-10-28T14:05:00Z"), t("2026-10-28T19:53:00Z"));
+        let now = t("2026-10-28T20:00:00Z").unwrap();
+        let text = last_sync_text;
+        assert_eq!(text(early, late, now).as_deref(), Some("2026-10-28 19:53"));
+        // Never older than the received time.
+        assert_eq!(text(late, early, now).as_deref(), Some("2026-10-28 19:53"));
+        assert_eq!(text(early, None, now).as_deref(), Some("2026-10-28 14:05"));
+        assert_eq!(text(None, late, now).as_deref(), Some("2026-10-28 19:53"));
+        assert_eq!(text(None, None, now), None);
+        // Held back to now when it is ahead; an unset clock does not hide it.
+        let before = t("2026-10-28T19:00:30Z").unwrap();
+        assert_eq!(
+            text(early, late, before).as_deref(),
+            Some("2026-10-28 19:00")
+        );
+        assert_eq!(text(late, None, 5).as_deref(), Some("2026-10-28 19:53"));
+        // A time before the clock was ever set is not a time.
+        assert_eq!(text(None, Some(5), 5), None);
     }
 
     #[test]

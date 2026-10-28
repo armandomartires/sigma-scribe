@@ -220,7 +220,8 @@ fn the_view_follows_the_rest_answers() {
         (v.peers[0].name.as_str(), v.peers[0].connected),
         ("Joe", true)
     );
-    assert_eq!(v.last_sync.as_deref(), Some("2026-10-28 14:05"));
+    // Syncthing says 14:05 at +01:00; the page shows the device clock, UTC.
+    assert_eq!(v.last_sync.as_deref(), Some("2026-10-28 13:05"));
     assert_eq!(v.status(), Status::Syncing(3, 4096));
     assert_eq!(v.pending_devices.len(), 1);
     assert_eq!(v.pending_devices[0].name, "Laptop");
@@ -300,6 +301,114 @@ fn a_device_that_has_not_accepted_the_folder_is_waited_for() {
     }
     sup.stop();
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+fn now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+}
+
+/// `YYYY-MM-DD HH:MM` (UTC) of Unix seconds, as the page shows it.
+fn minute(secs: u64) -> String {
+    sigma_core::log::timestamp(secs)[..16].to_owned()
+}
+
+/// A notes folder shared with JOE, who is connected and idle, and nothing
+/// ever received (a Kobo that only sends).
+fn send_only(f: &Shared, notes: &Path, needs: &str) {
+    basic_routes(f, notes, true);
+    shared_with_joe(f, notes);
+    route(f, "GET /rest/stats/folder", "{}");
+    route(
+        f,
+        &format!("GET /rest/db/completion?folder=notes&device={JOE}"),
+        &format!(r#"{{"completion":100,{needs}"remoteState":"valid"}}"#),
+    );
+}
+
+#[test]
+fn a_send_only_peer_that_is_in_sync_sets_the_last_sync_and_a_restart_keeps_it() {
+    let dir = tmp("last-sync");
+    let (port, fake) = serve();
+    let cfg = config(&dir, port, "exec sleep 120");
+    let home = cfg.home.clone();
+    send_only(&fake, &cfg.notes, r#""needItems":0,"needBytes":0,"#);
+    let before = now_secs();
+    let sup = Supervisor::start(cfg.clone());
+    let v = until(&sup, "a last sync", |v| v.last_sync.is_some());
+    let shown = v.last_sync.clone().unwrap();
+    assert!(
+        shown == minute(before) || shown == minute(now_secs()),
+        "{shown}"
+    );
+    assert_eq!(v.status(), Status::UpToDate);
+    sup.stop();
+    // Written the first time, for this folder.
+    let text = std::fs::read_to_string(home.join("last-in-sync")).unwrap();
+    let (id, secs) = text.trim().split_once(' ').unwrap();
+    assert_eq!(id, "notes");
+    assert!(secs.parse::<u64>().unwrap() >= before);
+
+    // After a restart with the device not connected, nothing is in sync now,
+    // yet the time is still there.
+    route(
+        &fake,
+        "GET /rest/system/connections",
+        r#"{"connections":{}}"#,
+    );
+    let sup = Supervisor::start(cfg);
+    let v = until(&sup, "the folder", |v| v.folder.is_some());
+    assert_eq!(v.last_sync.as_deref(), Some(shown.as_str()));
+    assert_eq!(v.status(), Status::NotConnected);
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn a_peer_that_still_needs_something_does_not_count_and_a_future_time_is_held_back() {
+    // The peer still needs two items: not in sync, so nothing is recorded.
+    let dir = tmp("last-sync-needs");
+    let (port, fake) = serve();
+    let cfg = config(&dir, port, "exec sleep 120");
+    let home = cfg.home.clone();
+    send_only(&fake, &cfg.notes, r#""needItems":2,"needBytes":10,"#);
+    let sup = Supervisor::start(cfg);
+    until(&sup, "the folder", |v| v.folder.is_some());
+    std::thread::sleep(Duration::from_millis(1200));
+    assert_eq!(sup.view().last_sync, None);
+    assert!(!home.join("last-in-sync").exists());
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+
+    // A remembered time ahead of the clock shows as now; one for another
+    // folder is not this folder's.
+    for (file, want_now) in [("notes {FUTURE}", true), ("other {NOW}", false)] {
+        let dir = tmp("last-sync-file");
+        let (port, fake) = serve();
+        let cfg = config(&dir, port, "exec sleep 120");
+        send_only(&fake, &cfg.notes, r#""needItems":2,"needBytes":10,"#);
+        std::fs::create_dir_all(&cfg.home).unwrap();
+        let now = now_secs();
+        let file = file
+            .replace("{FUTURE}", &(now + 86_400).to_string())
+            .replace("{NOW}", &now.to_string());
+        std::fs::write(cfg.home.join("last-in-sync"), file).unwrap();
+        let sup = Supervisor::start(cfg);
+        let v = until(&sup, "the folder", |v| v.folder.is_some());
+        if want_now {
+            let shown = v.last_sync.expect("shown");
+            assert!(
+                shown == minute(now) || shown == minute(now_secs()),
+                "{shown} is ahead of the clock"
+            );
+        } else {
+            assert_eq!(v.last_sync, None);
+        }
+        sup.stop();
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
 
 #[test]
