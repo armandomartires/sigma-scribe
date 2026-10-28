@@ -1129,3 +1129,10 @@ Loopback network is down
 
 Reason
 = Årsag
+
+Show QR code
+= Vis QR-kode
+
+
+QR code
+= QR-kode

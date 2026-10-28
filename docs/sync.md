@@ -224,11 +224,20 @@ and the Kobo has no copy and paste out. So the Kobo is the one that is
    at the notes path (§6), and syncing starts. **Ignore** dismisses the offer
    for now (`DELETE …/pending/…`); it can come back on the next connection.
 
-A QR code of the ID was considered. It is not cheap: an encoder with
-Reed-Solomon and mask scoring is a few hundred lines to write and verify with
-no scanner here, and the desktop's Add Device dialog does not scan. Deferred.
-A phone running the Syncthing app can scan it from the *computer's* screen,
-which does not need it on the Kobo.
+**Pairing by scanning.** Under the ID, **Show QR code** opens a full page
+with the ID as a QR code (the plain ID string with its dashes, which is what
+Syncthing's own GUI encodes and what the Android app's scanner reads). On the
+phone: Syncthing app → Devices → + → scan. The phone then adds the Kobo; the
+computer can be added to the Kobo the usual way (above) or the phone can
+introduce it. The code is black on white with a 4-module quiet zone whatever
+the Night setting, whole pixels per module, up to 14 px: about 39 mm across at
+the Forma's 300 dpi (the ID is upper case, digits and dashes, so it fits QR
+version 4, 33 modules, at error correction M). It is made by the `qrcodegen`
+crate (MIT, no dependencies, one file; chosen over writing an encoder, which
+is a few hundred lines to get right). The desktop's Add Device dialog does not
+scan; the typed ID above still works. Only after the ID is known does the row
+appear. Whether a phone reads it off e-ink at arm's length is for the Forma
+checklist (§12).
 
 First sync with notes already on both sides is Syncthing's usual merge: the
 newer copy of a file with the same name wins and the other is kept as a
@@ -363,6 +372,10 @@ did not touch the device. For `docs/device-checklist-prerelease.md`:
    a PEM). Local discovery on the same Wi-Fi does not need it.
 10. Syncing a few hundred notes the first time: does the app stay responsive
     (typing latency in `perf:` lines) while Syncthing hashes?
+12. QR code: Settings → Sync → Show QR code; the Syncthing app on a phone
+    (Devices → + → scan) reads it from the Forma's screen at normal reading
+    distance, in the room's light, and offers the right device ID. Try Night
+    mode too (the code must stay black on white).
 11. Loopback (found on the Forma, fix not yet tried there): the launcher log has
     `net: lo has no 127.0.0.1, bringing it up` then a `net: lo: inet …` line;
     `.adds/sigma-scribe/log/syncthing.log` has no "cannot assign requested
@@ -372,7 +385,6 @@ did not touch the device. For `docs/device-checklist-prerelease.md`:
 
 ## 13. Not done / later
 
-- A QR code of the device ID (§7).
 - Refreshing the Files list and the drawer panes live when a sync lands.
 - An on-screen message when a note is reloaded or kept as a conflict, and
   showing which note changed.

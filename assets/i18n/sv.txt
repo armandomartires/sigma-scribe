@@ -1129,3 +1129,10 @@ Loopback network is down
 
 Reason
 = Orsak
+
+Show QR code
+= Visa QR-kod
+
+
+QR code
+= QR-kod

@@ -357,6 +357,8 @@ pub enum SettingsPage {
     /// A plugin's own settings: its place in the Plugins list. Reachable
     /// only while the plugin is on.
     Plugin(usize),
+    /// The device ID as a QR code, from Settings → Sync (v1.16).
+    SyncQr,
 }
 
 /// Categories: name, then (section heading, row labels).
@@ -613,6 +615,8 @@ pub struct OptionsModel<'a> {
 pub enum Item {
     /// A section heading.
     Band(&'static str),
+    /// The QR code of this text, centred, in black on white.
+    Qr(String),
     /// A setting.
     Row(DRow),
     /// A category on the root page, with its summary.
@@ -1119,6 +1123,11 @@ fn sync_items(m: &OptionsModel<'_>) -> Vec<Item> {
                 note: None,
             }));
         }
+        out.push(Item::Row(DRow {
+            label: Cow::Borrowed("Show QR code"),
+            kind: Kind::Open(SettingsPage::SyncQr),
+            note: None,
+        }));
     }
     if !v.pending_devices.is_empty() || !v.pending_folders.is_empty() {
         out.push(Item::Band("Waiting for you"));
@@ -1314,6 +1323,7 @@ pub fn page_items(m: &OptionsModel<'_>) -> Vec<Item> {
         SettingsPage::Category(PLUGINS_CATEGORY) => plugin_items(m),
         SettingsPage::Category(SYNC_CATEGORY) => sync_items(m),
         SettingsPage::Plugin(i) => plugin_setting_items(m, i),
+        SettingsPage::SyncQr => vec![Item::Band("Device ID"), Item::Qr(m.sync.device_id.clone())],
         SettingsPage::Category(c) => {
             let mut out = Vec::new();
             for (band, rows) in CATEGORIES[c.min(CATEGORIES.len() - 1)].1 {
@@ -1352,6 +1362,7 @@ pub fn page_title(p: SettingsPage) -> &'static str {
         SettingsPage::Category(c) => CATEGORIES[c.min(CATEGORIES.len() - 1)].0,
         SettingsPage::Choice(_, l) => l,
         SettingsPage::Plugin(_) => CATEGORIES[PLUGINS_CATEGORY].0,
+        SettingsPage::SyncQr => "QR code",
     }
 }
 
@@ -1378,6 +1389,7 @@ pub fn parent(p: SettingsPage) -> Option<SettingsPage> {
         SettingsPage::Category(_) => Some(SettingsPage::Root),
         SettingsPage::Choice(c, _) => Some(SettingsPage::Category(c)),
         SettingsPage::Plugin(_) => Some(SettingsPage::Category(PLUGINS_CATEGORY)),
+        SettingsPage::SyncQr => Some(SettingsPage::Category(SYNC_CATEGORY)),
     }
 }
 
@@ -1588,8 +1600,15 @@ impl EditorScreen {
         // Split into sub-pages; a band never ends a page.
         let all = page_items(m);
         let slider_h = s.px(84.0);
+        // The QR code is as big as the page allows, at most 14 px a module.
+        let qr_h = |text: &str| {
+            let n = crate::qr::modules(text).map_or(21, |(n, _)| n);
+            let px = crate::qr::module_px(n, w - 2 * pad, bottom - top - band_h);
+            (n as i32 + 2 * crate::qr::QUIET) * px
+        };
         let item_h = |it: &Item| match it {
             Item::Band(_) => band_h,
+            Item::Qr(t) => qr_h(t),
             Item::Row(DRow {
                 kind: Kind::Slider { .. },
                 ..
@@ -1732,7 +1751,7 @@ impl EditorScreen {
                                 .map_or(OptionsHit::Nothing, OptionsHit::Change)
                         }
                     },
-                    Item::Band(_) => OptionsHit::Nothing,
+                    Item::Band(_) | Item::Qr(_) => OptionsHit::Nothing,
                 };
             }
         }
@@ -1797,7 +1816,7 @@ impl EditorScreen {
                         }
                     }
                 },
-                Item::Band(_) => {}
+                Item::Band(_) | Item::Qr(_) => {}
             }
         }
         // Names from the 1.4 sheet: `Layout/+` / `Layout/-` on the Layout
@@ -1871,7 +1890,9 @@ impl EditorScreen {
                 let n = ch.len() as i32;
                 Some(ch[(cur + d).rem_euclid(n) as usize].0.clone())
             }
-            SettingsPage::Choice(..) | SettingsPage::Plugin(_) => Some("Back".into()),
+            SettingsPage::Choice(..) | SettingsPage::Plugin(_) | SettingsPage::SyncQr => {
+                Some("Back".into())
+            }
             SettingsPage::Category(c) if c != cat => Some("Back".into()),
             SettingsPage::Category(_) => {
                 let here = self.options_controls(m);
@@ -1940,6 +1961,11 @@ impl EditorScreen {
                         t.ink,
                     );
                     continue;
+                }
+                Item::Qr(text) => {
+                    let n = crate::qr::modules(text).map_or(21, |(n, _)| n);
+                    let px = crate::qr::module_px(n, band.w, band.h);
+                    crate::qr::draw(c, text, band.x + band.w / 2, band.y, px);
                 }
                 Item::Category(i, sum) => {
                     self.fonts.draw(

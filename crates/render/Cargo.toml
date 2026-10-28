@@ -19,6 +19,7 @@ zeno = "0.3"
 resvg = { version = "0.45", default-features = false }
 unicode-bidi = "0.3"
 unicode-properties = "0.1"
+qrcodegen = "1.8"
 
 [lints]
 workspace = true
@@ -26,3 +27,6 @@ workspace = true
 # v1.1: Lucide SVG icons are baked into greyscale masks at build time.
 [build-dependencies]
 resvg = { version = "0.45", default-features = false }
+
+[dev-dependencies]
+rqrr = { version = "0.11", default-features = false }

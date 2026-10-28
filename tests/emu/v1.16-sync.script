@@ -21,6 +21,10 @@ sync-demo alone
 expect-sync NoDevices
 shot v1.16-sync-alone
 # The computer tried to connect: Accept or Ignore.
+# The ID as a QR code, to scan with the Syncthing app on a phone.
+tap-on Show QR code
+shot v1.16-sync-qr
+tap-on Back
 sync-demo pending-device
 expect-sync-pending 1,0
 shot v1.16-sync-pending-device

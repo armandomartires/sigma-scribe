@@ -18,6 +18,7 @@ This binary statically links:
 - wasmi (MIT / Apache-2.0, a WebAssembly interpreter) with its dependencies (wasmi_core,
   wasmi_ir, wasmi_collections, wasmparser, spin, libm), which runs screen plugins such as the
   Graph map in a sandbox. wasmparser: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT.
+- qrcodegen by Project Nayuki (MIT), which draws the QR code of the device ID in Settings -> Sync.
 - The Rust standard library and musl libc (MIT / Apache-2.0, MIT).
 
 Syncthing v2.1.7 (syncthing/, used by Settings -> Sync): Syncthing Authors, Mozilla Public
