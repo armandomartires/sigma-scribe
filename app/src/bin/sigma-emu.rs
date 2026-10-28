@@ -1036,6 +1036,12 @@ fn demo_sync(name: &str) -> Option<sigma_core::sync::View> {
             last_sync: Some("2026-10-28 13:58".into()),
             ..running
         },
+        "waiting" => View {
+            peers: vec![laptop(true)],
+            folder: Some(folder("idle", 0)),
+            waiting: vec!["Laptop".into()],
+            ..running
+        },
         "idle" => View {
             peers: vec![laptop(true)],
             folder: Some(folder("idle", 0)),

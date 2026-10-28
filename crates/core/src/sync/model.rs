@@ -95,6 +95,9 @@ pub struct View {
     pub pending_folders: Vec<PendingFolder>,
     /// Conflict files in the notes folder.
     pub conflicts: usize,
+    /// Names of the connected devices that have not accepted the notes folder
+    /// (Syncthing's `remoteState` is `notSharing`), in the order of `peers`.
+    pub waiting: Vec<String>,
 }
 
 /// An empty view, for a model that has no sync to show (tests, the
@@ -108,6 +111,7 @@ pub static NO_SYNC: View = View {
     pending_devices: Vec::new(),
     pending_folders: Vec::new(),
     conflicts: 0,
+    waiting: Vec::new(),
 };
 
 /// The one line the page shows for the state of things.
@@ -133,6 +137,9 @@ pub enum Status {
     NotShared,
     /// Scanning the notes folder.
     Scanning,
+    /// A connected device has not accepted the notes folder yet: its name
+    /// (the first one), and how many more are waiting too.
+    WaitingFor(String, usize),
     /// Fetching: files and bytes still to come.
     Syncing(u64, u64),
     /// Nothing to fetch.
@@ -184,10 +191,23 @@ impl View {
             Some(f) if f.state.starts_with("sync") || f.need_files > 0 => {
                 Status::Syncing(f.need_files, f.need_bytes)
             }
+            // Idle is not "up to date" while a device has yet to accept.
+            _ if !self.waiting.is_empty() => {
+                Status::WaitingFor(self.waiting[0].clone(), self.waiting.len() - 1)
+            }
             Some(f) if f.state.starts_with("scan") => Status::Scanning,
             _ => Status::UpToDate,
         }
     }
+}
+
+/// Whether `/rest/db/completion?folder=…&device=…` says the device has not
+/// accepted the folder: `remoteState` is `notSharing` (Syncthing 1.20 and
+/// later; the other values are `unknown` for a device that is not connected,
+/// `paused` and `valid`). An answer without it counts as accepted.
+#[must_use]
+pub fn not_sharing(completion: &Json) -> bool {
+    completion.get("remoteState").and_then(Json::as_str) == Some("notSharing")
 }
 
 /// `YYYY-MM-DD HH:MM` from an RFC 3339 time (the part Syncthing writes
@@ -430,6 +450,18 @@ mod tests {
     }
 
     #[test]
+    fn remote_state_not_sharing_is_the_only_waiting_one() {
+        let j = |t: &str| Json::parse(t).unwrap();
+        assert!(not_sharing(&j(
+            r#"{"completion":100,"remoteState":"notSharing"}"#
+        )));
+        for state in ["valid", "unknown", "paused"] {
+            assert!(!not_sharing(&j(&format!(r#"{{"remoteState":"{state}"}}"#))));
+        }
+        assert!(!not_sharing(&j(r#"{"completion":100}"#)));
+    }
+
+    #[test]
     fn status_follows_the_state_of_things() {
         let mut v = View::default();
         assert_eq!(v.status(), Status::Off);
@@ -452,6 +484,31 @@ mod tests {
         v.peers[0].connected = false;
         assert_eq!(v.status(), Status::NotConnected);
         v.peers[0].connected = true;
+        // A device that has not accepted the folder outranks "up to date" and
+        // "scanning", and yields to errors and to syncing.
+        v.folder = Some(FolderView::default());
+        v.waiting = vec!["Joe".into()];
+        assert_eq!(v.status(), Status::WaitingFor("Joe".into(), 0));
+        v.waiting = vec!["Joe".into(), "Ann".into(), "Bo".into()];
+        assert_eq!(v.status(), Status::WaitingFor("Joe".into(), 2));
+        v.folder = Some(FolderView {
+            state: "scanning".into(),
+            ..FolderView::default()
+        });
+        assert_eq!(v.status(), Status::WaitingFor("Joe".into(), 2));
+        v.folder = Some(FolderView {
+            state: "syncing".into(),
+            need_files: 2,
+            need_bytes: 9,
+            ..FolderView::default()
+        });
+        assert_eq!(v.status(), Status::Syncing(2, 9));
+        v.folder = Some(FolderView {
+            state: "error".into(),
+            ..FolderView::default()
+        });
+        assert!(matches!(v.status(), Status::Error(_)));
+        v.waiting.clear();
         v.folder = Some(FolderView {
             state: "syncing".into(),
             need_files: 2,

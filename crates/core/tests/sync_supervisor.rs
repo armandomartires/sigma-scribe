@@ -250,6 +250,85 @@ fn the_view_follows_the_rest_answers() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// The notes folder shared with JOE, who is connected, and idle.
+fn shared_with_joe(f: &Shared, notes: &Path) {
+    route(
+        f,
+        "GET /rest/config/folders",
+        &format!(
+            r#"[{{"id":"notes","label":"Notes","path":"{}/","devices":[{{"deviceID":"{ME}"}},{{"deviceID":"{JOE}"}}]}}]"#,
+            notes.display()
+        ),
+    );
+    route(
+        f,
+        "GET /rest/db/status?folder=notes",
+        r#"{"state":"idle","needFiles":0,"needBytes":0,"pullErrors":0,"invalid":""}"#,
+    );
+}
+
+fn completion(f: &Shared, state: &str) {
+    route(
+        f,
+        &format!("GET /rest/db/completion?folder=notes&device={JOE}"),
+        &format!(r#"{{"completion":100,"remoteState":"{state}"}}"#),
+    );
+}
+
+#[test]
+fn a_device_that_has_not_accepted_the_folder_is_waited_for() {
+    let dir = tmp("waiting");
+    let (port, fake) = serve();
+    let cfg = config(&dir, port, "exec sleep 120");
+    basic_routes(&fake, &cfg.notes, true);
+    shared_with_joe(&fake, &cfg.notes);
+    completion(&fake, "notSharing");
+    let sup = Supervisor::start(cfg);
+    let v = until(&sup, "waiting", |v| !v.waiting.is_empty());
+    assert_eq!(v.waiting, ["Joe"]);
+    assert_eq!(v.status(), Status::WaitingFor("Joe".into(), 0));
+    // It accepts: the next poll says up to date.
+    completion(&fake, "valid");
+    sup.set_fast(true);
+    let v = until(&sup, "accepted", |v| v.waiting.is_empty());
+    assert_eq!(v.status(), Status::UpToDate);
+    // A device that is paused or unknown is not waited for either.
+    for state in ["paused", "unknown"] {
+        completion(&fake, state);
+        std::thread::sleep(Duration::from_millis(1300));
+        assert!(sup.view().waiting.is_empty(), "{state}");
+    }
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn completion_is_not_asked_for_a_device_that_is_not_connected() {
+    let dir = tmp("waiting-off");
+    let (port, fake) = serve();
+    let cfg = config(&dir, port, "exec sleep 120");
+    basic_routes(&fake, &cfg.notes, true);
+    shared_with_joe(&fake, &cfg.notes);
+    completion(&fake, "notSharing");
+    route(
+        &fake,
+        "GET /rest/system/connections",
+        r#"{"connections":{}}"#,
+    );
+    let sup = Supervisor::start(cfg);
+    until(&sup, "a view with the folder", |v| v.folder.is_some());
+    std::thread::sleep(Duration::from_millis(1200));
+    assert_eq!(sup.view().status(), Status::NotConnected);
+    assert!(fake
+        .lock()
+        .unwrap()
+        .seen
+        .iter()
+        .all(|s| !s.0.contains("/rest/db/completion")));
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 #[test]
 fn a_connected_device_and_no_notes_folder_is_not_up_to_date() {
     let dir = tmp("noshare");

@@ -8,7 +8,7 @@
 use crate::canvas::{Canvas, Rect};
 use crate::editor::{EditorScreen, Layout};
 use crate::fonts::Face;
-use crate::i18n::tr;
+use crate::i18n::{tr, tr_name};
 use crate::theme::Theme;
 use sigma_core::keyboard::Layout as KbLayout;
 use sigma_core::settings::{Change, Orientation, Settings, Words};
@@ -1028,6 +1028,14 @@ fn sync_status_text(st: &sigma_core::sync::Status) -> String {
         Status::NoDevices => tr("No devices yet").into_owned(),
         Status::NotConnected => tr("No device connected").into_owned(),
         Status::NotShared => tr("Not shared yet").into_owned(),
+        Status::WaitingFor(name, more) => {
+            let who = if *more > 0 {
+                format!("{name} +{more}")
+            } else {
+                name.clone()
+            };
+            tr_name("Waiting for {name} to accept", &who)
+        }
         Status::Scanning => tr("Scanning").into_owned(),
         Status::Syncing(files, bytes) => format!(
             "{} \u{b7} {}",
@@ -1089,6 +1097,16 @@ fn sync_items(m: &OptionsModel<'_>) -> Vec<Item> {
     out.push(info_row("Status", sync_status_text(&status)));
     // The reason has a row of its own: a note under Status would run under
     // the value.
+    if matches!(status, sigma_core::sync::Status::WaitingFor(..)) {
+        // What to do, translated (the reason below is Syncthing's own text).
+        out.push(Item::Row(DRow {
+            label: Cow::Borrowed("Next step"),
+            kind: Kind::Info(String::new()),
+            note: Some(Cow::Owned(
+                tr("Accept \u{201c}Σscribe notes\u{201d} in Syncthing on that device").into_owned(),
+            )),
+        }));
+    }
     if let Some(why) = sync_status_note(&status) {
         out.push(Item::Row(DRow {
             label: Cow::Borrowed("Reason"),
@@ -2111,6 +2129,19 @@ impl EditorScreen {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_waiting_status_names_the_device_and_counts_the_rest() {
+        use sigma_core::sync::Status;
+        assert_eq!(
+            sync_status_text(&Status::WaitingFor("Joe".into(), 0)),
+            "Waiting for Joe to accept"
+        );
+        assert_eq!(
+            sync_status_text(&Status::WaitingFor("Joe".into(), 2)),
+            "Waiting for Joe +2 to accept"
+        );
+    }
+
     use super::*;
 
     fn model<'a>(

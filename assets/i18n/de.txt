@@ -1139,3 +1139,12 @@ QR code
 
 Not shared yet
 = Noch nicht geteilt
+
+Waiting for {name} to accept
+= Warten auf Bestätigung von {name}
+
+Next step
+= Nächster Schritt
+
+Accept “Σscribe notes” in Syncthing on that device
+= „Σscribe notes“ in Syncthing auf diesem Gerät annehmen

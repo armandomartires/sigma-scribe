@@ -40,6 +40,9 @@ expect-sync-pending 0,0
 sync-demo syncing
 expect-sync Syncing
 shot v1.16-sync-syncing
+sync-demo waiting
+expect-sync WaitingFor
+shot v1.16-sync-waiting
 sync-demo idle
 expect-sync UpToDate
 shot v1.16-sync-idle

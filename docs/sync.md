@@ -287,7 +287,7 @@ Syncthing's own GUI encodes and what the Android app's scanner reads). On the
 phone: Syncthing app → Devices → + → scan. The phone then adds the Kobo and
 the Kobo lists the phone under *Waiting for you*. The whole phone flow:
 scan the code, **Accept** the phone on the Kobo (which shares the notes
-folder with it), then accept "Σscribe notes" on the phone. A computer can
+folder with it), then accept "Σscribe notes" on the phone (it shows the offer from "kobo", the Kobo's Syncthing device name, as a notification and in its Web GUI; until then the Kobo's status says *Waiting for <phone> to accept*, §10). A computer can
 be added to the Kobo the usual way (above), or the phone can introduce it. The code is black on white with a 4-module quiet zone whatever
 the Night setting, whole pixels per module, up to 14 px: about 39 mm across at
 the Forma's 300 dpi (the ID is upper case, digits and dashes, so it fits QR
@@ -355,12 +355,21 @@ lost at the next keystroke. With sync that is not acceptable, so:
 | Row | Source |
 |---|---|
 | Sync (On / Off) | the setting |
-| Status | *Starting…*, *Not installed*, *Stopped: <reason>*, *No devices yet*, *No device connected*, *Not shared yet* (a device is connected but no folder is at the notes path: the folder is being made, could not be made, or the offer was ignored; never "Up to date"), *Syncing 3 files (120 KB)*, *Scanning*, *Up to date*, or the first folder error |
+| Status | *Starting…*, *Not installed*, *Stopped: <reason>*, *No devices yet*, *No device connected*, *Not shared yet* (a device is connected but no folder is at the notes path: the folder is being made, could not be made, or the offer was ignored; never "Up to date"), *Waiting for Joe to accept* (a connected device on the folder has not accepted it: Syncthing's `remoteState` is `notSharing`; with several, "Joe +2"; a "Next step" line under Status says to accept "Σscribe notes" in Syncthing on that device), *Syncing 3 files (120 KB)*, *Scanning*, *Up to date*, or the first folder error |
 | Devices | `connections`: "1 of 2 connected" |
 | Last sync | `stats/folder` → `lastFile.at`, shown as `2026-10-28 14:05` |
 | Conflicts | count of `*.sync-conflict-*` and `*.conflict-*` files in the notes folder (a walk of at most 20,000 entries, once a minute, dotted folders skipped) |
 | Device ID | `system/status` → `myID` |
 | Waiting for you | pending devices, then pending folders, each with Accept / Ignore (at most 4 of each; the rest wait) |
+
+*Waiting for … to accept* comes from `GET /rest/db/completion?folder=<id>&device=<id>`
+(Syncthing 1.20 and later; the bundled 2.1.7 has it). Its `remoteState` is
+`unknown` (the device is not connected), `paused`, `notSharing` (the device
+has not accepted the folder) or `valid` (it shares the folder back); only
+`notSharing` is waited for. The call is made once per poll for each device
+that is connected and on the notes folder, and only while the folder exists.
+The order of the status: errors, no devices, not connected, not shared yet,
+syncing, waiting, scanning, up to date.
 
 While Settings → Sync is open the supervisor polls every second, otherwise
 every 10 s.
@@ -387,6 +396,9 @@ These are estimates from Syncthing's behaviour; the real figures come from
 - **Storage wear.** The database is SQLite on the vfat volume. Syncthing 2
   batches writes; the hourly rescan writes nothing if nothing changed. Watch
   `syncthing-home/` size in the pass.
+- **Polling.** The status adds one small local REST call per connected
+  device per poll (a few hundred bytes, no disk), so every 10 s with the page
+  closed. Negligible next to the rest.
 - **Ports.** Syncthing also listens on TCP and QUIC port 22000 on every
   interface (so a computer can connect to the Kobo) and sends UDP broadcasts
   on 21027. On a shared network, the Kobo is visible as a Syncthing device;
@@ -455,7 +467,11 @@ did not touch the device. For `docs/device-checklist-prerelease.md`:
     and no notes folder: restart sync (Off, On). The log shows
     `sync: share notes with <id> (accepted earlier)` then
     `notes folder … created`; the phone is offered "Σscribe notes".
-15. Expected in `syncthing.log`, harmless: Syncthing warns that it "should not
+15. Waiting: with the phone connected and not yet accepting, Settings → Sync
+    says *Waiting for <phone> to accept* with the next-step line, not *Up to
+    date*; within a poll (10 s, 1 s with the page open) of accepting
+    "Σscribe notes" on the phone it changes to *Syncing* or *Up to date*.
+16. Expected in `syncthing.log`, harmless: Syncthing warns that it "should not
     run as a privileged or system user"; the Kobo runs everything as root.
 11. Loopback (found on the Forma, fix not yet tried there): the launcher log has
     `net: lo has no 127.0.0.1, bringing it up` then a `net: lo: inet …` line;

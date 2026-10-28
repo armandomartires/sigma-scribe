@@ -3,7 +3,7 @@
 //! Syncthing (a shell script that sleeps, and a few canned REST answers).
 #![cfg(unix)]
 
-use sigma_core::sync::{Config, Peer, PendingDevice, PendingFolder, Run, View};
+use sigma_core::sync::{Config, FolderView, Peer, PendingDevice, PendingFolder, Run, Status, View};
 use sigma_device::desktop::DesktopDevice;
 use sigma_device::{Event, Refresh};
 use sigma_render::options::SYNC_CATEGORY;
@@ -109,6 +109,38 @@ fn the_switch_is_saved_and_the_rest_waits_for_it() {
         View::default(),
         "off clears what it showed"
     );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn the_page_says_who_has_yet_to_accept_the_folder() {
+    let (mut r, d) = Rig::new("waiting");
+    r.open_sync_page();
+    r.app.settings.sync = true;
+    let mut view = View {
+        peers: vec![Peer {
+            id: LAPTOP.into(),
+            name: "Laptop".into(),
+            connected: true,
+        }],
+        folder: Some(FolderView {
+            id: "notes".into(),
+            state: "idle".into(),
+            ..FolderView::default()
+        }),
+        waiting: vec!["Laptop".into()],
+        ..running()
+    };
+    r.app.set_sync_view(view.clone());
+    r.app.render(&mut r.dev, Refresh::Full).unwrap();
+    assert_eq!(
+        r.app.sync_view().status(),
+        Status::WaitingFor("Laptop".into(), 0)
+    );
+    view.waiting.clear();
+    r.app.set_sync_view(view);
+    r.app.render(&mut r.dev, Refresh::Full).unwrap();
+    assert_eq!(r.app.sync_view().status(), Status::UpToDate);
     let _ = std::fs::remove_dir_all(&d);
 }
 
