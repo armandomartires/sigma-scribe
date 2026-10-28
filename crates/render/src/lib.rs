@@ -29,6 +29,7 @@ pub mod slider;
 pub mod switch;
 pub mod theme;
 pub mod typeface;
+pub mod wifi_menu;
 
 pub use canvas::{Canvas, Rect};
 pub use drawer::{DrawerHit, DrawerModel, Pane};

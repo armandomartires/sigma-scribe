@@ -48,6 +48,11 @@ FBInk has **no emulator or preview window**. Its README notes it "works perfectl
 - Emulator steps `sync-demo STATE` (`off`, `missing`, `starting`, `failed`, `alone`, `pending-device`, `pending-folder`, `syncing`, `idle`, `offline`), `expect-sync STATUS` and `expect-sync-pending DEVICES,FOLDERS`; script `tests/emu/v1.16-sync.script` (screenshots in `docs/screenshots/v1.16/`).
 - Not covered by any test: a real Syncthing, and the Forma. See `docs/sync.md` §12.
 
+## v1.17 Wi-Fi (title-bar button)
+- `crates/device/src/wifi/wpa.rs`: the control-socket protocol (parsers on canned replies, and every join / scan / forget flow against a fake `wpa_supplicant` on a real Unix datagram socket). `crates/device/src/wifi/{mod,fake}.rs`: the service, the pretend radio. `crates/render/src/wifi_menu.rs`: the title bar and menu layout in both orientations at three UI scales. `app/tests/wifi.rs`: the journey through the app, with the pretend radio (and a fake `syncthing` for Syncthing following the radio).
+- Emulator steps `wifi-demo [online]` and `expect-wifi off|on|joined:NAME|saved:NAME|unsaved:NAME|failure|no-failure`; controls `Wi-Fi`, `WifiSwitch`, `Rescan`, `Net:NAME`, `Forget:NAME`, `ShowPassword`; script `tests/emu/v1.17-wifi.script` (screenshots in `docs/screenshots/v1.17/`).
+- Not covered by any test: `kobo.rs` (ARM only), `wifi.sh`, a real supplicant, the Forma. See `docs/wifi.md` §6.
+
 ## v1.0 release checks
 - `scripts/check-package.sh dist/sigma-scribe-<ver>-kobo` (run by `package-kobo.sh` and the release workflow).
 - `app/tests/release.rs`; tour script `tests/emu/v1.0-tour.script` (screenshots `docs/screenshots/v1.0/`, `eink/`).

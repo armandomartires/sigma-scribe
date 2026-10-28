@@ -42,6 +42,12 @@ const ICONS: &[&str] = &[
     // v1.16 the drawer button (the panel on the drawer's side).
     "panel-right",
     "panel-left",
+    // v1.18 the Wi-Fi button and menu.
+    "wifi",
+    "wifi-low",
+    "wifi-off",
+    "lock",
+    "refresh-cw",
 ];
 
 /// A touch target is 44 brief units; the glyph is half of it.

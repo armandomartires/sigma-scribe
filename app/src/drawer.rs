@@ -333,13 +333,14 @@ impl App {
 
     /// The drawer button (v1.16): opens or closes the drawer menu.
     pub(crate) fn toggle_drawer_menu(&mut self) -> Refresh {
+        self.screen.wifi_menu = false;
         self.screen.drawer_menu = !self.screen.drawer_menu;
         self.sel_ui = None;
         Refresh::Partial
     }
 
     /// The title-bar layout of the mode on screen (preview has no keys).
-    fn title_layout(&self) -> sigma_render::editor::Layout {
+    pub(crate) fn title_layout(&self) -> sigma_render::editor::Layout {
         let keys = self.preview.is_none() && self.keys_visible();
         self.screen.layout(keys, &self.keyboard)
     }

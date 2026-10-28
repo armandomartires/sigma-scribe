@@ -129,7 +129,10 @@ vfat volume; this is the first thing to watch on the Forma (§12).
   path, call `sync_pause()` there; the REST API supports `POST
   /rest/system/pause`.
 - **Network.** Sync needs the Wi-Fi the launcher leaves up (PR #89). Without
-  it, Syncthing runs and reports no connection; nothing is lost.
+  it, Syncthing runs and reports no connection; nothing is lost. The title-bar
+  Wi-Fi button (`docs/wifi.md`) turns the radio on and off: **Wi-Fi off stops
+  Syncthing and Wi-Fi on lets it start again** (with Settings → Sync on; the
+  setting itself is not touched).
 - **Loopback.** Syncthing's API listens on 127.0.0.1, which needs the `lo`
   interface. With Nickel stopped the Forma's `lo` has no address (found on the
   device, 2026-10-28: "listen tcp 127.0.0.1:8484: bind: cannot assign

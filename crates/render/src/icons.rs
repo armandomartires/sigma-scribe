@@ -68,6 +68,16 @@ pub enum Icon {
     PanelRight,
     /// The drawer button with the drawer on the left (v1.16).
     PanelLeft,
+    /// The Wi-Fi button while connected (v1.18).
+    Wifi,
+    /// The Wi-Fi button while on but not connected.
+    WifiLow,
+    /// The Wi-Fi button while off.
+    WifiOff,
+    /// A network that needs a password.
+    Lock,
+    /// Scan again.
+    Refresh,
 }
 
 impl Icon {
@@ -104,6 +114,11 @@ impl Icon {
             Self::Settings => "settings",
             Self::PanelRight => "panel-right",
             Self::PanelLeft => "panel-left",
+            Self::Wifi => "wifi",
+            Self::WifiLow => "wifi-low",
+            Self::WifiOff => "wifi-off",
+            Self::Lock => "lock",
+            Self::Refresh => "refresh-cw",
         }
     }
 }
@@ -214,6 +229,11 @@ mod tests {
             Icon::Settings,
             Icon::PanelRight,
             Icon::PanelLeft,
+            Icon::Wifi,
+            Icon::WifiLow,
+            Icon::WifiOff,
+            Icon::Lock,
+            Icon::Refresh,
         ] {
             for &s in SIZES {
                 let m = ICONS

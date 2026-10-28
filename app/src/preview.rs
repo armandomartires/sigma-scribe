@@ -62,6 +62,7 @@ impl App {
             Event::Tap { x, y } => match self.screen.preview_hit(&self.keyboard, x, y) {
                 Hit::Back => self.go_back(),
                 Hit::DrawerMenu => Some(self.toggle_drawer_menu()),
+                Hit::Wifi => Some(self.toggle_wifi_menu()),
                 Hit::TogglePreview => {
                     self.exit_preview();
                     Some(Refresh::Full)
