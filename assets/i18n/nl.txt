@@ -1148,3 +1148,49 @@ Next step
 
 Accept “Σscribe notes” in Syncthing on that device
 = Accepteer “Σscribe notes” in Syncthing op dat apparaat
+
+Wi-Fi
+= Wi-Fi
+
+Not connected
+= Niet verbonden
+
+Connected
+= Verbonden
+
+Turning on…
+= Inschakelen…
+
+Turning off…
+= Uitschakelen…
+
+Connecting…
+= Verbinden…
+
+Scanning…
+= Zoeken…
+
+Scan again
+= Opnieuw zoeken
+
+No networks found
+= Geen netwerken gevonden
+
+Password
+= Wachtwoord
+
+
+A Wi-Fi password has 8 to 63 characters
+= Een wifi-wachtwoord heeft 8 tot 63 tekens
+
+This kind of network is not supported here
+= Dit type netwerk wordt hier niet ondersteund
+
+Could not join: wrong password? Forget it and try again
+= Verbinden mislukt: verkeerd wachtwoord? Vergeet het netwerk en probeer opnieuw
+
+Joined, but the network gave no address
+= Verbonden, maar het netwerk gaf geen adres
+
+Wi-Fi did not answer
+= Wifi antwoordt niet

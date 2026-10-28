@@ -141,7 +141,7 @@ impl App {
     /// Starts Syncthing when Settings → Sync is on and it is not running,
     /// stops it when it is off.
     pub fn apply_sync(&mut self) {
-        match (self.settings.sync, self.sync.is_some()) {
+        match (self.sync_wanted(), self.sync.is_some()) {
             (true, false) => {
                 sigma_core::info!("sync", "on");
                 self.sync = Some(Supervisor::start(self.sync_cfg.clone()));

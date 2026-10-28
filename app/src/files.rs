@@ -64,6 +64,8 @@ pub(crate) fn take_text(b: &mut Buffer, new: &str) {
 pub(crate) enum RenameTarget {
     Current,
     Entry(NotePath),
+    /// The password of this Wi-Fi network, typed in the title bar (v1.18).
+    WifiPassword(String),
 }
 
 impl App {
@@ -219,6 +221,7 @@ impl App {
         let name = match &target {
             RenameTarget::Current => self.current.name().to_owned(),
             RenameTarget::Entry(p) => p.name().to_owned(),
+            RenameTarget::WifiPassword(_) => String::new(),
         };
         let k = &self.keyboard;
         self.keyboard = Keyboard {
@@ -234,12 +237,17 @@ impl App {
         let Some((target, field)) = self.rename.take() else {
             return;
         };
+        if let RenameTarget::WifiPassword(ssid) = &target {
+            self.finish_wifi_password(ssid, field, ok);
+            return;
+        }
         if !ok {
             return;
         }
         let path = match &target {
             RenameTarget::Current => self.current.clone(),
             RenameTarget::Entry(p) => p.clone(),
+            RenameTarget::WifiPassword(_) => return,
         };
         self.save();
         self.save_scratch();

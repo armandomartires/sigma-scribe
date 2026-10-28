@@ -30,7 +30,7 @@ overrides the folder; `target/emu-log` on a desktop). One line per entry:
 - **Time** is UTC. A Kobo whose clock is not set shows question marks
   (before 2020); the uptime next to it still orders the lines.
 - **Source** is where the line came from: `app`, `ui`, `settings`, `usb`,
-  `light`, `touch`, `perf`, `panic`, `files`, `plugin` (the app talking about a
+  `light`, `touch`, `perf`, `panic`, `files`, `wifi`, `plugin` (the app talking about a
   plugin), or `plugin/<id>` for a line the plugin wrote itself.
 - `files` lines say what Files did, with paths and never note text, at INFO:
   `new note`, `new folder`, `rename a -> b`, `move a -> b`,
@@ -38,6 +38,12 @@ overrides the folder; `target/emu-log` on a desktop). One line per entry:
   taken)`) and `empty trash (n items)`. A failure is a WARNING with the
   reason (`files: delete a.md: …`). Opening the Trash is `ui: open trash` at
   DEBUG, like `ui: open files`.
+- `wifi` lines (INFO): `radio on|off` and `interface …, module …` at start,
+  `on`, `off`, `joining <name>`, `joined <name>`, `not connected`,
+  `scan: <n> networks`, `off: Syncthing stopped`, `on: Syncthing started`, and
+  the `wifi:` lines of `wifi.sh` (the driver and supplicant steps). A failure
+  is a WARNING (`wifi: failed: …`). Network names are logged; **never a
+  password, a passphrase or an IP address.** See `docs/wifi.md`.
 - A multi-line message (a panic) stays one entry, its continuation lines
   indented.
 - At **512 KB** the file becomes `sigma-scribe.log.1` (one backup is kept) and

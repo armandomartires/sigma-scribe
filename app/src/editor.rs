@@ -62,12 +62,12 @@ impl App {
             // v1.16: the open drawer menu turns any touch into a tap (no
             // drags, no word selection under it).
             Gesture::Tap { x, y } | Gesture::DoubleTap { x, y } | Gesture::LongPress { x, y }
-                if self.screen.drawer_menu =>
+                if self.any_menu_open() =>
             {
                 self.drag = None;
                 self.handle(Event::Tap { x, y })
             }
-            _ if self.screen.drawer_menu => None,
+            _ if self.any_menu_open() => None,
             Gesture::Press { x, y } if self.on_plugin_area(x, y) => {
                 self.drag = None;
                 self.plugin_drag_start(x, y);

@@ -24,6 +24,7 @@ impl App {
     pub(crate) fn toggle_light_menu(&mut self) -> Refresh {
         self.screen.light_menu = !self.screen.light_menu;
         self.screen.drawer_menu = false;
+        self.screen.wifi_menu = false;
         self.light_touch = None;
         self.sel_ui = None;
         Refresh::Partial

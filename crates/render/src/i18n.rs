@@ -308,6 +308,35 @@ mod tests {
         set_lang(Lang::En);
     }
 
+    /// The texts of the Wi-Fi menu (v1.18) are translated everywhere; the
+    /// failure texts come from `sigma-device`, which has no catalog.
+    #[test]
+    fn the_wifi_menu_is_translated() {
+        let texts = [
+            "Wi-Fi",
+            "Not connected",
+            "Connected",
+            "Turning on\u{2026}",
+            "Turning off\u{2026}",
+            "Connecting\u{2026}",
+            "Scanning\u{2026}",
+            "Scan again",
+            "No networks found",
+            "Password",
+            "A Wi-Fi password has 8 to 63 characters",
+            "This kind of network is not supported here",
+            "Could not join: wrong password? Forget it and try again",
+            "Joined, but the network gave no address",
+            "Wi-Fi did not answer",
+        ];
+        for &(_, name, text) in REAL {
+            let c = parse(text);
+            for t in texts {
+                assert!(c.contains_key(t), "{name} lacks {t:?}");
+            }
+        }
+    }
+
     #[test]
     fn catalogs_parse_and_keep_placeholders() {
         for &(_, name, text) in REAL {

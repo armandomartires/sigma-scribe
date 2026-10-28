@@ -1148,3 +1148,49 @@ Next step
 
 Accept “Σscribe notes” in Syncthing on that device
 = Accepter “Σscribe notes” i Syncthing på den enhed
+
+Wi-Fi
+= Wi-Fi
+
+Not connected
+= Ikke forbundet
+
+Connected
+= Forbundet
+
+Turning on…
+= Tænder…
+
+Turning off…
+= Slukker…
+
+Connecting…
+= Forbinder…
+
+Scanning…
+= Søger…
+
+Scan again
+= Søg igen
+
+No networks found
+= Ingen netværk fundet
+
+Password
+= Adgangskode
+
+
+A Wi-Fi password has 8 to 63 characters
+= En Wi-Fi-adgangskode har 8 til 63 tegn
+
+This kind of network is not supported here
+= Denne type netværk understøttes ikke her
+
+Could not join: wrong password? Forget it and try again
+= Kunne ikke forbinde: forkert adgangskode? Glem netværket og prøv igen
+
+Joined, but the network gave no address
+= Forbundet, men netværket gav ingen adresse
+
+Wi-Fi did not answer
+= Wi-Fi svarer ikke

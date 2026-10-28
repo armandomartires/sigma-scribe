@@ -950,6 +950,41 @@ fn main() -> ExitCode {
                     return fail(format!("pending devices,folders: {got}"));
                 }
             }
+            // v1.18: `wifi-demo [online]` gives the app a pretend radio, so the
+            // title bar gets the Wi-Fi button (an app with none shows none).
+            // `expect-wifi off|on|joined:NAME|saved:NAME|unsaved:NAME|failure|no-failure`.
+            "wifi-demo" => {
+                use sigma_device::wifi::{fake::FakeWifi, Service};
+                app.set_wifi(Service::inline(if arg == "online" {
+                    FakeWifi::demo_online()
+                } else {
+                    FakeWifi::demo()
+                }));
+                let _ = app.render(&mut dev, sigma_device::Refresh::Full);
+            }
+            "expect-wifi" => {
+                let v = app.wifi_view();
+                let saved = |n: &str| v.networks.iter().any(|x| x.ssid == n && x.saved);
+                let ok = match arg.split_once(':') {
+                    None => match arg {
+                        "off" => !v.powered,
+                        "on" => v.powered && v.ssid.is_none(),
+                        "failure" => v.failure.is_some(),
+                        "no-failure" => v.failure.is_none(),
+                        _ => return fail("unknown Wi-Fi state".into()),
+                    },
+                    Some(("joined", n)) => v.ssid.as_deref() == Some(n),
+                    Some(("saved", n)) => saved(n),
+                    Some(("unsaved", n)) => !saved(n),
+                    Some(_) => return fail("unknown Wi-Fi state".into()),
+                };
+                if !ok {
+                    return fail(format!(
+                        "Wi-Fi: powered {}, joined {:?}, failure {:?}",
+                        v.powered, v.ssid, v.failure
+                    ));
+                }
+            }
             "expect-status" => {
                 if app.autosave.state.label() != arg {
                     return fail(format!("status is {:?}", app.autosave.state.label()));

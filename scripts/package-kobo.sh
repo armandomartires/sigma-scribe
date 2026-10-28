@@ -35,7 +35,7 @@ cp "$ST/syncthing" "$ST/LICENSE.txt" "$ST/AUTHORS.txt" "$OUT/.adds/sigma-scribe/
 # Its root certificates (the Kobo has none it finds): the pinned Mozilla
 # bundle, passed as SSL_CERT_FILE when the app starts it.
 cp "$(./scripts/fetch-cacert.sh)" "$OUT/.adds/sigma-scribe/syncthing/ca-certificates.crt"
-chmod 755 "$OUT/.adds/sigma-scribe/sigma-scribe" "$OUT/.adds/sigma-scribe/launch.sh" "$OUT/.adds/sigma-scribe/syncthing/syncthing"
+chmod 755 "$OUT/.adds/sigma-scribe/sigma-scribe" "$OUT/.adds/sigma-scribe/launch.sh" "$OUT/.adds/sigma-scribe/wifi.sh" "$OUT/.adds/sigma-scribe/syncthing/syncthing"
 ( cd "$OUT" && find . -type f | sort | xargs sha256sum ) > "$OUT.sha256"
 # Reproducible tarball: fixed order, owner, mode and time; gzip without name/time.
 tar -C "$OUT" --sort=name --owner=0 --group=0 --numeric-owner \

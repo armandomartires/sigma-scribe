@@ -197,6 +197,8 @@ impl App {
                     .map(|(_, r)| centre(r))
             }
             "Find" => Some(centre(l.find_button)),
+            "Wi-Fi" | "WifiSwitch" | "Rescan" | "ShowPassword" => self.wifi_control(label),
+            s if s.starts_with("Net:") || s.starts_with("Forget:") => self.wifi_control(s),
             "Graph" if self.screen.graph_on => Some(centre(l.graph_button)),
             "FindField" | "ReplaceField" | "FindClose" | "Prev" | "Next" | "Replace" | "All"
             | "Aa" => self.screen.find_control(&l, label),
