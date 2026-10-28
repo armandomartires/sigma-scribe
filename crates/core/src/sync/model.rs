@@ -127,6 +127,10 @@ pub enum Status {
     NoDevices,
     /// Devices are set up and none is connected.
     NotConnected,
+    /// A device is connected but no folder is at the notes path, so nothing
+    /// can sync (the folder is being made, could not be made, or the
+    /// device's offer was ignored).
+    NotShared,
     /// Scanning the notes folder.
     Scanning,
     /// Fetching: files and bytes still to come.
@@ -172,6 +176,9 @@ impl View {
         }
         if self.connected() == 0 {
             return Status::NotConnected;
+        }
+        if self.folder.is_none() {
+            return Status::NotShared;
         }
         match self.folder.as_ref() {
             Some(f) if f.state.starts_with("sync") || f.need_files > 0 => {
@@ -437,7 +444,14 @@ mod tests {
         }];
         assert_eq!(v.status(), Status::NotConnected);
         v.peers[0].connected = true;
+        // Connected, but nothing is shared: not "up to date".
+        assert_eq!(v.status(), Status::NotShared);
+        v.folder = Some(FolderView::default());
         assert_eq!(v.status(), Status::UpToDate);
+        v.folder = None;
+        v.peers[0].connected = false;
+        assert_eq!(v.status(), Status::NotConnected);
+        v.peers[0].connected = true;
         v.folder = Some(FolderView {
             state: "syncing".into(),
             need_files: 2,

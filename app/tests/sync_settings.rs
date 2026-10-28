@@ -240,6 +240,12 @@ fn turning_sync_on_runs_it_and_accepting_reaches_syncthing() {
             r#"{"deviceID":"","name":""}"#.into(),
         ),
         ("POST /rest/config/devices", String::new()),
+        // Accepting a device also shares the notes folder with it.
+        (
+            "GET /rest/config/defaults/folder",
+            r#"{"id":"","path":"~","devices":[]}"#.into(),
+        ),
+        ("POST /rest/config/folders", String::new()),
         ("POST /rest/system/shutdown", String::new()),
     ]);
     let mut cfg = Config::new(bin, d.join("home"), notes, d.join("log/syncthing.log"));
@@ -280,6 +286,28 @@ fn turning_sync_on_runs_it_and_accepting_reaches_syncthing() {
         .1
         .clone();
     assert!(body.contains(LAPTOP) && body.contains("Laptop"), "{body}");
+    let end = Instant::now() + Duration::from_secs(10);
+    while !seen
+        .lock()
+        .unwrap()
+        .iter()
+        .any(|s| s.0 == "POST /rest/config/folders")
+    {
+        assert!(Instant::now() < end, "the notes folder was not shared");
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    let folder = seen
+        .lock()
+        .unwrap()
+        .iter()
+        .find(|s| s.0 == "POST /rest/config/folders")
+        .unwrap()
+        .1
+        .clone();
+    assert!(
+        folder.contains(LAPTOP) && folder.contains("scribe notes"),
+        "{folder}"
+    );
     // Leaving the app stops it.
     r.app.stop_sync();
     assert!(seen

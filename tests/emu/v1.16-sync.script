@@ -32,6 +32,7 @@ tap-on Laptop/Accept
 expect-sync-pending 0,0
 # Then it offers its folder.
 sync-demo pending-folder
+expect-sync NotShared
 expect-sync-pending 0,1
 shot v1.16-sync-pending-folder
 tap-on Notes/Ignore

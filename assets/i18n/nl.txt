@@ -1136,3 +1136,6 @@ Show QR code
 
 QR code
 = QR-code
+
+Not shared yet
+= Nog niet gedeeld

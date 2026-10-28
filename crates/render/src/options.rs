@@ -1027,6 +1027,7 @@ fn sync_status_text(st: &sigma_core::sync::Status) -> String {
         Status::NoLoopback => tr("Loopback network is down").into_owned(),
         Status::NoDevices => tr("No devices yet").into_owned(),
         Status::NotConnected => tr("No device connected").into_owned(),
+        Status::NotShared => tr("Not shared yet").into_owned(),
         Status::Scanning => tr("Scanning").into_owned(),
         Status::Syncing(files, bytes) => format!(
             "{} \u{b7} {}",
