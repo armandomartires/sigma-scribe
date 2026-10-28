@@ -20,6 +20,10 @@ This binary statically links:
   Graph map in a sandbox. wasmparser: Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT.
 - The Rust standard library and musl libc (MIT / Apache-2.0, MIT).
 
+Syncthing v2.1.7 (syncthing/, used by Settings -> Sync): Syncthing Authors, Mozilla Public
+License 2.0, unmodified, run as a separate program (not linked). Its licence, authors and
+where to get its source code are in syncthing/ (LICENSE.txt, AUTHORS.txt, NOTICE.txt).
+
 Bundled plugins (plugins/: graph-map, contents-pane, todo-pane, scratch-pane): by
 SIGMArecon, AGPL-3.0-only like the app, WebAssembly modules built from the
 sigma-scribe-plugins repository (https://github.com/armandomartires/sigma-scribe-plugins)

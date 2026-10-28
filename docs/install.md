@@ -24,7 +24,7 @@ The package includes four plugins: the Graph, and the side drawer's Contents, To
 Same as install: unpacking over an older version replaces the program files only (including the bundled plugins' files, never your plugin on/off choices). Your notes in `sigma-scribe/notes/` (and the hidden settings and scratch files there) are not in the package and are kept. If you edited `.adds/sigma-scribe/touch.conf`, back it up first — the package contains the default.
 
 ## Uninstall
-Delete `.adds/sigma-scribe/` and `.adds/nm/sigma-scribe` from the drive, eject. Your notes stay in `sigma-scribe/notes/` until you delete that folder yourself. Nothing else on the Kobo is changed.
+Delete `.adds/sigma-scribe/` and `.adds/nm/sigma-scribe` from the drive, eject. (That includes `syncthing-home/`, the device ID and database of Settings → Sync: the other computers would have to add the Kobo again. Copy it first if you want to keep it.) Your notes stay in `sigma-scribe/notes/` until you delete that folder yourself. Nothing else on the Kobo is changed.
 
 ## Getting your notes off (export)
 Notes are plain Markdown files: connect over USB and copy `sigma-scribe/notes`.

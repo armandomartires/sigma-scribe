@@ -49,7 +49,7 @@ fn now_secs() -> u64 {
 }
 
 /// Replaces a buffer's text with `new` (undoable), caret kept nearby.
-fn take_text(b: &mut Buffer, new: &str) {
+pub(crate) fn take_text(b: &mut Buffer, new: &str) {
     let at = b.caret().min(new.len());
     let at = (0..=at)
         .rev()

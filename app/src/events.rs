@@ -135,6 +135,10 @@ impl App {
                 if let Some(r) = self.plugin_step() {
                     return Some(r);
                 }
+                // Syncthing's news, and notes changed on disk (v1.16).
+                if let Some(r) = self.sync_tick(t) {
+                    return Some(r);
+                }
                 if let Some(items) = self.indexer.poll() {
                     let changed = items != self.disk_todos;
                     self.disk_todos = items;
@@ -451,6 +455,7 @@ impl App {
         self.set_gsensor(dev.has_gsensor());
         sigma_device::usbkbd::set_layout(self.settings.kb_layout);
         self.render(dev, Refresh::Full)?;
+        self.apply_sync();
         while self.running {
             self.sync_usb_host(dev);
             self.sync_light(dev);
@@ -470,6 +475,9 @@ impl App {
             }
         }
         self.save();
+        self.save_scratch();
+        // After the notes are written: ask Syncthing to shut down (docs/sync.md §3).
+        self.stop_sync();
         if self.usb_host {
             let _ = dev.usb_host(false);
             self.usb_host = false;

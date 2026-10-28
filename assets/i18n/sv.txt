@@ -1034,3 +1034,92 @@ Yesterday
 
 {n} days ago
 = för {n} dagar sedan
+
+# Settings -> Sync (v1.16)
+
+Sync
+= Synkronisering
+
+Sync notes
+= Synkronisera anteckningar
+
+Keeps the notes in step with your computers while Σscribe is open
+= Håller anteckningarna i takt med dina datorer medan Σscribe är öppet
+
+Status
+= Status
+
+Devices
+= Enheter
+
+Last sync
+= Senaste synkronisering
+
+Conflicts
+= Konflikter
+
+Look for conflict in the Files list
+= Leta efter conflict i fillistan
+
+Device ID
+= Enhets-ID
+
+Waiting for you
+= Väntar på dig
+
+Pairing
+= Parkoppling
+
+Add this device on your computer
+= Lägg till den här enheten på din dator
+
+In Syncthing there choose Add Remote Device and enter the ID above
+= Välj Lägg till fjärrenhet i Syncthing där och ange ID:t ovan
+
+Accept
+= Godkänn
+
+Ignore
+= Ignorera
+
+New device
+= Ny enhet
+
+Never
+= Aldrig
+
+Folder from
+= Mapp från
+
+Syncthing is not installed
+= Syncthing är inte installerat
+
+Starting
+= Startar
+
+Stopped
+= Stoppad
+
+No devices yet
+= Inga enheter ännu
+
+No device connected
+= Ingen enhet ansluten
+
+Scanning
+= Skannar
+
+Syncing {n} files
+= Synkroniserar {n} filer
+
+{n} of {m} connected
+= {n} av {m} anslutna
+
+{n} files
+= {n} filer
+
+{n} KB
+= {n} KB
+
+{n} MB
+= {n} MB

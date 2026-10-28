@@ -928,6 +928,28 @@ fn main() -> ExitCode {
                     return fail(e.to_string());
                 }
             }
+            "sync-demo" => {
+                // v1.16: what Settings → Sync shows for a state of Syncthing,
+                // without running it. `expect-sync` checks the status word.
+                match demo_sync(arg) {
+                    Some(v) => app.set_sync_view(v),
+                    None => return fail("unknown sync state".into()),
+                }
+                let _ = app.render(&mut dev, sigma_device::Refresh::Partial);
+            }
+            "expect-sync" => {
+                let got = format!("{:?}", app.sync_view().status());
+                if !got.starts_with(arg) {
+                    return fail(format!("sync status is {got}"));
+                }
+            }
+            "expect-sync-pending" => {
+                let v = app.sync_view();
+                let got = format!("{},{}", v.pending_devices.len(), v.pending_folders.len());
+                if got != arg {
+                    return fail(format!("pending devices,folders: {got}"));
+                }
+            }
             "expect-status" => {
                 if app.autosave.state.label() != arg {
                     return fail(format!("status is {:?}", app.autosave.state.label()));
@@ -945,6 +967,84 @@ fn main() -> ExitCode {
         dev.refreshes.len()
     );
     ExitCode::SUCCESS
+}
+
+/// v1.16: a state of Syncthing for the Sync page (see `docs/sync.md` §10).
+fn demo_sync(name: &str) -> Option<sigma_core::sync::View> {
+    use sigma_core::sync::{FolderView, Peer, PendingDevice, PendingFolder, Run, View};
+    const ME: &str = "MFZWI3D-BONSGYC-YLTMRWG-C43ENR5-QXGZDMM-FZWI3DP-BONSGYY-LTMRWAD";
+    const LAPTOP: &str = "P56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2";
+    let running = View {
+        run: Run::Running,
+        device_id: ME.into(),
+        ..View::default()
+    };
+    let laptop = |connected| Peer {
+        id: LAPTOP.into(),
+        name: "Laptop".into(),
+        connected,
+    };
+    let folder = |state: &str, need: u64| FolderView {
+        id: "notes".into(),
+        state: state.into(),
+        need_files: need,
+        need_bytes: need * 4096,
+        ..FolderView::default()
+    };
+    Some(match name {
+        "off" => View::default(),
+        "missing" => View {
+            run: Run::NotInstalled,
+            ..View::default()
+        },
+        "starting" => View {
+            run: Run::Starting,
+            ..View::default()
+        },
+        "failed" => View {
+            run: Run::Failed("exited at start (exit status: 1)".into()),
+            ..View::default()
+        },
+        "alone" => running,
+        "pending-device" => View {
+            pending_devices: vec![PendingDevice {
+                id: LAPTOP.into(),
+                name: "Laptop".into(),
+                address: "192.168.1.20:22000".into(),
+            }],
+            ..running
+        },
+        "pending-folder" => View {
+            peers: vec![laptop(true)],
+            pending_folders: vec![PendingFolder {
+                id: "abcde-fghij".into(),
+                label: "Notes".into(),
+                device: LAPTOP.into(),
+                device_name: "Laptop".into(),
+            }],
+            ..running
+        },
+        "syncing" => View {
+            peers: vec![laptop(true)],
+            folder: Some(folder("syncing", 3)),
+            last_sync: Some("2026-10-28 13:58".into()),
+            ..running
+        },
+        "idle" => View {
+            peers: vec![laptop(true)],
+            folder: Some(folder("idle", 0)),
+            last_sync: Some("2026-10-28 14:05".into()),
+            conflicts: 2,
+            ..running
+        },
+        "offline" => View {
+            peers: vec![laptop(false)],
+            folder: Some(folder("idle", 0)),
+            last_sync: Some("2026-10-27 21:40".into()),
+            ..running
+        },
+        _ => return None,
+    })
 }
 
 /// v1.4.2: taps through Settings pages until `name` is on screen.

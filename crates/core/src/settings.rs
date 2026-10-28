@@ -277,6 +277,10 @@ pub struct Settings {
     /// app then leaves the mixer as it finds it. Applied at start
     /// (v1.17). `warmth=` is `keep` or the step.
     pub warmth: Option<u8>,
+    /// Settings → Sync (v1.16): run Syncthing on the Kobo while the app is
+    /// open and keep the notes folder in step with the reader's other
+    /// computers (`docs/sync.md`). Per device, off by default. `sync=`.
+    pub sync: bool,
 }
 
 /// Backlight steps above off: nine stops, 0 to 8 (Display → Backlight).
@@ -407,6 +411,7 @@ impl Default for Settings {
             log: false,
             log_level: crate::log::Level::Info,
             warmth: None,
+            sync: false,
         }
     }
 }
@@ -488,6 +493,17 @@ pub enum Change {
     Log(bool),
     /// Settings → Logging → Level.
     LogLevel(crate::log::Level),
+    /// Settings → Sync: Syncthing on or off (applied at once).
+    Sync(bool),
+    /// Settings → Sync: accept pending device number `i` of the list the
+    /// page showed. The app applies it.
+    SyncAcceptDevice(u8),
+    /// Settings → Sync: ignore pending device number `i`.
+    SyncIgnoreDevice(u8),
+    /// Settings → Sync: accept pending folder number `i`.
+    SyncAcceptFolder(u8),
+    /// Settings → Sync: ignore pending folder number `i`.
+    SyncIgnoreFolder(u8),
     /// Set a setting of a plugin: plugin number, the setting's place in its
     /// declared list, and the chosen option's place. Kept in the plugin's own
     /// `settings` file, so `Settings` ignores it and the app applies it.
@@ -659,7 +675,12 @@ impl Settings {
             Change::Log(on) => self.log = on,
             Change::LogLevel(l) => self.log_level = l,
             Change::Warmth(n) => self.warmth = Some(n.min(WARMTH_MAX)),
-            Change::Backlight(_)
+            Change::Sync(on) => self.sync = on,
+            Change::SyncAcceptDevice(_)
+            | Change::SyncIgnoreDevice(_)
+            | Change::SyncAcceptFolder(_)
+            | Change::SyncIgnoreFolder(_)
+            | Change::Backlight(_)
             | Change::Plugin(..)
             | Change::PluginSetting(..)
             | Change::PluginCheck
@@ -1119,6 +1140,7 @@ pub const FIELDS: &[Field] = &[
         },
         write: |s| s.warmth.map_or("keep".to_owned(), |n| n.to_string()),
     },
+    toggle!("sync", sync),
 ];
 
 #[cfg(test)]
@@ -1164,6 +1186,7 @@ mod tests {
             log: true,
             log_level: crate::log::Level::Error,
             warmth: Some(7),
+            sync: true,
         }
     }
 
@@ -1180,7 +1203,7 @@ mod tests {
              rotation=0\nlandscape_keys=centre\npad=numbers\npad_side=right\nui_scale=200\n\
              layout=us\nkeyboard_size=auto\nink_pen=finger\nink_a2=off\nink_words=off\n\
              ink_boxes=off\nink_learn=on\nui_lang_override=off\nui_lang=en\nexperimental=off\n\
-             enhanced_keyboard=on\nlog=off\nlog_level=info\nwarmth=keep\n"
+             enhanced_keyboard=on\nlog=off\nlog_level=info\nwarmth=keep\nsync=off\n"
         );
         assert_eq!(
             every_field_changed().serialize(),
@@ -1190,7 +1213,7 @@ mod tests {
              rotation=270\nlandscape_keys=split\npad=arrows\npad_side=left\nui_scale=150\n\
              layout=de\nkeyboard_size=125\nink_pen=stylus\nink_a2=on\nink_words=on\n\
              ink_boxes=on\nink_learn=off\nui_lang_override=on\nui_lang=pt\nexperimental=on\n\
-             enhanced_keyboard=off\nlog=on\nlog_level=error\nwarmth=7\n"
+             enhanced_keyboard=off\nlog=on\nlog_level=error\nwarmth=7\nsync=on\n"
         );
     }
 

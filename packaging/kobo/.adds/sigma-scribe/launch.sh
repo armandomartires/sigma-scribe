@@ -58,5 +58,8 @@ if [ -d "$DIR/plugins" ] && [ ! -f "$STATE" ]; then
 fi
 "$DIR/sigma-scribe" >>"$LOG" 2>&1
 echo "=== $(date) exit $?" >>"$LOG"
+# Settings -> Sync: the app stops Syncthing itself; this is for a crash that
+# left it running (a reboot would end it anyway, but not before the sync).
+killall -q syncthing >/dev/null 2>&1
 sync
 reboot

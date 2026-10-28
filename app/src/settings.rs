@@ -81,6 +81,15 @@ impl App {
         if let Change::PluginGet(i) = c {
             return self.plugin_get(usize::from(i));
         }
+        if matches!(
+            c,
+            Change::SyncAcceptDevice(_)
+                | Change::SyncIgnoreDevice(_)
+                | Change::SyncAcceptFolder(_)
+                | Change::SyncIgnoreFolder(_)
+        ) {
+            return self.sync_command(c);
+        }
         if let Change::PluginSetting(p, s, o) = c {
             return self.set_plugin_setting(usize::from(p), usize::from(s), usize::from(o));
         }
@@ -124,6 +133,9 @@ impl App {
             if self.settings.log {
                 sigma_core::info!("app", "logging level {}", self.settings.log_level.label());
             }
+        }
+        if matches!(c, Change::Sync(_)) {
+            self.apply_sync();
         }
         sigma_core::debug!("settings", "{c:?}");
         self.screen.ink_words = self.settings.word_mode();
@@ -210,6 +222,7 @@ impl App {
             plugins: &self.plugin_list,
             repository: &self.repo_rows,
             repo_note: &self.repo_note,
+            sync: &self.sync_view,
         }
     }
 

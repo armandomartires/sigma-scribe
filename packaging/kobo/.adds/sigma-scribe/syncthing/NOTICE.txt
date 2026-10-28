@@ -1,0 +1,23 @@
+Syncthing (used by Settings -> Sync)
+
+This folder holds Syncthing v2.1.7, the official "syncthing-linux-arm" release,
+unmodified, exactly as published at
+https://github.com/syncthing/syncthing/releases/tag/v2.1.7
+(sha256 of the release file d8b59029e25992bc0d280fccc5626e5dca743b285fca1a36db1148fcf871b639;
+the program's sha256 is in the package's checksum list).
+
+Syncthing is free software of the Syncthing Authors, licensed under the Mozilla
+Public License, version 2.0 (LICENSE.txt in this folder; the authors are in
+AUTHORS.txt). The full source code of this exact version, which is the Source
+Code Form for the purposes of MPL-2.0 section 3.2, is available at
+https://github.com/syncthing/syncthing/tree/v2.1.7
+and as the source archive of the release above.
+
+Sigma scribe starts it as a separate program (it does not link to it), only
+while Settings -> Sync is on, and talks to it on the loopback. Sigma scribe
+itself is licensed under the GNU Affero General Public License v3.0 only (see
+../LICENSE). The Go modules built into Syncthing carry their own licences; the
+source tree above lists them.
+
+Syncthing keeps its configuration, device key and database in
+../syncthing-home/, which an update of Sigma scribe never replaces.

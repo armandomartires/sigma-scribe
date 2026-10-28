@@ -41,6 +41,13 @@ FBInk has **no emulator or preview window**. Its README notes it "works perfectl
 - `click`, `double-click`, `right-click`, `mouse-down`, `mouse-up`, `wheel N` (+ = up); `expect-pointer visible|hidden`; `wait MS` drives the throttle and the 3 s hide.
 - Script: `tests/emu/v0.8.1-pointer.script` (screenshots in `docs/screenshots/v0.8.1/`, `eink/`).
 
+## v1.16 sync (Settings → Sync)
+- `crates/core/src/sync/*` unit tests: the JSON reader, the REST reply reader, the status model from the documented Syncthing answers, `.stignore`, conflict counting.
+- `crates/core/tests/sync_supervisor.rs`: the supervisor against a fake REST API (a thread on the loopback with canned answers) and a fake `syncthing` (a shell script that sleeps or exits). No real Syncthing is run anywhere in the tests. Unix only.
+- `app/tests/sync_settings.rs`: the page, the switch, Accept and Ignore; and the app → supervisor → fake API path. `app/tests/sync_notes.rs`: a note changed on disk is taken in, and never overwritten.
+- Emulator steps `sync-demo STATE` (`off`, `missing`, `starting`, `failed`, `alone`, `pending-device`, `pending-folder`, `syncing`, `idle`, `offline`), `expect-sync STATUS` and `expect-sync-pending DEVICES,FOLDERS`; script `tests/emu/v1.16-sync.script` (screenshots in `docs/screenshots/v1.16/`).
+- Not covered by any test: a real Syncthing, and the Forma. See `docs/sync.md` §12.
+
 ## v1.0 release checks
 - `scripts/check-package.sh dist/sigma-scribe-<ver>-kobo` (run by `package-kobo.sh` and the release workflow).
 - `app/tests/release.rs`; tour script `tests/emu/v1.0-tour.script` (screenshots `docs/screenshots/v1.0/`, `eink/`).

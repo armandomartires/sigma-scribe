@@ -1035,3 +1035,92 @@ Yesterday
 
 {n} days ago
 = il y a {n} jours
+
+# Settings -> Sync (v1.16)
+
+Sync
+= Synchronisation
+
+Sync notes
+= Synchroniser les notes
+
+Keeps the notes in step with your computers while Σscribe is open
+= Garde les notes à jour avec vos ordinateurs tant que Σscribe est ouvert
+
+Status
+= État
+
+Devices
+= Appareils
+
+Last sync
+= Dernière synchro
+
+Conflicts
+= Conflits
+
+Look for conflict in the Files list
+= Cherchez conflict dans la liste des fichiers
+
+Device ID
+= ID de l'appareil
+
+Waiting for you
+= En attente de vous
+
+Pairing
+= Jumelage
+
+Add this device on your computer
+= Ajoutez cet appareil sur votre ordinateur
+
+In Syncthing there choose Add Remote Device and enter the ID above
+= Dans Syncthing, choisissez Ajouter un appareil distant et entrez l'ID ci-dessus
+
+Accept
+= Accepter
+
+Ignore
+= Ignorer
+
+New device
+= Nouvel appareil
+
+Never
+= Jamais
+
+Folder from
+= Dossier de
+
+Syncthing is not installed
+= Syncthing n'est pas installé
+
+Starting
+= Démarrage
+
+Stopped
+= Arrêté
+
+No devices yet
+= Aucun appareil pour l'instant
+
+No device connected
+= Aucun appareil connecté
+
+Scanning
+= Analyse
+
+Syncing {n} files
+= Synchronisation de {n} fichiers
+
+{n} of {m} connected
+= {n} sur {m} connectés
+
+{n} files
+= {n} fichiers
+
+{n} KB
+= {n} Ko
+
+{n} MB
+= {n} Mo
