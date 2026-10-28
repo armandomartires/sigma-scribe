@@ -506,6 +506,12 @@ fn accepting_a_device_with_no_notes_folder_makes_one_shared_with_it() {
         order,
         ["POST /rest/config/devices", "POST /rest/config/folders"]
     );
+    // The marker is written just after the POST is answered.
+    let end = Instant::now() + Duration::from_secs(10);
+    while !home.join("notes-folder-made-here").exists() {
+        assert!(Instant::now() < end, "no marker");
+        std::thread::sleep(Duration::from_millis(20));
+    }
     assert_eq!(
         std::fs::read_to_string(home.join("notes-folder-made-here"))
             .unwrap()
