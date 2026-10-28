@@ -68,6 +68,10 @@ pub enum Icon {
     PanelRight,
     /// The drawer button with the drawer on the left (v1.16).
     PanelLeft,
+    /// The front-light button while the light is on.
+    Sun,
+    /// The front-light button while the light is off.
+    SunDim,
     /// The Wi-Fi button while connected (v1.18).
     Wifi,
     /// The Wi-Fi button while on but not connected.
@@ -114,6 +118,8 @@ impl Icon {
             Self::Settings => "settings",
             Self::PanelRight => "panel-right",
             Self::PanelLeft => "panel-left",
+            Self::Sun => "sun",
+            Self::SunDim => "sun-dim",
             Self::Wifi => "wifi",
             Self::WifiLow => "wifi-low",
             Self::WifiOff => "wifi-off",
@@ -229,6 +235,8 @@ mod tests {
             Icon::Settings,
             Icon::PanelRight,
             Icon::PanelLeft,
+            Icon::Sun,
+            Icon::SunDim,
             Icon::Wifi,
             Icon::WifiLow,
             Icon::WifiOff,

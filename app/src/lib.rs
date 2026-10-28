@@ -26,6 +26,7 @@ mod handwriting;
 mod help;
 mod ink;
 mod keyboard;
+mod light_menu;
 mod nav;
 mod paged_bar;
 mod perf;
@@ -245,6 +246,8 @@ pub struct App {
     warmth_step: u8,
     warmth_want: Option<u8>,
     warmth_probed: bool,
+    /// The light-menu slider the finger is on (a drag moves it).
+    light_touch: Option<sigma_render::light_menu::LightRow>,
     /// USB mouse / touchpad (v0.8.1).
     pub pointer: PointerState,
     /// The ink panel (v1.5.0); `Some` while open.
@@ -382,6 +385,7 @@ impl App {
             warmth_step: 0,
             warmth_want: None,
             warmth_probed: false,
+            light_touch: None,
             pointer: PointerState::default(),
             ink: None,
             hwr: Hwr::default(),

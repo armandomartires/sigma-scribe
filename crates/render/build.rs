@@ -42,6 +42,9 @@ const ICONS: &[&str] = &[
     // v1.16 the drawer button (the panel on the drawer's side).
     "panel-right",
     "panel-left",
+    // The front-light button: on, and dim while the light is off.
+    "sun",
+    "sun-dim",
     // v1.18 the Wi-Fi button and menu.
     "wifi",
     "wifi-low",

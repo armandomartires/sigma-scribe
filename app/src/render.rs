@@ -184,6 +184,7 @@ impl App {
                 .draw_drawer_tab(&mut c, &base, self.settings.drawer, self.theme());
         }
         self.draw_drawer_menu(&mut c);
+        self.draw_light_menu(&mut c);
         self.draw_wifi_menu(&mut c);
         let v = self.ink_view();
         if let (Some(ink), Some(v)) = (&mut self.ink, v) {

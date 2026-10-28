@@ -572,6 +572,39 @@ mod tests {
     }
 
     #[test]
+    fn every_title_icon_at_once_fits_with_the_light_button() {
+        let k = Keyboard::default();
+        for mut e in screens() {
+            e.back_on = true;
+            e.contents_on = true;
+            e.graph_on = true;
+            e.light_on = true;
+            let l = e.layout(true, &k);
+            let order = [
+                l.back_button,
+                l.files_button,
+                l.preview_button,
+                l.find_button,
+                l.light_button,
+                l.drawer_button,
+                l.graph_button,
+                l.wifi_button,
+                l.options_button,
+            ];
+            for (i, a) in order.iter().enumerate() {
+                assert!(a.w >= e.page_scale().px(44.0), "a full target: {a:?}");
+                assert!(a.x >= 0 && a.x + a.w <= e.width as i32, "{a:?}");
+                assert!(a.y >= 0 && a.y + a.h <= l.title.h);
+                if let Some(o) = order.get(i + 1) {
+                    assert!(a.x + a.w <= o.x, "in order, no overlap: {a:?} {o:?}");
+                }
+            }
+            assert!(l.name_rect.w >= e.px(100.0), "{:?}", l.name_rect);
+            assert!(l.name_rect.x + l.name_rect.w <= l.back_button.x);
+        }
+    }
+
+    #[test]
     fn a_tap_on_the_button_is_wifi_in_write_mode_and_preview() {
         let k = Keyboard::default();
         let b = sigma_core::Buffer::new("x");
