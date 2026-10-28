@@ -211,6 +211,13 @@ pub trait Device {
     fn has_gsensor(&self) -> bool {
         false
     }
+    /// What the start-up probe of the front light and the warmth mixer found,
+    /// one line each, handed over once. The device opens before the log is
+    /// switched on, so the app logs these itself when it starts. Default:
+    /// nothing to say.
+    fn light_report(&mut self) -> Vec<String> {
+        Vec::new()
+    }
     /// The front light's step, 0 (off) to 8 (full), when the device has
     /// one (v1.12). Default: no light, so Display shows no Backlight row.
     fn light_step(&mut self) -> Option<u8> {

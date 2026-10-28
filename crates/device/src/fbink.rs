@@ -44,6 +44,9 @@ pub struct KoboDevice {
     light: Option<crate::light::Light>,
     /// The warm-to-cool mixer (v1.17), when sysfs shows one.
     warmth: Option<crate::light::Warmth>,
+    /// What the light probe found, until the app asks for it to be logged
+    /// (the log is not on yet when the device opens).
+    light_report: Vec<String>,
 }
 
 impl KoboDevice {
@@ -164,6 +167,7 @@ impl KoboDevice {
             });
         }
         spawn_usb_watcher(tx, epoch);
+        let probe = crate::light::probe(std::path::Path::new(crate::light::ROOT));
         Ok(Self {
             otg: OtgSwitch::new(CHIPIDEA_ROLE),
             width: w,
@@ -173,43 +177,18 @@ impl KoboDevice {
             pointer_updates: 0,
             last_full: None,
             gsensor,
-            light: open_light(),
-            warmth: open_warmth(),
+            light: probe.light,
+            warmth: probe.warmth,
+            light_report: probe.report,
         })
     }
 }
 
-/// Finds the front light and logs what sysfs shows, so a wrong pick is easy
-/// to see in the log (v1.12).
-fn open_light() -> Option<crate::light::Light> {
-    let root = std::path::Path::new(crate::light::ROOT);
-    for line in crate::light::describe(root) {
-        sigma_core::info!("light", "sysfs {line}");
-    }
-    let l = crate::light::Light::find(root);
-    match &l {
-        Some(l) => sigma_core::info!("light", "using {} (step {:?})", l.name(), l.step()),
-        None => sigma_core::info!("light", "no front light found"),
-    }
-    l
-}
-
-/// Finds the warm-to-cool mixer and logs what it holds (v1.17).
-fn open_warmth() -> Option<crate::light::Warmth> {
-    let w = crate::light::Warmth::find(std::path::Path::new(crate::light::ROOT));
-    match &w {
-        Some(w) => sigma_core::info!(
-            "light",
-            "warmth mixer {} (step {:?})",
-            w.path().display(),
-            w.step()
-        ),
-        None => sigma_core::info!("light", "no warmth mixer found"),
-    }
-    w
-}
-
 impl Device for KoboDevice {
+    fn light_report(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.light_report)
+    }
+
     fn size(&self) -> (u32, u32) {
         (self.width, self.height)
     }

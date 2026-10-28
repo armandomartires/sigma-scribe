@@ -196,6 +196,45 @@ impl Warmth {
     }
 }
 
+/// What the start-up probe found, and what to tell the log about it.
+///
+/// The probe runs when the device is opened, before the app has read its
+/// settings and switched the log on, so it cannot log then: the lines are
+/// kept and handed over later ([`crate::Device::light_report`]).
+#[derive(Debug, Default)]
+pub struct Probe {
+    /// The front light, if sysfs shows one.
+    pub light: Option<Light>,
+    /// The warm-to-cool mixer, if there is one.
+    pub warmth: Option<Warmth>,
+    /// What sysfs shows and what was picked, one line each.
+    pub report: Vec<String>,
+}
+
+/// Looks for the front light and the warmth mixer under `root`.
+#[must_use]
+pub fn probe(root: &Path) -> Probe {
+    let mut report: Vec<String> = describe(root)
+        .into_iter()
+        .map(|l| format!("sysfs {l}"))
+        .collect();
+    let light = Light::find(root);
+    report.push(match &light {
+        Some(l) => format!("using {} (step {:?})", l.name(), l.step()),
+        None => "no front light found".to_owned(),
+    });
+    let warmth = Warmth::find(root);
+    report.push(match &warmth {
+        Some(w) => format!("warmth mixer {} (step {:?})", w.path().display(), w.step()),
+        None => "no warmth mixer found".to_owned(),
+    });
+    Probe {
+        light,
+        warmth,
+        report,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -298,5 +337,37 @@ mod tests {
         assert_eq!(w.step(), None);
         std::fs::write(d.join("color"), "999").unwrap();
         assert_eq!(w.step(), Some(0), "an out-of-range value is the coolest");
+    }
+
+    #[test]
+    fn the_probe_reports_what_it_found_for_the_log() {
+        let root = fake(
+            "probe",
+            &[("mxc_msp430.0", 0, 100), ("tlc5947_bl", 0, 4096)],
+        );
+        std::fs::write(root.join(MIXER), "7").unwrap();
+        let p = probe(&root);
+        assert!(p.light.is_some() && p.warmth.is_some());
+        let text = p.report.join("\n");
+        assert!(
+            text.contains("sysfs mxc_msp430.0 brightness 0 of 100"),
+            "{text}"
+        );
+        assert!(text.contains("using "), "{text}");
+        assert!(
+            text.contains("tlc5947_bl/color (step Some(3))"),
+            "10 - 7: {text}"
+        );
+        // A file that does not hold a number is found but has no step.
+        std::fs::write(root.join(MIXER), "x").unwrap();
+        assert!(probe(&root).report.join("\n").contains("(step None)"));
+        // No mixer, no light: both said.
+        let none = probe(&root.join("missing"));
+        assert!(none.light.is_none() && none.warmth.is_none());
+        assert_eq!(
+            none.report,
+            ["no front light found", "no warmth mixer found"]
+        );
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

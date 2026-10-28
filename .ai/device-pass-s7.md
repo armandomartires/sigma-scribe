@@ -31,6 +31,6 @@ With the build installed (not before your yes), Settings → Display → Light:
 2. With the light on (Backlight about 50 %), move Warmth from Cool to Warm. **Cool should look white, Warm should look orange**, with the change visible by the middle. If it is the other way round, the inversion is wrong: report it, do not turn it round by hand.
 3. Leave Settings, quit, start again: the light keeps its colour, and the slider shows the same stop (the step is saved and written at start).
 4. Turn Backlight to Off, move Warmth, turn Backlight back up: the colour should follow (KOReader writes the mixer whatever the white light does).
-5. In `sigma-scribe.log`: `light: warmth mixer /sys/class/backlight/tlc5947_bl/color (step …)` at start (`Some(n)` if the file reads back, `None` if not), one `light: warmth -> step n: Ok(())` per stop and no repeats while dragging.
+5. In `sigma-scribe.log`: `light: warmth mixer /sys/class/backlight/tlc5947_bl/color (step …)` at start, just after the `logging on` line (`Some(n)` if the file reads back, `None` if not; Logging must be on before the start, or these lines are not written), one `light: warmth -> step n: Ok(())` per stop and no repeats while dragging.
 
 Note in `.ai/GOALS.md` (7.4): which end is orange, and whether the file reads back (`step Some(..)` in the start line).
