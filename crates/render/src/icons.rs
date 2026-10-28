@@ -68,6 +68,10 @@ pub enum Icon {
     PanelRight,
     /// The drawer button with the drawer on the left (v1.16).
     PanelLeft,
+    /// The front-light button while the light is on.
+    Sun,
+    /// The front-light button while the light is off.
+    SunDim,
 }
 
 impl Icon {
@@ -104,6 +108,8 @@ impl Icon {
             Self::Settings => "settings",
             Self::PanelRight => "panel-right",
             Self::PanelLeft => "panel-left",
+            Self::Sun => "sun",
+            Self::SunDim => "sun-dim",
         }
     }
 }
@@ -214,6 +220,8 @@ mod tests {
             Icon::Settings,
             Icon::PanelRight,
             Icon::PanelLeft,
+            Icon::Sun,
+            Icon::SunDim,
         ] {
             for &s in SIZES {
                 let m = ICONS

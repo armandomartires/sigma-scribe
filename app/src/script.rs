@@ -24,6 +24,9 @@ impl App {
     /// again. Anything else is itself.
     #[must_use]
     pub fn control_steps(&self, label: &str) -> Vec<String> {
+        if label.starts_with("Light:") && !self.screen.light_menu {
+            return vec!["Light".into(), label.into()];
+        }
         let pane = matches!(label, "Contents" | "To-dos" | "Scratch");
         if pane && !self.screen.drawer_menu {
             vec!["Panels".into(), label.into(), "Panels".into()]
@@ -169,6 +172,19 @@ impl App {
             "Write" => Some(centre(l.ink_button)),
             "Options" => Some(centre(l.options_button)),
             "Panels" if self.screen.panes_on() => Some(centre(l.drawer_button)),
+            "Light" if self.screen.light_on => Some(centre(l.light_button)),
+            // `Light:Backlight/Full`, `Light:Warmth/60 %`: a stop of a light-menu slider.
+            s if s.starts_with("Light:") && self.screen.light_menu => {
+                let (row, stop) = s["Light:".len()..].split_once('/')?;
+                let l = self.screen.layout(
+                    self.preview.is_none() && self.keys_visible(),
+                    &self.keyboard,
+                );
+                let (_, rows) = self.screen.light_menu_rows(&l);
+                let (r, _, g) = rows.into_iter().find(|(r, _, _)| r.title() == row)?;
+                let i = r.labels().iter().position(|n| n == stop)?;
+                Some((g.xs[i], g.track_y))
+            }
             // v1.16: the panes are rows of the open drawer menu.
             "Contents" | "To-dos" | "Scratch" if self.screen.drawer_menu => {
                 let l = self.screen.layout(
@@ -416,6 +432,9 @@ impl App {
         add("Find", l.find_button);
         if self.screen.panes_on() {
             add("Panels", l.drawer_button);
+        }
+        if self.screen.light_on {
+            add("Light", l.light_button);
         }
         if self.screen.drawer_menu {
             for (p, r) in self.screen.drawer_menu_rows(&l).1 {

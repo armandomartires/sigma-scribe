@@ -120,12 +120,14 @@ impl App {
             // Not a saved setting: the front light keeps its level.
             self.light_step = n.min(sigma_core::settings::BACKLIGHT_MAX);
             self.light_want = Some(self.light_step);
+            self.sync_light_screen();
             return Refresh::Partial;
         }
         if let Change::Warmth(n) = c {
             // Saved (below), and sent to the mixer by the loop.
             self.warmth_step = n.min(sigma_core::settings::WARMTH_MAX);
             self.warmth_want = Some(self.warmth_step);
+            self.sync_light_screen();
         }
         self.settings.apply(c);
         if matches!(c, Change::Log(_) | Change::LogLevel(_)) {
@@ -379,6 +381,7 @@ impl App {
                 self.light_have = true;
                 self.light_step = n;
             }
+            self.sync_light_screen();
         }
         if let Some(n) = self.light_want.take() {
             if let Err(e) = dev.set_light(n) {
@@ -404,6 +407,7 @@ impl App {
                     .min(sigma_core::settings::WARMTH_MAX);
                 self.warmth_want = self.settings.warmth;
             }
+            self.sync_light_screen();
         }
         if let Some(n) = self.warmth_want.take() {
             if let Err(e) = dev.set_warmth(n) {

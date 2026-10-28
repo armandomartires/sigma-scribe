@@ -334,6 +334,7 @@ impl App {
     /// The drawer button (v1.16): opens or closes the drawer menu.
     pub(crate) fn toggle_drawer_menu(&mut self) -> Refresh {
         self.screen.drawer_menu = !self.screen.drawer_menu;
+        self.screen.light_menu = false;
         self.sel_ui = None;
         Refresh::Partial
     }
