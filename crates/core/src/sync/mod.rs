@@ -15,7 +15,7 @@ pub mod rest;
 pub mod supervisor;
 
 pub use model::{FolderView, Peer, PendingDevice, PendingFolder, Run, Status, View, MAX_PENDING};
-pub use supervisor::{Cmd, Config, Supervisor};
+pub use supervisor::{last_error, loopback_up, Cmd, Config, Supervisor};
 
 use std::io;
 use std::path::Path;

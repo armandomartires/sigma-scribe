@@ -19,6 +19,9 @@ pub enum Run {
     Running,
     /// It could not start or kept stopping: the reason.
     Failed(String),
+    /// The loopback network (127.0.0.1) cannot be used, so Syncthing's local
+    /// API cannot start. Tried again every few seconds.
+    NoLoopback,
 }
 
 /// A device the notes folder is shared with.
@@ -118,6 +121,8 @@ pub enum Status {
     Starting,
     /// Stopped, with the reason.
     Failed(String),
+    /// The loopback network is down.
+    NoLoopback,
     /// Running, and no device is set up yet.
     NoDevices,
     /// Devices are set up and none is connected.
@@ -147,6 +152,7 @@ impl View {
             Run::NotInstalled => return Status::NotInstalled,
             Run::Starting => return Status::Starting,
             Run::Failed(e) => return Status::Failed(e.clone()),
+            Run::NoLoopback => return Status::NoLoopback,
             Run::Running => {}
         }
         if let Some(f) = &self.folder {

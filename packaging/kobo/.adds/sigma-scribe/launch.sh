@@ -19,6 +19,20 @@ sync
 # reboots anyway). sickel is Nickel's watchdog.
 killall -q -TERM nickel hindenburg sickel fickel strickel fontickel adobehost foxitpdf iink dhcpcd-dbus fmon >/dev/null 2>&1
 sleep 2
+# Loopback. With Nickel stopped the Forma's `lo` can be left without
+# 127.0.0.1, and Syncthing (Settings -> Sync) then cannot bind its local API
+# ("cannot assign requested address"). Bring it up when it has no address;
+# never take it down. busybox ifconfig, else ip.
+{
+  if ifconfig lo 2>/dev/null | grep -q '127\.0\.0\.1'; then
+    echo "net: lo already has 127.0.0.1"
+  else
+    echo "net: lo has no 127.0.0.1, bringing it up"
+    ifconfig lo 127.0.0.1 netmask 255.0.0.0 up 2>&1 ||
+      { ip addr add 127.0.0.1/8 dev lo 2>&1; ip link set lo up 2>&1; }
+  fi
+  ifconfig lo 2>&1 | grep -E 'inet |UP' | sed 's/^ */net: lo: /'
+} >>"$LOG" 2>&1
 # The network as the app finds it (Nickel sets INTERFACE and WIFI_MODULE).
 {
   echo "net: interface ${INTERFACE:-unset}, module ${WIFI_MODULE:-unset}"

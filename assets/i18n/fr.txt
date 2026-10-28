@@ -1124,3 +1124,9 @@ Syncing {n} files
 
 {n} MB
 = {n} Mo
+
+Loopback network is down
+= Le réseau de bouclage est inactif
+
+Reason
+= Raison

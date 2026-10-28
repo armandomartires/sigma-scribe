@@ -1002,7 +1002,13 @@ fn demo_sync(name: &str) -> Option<sigma_core::sync::View> {
             ..View::default()
         },
         "failed" => View {
-            run: Run::Failed("exited at start (exit status: 1)".into()),
+            run: Run::Failed(
+                "Failed to start API/GUI (error=\"listen tcp 127.0.0.1:8484: bind: cannot assign requested address\")".into(),
+            ),
+            ..View::default()
+        },
+        "noloopback" => View {
+            run: Run::NoLoopback,
             ..View::default()
         },
         "alone" => running,
