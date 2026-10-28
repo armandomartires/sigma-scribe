@@ -242,16 +242,23 @@ impl App {
             Event::Tap { x, y } if self.files.is_some() => self.files_tap(x, y),
             Event::PageTurn { forward } if self.files.is_some() => {
                 let rows = self.rows();
-                let visible = self
-                    .files_model(&rows)
-                    .map_or(1, |m| self.screen.files_layout(&m).visible.max(1));
+                let (first, visible) = self.files_model(&rows).map_or((0, 1), |m| {
+                    let l = self.screen.files_layout(&m);
+                    (l.first, l.visible.max(1))
+                });
                 let f = self.files.as_mut()?;
                 let n = rows.len();
                 f.first = if forward {
-                    (f.first + visible).min(n.saturating_sub(1))
+                    (first + visible).min(n.saturating_sub(1))
                 } else {
-                    f.first.saturating_sub(visible)
+                    first.saturating_sub(visible)
                 };
+                // The open row and the armed delete may have left the page,
+                // and so may the Trash's selection: Restore only acts on
+                // what is on screen.
+                f.more = None;
+                f.armed = None;
+                f.selected = None;
                 Some(Refresh::Partial)
             }
             Event::Key(HwKey::Escape) if self.files.is_some() => {

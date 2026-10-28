@@ -1,0 +1,21 @@
+# v1.17: More on the last row of a page. The Rename / Move / Delete row used
+# to be left out when it did not fit above the bottom buttons, so More looked
+# open and nothing showed. The list now scrolls just far enough to show the
+# row and its actions together.
+# Run: `scripts/sim.sh --headless tests/emu/v1.17-files-more.script docs/screenshots/v1.17`.
+make-notes 30
+tap-on Files
+shot v1.17-files-page
+# n007 is the last row that fits on the page.
+tap-on More:n007.md
+shot v1.17-files-more-last-row
+# The actions are there to tap (the first Delete tap only arms it).
+tap-on Delete
+shot v1.17-files-more-last-row-armed
+# Close it again with the same tap; the list stays where it is.
+tap-on More:n007.md
+# A row near the top does not move anything.
+tap-on More:n003.md
+shot v1.17-files-more-upper-row
+tap-on Rename
+shot v1.17-files-more-rename

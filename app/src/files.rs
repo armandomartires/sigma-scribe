@@ -245,6 +245,7 @@ impl App {
         self.save_scratch();
         match self.library.rename(&path, field.text()) {
             Ok(new) => {
+                sigma_core::info!("files", "rename {} -> {}", path.as_str(), new.as_str());
                 if self.current == path {
                     self.current = new;
                 } else if self.current.within(&path) && !path.is_root() {
@@ -261,6 +262,7 @@ impl App {
                 self.refresh_files();
             }
             Err(e) => {
+                sigma_core::warn!("files", "rename {}: {e}", path.as_str());
                 if let Some(f) = &mut self.files {
                     f.message = Some(e.to_string());
                 }
@@ -352,6 +354,7 @@ impl App {
                 self.refresh_files();
             }
             FilesHit::OpenTrash => {
+                sigma_core::debug!("ui", "open trash");
                 f.trash = true;
                 f.selected = None;
                 f.first = 0;
@@ -364,6 +367,16 @@ impl App {
                 None => f.message = Some("Tap a note to restore it".into()),
                 Some(t) => match lib.restore(&t.id) {
                     Ok(back) => {
+                        if back == t.path {
+                            sigma_core::info!("files", "restore {}", t.path.as_str());
+                        } else {
+                            sigma_core::info!(
+                                "files",
+                                "restore {} as {} (the name was taken)",
+                                t.path.as_str(),
+                                back.as_str()
+                            );
+                        }
                         f.selected = None;
                         let text = tr_name("Restored to {name}", back.as_str());
                         self.refresh_files();
@@ -373,20 +386,27 @@ impl App {
                         // The restored note joins the to-do list and the index.
                         self.reindex();
                     }
-                    Err(e) => f.message = Some(e.to_string()),
+                    Err(e) => {
+                        sigma_core::warn!("files", "restore {}: {e}", t.path.as_str());
+                        f.message = Some(e.to_string());
+                    }
                 },
             },
             FilesHit::EmptyTrash => {
                 if was_emptying {
                     match lib.empty_trash() {
-                        Ok(_) => {
+                        Ok(n) => {
+                            sigma_core::info!("files", "empty trash ({n} items)");
                             f.selected = None;
                             self.refresh_files();
                             if let Some(f) = &mut self.files {
                                 f.message = Some("Trash emptied".into());
                             }
                         }
-                        Err(e) => f.message = Some(e.to_string()),
+                        Err(e) => {
+                            sigma_core::warn!("files", "empty trash: {e}");
+                            f.message = Some(e.to_string());
+                        }
                     }
                 } else {
                     f.emptying = true;
@@ -400,6 +420,12 @@ impl App {
                     self.save_scratch();
                     match lib.move_to(&target, &dest) {
                         Ok(new) => {
+                            sigma_core::info!(
+                                "files",
+                                "move {} -> {}",
+                                target.as_str(),
+                                new.as_str()
+                            );
                             if self.current == target {
                                 self.current = new;
                             } else if self.current.within(&target) {
@@ -416,6 +442,7 @@ impl App {
                             self.refresh_files();
                         }
                         Err(e) => {
+                            sigma_core::warn!("files", "move {}: {e}", target.as_str());
                             self.refresh_files();
                             if let Some(f) = &mut self.files {
                                 f.message = Some(e.to_string());
@@ -438,7 +465,22 @@ impl App {
                     return Some(Refresh::Full);
                 }
             }
-            FilesHit::More(i) => f.more = if f.more == Some(i) { None } else { Some(i) },
+            FilesHit::More(i) => {
+                f.more = if f.more == Some(i) { None } else { Some(i) };
+                // Opening the actions may have scrolled the list; keep it
+                // there once they close.
+                if f.more.is_some() {
+                    let rows = self.rows();
+                    if let Some(first) = self
+                        .files_model(&rows)
+                        .map(|m| self.screen.files_layout(&m).first)
+                    {
+                        if let Some(f) = &mut self.files {
+                            f.first = first;
+                        }
+                    }
+                }
+            }
             FilesHit::Rename(i) => {
                 let p = f.entries.get(i)?.path.clone();
                 self.start_rename(RenameTarget::Entry(p));
@@ -460,7 +502,16 @@ impl App {
                 if was_armed == Some(i) {
                     let p = f.entries.get(i)?.path.clone();
                     match lib.trash(&p) {
-                        Ok(_) => {
+                        Ok(bin) => {
+                            sigma_core::info!(
+                                "files",
+                                "delete {} -> .trash/{}/\u{2026}",
+                                p.as_str(),
+                                bin.file_name().map_or_else(
+                                    || String::from("?"),
+                                    |n| n.to_string_lossy().into_owned()
+                                )
+                            );
                             let gone = self.current.within(&p);
                             self.refresh_files();
                             if gone {
@@ -473,7 +524,10 @@ impl App {
                                 }
                             }
                         }
-                        Err(e) => f.message = Some(e.to_string()),
+                        Err(e) => {
+                            sigma_core::warn!("files", "delete {}: {e}", p.as_str());
+                            f.message = Some(e.to_string());
+                        }
                     }
                 } else {
                     f.armed = Some(i);
@@ -483,23 +537,31 @@ impl App {
                 let folder = f.folder.clone();
                 match lib.create_note(&folder, "untitled") {
                     Ok(p) => {
+                        sigma_core::info!("files", "new note {}", p.as_str());
                         self.files = None;
                         self.open(&p);
                         self.start_rename(RenameTarget::Current);
                         return Some(Refresh::Full);
                     }
-                    Err(e) => f.message = Some(e.to_string()),
+                    Err(e) => {
+                        sigma_core::warn!("files", "new note in {}: {e}", folder.as_str());
+                        f.message = Some(e.to_string());
+                    }
                 }
             }
             FilesHit::NewFolder => {
                 let folder = f.folder.clone();
                 match lib.create_folder(&folder, "new folder") {
                     Ok(p) => {
+                        sigma_core::info!("files", "new folder {}", p.as_str());
                         self.refresh_files();
                         // Brief: a new folder starts in rename.
                         self.start_rename(RenameTarget::Entry(p));
                     }
-                    Err(e) => f.message = Some(e.to_string()),
+                    Err(e) => {
+                        sigma_core::warn!("files", "new folder in {}: {e}", folder.as_str());
+                        f.message = Some(e.to_string());
+                    }
                 }
             }
             FilesHit::CancelMove => {

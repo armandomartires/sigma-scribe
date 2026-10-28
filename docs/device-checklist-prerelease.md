@@ -213,6 +213,8 @@ Installed on the Forma: **local build of `v1.13.1-write-fixes` (PR 48), head `a3
 - [ ] A deleted folder is one row ("Folder · in … · …") and restores whole. A note with handwriting keeps its ink.
 - [ ] Empty trash: the first tap turns the button black ("Tap again to empty"); a tap anywhere else disarms it; the second tap removes everything (check `sigma-scribe/notes/.trash` is gone over USB) and returns to Files.
 - [ ] Times read right after a few hours and a day ("2 h ago", "Yesterday"). Several items in the list page with the page buttons.
+- [ ] With Settings → Logging on at Debug: opening the Trash, a delete, a restore (also one that comes back as `(restored)`), Empty trash, New note, New folder, Rename and Move each leave one `files:` or `ui:` line in the log.
+- [ ] More on the last row that fits on a page (also the only row, and with the Trash button showing): Rename, Move and Delete show under it, above the buttons; the list scrolls one row if it has to. More with the keyboard up (after Rename) keeps the row in view. A page turn closes More.
 
 ## Sync (Unreleased, v1.16): not tried on the Forma yet
 The full list, with what to measure, is `docs/sync.md` §12. In short:
