@@ -554,11 +554,18 @@ mod tests {
                 l.files_button,
                 l.preview_button,
                 l.find_button,
-                l.light_button,
                 l.drawer_button,
+                l.light_button,
                 l.wifi_button,
                 l.options_button,
             ];
+            // With Wi-Fi and a light, the light button is third from the
+            // right: Light, Wi-Fi, Settings.
+            assert!(l.light_button.x + l.light_button.w <= l.wifi_button.x);
+            assert_eq!(
+                l.wifi_button.x - l.light_button.x,
+                l.options_button.x - l.wifi_button.x
+            );
             for (i, a) in all.iter().enumerate() {
                 assert!(a.x >= 0 && a.x + a.w <= e.width as i32, "{a:?}");
                 assert!(a.y >= 0 && a.y + a.h <= l.title.h);

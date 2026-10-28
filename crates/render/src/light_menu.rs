@@ -244,7 +244,7 @@ mod tests {
     }
 
     #[test]
-    fn the_button_takes_a_place_after_find_and_the_bar_does_not_overflow() {
+    fn the_button_takes_a_place_after_graph_and_the_bar_does_not_overflow() {
         let k = Keyboard::default();
         for (w, h) in [(1440, 1920), (1920, 1440)] {
             for pct in [100u16, 125, 150, 175, 200] {
@@ -260,9 +260,9 @@ mod tests {
                     l.files_button,
                     l.preview_button,
                     l.find_button,
-                    l.light_button,
                     l.drawer_button,
                     l.graph_button,
+                    l.light_button,
                     l.options_button,
                 ];
                 for p in order.windows(2) {

@@ -181,11 +181,12 @@ pub struct Layout {
     /// The drawer button after Find (v1.16): opens the drawer menu.
     /// Zero-sized when no pane is available.
     pub drawer_button: Rect,
-    /// The Wi-Fi button between Graph and Options (v1.18). Zero-sized when
-    /// the device has no Wi-Fi control.
+    /// The Wi-Fi button between the light button and Options (v1.18).
+    /// Zero-sized when the device has no Wi-Fi control.
     pub wifi_button: Rect,
-    /// The front-light button after Find: opens the light menu. Zero-sized
-    /// when the device has no front light.
+    /// The front-light button between Graph and Wi-Fi, third from the
+    /// right on the Forma: opens the light menu. Zero-sized when the device
+    /// has no front light.
     pub light_button: Rect,
     /// Find (between the eye and the drawer button) and Graph (between the
     /// drawer button and Options).
@@ -203,7 +204,7 @@ pub struct Layout {
 
 /// Icon slots in the title bar (S9.2; v1.0.2 adds Back before Files, so
 /// sizing always reserves room for it; v1.16 one drawer button for three;
-/// the front-light button after Find; v1.18 adds the Wi-Fi button).
+/// v1.18 adds the front-light and Wi-Fi buttons, before Settings).
 pub const TITLE_ICONS: i32 = 9;
 
 /// The editor screen: layout, drawing and hit-testing for write and
@@ -528,7 +529,7 @@ impl EditorScreen {
         };
         let by = (title.h - btn) / 2;
         // Right-aligned group, mockup order left to right.
-        let optional = [self.light_on, self.panes_on(), self.graph_on, self.wifi_on];
+        let optional = [self.panes_on(), self.graph_on, self.light_on, self.wifi_on];
         let shown = TITLE_ICONS - optional.iter().filter(|on| !**on).count() as i32;
         let x0 = w - self.px(12.0) - shown * btn - (shown - 1) * icon_gap;
         let slot = |i: i32| Rect::new(x0 + i * (btn + icon_gap), by, btn, btn);
@@ -547,9 +548,9 @@ impl EditorScreen {
                 Rect::default()
             }
         };
-        let light_button = place(self.light_on);
         let drawer_button = place(self.panes_on());
         let graph_button = place(self.graph_on);
+        let light_button = place(self.light_on);
         let wifi_button = place(self.wifi_on);
         let options_button = slot(next);
         // Help opens from Settings → Help & about; the far-right slot is the
