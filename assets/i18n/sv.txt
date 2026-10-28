@@ -1139,3 +1139,12 @@ QR code
 
 Not shared yet
 = Inte delad än
+
+Waiting for {name} to accept
+= Väntar på att {name} ska acceptera
+
+Next step
+= Nästa steg
+
+Accept “Σscribe notes” in Syncthing on that device
+= Acceptera ”Σscribe notes” i Syncthing på den enheten

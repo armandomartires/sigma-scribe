@@ -820,6 +820,31 @@ impl Poller {
             }
             None => (None, None),
         };
+        // Connected devices on the folder that have not accepted it back.
+        let mut waiting = Vec::new();
+        if let Some(f) = folder_id.as_deref().and_then(|f| find_folder(&folders, f)) {
+            let fid = f.get("id").and_then(Json::as_str).unwrap_or_default();
+            let on_folder: Vec<&str> = f
+                .get("devices")
+                .map_or(&[][..], Json::items)
+                .iter()
+                .filter_map(|d| d.get("deviceID")?.as_str())
+                .collect();
+            for p in peers
+                .iter()
+                .filter(|p| p.connected && on_folder.contains(&p.id.as_str()))
+            {
+                let path = format!(
+                    "/rest/db/completion?folder={}&device={}",
+                    percent_encode(fid),
+                    percent_encode(&p.id)
+                );
+                // An answer that cannot be read means "not known to wait".
+                if client.get_json(&path).is_ok_and(|j| model::not_sharing(&j)) {
+                    waiting.push(p.name.clone());
+                }
+            }
+        }
         let pending_devices =
             model::parse_pending_devices(&client.get_json("/rest/cluster/pending/devices")?);
         // Offers fit only while there is no notes folder, or for that folder;
@@ -849,6 +874,7 @@ impl Poller {
             pending_devices,
             pending_folders,
             conflicts: self.conflicts,
+            waiting,
         });
         Ok(())
     }
