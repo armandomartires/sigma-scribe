@@ -1019,7 +1019,8 @@ fn sync_status_text(st: &sigma_core::sync::Status) -> String {
         Status::Off => tr("Off").into_owned(),
         Status::NotInstalled => tr("Syncthing is not installed").into_owned(),
         Status::Starting => tr("Starting").into_owned(),
-        Status::Failed(why) => format!("{} \u{b7} {why}", tr("Stopped")),
+        Status::Failed(_) => tr("Stopped").into_owned(),
+        Status::NoLoopback => tr("Loopback network is down").into_owned(),
         Status::NoDevices => tr("No devices yet").into_owned(),
         Status::NotConnected => tr("No device connected").into_owned(),
         Status::Scanning => tr("Scanning").into_owned(),
@@ -1029,7 +1030,17 @@ fn sync_status_text(st: &sigma_core::sync::Status) -> String {
             tr(&size_text(*bytes))
         ),
         Status::UpToDate => tr("Up to date").into_owned(),
-        Status::Error(why) => format!("{} \u{b7} {why}", tr("Error")),
+        Status::Error(_) => tr("Error").into_owned(),
+    }
+}
+
+/// The reason under a Stopped or Error status, in small print (it is
+/// Syncthing's own English text, not translated).
+fn sync_status_note(st: &sigma_core::sync::Status) -> Option<String> {
+    use sigma_core::sync::Status;
+    match st {
+        Status::Failed(why) | Status::Error(why) => Some(why.clone()),
+        _ => None,
     }
 }
 
@@ -1069,7 +1080,17 @@ fn sync_items(m: &OptionsModel<'_>) -> Vec<Item> {
         return out;
     }
     out.push(Item::Band("Status"));
-    out.push(info_row("Status", sync_status_text(&v.status())));
+    let status = v.status();
+    out.push(info_row("Status", sync_status_text(&status)));
+    // The reason has a row of its own: a note under Status would run under
+    // the value.
+    if let Some(why) = sync_status_note(&status) {
+        out.push(Item::Row(DRow {
+            label: Cow::Borrowed("Reason"),
+            kind: Kind::Info(String::new()),
+            note: Some(Cow::Owned(why)),
+        }));
+    }
     if !v.peers.is_empty() {
         out.push(info_row(
             "Devices",

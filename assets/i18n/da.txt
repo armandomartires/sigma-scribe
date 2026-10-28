@@ -1123,3 +1123,9 @@ Syncing {n} files
 
 {n} MB
 = {n} MB
+
+Loopback network is down
+= Loopback-netværket er nede
+
+Reason
+= Årsag
