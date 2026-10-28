@@ -11,7 +11,7 @@
 use crate::files::RenameTarget;
 use crate::App;
 use sigma_core::Buffer;
-use sigma_device::wifi::{Busy, Network, Service, View};
+use sigma_device::wifi::{Busy, JoinError, Network, Service, View};
 use sigma_device::Refresh;
 use sigma_render::wifi_menu::{Activity, NetRow, WifiHit, WifiModel, WifiState};
 
@@ -135,6 +135,8 @@ impl App {
         if new.failure != old.failure {
             if let Some(f) = &new.failure {
                 sigma_core::warn!("wifi", "failed: {f}");
+            } else if old.failure == Some(JoinError::NoAddress) && new.ip.is_some() {
+                sigma_core::info!("wifi", "address came late");
             }
         }
     }

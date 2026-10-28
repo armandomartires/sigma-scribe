@@ -6,6 +6,8 @@
 
 use super::{Backend, JoinError, Network, Security, Status};
 use std::io;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 /// The password the pretend networks refuse.
 pub const WRONG_PASSWORD: &str = "wrong-password";
@@ -18,6 +20,10 @@ pub struct FakeWifi {
     networks: Vec<Network>,
     /// The next power-on fails (the tests' way to see a failure).
     pub fail_power: bool,
+    /// Whether the networks hand out addresses. Cleared, a join succeeds
+    /// without one (a slow DHCP); set again, the address comes. Shared, so a
+    /// test keeps a handle on the radio the service owns.
+    pub lease: Arc<AtomicBool>,
 }
 
 impl FakeWifi {
@@ -44,6 +50,7 @@ impl FakeWifi {
                 n("Holiday house", None, Security::Unknown, true),
             ],
             fail_power: false,
+            lease: Arc::new(AtomicBool::new(true)),
         }
     }
 
@@ -62,7 +69,11 @@ impl Backend for FakeWifi {
         Ok(Status {
             powered: self.powered,
             ssid: self.joined.clone(),
-            ip: self.joined.as_ref().map(|_| "192.168.1.42".to_owned()),
+            ip: self
+                .joined
+                .as_ref()
+                .filter(|_| self.lease.load(Ordering::SeqCst))
+                .map(|_| "192.168.1.42".to_owned()),
         })
     }
 
@@ -110,6 +121,9 @@ impl Backend for FakeWifi {
         }
         n.saved = true;
         self.joined = Some(ssid.to_owned());
+        if !self.lease.load(Ordering::SeqCst) {
+            return Err(JoinError::NoAddress);
+        }
         Ok(())
     }
 
@@ -126,7 +140,7 @@ impl Backend for FakeWifi {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{Busy, Service};
+    use super::super::{Busy, Service, View};
     use super::*;
 
     #[test]
@@ -166,6 +180,54 @@ mod tests {
         assert!(v.networks.iter().any(|n| n.ssid == "Office-5G" && n.saved));
         s.join("Café Central", None);
         assert_eq!(s.view().ssid.as_deref(), Some("Café Central"));
+    }
+
+    #[test]
+    fn an_address_that_comes_after_the_join_gave_up_clears_the_failure() {
+        let f = FakeWifi::demo_online();
+        let lease = f.lease.clone();
+        let s = Service::inline(f);
+        s.scan();
+        lease.store(false, Ordering::SeqCst);
+        s.join("Office-5G", Some("correct horse".into()));
+        let v = s.view();
+        assert_eq!(v.failure, Some(JoinError::NoAddress));
+        assert_eq!(v.ssid.as_deref(), Some("Office-5G"));
+        assert!(v.ip.is_none());
+        assert!(v.networks.iter().any(|n| n.ssid == "Office-5G" && n.saved));
+        // Still no address: the failure stays through the regular poll.
+        s.refresh();
+        assert_eq!(s.view().failure, Some(JoinError::NoAddress));
+        lease.store(true, Ordering::SeqCst);
+        let g = s.generation();
+        s.refresh();
+        let v = s.view();
+        assert!(s.generation() > g);
+        assert_eq!(v.failure, None);
+        assert_eq!(v.ip.as_deref(), Some("192.168.1.42"));
+    }
+
+    #[test]
+    fn the_regular_poll_of_a_thread_picks_the_late_address_up() {
+        let f = FakeWifi::demo_online();
+        let lease = f.lease.clone();
+        let s = Service::spawn(f);
+        s.scan();
+        lease.store(false, Ordering::SeqCst);
+        s.join("Office-5G", Some("correct horse".into()));
+        let wait = |done: &dyn Fn(&View) -> bool| {
+            let end = std::time::Instant::now() + std::time::Duration::from_secs(5);
+            while !done(&s.view()) && std::time::Instant::now() < end {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+        };
+        wait(&|v| v.failure == Some(JoinError::NoAddress));
+        assert_eq!(s.view().failure, Some(JoinError::NoAddress));
+        lease.store(true, Ordering::SeqCst);
+        // No command: the thread's own poll (every few seconds) notices.
+        wait(&|v| v.failure.is_none());
+        assert_eq!(s.view().failure, None);
+        assert!(s.view().ip.is_some());
     }
 
     #[test]

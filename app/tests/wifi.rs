@@ -528,3 +528,46 @@ fn the_log_has_wifi_lines_and_never_a_password_or_an_address() {
     assert!(!text.contains("hunter2"), "no password in the log");
     assert!(!text.contains("192.168"), "no address in the log");
 }
+
+#[test]
+fn an_address_that_comes_late_clears_the_failure_and_is_logged_without_it() {
+    let mut r = Rig::new("late", None);
+    let radio = FakeWifi::demo_online();
+    let lease = radio.lease.clone();
+    r.app.set_wifi(Service::spawn(radio));
+    r.app.render(&mut r.dev, Refresh::Full).unwrap();
+    let log = r.dir.join("log");
+    r.app.set_log_dir(log.clone());
+    sigma_core::log::configure(true, Level::Info, Some(log.clone()));
+    lease.store(false, std::sync::atomic::Ordering::SeqCst);
+    let until = |r: &mut Rig, done: &dyn Fn(&Rig) -> bool| {
+        let end = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        while !done(r) {
+            assert!(std::time::Instant::now() < end, "never happened");
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            r.tick();
+        }
+    };
+    r.tap_on("Wi-Fi");
+    until(&mut r, &|r| r.has("Net:Café Central"));
+    r.tap_on("Net:Café Central");
+    until(&mut r, &|r| {
+        r.app.wifi_view().failure == Some(JoinError::NoAddress)
+    });
+    assert_eq!(r.ssid().as_deref(), Some("Café Central"));
+    assert!(r.app.wifi_view().ip.is_none());
+    lease.store(true, std::sync::atomic::Ordering::SeqCst);
+    // No tap: the service's own poll finds the address.
+    until(&mut r, &|r| r.app.wifi_view().failure.is_none());
+    assert!(r.app.wifi_view().ip.is_some());
+    sigma_core::log::configure(false, Level::Info, None);
+    let text = std::fs::read_to_string(log.join(FILE_NAME)).unwrap_or_default();
+    let wifi: Vec<&str> = text.lines().filter(|l| l.contains("wifi:")).collect();
+    let pos = |s: &str| wifi.iter().position(|l| l.contains(s));
+    assert!(pos("address") < pos("address came late"), "{wifi:?}");
+    assert!(
+        pos("no address").is_some_and(|f| f < pos("address came late").unwrap()),
+        "the failure came first: {wifi:?}"
+    );
+    assert!(!text.contains("192.168"), "no address in the log");
+}
