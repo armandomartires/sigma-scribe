@@ -249,6 +249,9 @@ fn the_first_frame_already_has_the_button() {
     // was in the first one, not only in the next.
     let first = dev.panel.pixels.clone();
     app.render(&mut dev, Refresh::Full).unwrap();
-    assert!(first == dev.panel.pixels, "the first frame lacked the button");
+    assert!(
+        first == dev.panel.pixels,
+        "the first frame lacked the button"
+    );
     let _ = std::fs::remove_dir_all(&d);
 }
