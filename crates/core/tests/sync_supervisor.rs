@@ -506,18 +506,41 @@ fn accepting_a_device_with_no_notes_folder_makes_one_shared_with_it() {
         order,
         ["POST /rest/config/devices", "POST /rest/config/folders"]
     );
-    // The marker is written just after the POST is answered.
-    let end = Instant::now() + Duration::from_secs(10);
-    while !home.join("notes-folder-made-here").exists() {
-        assert!(Instant::now() < end, "no marker");
-        std::thread::sleep(Duration::from_millis(20));
-    }
+    // The marker was written before the folder was made.
     assert_eq!(
         std::fs::read_to_string(home.join("notes-folder-made-here"))
             .unwrap()
             .trim(),
         id
     );
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn a_refused_new_folder_leaves_no_marker() {
+    let dir = tmp("dev-refused");
+    let (port, fake) = serve();
+    let cfg = config(&dir, port, "exec sleep 120");
+    let home = cfg.home.clone();
+    basic_routes(&fake, &cfg.notes, false);
+    folder_defaults(&fake);
+    {
+        let mut g = fake.lock().unwrap();
+        g.routes.retain(|r| r.0 != "POST /rest/config/folders");
+        g.routes
+            .push(("POST /rest/config/folders".into(), 500, "nope".into()));
+    }
+    let sup = Supervisor::start(cfg);
+    until(&sup, "running", |v| v.run == Run::Running);
+    sup.command(Cmd::AcceptDevice {
+        id: JOE.into(),
+        name: "Phone".into(),
+    });
+    wait_for(&fake, "POST /rest/config/folders", 1);
+    // The command is finished once the supervisor answers the next poll.
+    std::thread::sleep(Duration::from_millis(1500));
+    assert!(!home.join("notes-folder-made-here").exists());
     sup.stop();
     let _ = std::fs::remove_dir_all(&dir);
 }

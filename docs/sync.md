@@ -232,7 +232,7 @@ At every start:
   - *Accepting a folder offer* creates the folder with the offered `id` and
     `label`, shared with the offering device, or adds the device if that
     folder is already the notes folder.
-  - The folder the Kobo makes itself is remembered in
+  - The folder the Kobo makes itself is remembered (written before it is made, removed if Syncthing refuses it) in
     `syncthing-home/notes-folder-made-here` (its ID). While the notes folder
     is that one, an offer of **any** folder ID is listed, because a computer
     that ticked its own folder when it added the Kobo offers it under its own

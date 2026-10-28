@@ -631,10 +631,14 @@ fn share_notes(cfg: &Config, client: &Client, device: &str) -> io::Result<()> {
         return share_folder(client, f, device);
     }
     let id = random_folder_id();
-    create_notes_folder(cfg, client, &id, NOTES_LABEL, vec![device_entry(device)])?;
-    // Remember that this one is ours, so a computer's own offer can replace it.
+    // Remembered as the Kobo's own before it exists, so a crash between the
+    // two never leaves a Kobo-made folder unmarked; taken back if it is refused.
     if let Err(e) = write_marker(cfg, &id) {
         crate::warn!("sync", "notes folder marker: {e}");
+    }
+    if let Err(e) = create_notes_folder(cfg, client, &id, NOTES_LABEL, vec![device_entry(device)]) {
+        forget_marker(cfg);
+        return Err(e);
     }
     crate::info!("sync", "notes folder {id} created");
     Ok(())
