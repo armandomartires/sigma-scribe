@@ -48,6 +48,9 @@ const ICONS: &[&str] = &[
     "wifi-off",
     "lock",
     "refresh-cw",
+    // The front-light button: on, and dim while the light is off.
+    "sun",
+    "sun-dim",
 ];
 
 /// A touch target is 44 brief units; the glyph is half of it.

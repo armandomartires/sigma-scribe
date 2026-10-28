@@ -78,6 +78,10 @@ pub enum Icon {
     Lock,
     /// Scan again.
     Refresh,
+    /// The front-light button while the light is on.
+    Sun,
+    /// The front-light button while the light is off.
+    SunDim,
 }
 
 impl Icon {
@@ -119,6 +123,8 @@ impl Icon {
             Self::WifiOff => "wifi-off",
             Self::Lock => "lock",
             Self::Refresh => "refresh-cw",
+            Self::Sun => "sun",
+            Self::SunDim => "sun-dim",
         }
     }
 }
@@ -234,6 +240,8 @@ mod tests {
             Icon::WifiOff,
             Icon::Lock,
             Icon::Refresh,
+            Icon::Sun,
+            Icon::SunDim,
         ] {
             for &s in SIZES {
                 let m = ICONS

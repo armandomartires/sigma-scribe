@@ -185,6 +185,7 @@ impl App {
         }
         self.draw_drawer_menu(&mut c);
         self.draw_wifi_menu(&mut c);
+        self.draw_light_menu(&mut c);
         let v = self.ink_view();
         if let (Some(ink), Some(v)) = (&mut self.ink, v) {
             let l = self.screen.ink_layout_for(ink.mode, &v);

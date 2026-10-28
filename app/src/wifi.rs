@@ -158,6 +158,8 @@ impl App {
     /// radio again, and scans when nothing has since it came on.
     pub(crate) fn toggle_wifi_menu(&mut self) -> Refresh {
         self.screen.drawer_menu = false;
+        self.screen.light_menu = false;
+        self.light_touch = None;
         self.screen.wifi_menu = !self.screen.wifi_menu;
         self.sel_ui = None;
         if self.screen.wifi_menu {

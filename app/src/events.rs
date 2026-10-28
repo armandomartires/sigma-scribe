@@ -75,6 +75,27 @@ impl App {
         let page = self.screen.layout(self.keys_visible(), &self.keyboard).page;
         match e {
             Event::Tilt { .. } => None,
+            // The open light menu takes every tap and touch; a slider moves
+            // while the finger is on it.
+            Event::Tap { x, y } if self.screen.light_menu && self.drawer_allowed() => {
+                self.light_menu_tap(x, y)
+            }
+            Event::Touch { phase, x, y, t } if self.screen.light_menu && self.drawer_allowed() => {
+                if let Some(r) = self.light_menu_touch(phase, x, y) {
+                    return r;
+                }
+                let g = match phase {
+                    Phase::Down => self.gestures.down(x, y, t),
+                    Phase::Move => self.gestures.moved(x, y, t),
+                    Phase::Up => self.gestures.up(x, y, t),
+                };
+                self.apply(g)
+            }
+            Event::Key(HwKey::Escape) if self.screen.light_menu && self.drawer_allowed() => {
+                self.screen.light_menu = false;
+                self.light_touch = None;
+                Some(Refresh::Partial)
+            }
             // v1.16: the open drawer menu takes every tap and touch.
             Event::Tap { x, y } if self.screen.drawer_menu && self.drawer_allowed() => {
                 self.drawer_menu_tap(x, y)
@@ -411,6 +432,7 @@ impl App {
                     }
                     Hit::DrawerMenu => Some(self.toggle_drawer_menu()),
                     Hit::Wifi => Some(self.toggle_wifi_menu()),
+                    Hit::LightMenu => Some(self.toggle_light_menu()),
                     Hit::Candidate(i) => {
                         self.keyboard.composer.pick(&mut self.buffer, i);
                         self.save();

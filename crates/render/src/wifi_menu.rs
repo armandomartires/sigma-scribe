@@ -524,6 +524,8 @@ mod tests {
                 e.cfg.ui_scale = ui;
                 e.resize(w, h);
                 e.wifi_on = true;
+                // The front-light button is there on the Forma too.
+                e.light_on = true;
                 out.push(e);
             }
         }
@@ -552,6 +554,7 @@ mod tests {
                 l.files_button,
                 l.preview_button,
                 l.find_button,
+                l.light_button,
                 l.drawer_button,
                 l.wifi_button,
                 l.options_button,

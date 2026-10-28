@@ -335,6 +335,7 @@ impl App {
     pub(crate) fn toggle_drawer_menu(&mut self) -> Refresh {
         self.screen.wifi_menu = false;
         self.screen.drawer_menu = !self.screen.drawer_menu;
+        self.screen.light_menu = false;
         self.sel_ui = None;
         Refresh::Partial
     }

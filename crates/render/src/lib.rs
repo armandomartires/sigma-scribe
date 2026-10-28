@@ -17,6 +17,7 @@ pub mod help;
 pub mod i18n;
 pub mod icons;
 pub mod ink;
+pub mod light_menu;
 pub mod options;
 pub mod plugin_screen;
 pub mod pointer;
