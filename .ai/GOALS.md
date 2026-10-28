@@ -84,13 +84,13 @@ Status: Done; PRs #76, #77 and #78 merged 2026-10-27
 
 ## Sprint 7 — Device verification and next
 Goal: One pass on the Forma over everything built since v1.0.2
-Status: Everything that can be done without the Forma is built and merged to `main` (PRs #80 to #85, #89); and the drawer button (PR #90). `main` (a247885, 1.15.0) was installed on the Forma on 2026-10-27; the device pass is the user's, then the logs are read. Runbook: `.ai/device-pass-s7.md`.
+Status: Everything that can be done without the Forma is built and merged to `main` (PRs #80 to #85, #89); and the drawer button (PR #90). `main` (a247885, 1.15.0) was installed on the Forma on 2026-10-27; the device pass is the user's, then the logs are read. `main` 5b976fe (Warmth, Trash, Sync; still labelled 1.15.0) installed on the Forma 2026-10-28 01:35 with the perf notes (backup kept, 39 files checked, notes and plugin state unchanged). Runbook: `.ai/device-pass-s7.md`.
 - [x] Install 1.15.0 on the Forma and run `docs/device-checklist-prerelease.md`
   `main` is installed on the Forma (2026-10-27, backup kept, package checked). Closed by the user 2026-10-28: the tests that matter were done on the device during the sprint; the checklist is not run.
 - [x] Verify the USB K400 Plus receiver and touchpad, including two-finger scroll
   Done by the user several times on the Forma: the K400 types and the touchpad is acceptable for an e-ink device (2026-10-28).
 - [!] Measure preview layout time on a large note on the device
-  2026-10-28: test notes `perf-100k.md` (102,700 B) and `perf-500k.md` (512,236 B) are in `../sigma-scribe-backups/perf-notes/`; to copy to the Forma when it is attached (user's go-ahead given), then open each in preview at Debug logging. Desktop done: about 0.65 ms per KB (100 KB in 60 ms), see `docs/perf.md`. The app now logs the time at Debug level, so one preview of a large note on the Forma settles it.
+  2026-10-28: test notes `perf-100k.md` (102,700 B) and `perf-500k.md` (512,236 B) are on the Forma (2026-10-28). To do on the device: Logging on at Debug, open each, tap the eye; then the log is read. Desktop done: about 0.65 ms per KB (100 KB in 60 ms), see `docs/perf.md`. The app now logs the time at Debug level, so one preview of a large note on the Forma settles it.
 - [?] Backlight colour slider (warm to cool)
   Merged (PR #91, 2026-10-28): Display → Warmth, 11 stops, saved and applied at start. KOReader (`device.lua` KoboFrost) drives the Forma's warmth through `tlc5947_bl/color`, 0 to 10, inverted (10 cold, 0 warm), never read back. Unverified on the device: the file exists, which end is orange. Was blocked on one device check: what `tlc5947_bl` (0 to 4096) does when written. Probe in `.ai/device-pass-s7.md`. Then: a second slider under Display → Backlight, a `Device` call for it, one string in the nine catalogs, tests.
 - [x] Draggable handle on the drawer edge
