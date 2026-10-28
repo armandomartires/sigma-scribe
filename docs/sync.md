@@ -41,7 +41,30 @@ they have the right key, and say so here.
 .adds/sigma-scribe/syncthing/LICENSE.txt      MPL-2.0, as shipped by Syncthing
 .adds/sigma-scribe/syncthing/AUTHORS.txt
 .adds/sigma-scribe/syncthing/NOTICE.txt       ours: what it is, where the source is
+.adds/sigma-scribe/syncthing/ca-certificates.crt   Mozilla's root certificates (below)
 ```
+
+**Root certificates.** Syncthing's relays and global discovery servers are
+reached over HTTPS, and Go looks for root certificates in `/etc/ssl/certs`
+and the like. The Kobo has none it finds: on the Forma (2026-10-28) the log
+showed `x509: certificate signed by unknown authority` for
+`relays.syncthing.net`. The package therefore carries Mozilla's CA bundle as
+curl extracts it, and the app starts Syncthing with `SSL_CERT_FILE` pointing
+at it (`Config::ca_file`, set when `ca-certificates.crt` is beside the
+binary). The app's own HTTPS (plugins repository) is unaffected: it uses the
+roots compiled into the program (`webpki-roots`), which hold only the keys,
+not the certificates Go needs.
+
+| | |
+|---|---|
+| File | `cacert-2026-10-20.pem` from https://curl.se/ca/ (200 KB, 118 certificates) |
+| sha256 | `796f1389bfea13c0ed78f663b765baaff54a508e5483786bd6ece73c5e3e3cbe` (equal to curl's published `.sha256`) |
+| Licence | MPL-2.0 (Mozilla's certificate data), named in `NOTICE.txt` and `THIRD-PARTY.txt` |
+
+`scripts/fetch-cacert.sh` pins it the same way as the Syncthing release. The
+bundle ages: certificates expire and roots are withdrawn, so refresh the pin
+(a dated file from https://curl.se/docs/caextract.html) with each Syncthing
+update, or at least once a year.
 
 To change the pin: edit `SYNCTHING_VERSION` and `SYNCTHING_SHA256` in
 `scripts/fetch-syncthing.sh`, rebuild, run the Forma checklist (§12), and
@@ -365,11 +388,12 @@ did not touch the device. For `docs/device-checklist-prerelease.md`:
    idle with sync on and Wi-Fi on, against sync off and Wi-Fi on; the size of
    `syncthing-home/`.
 9. TLS: Syncthing's global discovery and relays use HTTPS and need CA
-   certificates. If the log shows `x509: certificate signed by unknown
-   authority`, the Kobo lacks a usable bundle: set `SSL_CERT_FILE` in the
-   supervisor's environment to a bundle in the package (the app already
-   ships the Mozilla roots as Rust data; they would have to be written out as
-   a PEM). Local discovery on the same Wi-Fi does not need it.
+   certificates. Found on the Forma (2026-10-28): `x509: certificate signed by
+   unknown authority` for the relays, so the package now ships
+   `syncthing/ca-certificates.crt` and the app passes it as `SSL_CERT_FILE`
+   (§1). To try: `.adds/sigma-scribe/log/syncthing.log` has no `x509` lines,
+   and has `Joined relay` (or a relay listener that stays up) once Wi-Fi is
+   on. Local discovery on the same Wi-Fi never needed it.
 10. Syncing a few hundred notes the first time: does the app stay responsive
     (typing latency in `perf:` lines) while Syncthing hashes?
 12. QR code: Settings → Sync → Show QR code; the Syncthing app on a phone

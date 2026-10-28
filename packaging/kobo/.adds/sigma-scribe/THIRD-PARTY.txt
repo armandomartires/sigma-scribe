@@ -24,6 +24,8 @@ This binary statically links:
 Syncthing v2.1.7 (syncthing/, used by Settings -> Sync): Syncthing Authors, Mozilla Public
 License 2.0, unmodified, run as a separate program (not linked). Its licence, authors and
 where to get its source code are in syncthing/ (LICENSE.txt, AUTHORS.txt, NOTICE.txt).
+Its root certificates (syncthing/ca-certificates.crt): Mozilla's CA bundle as extracted by
+curl (https://curl.se/docs/caextract.html), Mozilla Public License 2.0, unmodified.
 
 Bundled plugins (plugins/: graph-map, contents-pane, todo-pane, scratch-pane): by
 SIGMArecon, AGPL-3.0-only like the app, WebAssembly modules built from the

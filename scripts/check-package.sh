@@ -18,6 +18,7 @@ for f in .adds/nm/sigma-scribe .adds/sigma-scribe/sigma-scribe .adds/sigma-scrib
          .adds/sigma-scribe/OFL-NotoSansTamil.txt .adds/sigma-scribe/OFL-NotoSansThai.txt\
          .adds/sigma-scribe/syncthing/syncthing .adds/sigma-scribe/syncthing/LICENSE.txt\
          .adds/sigma-scribe/syncthing/AUTHORS.txt .adds/sigma-scribe/syncthing/NOTICE.txt\
+         .adds/sigma-scribe/syncthing/ca-certificates.crt\
          .adds/sigma-scribe/dict/skk-jisyo.txt .adds/sigma-scribe/dict/SKK-JISYO.L-NOTICE.txt\
          .adds/sigma-scribe/dict/pinyin-hans.txt .adds/sigma-scribe/dict/pinyin-hant.txt\
          .adds/sigma-scribe/dict/PINYIN-NOTICE.txt .adds/sigma-scribe/dict/LGPL-3.0.txt\
@@ -34,5 +35,8 @@ file "$OUT/.adds/sigma-scribe/syncthing/syncthing" | grep -q 'ARM.*statically li
 V=$(sed -n 's/^SYNCTHING_VERSION=//p' scripts/fetch-syncthing.sh)
 grep -q "tree/$V" "$OUT/.adds/sigma-scribe/syncthing/NOTICE.txt" || fail "syncthing NOTICE.txt does not name $V"
 grep -q "$(sed -n 's/^SYNCTHING_SHA256=//p' scripts/fetch-syncthing.sh)" "$OUT/.adds/sigma-scribe/syncthing/NOTICE.txt" || fail "syncthing NOTICE.txt has the wrong sha256"
+C=$(sed -n 's/^CACERT_SHA256=//p' scripts/fetch-cacert.sh)
+[ "$(sha256sum "$OUT/.adds/sigma-scribe/syncthing/ca-certificates.crt" | cut -c1-64)" = "$C" ] || fail "ca-certificates.crt is not the pinned bundle"
+grep -q "$C" "$OUT/.adds/sigma-scribe/syncthing/NOTICE.txt" || fail "syncthing NOTICE.txt does not name the CA bundle's sha256"
 ( cd "$OUT" && sha256sum -c --quiet "../$(basename "$OUT").sha256" ) || fail "sha256 list mismatch"
 echo "check-package: ok $(sha256sum "$OUT/.adds/sigma-scribe/sigma-scribe" | cut -c1-64)"
