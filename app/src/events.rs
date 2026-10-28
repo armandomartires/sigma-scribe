@@ -502,6 +502,10 @@ impl App {
             sigma_core::info!("light", "{line}");
         }
         sigma_device::usbkbd::set_layout(self.settings.kb_layout);
+        // The light before the first frame: the title bar's light button is
+        // there only once the probe has found a light.
+        self.sync_light(dev);
+        self.sync_warmth(dev);
         self.render(dev, Refresh::Full)?;
         self.apply_sync();
         while self.running {

@@ -234,3 +234,24 @@ fn the_button_works_in_preview_and_the_drawer_menu_makes_way() {
     r.tap_on("Light");
     assert!(r.app.screen.light_menu && !r.app.screen.drawer_menu);
 }
+
+#[test]
+fn the_first_frame_already_has_the_button() {
+    let d = std::env::temp_dir().join(format!("sigma-lm-first-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    let mut app = App::new(1440, 1920, d.clone());
+    let mut dev = DesktopDevice::new(1440, 1920);
+    dev.light = Some(4);
+    dev.warmth = Some(2);
+    app.run(&mut dev).unwrap(); // no events: one frame, then it returns
+    assert!(app.screen.light_on);
+    // Drawn again with nothing changed, the frame is the same: the button
+    // was in the first one, not only in the next.
+    let first = dev.panel.pixels.clone();
+    app.render(&mut dev, Refresh::Full).unwrap();
+    assert!(
+        first == dev.panel.pixels,
+        "the first frame lacked the button"
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}
