@@ -21,6 +21,7 @@ pub mod options;
 pub mod plugin_screen;
 pub mod pointer;
 pub mod preview;
+pub mod qr;
 pub mod radio;
 pub mod scrollbar;
 pub(crate) mod shape;

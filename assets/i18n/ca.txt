@@ -1129,3 +1129,10 @@ Loopback network is down
 
 Reason
 = Motiu
+
+Show QR code
+= Mostra el codi QR
+
+
+QR code
+= Codi QR

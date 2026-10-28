@@ -289,3 +289,36 @@ fn turning_sync_on_runs_it_and_accepting_reaches_syncthing() {
         .any(|s| s.0 == "POST /rest/system/shutdown"));
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn the_qr_page_draws_a_code_that_reads_back_as_the_device_id() {
+    for (w, h, scale) in [(1440, 1920, 200u16), (1920, 1440, 200), (1440, 1920, 100)] {
+        let (mut r, d) = Rig::new("qr");
+        r.app.settings.sync = true;
+        r.app.change(sigma_core::settings::Change::UiScaleTo(scale));
+        if w > h {
+            r.app.change(sigma_core::settings::Change::Orientation(
+                sigma_core::settings::Orientation::Landscape,
+            ));
+        }
+        r.open_sync_page();
+        // No ID yet: no QR row.
+        assert!(r.app.control_centre("Show QR code").is_none());
+        r.app.set_sync_view(running());
+        r.app.render(&mut r.dev, Refresh::Full).unwrap();
+        r.tap_on("Show QR code");
+        assert_eq!(r.app.settings_page, SettingsPage::SyncQr);
+        let c = &r.app.canvas;
+        let (cw, ch) = (c.width as usize, c.height as usize);
+        let mut img =
+            rqrr::PreparedImage::prepare_from_greyscale(cw, ch, |x, y| c.pixels[y * cw + x]);
+        let grids = img.detect_grids();
+        assert_eq!(grids.len(), 1, "{w}x{h} at {scale} %");
+        let (_, text) = grids.into_iter().next().unwrap().decode().unwrap();
+        assert_eq!(text, ME);
+        // Back goes to the Sync page.
+        r.tap_on("Back");
+        assert_eq!(r.app.settings_page, SettingsPage::Category(SYNC_CATEGORY));
+        let _ = std::fs::remove_dir_all(&d);
+    }
+}
