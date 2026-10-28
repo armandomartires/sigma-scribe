@@ -100,7 +100,11 @@ impl App {
             Event::Tap { x, y } if self.screen.drawer_menu && self.drawer_allowed() => {
                 self.drawer_menu_tap(x, y)
             }
-            Event::Touch { phase, x, y, t } if self.screen.drawer_menu && self.drawer_allowed() => {
+            // v1.18: so does the Wi-Fi menu.
+            Event::Tap { x, y } if self.screen.wifi_menu && self.drawer_allowed() => {
+                self.wifi_menu_tap(x, y)
+            }
+            Event::Touch { phase, x, y, t } if self.any_menu_open() && self.drawer_allowed() => {
                 let g = match phase {
                     Phase::Down => self.gestures.down(x, y, t),
                     Phase::Move => self.gestures.moved(x, y, t),
@@ -110,10 +114,13 @@ impl App {
             }
             // v1.16: the closed drawer's tab (a mouse click or a script tap).
             Event::Tap { x, y } if self.on_drawer_tab(x, y) => self.reopen_drawer(),
-            Event::Key(HwKey::Escape) if self.screen.drawer_menu && self.drawer_allowed() => {
+            Event::Key(HwKey::Escape) if self.any_menu_open() && self.drawer_allowed() => {
                 self.screen.drawer_menu = false;
+                self.screen.wifi_menu = false;
                 Some(Refresh::Partial)
             }
+            // v1.18: the eye of the Wi-Fi password field.
+            Event::Tap { x, y } if self.wifi_eye_at(x, y) => Some(self.wifi_toggle_show()),
             Event::Tap { x, y } if self.paged_bar().is_some_and(|(_, b)| b.zone.contains(x, y)) => {
                 self.bar_tap(x, y).flatten()
             }
@@ -158,6 +165,10 @@ impl App {
                 }
                 // Syncthing's news, and notes changed on disk (v1.16).
                 if let Some(r) = self.sync_tick(t) {
+                    return Some(r);
+                }
+                // The radio's news (v1.18).
+                if let Some(r) = self.wifi_tick() {
                     return Some(r);
                 }
                 if let Some(items) = self.indexer.poll() {
@@ -370,7 +381,10 @@ impl App {
                 Some(Refresh::Fast)
             }
             Event::Tap { x, y } => {
-                let renaming = matches!(&self.rename, Some((RenameTarget::Current, _)));
+                let renaming = matches!(
+                    &self.rename,
+                    Some((RenameTarget::Current | RenameTarget::WifiPassword(_), _))
+                );
                 let model = Model {
                     file_name: self.current.name(),
                     buffer: &self.buffer,
@@ -417,6 +431,7 @@ impl App {
                         Some(Refresh::Full)
                     }
                     Hit::DrawerMenu => Some(self.toggle_drawer_menu()),
+                    Hit::Wifi => Some(self.toggle_wifi_menu()),
                     Hit::LightMenu => Some(self.toggle_light_menu()),
                     Hit::Candidate(i) => {
                         self.keyboard.composer.pick(&mut self.buffer, i);

@@ -10,7 +10,7 @@ tar tzf "$OUT.tar.gz" | grep -v '^\.adds/' && fail "entries outside .adds/"
 tar tzf "$OUT.tar.gz" | grep -qi 'notes' && fail "notes in the package"
 tar tzf "$OUT.tar.gz" | grep -q 'syncthing-home' && fail "syncthing-home in the package (it would replace the device's identity)"
 tar tzf "$OUT.tar.gz" | grep -q 'plugins\.state$' && fail "plugins.state in the package (it would reset the user's choices)"
-for f in .adds/nm/sigma-scribe .adds/sigma-scribe/sigma-scribe .adds/sigma-scribe/launch.sh \
+for f in .adds/nm/sigma-scribe .adds/sigma-scribe/sigma-scribe .adds/sigma-scribe/launch.sh .adds/sigma-scribe/wifi.sh \
          .adds/sigma-scribe/touch.conf .adds/sigma-scribe/LICENSE .adds/sigma-scribe/THIRD-PARTY.txt \
          .adds/sigma-scribe/OFL-Literata.txt .adds/sigma-scribe/OFL-AtkinsonHyperlegible.txt\
          .adds/sigma-scribe/OFL-NotoNaskhArabic.txt .adds/sigma-scribe/OFL-NotoSansHebrew.txt\

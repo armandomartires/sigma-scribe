@@ -1148,3 +1148,49 @@ Next step
 
 Accept “Σscribe notes” in Syncthing on that device
 = Accetta «Σscribe notes» in Syncthing su quel dispositivo
+
+Wi-Fi
+= Wi-Fi
+
+Not connected
+= Non connesso
+
+Connected
+= Connesso
+
+Turning on…
+= Attivazione…
+
+Turning off…
+= Disattivazione…
+
+Connecting…
+= Connessione…
+
+Scanning…
+= Ricerca…
+
+Scan again
+= Cerca di nuovo
+
+No networks found
+= Nessuna rete trovata
+
+Password
+= Password
+
+
+A Wi-Fi password has 8 to 63 characters
+= Una password Wi-Fi ha da 8 a 63 caratteri
+
+This kind of network is not supported here
+= Questo tipo di rete non è supportato qui
+
+Could not join: wrong password? Forget it and try again
+= Connessione non riuscita: password errata? Dimentica la rete e riprova
+
+Joined, but the network gave no address
+= Connesso, ma la rete non ha assegnato alcun indirizzo
+
+Wi-Fi did not answer
+= Il Wi-Fi non risponde

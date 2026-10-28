@@ -126,6 +126,12 @@ impl App {
                 self.screen.draw_files(&mut c, &m);
             }
         } else {
+            // The password of a Wi-Fi network is typed in the same field,
+            // starred (v1.18).
+            let starred = match &self.rename {
+                Some((RenameTarget::WifiPassword(_), b)) => Some(self.wifi_field_view(b)),
+                _ => None,
+            };
             let renaming_current = matches!(&self.rename, Some((RenameTarget::Current, _)));
             let model = Model {
                 file_name: self.current.name(),
@@ -142,10 +148,11 @@ impl App {
                 rename: if renaming_current {
                     self.rename.as_ref().map(|(_, b)| b)
                 } else {
-                    None
+                    starred.as_ref()
                 },
             };
             let l = self.screen.draw(&mut c, &model);
+            self.draw_wifi_password(&mut c, &l);
             if let Some(f) = &self.find {
                 let label = self.find_label();
                 self.screen.draw_find(
@@ -177,6 +184,7 @@ impl App {
                 .draw_drawer_tab(&mut c, &base, self.settings.drawer, self.theme());
         }
         self.draw_drawer_menu(&mut c);
+        self.draw_wifi_menu(&mut c);
         self.draw_light_menu(&mut c);
         let v = self.ink_view();
         if let (Some(ink), Some(v)) = (&mut self.ink, v) {

@@ -19,6 +19,7 @@ pub mod light;
 pub mod otg;
 pub mod pointer;
 pub mod usbkbd;
+pub mod wifi;
 
 use sigma_render::{Canvas, Rect};
 use std::io;

@@ -41,6 +41,7 @@ mod script;
 mod settings;
 mod splash;
 mod sync;
+mod wifi;
 
 use crate::files::RenameTarget;
 use crate::ink::ReadInk;
@@ -156,6 +157,13 @@ pub struct App {
     sync_cfg: sigma_core::sync::Config,
     sync_view: sigma_core::sync::View,
     sync_gen: u64,
+    /// The Wi-Fi radio (v1.18), what it last reported and which report that
+    /// was. `None`: no Wi-Fi button.
+    wifi: Option<sigma_device::wifi::Service>,
+    wifi_view: sigma_device::wifi::View,
+    wifi_gen: u64,
+    /// The password being typed is shown, not starred.
+    wifi_show: bool,
     /// The open note's and the scratch pad's files as the app last read or
     /// wrote them, to notice a change made by someone else.
     note_stamp: Option<sync::Stamp>,
@@ -322,6 +330,10 @@ impl App {
             sync_cfg: sync::sync_config(&root, &log_dir()),
             sync_view: sigma_core::sync::View::default(),
             sync_gen: 0,
+            wifi: None,
+            wifi_view: sigma_device::wifi::View::default(),
+            wifi_gen: 0,
+            wifi_show: false,
             note_stamp: None,
             scratch_stamp: None,
             note_hash: 0,

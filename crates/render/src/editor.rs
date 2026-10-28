@@ -113,6 +113,8 @@ pub enum Hit {
     /// The drawer button: open or close the drawer menu, where each pane
     /// is shown or hidden (v1.16; one icon per pane before).
     DrawerMenu,
+    /// The Wi-Fi button: open or close the Wi-Fi menu (v1.18).
+    Wifi,
     /// The front-light button: open or close the light menu.
     LightMenu,
     /// Landscape keyboard bar: Split / Full / Centre, pad toggles (v0.4).
@@ -179,6 +181,9 @@ pub struct Layout {
     /// The drawer button after Find (v1.16): opens the drawer menu.
     /// Zero-sized when no pane is available.
     pub drawer_button: Rect,
+    /// The Wi-Fi button between Graph and Options (v1.18). Zero-sized when
+    /// the device has no Wi-Fi control.
+    pub wifi_button: Rect,
     /// The front-light button after Find: opens the light menu. Zero-sized
     /// when the device has no front light.
     pub light_button: Rect,
@@ -197,8 +202,9 @@ pub struct Layout {
 }
 
 /// Icon slots in the title bar (S9.2; v1.0.2 adds Back before Files, so
-/// sizing always reserves room for it; v1.16 one drawer button for three).
-pub const TITLE_ICONS: i32 = 8;
+/// sizing always reserves room for it; v1.16 one drawer button for three;
+/// the front-light button after Find; v1.18 adds the Wi-Fi button).
+pub const TITLE_ICONS: i32 = 9;
 
 /// The editor screen: layout, drawing and hit-testing for write and
 /// preview mode, with the view state they share (scroll, type settings).
@@ -231,6 +237,13 @@ pub struct EditorScreen {
     pub scratch_on: bool,
     /// The drawer menu is open under the drawer button (v1.16).
     pub drawer_menu: bool,
+    /// The Wi-Fi button is shown (v1.18): the app has a Wi-Fi backend.
+    /// Off closes the button's place up.
+    pub wifi_on: bool,
+    /// The Wi-Fi menu is open under the Wi-Fi button (v1.18).
+    pub wifi_menu: bool,
+    /// What the Wi-Fi button shows: off, on, or connected.
+    pub wifi_state: crate::wifi_menu::WifiState,
     /// The device has a front light: the light button is shown.
     pub light_on: bool,
     /// The light menu is open under the light button.
@@ -312,6 +325,9 @@ impl EditorScreen {
             todos_on: true,
             scratch_on: true,
             drawer_menu: false,
+            wifi_on: false,
+            wifi_menu: false,
+            wifi_state: crate::wifi_menu::WifiState::Off,
             light_on: false,
             light_menu: false,
             light_level: 0,
@@ -512,7 +528,7 @@ impl EditorScreen {
         };
         let by = (title.h - btn) / 2;
         // Right-aligned group, mockup order left to right.
-        let optional = [self.light_on, self.panes_on(), self.graph_on];
+        let optional = [self.light_on, self.panes_on(), self.graph_on, self.wifi_on];
         let shown = TITLE_ICONS - optional.iter().filter(|on| !**on).count() as i32;
         let x0 = w - self.px(12.0) - shown * btn - (shown - 1) * icon_gap;
         let slot = |i: i32| Rect::new(x0 + i * (btn + icon_gap), by, btn, btn);
@@ -534,6 +550,7 @@ impl EditorScreen {
         let light_button = place(self.light_on);
         let drawer_button = place(self.panes_on());
         let graph_button = place(self.graph_on);
+        let wifi_button = place(self.wifi_on);
         let options_button = slot(next);
         // Help opens from Settings → Help & about; the far-right slot is the
         // Settings button, and Close takes its place on the other screens.
@@ -572,6 +589,7 @@ impl EditorScreen {
             cancel_rect,
             options_button,
             drawer_button,
+            wifi_button,
             light_button,
             find_button,
             graph_button,
@@ -1220,6 +1238,9 @@ impl EditorScreen {
         if self.panes_on() && l.drawer_button.inset(-self.px(4.0)).contains(x, y) {
             return Hit::DrawerMenu;
         }
+        if self.wifi_on && l.wifi_button.inset(-self.px(4.0)).contains(x, y) {
+            return Hit::Wifi;
+        }
         if self.light_on && l.light_button.inset(-self.px(4.0)).contains(x, y) {
             return Hit::LightMenu;
         }
@@ -1278,6 +1299,7 @@ impl EditorScreen {
                 crate::icons::draw_icon(c, crate::icons::Icon::Graph, l.graph_button, t.ink);
             }
             self.draw_drawer_button(c, &l, t);
+            self.draw_wifi_button(c, &l, t);
             self.draw_light_button(c, &l, t);
         }
 
@@ -2187,6 +2209,8 @@ impl EditorScreen {
         } else if self.panes_on() && l.drawer_button.inset(-self.px(4.0)).contains(x, y) {
             // v1.0.3: the drawer panes open in preview too.
             Hit::DrawerMenu
+        } else if self.wifi_on && l.wifi_button.inset(-self.px(4.0)).contains(x, y) {
+            Hit::Wifi
         } else if self.light_on && l.light_button.inset(-self.px(4.0)).contains(x, y) {
             Hit::LightMenu
         } else {
@@ -2222,6 +2246,7 @@ impl EditorScreen {
         }
         // v1.0.3: the drawer button, active while a pane is open (as in write).
         self.draw_drawer_button(c, &l, t);
+        self.draw_wifi_button(c, &l, t);
         self.draw_light_button(c, &l, t);
         let area = self.preview_area(m.keyboard);
         let page = m.page.min(m.doc.pages.len().saturating_sub(1));
