@@ -272,6 +272,11 @@ pub struct Settings {
     /// The lowest level the log file records, from DEBUG to CRITICAL (the
     /// levels of Python's logging). `log_level=`.
     pub log_level: crate::log::Level,
+    /// The warm-to-cool step the reader chose, 0 (cool) to
+    /// [`WARMTH_MAX`] (warm), or `None` while they have not chosen one: the
+    /// app then leaves the mixer as it finds it. Applied at start
+    /// (v1.17). `warmth=` is `keep` or the step.
+    pub warmth: Option<u8>,
     /// Settings → Sync (v1.16): run Syncthing on the Kobo while the app is
     /// open and keep the notes folder in step with the reader's other
     /// computers (`docs/sync.md`). Per device, off by default. `sync=`.
@@ -280,6 +285,11 @@ pub struct Settings {
 
 /// Backlight steps above off: nine stops, 0 to 8 (Display → Backlight).
 pub const BACKLIGHT_MAX: u8 = 8;
+
+/// Warmth steps above the coolest light: eleven stops, 0 to 10 (Display →
+/// Warmth). The same scale as the Forma's mixer file, turned the right way
+/// round (`sigma_device::light::WARMTH_MAX`).
+pub const WARMTH_MAX: u8 = 10;
 
 /// An interface language the user can pick (v1.5.5).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -400,6 +410,7 @@ impl Default for Settings {
             enhanced_keyboard: true,
             log: false,
             log_level: crate::log::Level::Info,
+            warmth: None,
             sync: false,
         }
     }
@@ -470,6 +481,10 @@ pub enum Change {
     /// The backlight step, 0 to [`BACKLIGHT_MAX`] (v1.12). Not a saved
     /// setting: the app sends it to the front light, which keeps it.
     Backlight(u8),
+    /// The warmth step, 0 (cool) to [`WARMTH_MAX`] (warm) (v1.17). Saved,
+    /// because the mixer cannot be read back reliably; the app sends it to
+    /// the front light at start and when it changes.
+    Warmth(u8),
     /// Turn plugin number `.0` (its place in the Settings → Plugins list) on
     /// or off. Kept in `plugins.state`, not in the settings file, so
     /// `Settings` ignores it and the app applies it.
@@ -659,6 +674,7 @@ impl Settings {
             Change::EnhancedKeyboard(on) => self.enhanced_keyboard = on,
             Change::Log(on) => self.log = on,
             Change::LogLevel(l) => self.log_level = l,
+            Change::Warmth(n) => self.warmth = Some(n.min(WARMTH_MAX)),
             Change::Sync(on) => self.sync = on,
             Change::SyncAcceptDevice(_)
             | Change::SyncIgnoreDevice(_)
@@ -1114,6 +1130,16 @@ pub const FIELDS: &[Field] = &[
         read: |s, v| s.log_level = crate::log::Level::parse(v).unwrap_or(s.log_level),
         write: |s| s.log_level.key().to_owned(),
     },
+    Field {
+        key: "warmth",
+        read: |s, v| {
+            s.warmth = match v.parse::<u8>() {
+                Ok(n) if n <= WARMTH_MAX => Some(n),
+                _ => None,
+            };
+        },
+        write: |s| s.warmth.map_or("keep".to_owned(), |n| n.to_string()),
+    },
     toggle!("sync", sync),
 ];
 
@@ -1159,12 +1185,14 @@ mod tests {
             enhanced_keyboard: false,
             log: true,
             log_level: crate::log::Level::Error,
+            warmth: Some(7),
             sync: true,
         }
     }
 
     /// The file is byte for byte what the hand-written serializer wrote
-    /// before the field table (v1.14), so no saved file changes.
+    /// before the field table (v1.14), plus the lines added since (`warmth`
+    /// in v1.17), so no saved file changes.
     #[test]
     fn the_file_is_unchanged_by_the_field_table() {
         assert_eq!(
@@ -1175,7 +1203,7 @@ mod tests {
              rotation=0\nlandscape_keys=centre\npad=numbers\npad_side=right\nui_scale=200\n\
              layout=us\nkeyboard_size=auto\nink_pen=finger\nink_a2=off\nink_words=off\n\
              ink_boxes=off\nink_learn=on\nui_lang_override=off\nui_lang=en\nexperimental=off\n\
-             enhanced_keyboard=on\nlog=off\nlog_level=info\nsync=off\n"
+             enhanced_keyboard=on\nlog=off\nlog_level=info\nwarmth=keep\nsync=off\n"
         );
         assert_eq!(
             every_field_changed().serialize(),
@@ -1185,7 +1213,7 @@ mod tests {
              rotation=270\nlandscape_keys=split\npad=arrows\npad_side=left\nui_scale=150\n\
              layout=de\nkeyboard_size=125\nink_pen=stylus\nink_a2=on\nink_words=on\n\
              ink_boxes=on\nink_learn=off\nui_lang_override=on\nui_lang=pt\nexperimental=on\n\
-             enhanced_keyboard=off\nlog=on\nlog_level=error\nsync=on\n"
+             enhanced_keyboard=off\nlog=on\nlog_level=error\nwarmth=7\nsync=on\n"
         );
     }
 
@@ -1205,6 +1233,27 @@ mod tests {
             (f.read)(&mut s, &(f.write)(&c));
             assert_eq!((f.write)(&s), (f.write)(&c), "{}", f.key);
         }
+    }
+
+    #[test]
+    fn warmth_is_kept_until_chosen_and_stays_in_range() {
+        assert_eq!(Settings::default().warmth, None, "the mixer is left alone");
+        let mut s = Settings::default();
+        s.apply(Change::Warmth(4));
+        assert_eq!(s.warmth, Some(4));
+        s.apply(Change::Warmth(200));
+        assert_eq!(s.warmth, Some(WARMTH_MAX));
+        assert_eq!(Settings::parse(&s.serialize()).warmth, Some(WARMTH_MAX));
+        for bad in [
+            "warmth=11\n",
+            "warmth=warm\n",
+            "warmth=-1\n",
+            "warmth=\n",
+            "",
+        ] {
+            assert_eq!(Settings::parse(bad).warmth, None, "{bad:?}");
+        }
+        assert_eq!(Settings::parse("warmth=0\n").warmth, Some(0));
     }
 
     fn words_round_trip<T: Words + std::fmt::Debug>() {

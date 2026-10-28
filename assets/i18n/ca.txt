@@ -836,6 +836,12 @@ Backlight
 = Retroil·luminació
 Light
 = Llum
+Warmth
+= Calidesa
+Warm
+= Càlida
+Cool
+= Freda
 Enhanced keyboard
 = Teclat avançat
 
@@ -983,6 +989,51 @@ Up to date
 Remove
 = Elimina
 
+
+Trash
+= Paperera
+
+Trash ({n})
+= Paperera ({n})
+
+Restore
+= Restaura
+
+Empty trash
+= Buida la paperera
+
+Tap again to empty
+= Torna a tocar per buidar
+
+The trash is empty.
+= La paperera és buida.
+
+Tap a note to restore it
+= Toca una nota per restaurar-la
+
+Restored to {name}
+= Restaurada a {name}
+
+Trash emptied
+= Paperera buidada
+
+in {name}
+= a {name}
+
+Just now
+= Ara mateix
+
+{n} min ago
+= fa {n} min
+
+{n} h ago
+= fa {n} h
+
+Yesterday
+= Ahir
+
+{n} days ago
+= fa {n} dies
 
 # Settings -> Sync (v1.16)
 

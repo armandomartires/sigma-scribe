@@ -837,6 +837,12 @@ Backlight
 = Brilho
 Light
 = Luz
+Warmth
+= Calor
+Warm
+= Quente
+Cool
+= Fria
 Enhanced keyboard
 = Teclado avançado
 
@@ -984,6 +990,51 @@ Up to date
 Remove
 = Remover
 
+
+Trash
+= Reciclagem
+
+Trash ({n})
+= Reciclagem ({n})
+
+Restore
+= Restaurar
+
+Empty trash
+= Esvaziar reciclagem
+
+Tap again to empty
+= Toque de novo para esvaziar
+
+The trash is empty.
+= A reciclagem está vazia.
+
+Tap a note to restore it
+= Toque numa nota para a restaurar
+
+Restored to {name}
+= Restaurada em {name}
+
+Trash emptied
+= Reciclagem esvaziada
+
+in {name}
+= em {name}
+
+Just now
+= Agora mesmo
+
+{n} min ago
+= há {n} min
+
+{n} h ago
+= há {n} h
+
+Yesterday
+= Ontem
+
+{n} days ago
+= há {n} dias
 
 # Settings -> Sync (v1.16)
 

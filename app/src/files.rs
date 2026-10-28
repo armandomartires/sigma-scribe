@@ -4,9 +4,49 @@ use crate::App;
 use sigma_core::buffer::TabKind;
 use sigma_core::keyboard::{Dir, Key};
 use sigma_core::library::SCRATCH;
-use sigma_core::{Autosave, Buffer, Entry, KeyAction, Keyboard, Kind, NotePath};
+use sigma_core::{Autosave, Buffer, Entry, KeyAction, Keyboard, Kind, NotePath, Trashed};
 use sigma_device::{HwKey, Refresh};
+use sigma_render::i18n::tr_name;
 use sigma_render::{FilesHit, FilesModel, Row};
+
+/// How long ago something happened, as short English text for the catalogs
+/// (`{n} min ago`): "Just now", minutes, hours, "Yesterday", days.
+fn ago(secs: u64) -> String {
+    match secs {
+        0..=59 => "Just now".into(),
+        60..=3599 => format!("{} min ago", secs / 60),
+        3600..=86_399 => format!("{} h ago", secs / 3600),
+        86_400..=172_799 => "Yesterday".into(),
+        _ => format!("{} days ago", secs / 86_400),
+    }
+}
+
+/// A trash row: the note's name, then where it was and when it was deleted.
+fn trash_row(t: &Trashed, now: u64, selected: bool) -> Row {
+    let mut detail = Vec::new();
+    if t.folder {
+        detail.push("Folder".to_owned());
+    }
+    if !t.path.parent().is_root() {
+        detail.push(tr_name(
+            "in {name}",
+            &t.path.parent().as_str().replace('/', " / "),
+        ));
+    }
+    detail.push(ago(now.saturating_sub(t.deleted)));
+    Row {
+        name: t.path.name().to_owned(),
+        detail: detail.join(" \u{b7} "),
+        folder: t.folder,
+        current: selected,
+    }
+}
+
+fn now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
+}
 
 /// Replaces a buffer's text with `new` (undoable), caret kept nearby.
 pub(crate) fn take_text(b: &mut Buffer, new: &str) {
@@ -57,6 +97,15 @@ impl App {
                 })
                 .collect();
         }
+        if f.trash {
+            let now = now_secs();
+            return f
+                .bin
+                .iter()
+                .enumerate()
+                .map(|(i, t)| trash_row(t, now, f.selected == Some(i)))
+                .collect();
+        }
         f.entries
             .iter()
             .map(|e| Row {
@@ -75,23 +124,30 @@ impl App {
     pub(crate) fn files_model<'a>(&'a self, rows: &'a [Row]) -> Option<FilesModel<'a>> {
         let f = self.files.as_ref()?;
         Some(FilesModel {
-            title: if f.folder.is_root() {
+            title: if f.trash {
+                "Trash".into()
+            } else if f.folder.is_root() {
                 "Files".into()
             } else {
                 format!("Files / {}", f.folder.as_str().replace('/', " / "))
             },
-            crumb: (!f.folder.is_root()).then(|| {
-                let up = f.folder.parent();
-                if up.is_root() {
-                    "Up to Files".into()
-                } else {
-                    format!("Up to {}", up.name())
-                }
+            crumb: f.trash.then(|| "Up to Files".to_owned()).or_else(|| {
+                (!f.folder.is_root()).then(|| {
+                    let up = f.folder.parent();
+                    if up.is_root() {
+                        "Up to Files".into()
+                    } else {
+                        format!("Up to {}", up.name())
+                    }
+                })
             }),
             rows,
             more: f.more,
             armed: f.armed,
             moving: f.moving.as_ref().map(NotePath::name),
+            trash: f.trash,
+            trash_count: f.trash_count,
+            emptying: f.emptying,
             message: f.message.as_deref(),
             first: f.first,
             theme: self.theme(),
@@ -106,7 +162,20 @@ impl App {
             f.entries = lib.list(&f.folder).unwrap_or_default();
             f.more = None;
             f.armed = None;
-            f.first = f.first.min(f.entries.len().saturating_sub(1));
+            f.emptying = false;
+            f.trash_count = lib.trash_len();
+            if f.trash {
+                f.bin = lib.list_trash().unwrap_or_default();
+                // Leaving the Trash when nothing is left in it.
+                f.trash = !f.bin.is_empty();
+                f.selected = f.selected.filter(|&i| i < f.bin.len());
+            }
+            let shown = if f.trash {
+                f.bin.len()
+            } else {
+                f.entries.len()
+            };
+            f.first = f.first.min(shown.saturating_sub(1));
         }
     }
 
@@ -264,16 +333,64 @@ impl App {
         let lib = self.library.clone();
         let f = self.files.as_mut()?;
         let was_armed = f.armed.take();
+        let was_emptying = std::mem::take(&mut f.emptying);
         f.message = None;
         match hit {
             FilesHit::Close => {
                 self.files = None;
                 return Some(Refresh::Full);
             }
+            FilesHit::Up if f.trash => {
+                f.trash = false;
+                f.selected = None;
+                f.first = 0;
+                self.refresh_files();
+            }
             FilesHit::Up => {
                 f.folder = f.folder.parent();
                 f.first = 0;
                 self.refresh_files();
+            }
+            FilesHit::OpenTrash => {
+                f.trash = true;
+                f.selected = None;
+                f.first = 0;
+                self.refresh_files();
+            }
+            FilesHit::Open(i) if f.trash => {
+                f.selected = (i < f.bin.len()).then_some(i);
+            }
+            FilesHit::Restore => match f.selected.and_then(|i| f.bin.get(i)) {
+                None => f.message = Some("Tap a note to restore it".into()),
+                Some(t) => match lib.restore(&t.id) {
+                    Ok(back) => {
+                        f.selected = None;
+                        let text = tr_name("Restored to {name}", back.as_str());
+                        self.refresh_files();
+                        if let Some(f) = &mut self.files {
+                            f.message = Some(text);
+                        }
+                        // The restored note joins the to-do list and the index.
+                        self.reindex();
+                    }
+                    Err(e) => f.message = Some(e.to_string()),
+                },
+            },
+            FilesHit::EmptyTrash => {
+                if was_emptying {
+                    match lib.empty_trash() {
+                        Ok(_) => {
+                            f.selected = None;
+                            self.refresh_files();
+                            if let Some(f) = &mut self.files {
+                                f.message = Some("Trash emptied".into());
+                            }
+                        }
+                        Err(e) => f.message = Some(e.to_string()),
+                    }
+                } else {
+                    f.emptying = true;
+                }
             }
             FilesHit::Open(i) => {
                 if let Some(target) = f.moving.clone() {
@@ -407,4 +524,55 @@ pub struct FilesState {
     pub targets: Vec<NotePath>,
     pub message: Option<String>,
     pub first: usize,
+    /// Showing the Trash instead of a folder.
+    pub trash: bool,
+    /// What the trash holds, newest first (loaded while it is shown).
+    pub bin: Vec<Trashed>,
+    /// The row of `bin` a tap selected.
+    pub selected: Option<usize>,
+    /// How many items the trash holds, for the Trash button.
+    pub trash_count: usize,
+    /// Empty trash has been tapped once.
+    pub emptying: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ago_reads_short_and_steps_up() {
+        assert_eq!(ago(0), "Just now");
+        assert_eq!(ago(59), "Just now");
+        assert_eq!(ago(60), "1 min ago");
+        assert_eq!(ago(3599), "59 min ago");
+        assert_eq!(ago(3600), "1 h ago");
+        assert_eq!(ago(86_399), "23 h ago");
+        assert_eq!(ago(86_400), "Yesterday");
+        assert_eq!(ago(172_800), "2 days ago");
+        assert_eq!(ago(40 * 86_400), "40 days ago");
+    }
+
+    #[test]
+    fn a_trash_row_names_the_note_its_folder_and_when() {
+        let t = |p: &str, folder| Trashed {
+            id: "100".into(),
+            path: NotePath::parse(p).unwrap(),
+            deleted: 1_000,
+            size: 5,
+            folder,
+        };
+        let r = trash_row(&t("a/b/n.md", false), 1_000 + 7_200, true);
+        assert_eq!(r.name, "n.md");
+        assert_eq!(r.detail, "in a / b \u{b7} 2 h ago");
+        assert!(r.current && !r.folder);
+        let r = trash_row(&t("n.md", false), 1_010, false);
+        assert_eq!(r.detail, "Just now");
+        let r = trash_row(&t("g", true), 1_000 + 86_400, false);
+        assert_eq!(
+            (r.name.as_str(), r.detail.as_str()),
+            ("g", "Folder \u{b7} Yesterday")
+        );
+        assert!(r.folder);
+    }
 }

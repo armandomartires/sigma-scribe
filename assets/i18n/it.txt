@@ -836,6 +836,12 @@ Backlight
 = Retroilluminazione
 Light
 = Luce
+Warmth
+= Calore
+Warm
+= Calda
+Cool
+= Fredda
 Enhanced keyboard
 = Tastiera avanzata
 
@@ -983,6 +989,51 @@ Up to date
 Remove
 = Rimuovi
 
+
+Trash
+= Cestino
+
+Trash ({n})
+= Cestino ({n})
+
+Restore
+= Ripristina
+
+Empty trash
+= Svuota cestino
+
+Tap again to empty
+= Tocca di nuovo per svuotare
+
+The trash is empty.
+= Il cestino è vuoto.
+
+Tap a note to restore it
+= Tocca una nota per ripristinarla
+
+Restored to {name}
+= Ripristinata in {name}
+
+Trash emptied
+= Cestino svuotato
+
+in {name}
+= in {name}
+
+Just now
+= Adesso
+
+{n} min ago
+= {n} min fa
+
+{n} h ago
+= {n} h fa
+
+Yesterday
+= Ieri
+
+{n} days ago
+= {n} giorni fa
 
 # Settings -> Sync (v1.16)
 

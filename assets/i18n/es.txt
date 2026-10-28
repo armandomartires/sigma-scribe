@@ -836,6 +836,12 @@ Backlight
 = Retroiluminación
 Light
 = Luz
+Warmth
+= Calidez
+Warm
+= Cálida
+Cool
+= Fría
 Enhanced keyboard
 = Teclado mejorado
 
@@ -983,6 +989,51 @@ Up to date
 Remove
 = Quitar
 
+
+Trash
+= Papelera
+
+Trash ({n})
+= Papelera ({n})
+
+Restore
+= Restaurar
+
+Empty trash
+= Vaciar papelera
+
+Tap again to empty
+= Toca de nuevo para vaciar
+
+The trash is empty.
+= La papelera está vacía.
+
+Tap a note to restore it
+= Toca una nota para restaurarla
+
+Restored to {name}
+= Restaurada en {name}
+
+Trash emptied
+= Papelera vaciada
+
+in {name}
+= en {name}
+
+Just now
+= Ahora mismo
+
+{n} min ago
+= hace {n} min
+
+{n} h ago
+= hace {n} h
+
+Yesterday
+= Ayer
+
+{n} days ago
+= hace {n} días
 
 # Settings -> Sync (v1.16)
 

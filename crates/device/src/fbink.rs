@@ -42,6 +42,8 @@ pub struct KoboDevice {
     gsensor: bool,
     /// The front light (v1.12), when sysfs shows one.
     light: Option<crate::light::Light>,
+    /// The warm-to-cool mixer (v1.17), when sysfs shows one.
+    warmth: Option<crate::light::Warmth>,
 }
 
 impl KoboDevice {
@@ -172,6 +174,7 @@ impl KoboDevice {
             last_full: None,
             gsensor,
             light: open_light(),
+            warmth: open_warmth(),
         })
     }
 }
@@ -189,6 +192,21 @@ fn open_light() -> Option<crate::light::Light> {
         None => sigma_core::info!("light", "no front light found"),
     }
     l
+}
+
+/// Finds the warm-to-cool mixer and logs what it holds (v1.17).
+fn open_warmth() -> Option<crate::light::Warmth> {
+    let w = crate::light::Warmth::find(std::path::Path::new(crate::light::ROOT));
+    match &w {
+        Some(w) => sigma_core::info!(
+            "light",
+            "warmth mixer {} (step {:?})",
+            w.path().display(),
+            w.step()
+        ),
+        None => sigma_core::info!("light", "no warmth mixer found"),
+    }
+    w
 }
 
 impl Device for KoboDevice {
@@ -276,6 +294,24 @@ impl Device for KoboDevice {
             .ok_or_else(|| io::Error::other("no front light"))?;
         let r = l.set_step(step);
         sigma_core::info!("light", "{} -> step {step}: {r:?}", l.name());
+        r
+    }
+
+    fn has_warmth(&self) -> bool {
+        self.warmth.is_some()
+    }
+
+    fn warmth_step(&mut self) -> Option<u8> {
+        self.warmth.as_ref()?.step()
+    }
+
+    fn set_warmth(&mut self, step: u8) -> io::Result<()> {
+        let w = self
+            .warmth
+            .as_ref()
+            .ok_or_else(|| io::Error::other("no warmth mixer"))?;
+        let r = w.set_step(step);
+        sigma_core::info!("light", "warmth -> step {step}: {r:?}");
         r
     }
 

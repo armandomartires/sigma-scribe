@@ -142,8 +142,11 @@ impl App {
                 "Cancel" => Some(centre(l.bottom[0].union(&l.bottom[1]))),
                 "Close" => Some(centre(l.close)),
                 "Up" => Some(centre(l.crumb)),
-                "New note" => Some(centre(l.bottom[0])),
-                "New folder" => Some(centre(l.bottom[1])),
+                "New note" if !m.trash => Some(centre(l.bottom[0])),
+                "New folder" if !m.trash => Some(centre(l.bottom[1])),
+                "Trash" if l.bottom[2].w > 0 => Some(centre(l.bottom[2])),
+                "Restore" if m.trash => Some(centre(l.bottom[0])),
+                "Empty trash" if m.trash => Some(centre(l.bottom[1])),
                 "Rename" => l.actions.map(|a| centre(a[0])),
                 "Move" => l.actions.map(|a| centre(a[1])),
                 "Delete" => l.actions.map(|a| centre(a[2])),
@@ -385,13 +388,23 @@ impl App {
             }
             for (i, r, more) in &l.rows {
                 add(&format!("file row {i}"), *r);
-                add(&format!("file more {i}"), *more);
+                if more.w > 0 {
+                    add(&format!("file more {i}"), *more);
+                }
             }
             for (k, r) in l.actions.iter().flatten().enumerate() {
                 add(&format!("action {k}"), *r);
             }
-            add("New note", l.bottom[0]);
-            add("New folder", l.bottom[1]);
+            if m.trash {
+                add("Restore", l.bottom[0]);
+                add("Empty trash", l.bottom[1]);
+            } else {
+                add("New note", l.bottom[0]);
+                add("New folder", l.bottom[1]);
+                if l.bottom[2].w > 0 {
+                    add("Trash", l.bottom[2]);
+                }
+            }
             return out;
         }
         let l = self.page_layout();

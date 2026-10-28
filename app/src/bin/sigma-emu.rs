@@ -8,7 +8,7 @@
 //!   long-press-word W | double-tap-word W | grab-handle start|end
 //!   move-handle-end W | move-handle-start W | expect-bar A,B|none
 //!   expect-clipboard T | expect-caret-after W |
-//!   expect-not TEXT | expect-selection TEXT | clear-field | expect-file PATH | expect-no-file PATH | expect-open PATH
+//!   age-trash N SECS | expect-not TEXT | expect-selection TEXT | clear-field | expect-file PATH | expect-no-file PATH | expect-open PATH
 //!   v0.4: tap-on Options | tap-on Row/Cell (in Options, e.g. Dark mode/On, Size/+)
 //!   tap-on Split|Full|Centre|Arrows|123|Pad left|Pad right (landscape bar)
 //!   expect-setting KEY=VALUE | expect-words N | expect-screen WxH | restart
@@ -159,6 +159,37 @@ fn main() -> ExitCode {
             "expect-no-file" => {
                 if app.library.root().join(arg).exists() {
                     return fail("file still exists".into());
+                }
+            }
+            // `age-trash N SECS`: the Nth newest item in the trash (0 is the
+            // newest) looks SECS seconds old, so the screenshots show more
+            // than "Just now".
+            "age-trash" => {
+                let v: Vec<u64> = arg
+                    .split_whitespace()
+                    .filter_map(|x| x.parse().ok())
+                    .collect();
+                let (Some(&n), Some(&secs)) = (v.first(), v.get(1)) else {
+                    return fail("expected N SECS".into());
+                };
+                let Some(t) = app
+                    .library
+                    .list_trash()
+                    .ok()
+                    .and_then(|l| l.into_iter().nth(n as usize))
+                else {
+                    return fail("no such trash item".into());
+                };
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_or(0, |d| d.as_secs());
+                let base = app.library.root().join(sigma_core::library::TRASH);
+                let to = base.join(now.saturating_sub(secs).to_string());
+                if to.exists() {
+                    return fail("another item has that time".into());
+                }
+                if let Err(e) = std::fs::rename(base.join(&t.id), to) {
+                    return fail(e.to_string());
                 }
             }
             "expect-open" => {
@@ -790,6 +821,21 @@ fn main() -> ExitCode {
                 app.sync_light(&mut dev);
                 if let Some(n) = dev.light {
                     app.change(sigma_core::settings::Change::Backlight(n));
+                }
+            }
+            "warmth" => {
+                // v1.17: pretend a warm-to-cool mixer at this step (0 to 10),
+                // or none. `warmth 3 unreadable` cannot be read back, as the
+                // stock reader never does.
+                let mut it = arg.split_whitespace();
+                dev.warmth = it.next().and_then(|n| n.parse::<u8>().ok());
+                dev.warmth_readable = it.next() != Some("unreadable");
+                app.sync_warmth(&mut dev);
+            }
+            "expect-warmth" => {
+                app.sync_warmth(&mut dev);
+                if dev.warmth.map_or(String::new(), |n| n.to_string()) != arg {
+                    return fail(format!("warmth is {:?}", dev.warmth));
                 }
             }
             "expect-light" => {

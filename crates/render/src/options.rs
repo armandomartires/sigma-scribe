@@ -387,7 +387,7 @@ pub const CATEGORIES: [(&str, &[Section]); 10] = [
         "Display",
         &[
             ("Page", &["Dark mode", "UI scale", "Drawer", "Drawer width"]),
-            ("Light", &["Backlight"]),
+            ("Light", &["Backlight", "Warmth"]),
             ("Orientation", &["Orientation", "Upside down"]),
         ],
     ),
@@ -591,6 +591,9 @@ pub struct OptionsModel<'a> {
     /// The front light's step when the device has one (v1.12); `None`
     /// hides Display → Backlight.
     pub light: Option<u8>,
+    /// The warm-to-cool step when the front light has a mixer (v1.17);
+    /// `None` hides Display → Warmth.
+    pub warmth: Option<u8>,
     /// UI scale while its slider is being dragged: the thumb moves and the
     /// value shows, but the scale itself only changes on release (v1.13.1).
     pub ui_scale_pending: Option<u16>,
@@ -789,6 +792,29 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
                         ),
                     };
                     choice(&text, Change::Backlight(i), i == n)
+                })
+                .collect();
+            Kind::Slider {
+                value: usize::from(n),
+                stops,
+                enabled: true,
+                ends: true,
+            }
+        }
+        // v1.17: eleven steps from cool to warm; only with a mixer.
+        "Warmth" => {
+            let n = m.warmth?;
+            let stops: Vec<Cell> = (0..=sigma_core::settings::WARMTH_MAX)
+                .map(|i| {
+                    let text = match i {
+                        0 => tr("Cool").into_owned(),
+                        sigma_core::settings::WARMTH_MAX => tr("Warm").into_owned(),
+                        i => format!(
+                            "{} %",
+                            usize::from(i) * 100 / usize::from(sigma_core::settings::WARMTH_MAX)
+                        ),
+                    };
+                    choice(&text, Change::Warmth(i), i == n)
                 })
                 .collect();
             Kind::Slider {
@@ -2057,6 +2083,7 @@ mod tests {
             focus: None,
             hw_samples: 0,
             light: None,
+            warmth: None,
             ui_scale_pending: None,
             plugins: &[],
             repository: &[],

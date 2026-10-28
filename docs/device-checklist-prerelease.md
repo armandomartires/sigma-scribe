@@ -206,6 +206,14 @@ Installed on the Forma: **local build of `v1.13.1-write-fixes` (PR 48), head `a3
 - [x] A double tap on the drawer's grip closes the drawer and leaves a tab where its outer edge was (left of the scroll bar); dragging the grip to the edge does the same. Tapping the tab brings back the same panes; dragging it in reopens at that width. Two slow taps do not close it. With the touchpad, a double click on the grip closes it.
 - [x] With the drawer open on the right, the scroll bar stays at the screen edge and works; the gap between the drawer and the bar matches the bar's margin to the edge. Same in preview (the page bar). — user pass 2026-10-27 (06618b8): all OK.
 
+## Trash in Files (Unreleased, v1.17)
+- [ ] Files → Delete (two taps) on a note: a third button **Trash (1)** appears beside New note and New folder, with its label whole at 200 % in portrait and landscape; the buttons are full finger targets.
+- [ ] Trash lists the note with the folder it was in and "Just now"; a tap selects it (grey wash, bar at the left, bold name) and the e-ink redraw is clean. Restore with nothing selected says "Tap a note to restore it".
+- [ ] Restore puts the note back where it was (check the folder in Files); with the same name taken by a new note it comes back as `name (restored).md`. Restoring the last item leaves the Trash and the button goes. A restored note shows in Find and its to-dos in the to-do pane.
+- [ ] A deleted folder is one row ("Folder · in … · …") and restores whole. A note with handwriting keeps its ink.
+- [ ] Empty trash: the first tap turns the button black ("Tap again to empty"); a tap anywhere else disarms it; the second tap removes everything (check `sigma-scribe/notes/.trash` is gone over USB) and returns to Files.
+- [ ] Times read right after a few hours and a day ("2 h ago", "Yesterday"). Several items in the list page with the page buttons.
+
 ## Sync (Unreleased, v1.16): not tried on the Forma yet
 The full list, with what to measure, is `docs/sync.md` §12. In short:
 - [ ] The package has `.adds/sigma-scribe/syncthing/syncthing` (static ARM, 32 MB) and its notices; `syncthing --version` runs on the Forma (v2.1.7).
