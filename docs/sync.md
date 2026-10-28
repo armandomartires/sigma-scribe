@@ -360,10 +360,29 @@ lost at the next keystroke. With sync that is not acceptable, so:
 | Sync (On / Off) | the setting |
 | Status | *Starting…*, *Not installed*, *Stopped: <reason>*, *No devices yet*, *No device connected*, *Not shared yet* (a device is connected but no folder is at the notes path: the folder is being made, could not be made, or the offer was ignored; never "Up to date"), *Waiting for Joe to accept* (a connected device on the folder has not accepted it: Syncthing's `remoteState` is `notSharing`; with several, "Joe +2"; a "Next step" line under Status says to accept "Σscribe notes" in Syncthing on that device), *Syncing 3 files (120 KB)*, *Scanning*, *Up to date*, or the first folder error |
 | Devices | `connections`: "1 of 2 connected" |
-| Last sync | `stats/folder` → `lastFile.at`, shown as `2026-10-28 14:05` |
+| Last sync | the later of `stats/folder` → `lastFile.at` (a file received) and the last time a connected device on the folder was in sync with it (below), shown as `2026-10-28 14:05`, UTC (the device clock) |
 | Conflicts | count of `*.sync-conflict-*` and `*.conflict-*` files in the notes folder (a walk of at most 20,000 entries, once a minute, dotted folders skipped) |
 | Device ID | `system/status` → `myID` |
 | Waiting for you | pending devices, then pending folders, each with Accept / Ignore (at most 4 of each; the rest wait) |
+
+**Last sync.** Syncthing sets `lastFile.at` only when this device *receives* a
+file, so a Kobo that only sends (notes written on it, none coming back) would
+show "Never" although they reached the phone. So the poll also reads the
+completion it already asks for (below): when a connected device on the folder
+has `remoteState` `valid` with `needItems` and `needBytes` 0, and this
+device's folder is idle with nothing to fetch and no errors, the folder is in
+sync with a peer *now*, and that moment is remembered. The page shows the later
+of the two times. Both are Unix seconds, shown as UTC (the device clock; the
+received time is converted from the offset Syncthing wrote, which on the Forma
+is not UTC). A remembered time ahead of the clock is shown as now, and none is
+kept while the clock is unset (before 2020). The in-sync time is kept across
+restarts in `syncthing-home/last-in-sync` (`<folder id> <seconds>`, ignored
+if the notes folder has another ID now): written the first time, when the
+folder falls out of sync, and at most every 10 minutes while it stays in sync
+(one tiny write; at worst a restart loses ten minutes). Syncthing's
+`/rest/stats/device` `lastSeen` was not used: it is the last connection, not
+the last sync. While a peer is connected and up to date, the time is
+effectively "now", so it moves on at the next minute.
 
 *Waiting for … to accept* comes from `GET /rest/db/completion?folder=<id>&device=<id>`
 (Syncthing 1.20 and later; the bundled 2.1.7 has it). Its `remoteState` is
@@ -474,7 +493,11 @@ did not touch the device. For `docs/device-checklist-prerelease.md`:
     says *Waiting for <phone> to accept* with the next-step line, not *Up to
     date*; within a poll (10 s, 1 s with the page open) of accepting
     "Σscribe notes" on the phone it changes to *Syncing* or *Up to date*.
-16. Expected in `syncthing.log`, harmless: Syncthing warns that it "should not
+16. Last sync: after the notes have gone to the phone and nothing came back,
+    Settings → Sync shows a time (not *Never*) while the phone is connected
+    and up to date; after leaving the app and starting it again with the
+    phone out of range, the time is still there (`syncthing-home/last-in-sync`).
+17. Expected in `syncthing.log`, harmless: Syncthing warns that it "should not
     run as a privileged or system user"; the Kobo runs everything as root.
 11. Loopback (found on the Forma, fix not yet tried there): the launcher log has
     `net: lo has no 127.0.0.1, bringing it up` then a `net: lo: inet …` line;
