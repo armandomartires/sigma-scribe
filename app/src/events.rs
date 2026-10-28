@@ -242,11 +242,7 @@ impl App {
                     .files_model(&rows)
                     .map_or(1, |m| self.screen.files_layout(&m).visible.max(1));
                 let f = self.files.as_mut()?;
-                let n = if f.moving.is_some() {
-                    f.targets.len()
-                } else {
-                    f.entries.len()
-                };
+                let n = rows.len();
                 f.first = if forward {
                     (f.first + visible).min(n.saturating_sub(1))
                 } else {

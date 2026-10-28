@@ -989,3 +989,48 @@ Up to date
 Remove
 = Entfernen
 
+
+Trash
+= Papierkorb
+
+Trash ({n})
+= Papierkorb ({n})
+
+Restore
+= Wiederherstellen
+
+Empty trash
+= Papierkorb leeren
+
+Tap again to empty
+= Zum Leeren erneut tippen
+
+The trash is empty.
+= Der Papierkorb ist leer.
+
+Tap a note to restore it
+= Notiz antippen, um sie wiederherzustellen
+
+Restored to {name}
+= Wiederhergestellt nach {name}
+
+Trash emptied
+= Papierkorb geleert
+
+in {name}
+= in {name}
+
+Just now
+= Gerade eben
+
+{n} min ago
+= vor {n} Min.
+
+{n} h ago
+= vor {n} Std.
+
+Yesterday
+= Gestern
+
+{n} days ago
+= vor {n} Tagen

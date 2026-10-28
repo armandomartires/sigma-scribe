@@ -26,7 +26,7 @@ Screenshots from the desktop emulator (`tests/emu/v1.15-readme.script`); e-ink-l
 - Find & Replace. Line mode (a set number of words per line), size, leading, margin, tabs.
 
 **Notes**
-- A library of notes and folders: new, rename, move, delete (to a `.trash` folder you can copy notes back from). Notes are plain Markdown in `sigma-scribe/notes` on the Kobo drive; nothing else is needed to read them.
+- A library of notes and folders: new, rename, move, delete (to a Trash in Files, where you can restore a note or empty it). Notes are plain Markdown in `sigma-scribe/notes` on the Kobo drive; nothing else is needed to read them.
 - Markdown preview with pages, turned with the page buttons.
 - Wiki links `[[note]]` with backlinks; renaming or moving a note updates the links to it.
 - A side drawer (drag its grip to set the width, or to the screen edge to tuck it away): the note's **Contents**, **To-dos** across all notes (tick them off from the drawer), and a **Scratch** pad.

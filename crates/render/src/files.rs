@@ -2,6 +2,9 @@
 //! Tap a folder to enter, a note to open; **More** reveals Rename / Move /
 //! Delete (armed: first tap arms, second confirms); New note / New folder at
 //! the bottom. In move mode the list shows destination folders instead.
+//! While the trash holds something, a Trash button sits beside them; the
+//! Trash view lists the deleted notes, a tap selects one, Restore puts it
+//! back and Empty trash (armed like Delete) removes them for good.
 
 use crate::canvas::{Canvas, Rect};
 use crate::editor::{EditorScreen, Layout};
@@ -19,7 +22,8 @@ pub struct Row {
     pub detail: String,
     /// Whether the entry is a folder (drawn with a folder icon).
     pub folder: bool,
-    /// Whether the entry is the open note (marked and drawn in bold).
+    /// Whether the entry is the open note, or in the Trash the selected
+    /// one (marked and drawn in bold).
     pub current: bool,
 }
 
@@ -38,6 +42,13 @@ pub struct FilesModel<'a> {
     pub armed: Option<usize>,
     /// Some(name) while choosing where to move `name`; rows are folders.
     pub moving: Option<&'a str>,
+    /// Showing the Trash: `rows` are the deleted notes.
+    pub trash: bool,
+    /// How many items the trash holds; the Trash button is shown while it is
+    /// not 0 (and not in the Trash itself).
+    pub trash_count: usize,
+    /// Empty trash has been tapped once; a second tap confirms.
+    pub emptying: bool,
     /// A line shown above the bottom buttons, if any.
     pub message: Option<&'a str>,
     /// Index of the first row shown.
@@ -67,6 +78,12 @@ pub enum FilesHit {
     Move(usize),
     /// Delete, in the open row's actions.
     Delete(usize),
+    /// The Trash button.
+    OpenTrash,
+    /// Restore, in the Trash.
+    Restore,
+    /// Empty trash, in the Trash.
+    EmptyTrash,
     /// The New note button.
     NewNote,
     /// The New folder button.
@@ -97,8 +114,9 @@ pub struct FilesLayout {
     pub rows: Vec<(usize, Rect, Rect)>,
     /// Rename, Move and Delete under the open row, when they fit.
     pub actions: Option<[Rect; 3]>,
-    /// New note and New folder.
-    pub bottom: [Rect; 2],
+    /// New note, New folder and (while the trash holds something) Trash; in
+    /// the Trash: Restore and Empty trash. An unused one is empty.
+    pub bottom: [Rect; 3],
     /// How many rows are shown.
     pub visible: usize,
 }
@@ -130,11 +148,24 @@ impl EditorScreen {
         } else {
             self.height as i32
         } - bottom_h;
-        let bw = (w - 3 * pad) / 2;
-        let bottom = [
-            Rect::new(pad, bottom_y + self.files_px(12.0), bw, btn),
-            Rect::new(2 * pad + bw, bottom_y + self.files_px(12.0), bw, btn),
-        ];
+        let by = bottom_y + self.files_px(12.0);
+        let bottom = if m.trash_count > 0 && !m.trash && m.moving.is_none() {
+            let bw = (w - 4 * pad) / 3;
+            [
+                Rect::new(pad, by, bw, btn),
+                Rect::new(2 * pad + bw, by, bw, btn),
+                Rect::new(3 * pad + 2 * bw, by, bw, btn),
+            ]
+        } else {
+            let bw = (w - 3 * pad) / 2;
+            [
+                Rect::new(pad, by, bw, btn),
+                Rect::new(2 * pad + bw, by, bw, btn),
+                Rect::default(),
+            ]
+        };
+        // Moving and the Trash have no More buttons: a row is only a target.
+        let plain = m.moving.is_some() || m.trash;
         let row_h = self.files_px(76.0);
         let act_h = btn + self.files_px(16.0);
         let mut rows = Vec::new();
@@ -148,17 +179,9 @@ impl EditorScreen {
                 self.files_px(80.0),
                 btn,
             );
-            rows.push((
-                i,
-                r,
-                if m.moving.is_some() {
-                    Rect::default()
-                } else {
-                    more
-                },
-            ));
+            rows.push((i, r, if plain { Rect::default() } else { more }));
             y += row_h;
-            if m.more == Some(i) && m.moving.is_none() && y + act_h <= bottom_y {
+            if m.more == Some(i) && !plain && y + act_h <= bottom_y {
                 let aw = (w - 4 * pad) / 3;
                 let ay = y + self.files_px(8.0);
                 actions = Some([
@@ -232,10 +255,18 @@ impl EditorScreen {
             if l.bottom[0].union(&l.bottom[1]).contains(x, y) {
                 return FilesHit::CancelMove;
             }
+        } else if m.trash {
+            if l.bottom[0].contains(x, y) {
+                return FilesHit::Restore;
+            } else if l.bottom[1].contains(x, y) {
+                return FilesHit::EmptyTrash;
+            }
         } else if l.bottom[0].contains(x, y) {
             return FilesHit::NewNote;
         } else if l.bottom[1].contains(x, y) {
             return FilesHit::NewFolder;
+        } else if l.bottom[2].w > 0 && l.bottom[2].contains(x, y) {
+            return FilesHit::OpenTrash;
         }
         FilesHit::Nothing
     }
@@ -249,6 +280,7 @@ impl EditorScreen {
         c.fill(c.bounds(), t.paper);
         let title = match m.moving {
             Some(name) => format!("{}\u{2026}", crate::i18n::tr_name("Move {name} to", name)),
+            None if m.trash => tr("Trash").into_owned(),
             None => m.title.replacen("Files", &tr("Files"), 1),
         };
         self.draw_title(c, &l.base, &title, m.rename, t, false);
@@ -286,6 +318,8 @@ impl EditorScreen {
             let y = l.crumb.y.max(l.base.title.h) + s.px(80.0);
             let msg = if m.moving.is_some() {
                 "No folders."
+            } else if m.trash {
+                "The trash is empty."
             } else {
                 "No notes here yet. Tap New note."
             };
@@ -302,6 +336,9 @@ impl EditorScreen {
         for &(i, r, more) in &l.rows {
             let row = &m.rows[i];
             if row.current {
+                if m.trash {
+                    c.fill(r, t.wash);
+                }
                 c.fill(Rect::new(0, r.y, s.px(6.0), r.h), t.ink);
             }
             let ix = s.px(20.0);
@@ -405,21 +442,39 @@ impl EditorScreen {
             Rect::new(0, l.bottom[0].y - s.px(12.0), self.width as i32, 1),
             t.rule,
         );
-        let labels: [&str; 2] = if m.moving.is_some() {
-            ["Cancel", ""]
+        let trash_label = tr("Trash ({n})").replace("{n}", &m.trash_count.to_string());
+        let labels: [&str; 3] = if m.moving.is_some() {
+            ["Cancel", "", ""]
+        } else if m.trash {
+            [
+                "Restore",
+                if m.emptying {
+                    "Tap again to empty"
+                } else {
+                    "Empty trash"
+                },
+                "",
+            ]
         } else {
-            ["New note", "New folder"]
+            ["New note", "New folder", &trash_label]
         };
         let rects = if m.moving.is_some() {
-            [l.bottom[0].union(&l.bottom[1]), Rect::default()]
+            [
+                l.bottom[0].union(&l.bottom[1]),
+                Rect::default(),
+                Rect::default(),
+            ]
         } else {
             l.bottom
         };
-        for (r, label) in rects.iter().zip(labels) {
+        for (n, (r, label)) in rects.iter().zip(labels).enumerate() {
             if r.w == 0 {
                 continue;
             }
-            let label: &str = &tr(label);
+            // Armed, like Delete: ink with the label inverted.
+            let inverted = m.trash && n == 1 && m.emptying;
+            let label: &str = if n == 2 { label } else { &tr(label) };
+            c.fill(*r, if inverted { t.ink } else { t.paper });
             c.stroke(*r, 1, t.ink);
             let lw = self.fonts.width(Face::AtkinsonBold, ui, label);
             self.fonts.draw(
@@ -429,7 +484,7 @@ impl EditorScreen {
                 r.x as f32 + (r.w as f32 - lw) / 2.0,
                 base(*r, Face::AtkinsonBold),
                 label,
-                t.ink,
+                if inverted { t.paper } else { t.ink },
             );
         }
         if m.rename.is_some() {
@@ -469,6 +524,9 @@ mod tests {
             more: None,
             armed: None,
             moving: None,
+            trash: false,
+            trash_count: 0,
+            emptying: false,
             message: None,
             first: 0,
             theme: Theme::DAY,
@@ -536,5 +594,69 @@ mod tests {
             e.files_hit(&m, l.bottom[1].x + 5, l.bottom[1].y + 5),
             FilesHit::CancelMove
         );
+    }
+
+    #[test]
+    fn the_trash_button_shows_while_the_trash_holds_something() {
+        let e = EditorScreen::new(1440, 1920);
+        let (r, kb) = (rows(), Keyboard::default());
+        let mut m = model(&r, &kb);
+        assert_eq!(e.files_layout(&m).bottom[2], Rect::default(), "empty trash");
+        m.trash_count = 3;
+        let l = e.files_layout(&m);
+        for b in l.bottom {
+            assert!(b.w >= 44 && b.h >= 44, "{b:?}");
+        }
+        assert!(l.bottom[0].x + l.bottom[0].w < l.bottom[1].x);
+        assert!(l.bottom[1].x + l.bottom[1].w < l.bottom[2].x);
+        assert!(l.bottom[2].x + l.bottom[2].w <= 1440);
+        let t = l.bottom[2];
+        assert_eq!(e.files_hit(&m, t.x + 5, t.y + 5), FilesHit::OpenTrash);
+        assert_eq!(
+            e.files_hit(&m, l.bottom[0].x + 5, l.bottom[0].y + 5),
+            FilesHit::NewNote
+        );
+        let mut c = Canvas::new(1440, 1920, 255);
+        e.draw_files(&mut c, &m);
+    }
+
+    #[test]
+    fn the_trash_view_selects_rows_and_has_restore_and_empty() {
+        let e = EditorScreen::new(1440, 1920);
+        let (r, kb) = (rows(), Keyboard::default());
+        let mut m = model(&r, &kb);
+        m.trash = true;
+        m.trash_count = 31;
+        m.crumb = Some("Up to Files".into());
+        m.more = Some(1);
+        let l = e.files_layout(&m);
+        assert!(l.rows.iter().all(|(_, _, more)| more.w == 0), "no More");
+        assert!(l.actions.is_none());
+        assert_eq!(l.bottom[2], Rect::default(), "no Trash button inside");
+        let (i, row, _) = l.rows[0];
+        assert_eq!(
+            e.files_hit(&m, row.x + 40, row.y + row.h / 2),
+            FilesHit::Open(i)
+        );
+        assert_eq!(
+            e.files_hit(&m, l.bottom[0].x + 5, l.bottom[0].y + 5),
+            FilesHit::Restore
+        );
+        assert_eq!(
+            e.files_hit(&m, l.bottom[1].x + 5, l.bottom[1].y + 5),
+            FilesHit::EmptyTrash
+        );
+        assert_eq!(e.files_hit(&m, 30, l.crumb.y + 5), FilesHit::Up);
+        assert_eq!(
+            e.files_hit(&m, l.close.x + 5, l.close.y + 5),
+            FilesHit::Close
+        );
+        // Armed and empty both draw.
+        m.emptying = true;
+        let mut c = Canvas::new(1440, 1920, 255);
+        e.draw_files(&mut c, &m);
+        let none: Vec<Row> = Vec::new();
+        m.rows = &none;
+        e.draw_files(&mut c, &m);
     }
 }
