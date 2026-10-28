@@ -19,5 +19,14 @@ itself is licensed under the GNU Affero General Public License v3.0 only (see
 ../LICENSE). The Go modules built into Syncthing carry their own licences; the
 source tree above lists them.
 
+ca-certificates.crt is the bundle of Mozilla's root certificates as extracted
+by curl, unmodified, dated 2026-10-20, from https://curl.se/ca/cacert-2026-10-20.pem
+(sha256 796f1389bfea13c0ed78f663b765baaff54a508e5483786bd6ece73c5e3e3cbe).
+The certificate data comes from Mozilla's NSS (certdata.txt) under the Mozilla
+Public License, version 2.0 (the same licence text as LICENSE.txt in this
+folder); its source is https://curl.se/docs/caextract.html. Sigma scribe gives
+it to Syncthing as SSL_CERT_FILE, for the HTTPS of its relays and global
+discovery servers; the Kobo has no root certificates Syncthing finds.
+
 Syncthing keeps its configuration, device key and database in
 ../syncthing-home/, which an update of Sigma scribe never replaces.

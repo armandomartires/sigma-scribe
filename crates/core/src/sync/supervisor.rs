@@ -52,6 +52,10 @@ pub struct Config {
     /// Whether 127.0.0.1 can be bound; checked before every start. Tests
     /// replace it.
     pub loopback_probe: fn() -> bool,
+    /// Root certificates for Syncthing's HTTPS (relays, global discovery),
+    /// given to it as `SSL_CERT_FILE`. The Kobo has none it finds; on a
+    /// desktop `None` leaves it the system's.
+    pub ca_file: Option<PathBuf>,
 }
 
 /// Whether a socket can be bound on 127.0.0.1. On the Kobo the loopback
@@ -77,6 +81,7 @@ impl Config {
             retry_wait: Duration::from_secs(15),
             kill_by_name: false,
             loopback_probe: loopback_up,
+            ca_file: None,
         }
     }
 }
@@ -316,8 +321,11 @@ fn spawn(cfg: &Config, key: &str) -> io::Result<Child> {
     if let Some(d) = cfg.log_file.parent() {
         std::fs::create_dir_all(d)?;
     }
-    Command::new(&cfg.binary)
-        .arg("serve")
+    let mut cmd = Command::new(&cfg.binary);
+    if let Some(f) = &cfg.ca_file {
+        cmd.env("SSL_CERT_FILE", f);
+    }
+    cmd.arg("serve")
         .arg(format!("--home={}", cfg.home.display()))
         .arg(format!("--gui-address=127.0.0.1:{}", cfg.port))
         .arg("--no-browser")

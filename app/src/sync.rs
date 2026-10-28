@@ -76,7 +76,16 @@ pub fn sync_config(notes: &Path, log_dir: &Path) -> Config {
         c.port = p;
     }
     c.kill_by_name = cfg!(target_arch = "arm");
+    c.ca_file = ca_file_beside(&c.binary);
     c
+}
+
+/// `ca-certificates.crt` beside the Syncthing executable, as the Kobo
+/// package ships it, when it is there.
+#[must_use]
+pub fn ca_file_beside(binary: &Path) -> Option<PathBuf> {
+    let f = binary.with_file_name("ca-certificates.crt");
+    f.is_file().then_some(f)
 }
 
 /// `YYYYMMDD-HHMMSS` (UTC) for a conflict file name.

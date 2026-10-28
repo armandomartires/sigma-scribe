@@ -251,6 +251,24 @@ fn the_view_follows_the_rest_answers() {
 }
 
 #[test]
+fn the_ca_file_reaches_syncthing_as_ssl_cert_file() {
+    let dir = tmp("ca");
+    let (port, fake) = serve();
+    let script = r#"echo "${SSL_CERT_FILE-unset}" > "$(dirname "$0")/env.txt"; exec sleep 120"#;
+    let mut cfg = config(&dir, port, script);
+    basic_routes(&fake, &cfg.notes, true);
+    let ca = dir.join("ca-certificates.crt");
+    std::fs::write(&ca, "-----BEGIN CERTIFICATE-----\n").unwrap();
+    cfg.ca_file = Some(ca.clone());
+    let sup = Supervisor::start(cfg);
+    until(&sup, "a running view", |v| v.run == Run::Running);
+    let got = std::fs::read_to_string(dir.join("env.txt")).unwrap();
+    assert_eq!(got.trim_end(), ca.display().to_string());
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn accepting_posts_the_documented_objects() {
     let dir = tmp("accept");
     let (port, fake) = serve();
