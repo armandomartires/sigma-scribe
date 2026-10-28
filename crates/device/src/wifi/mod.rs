@@ -310,6 +310,15 @@ impl Worker {
                 v.powered = s.powered;
                 v.ssid = s.ssid;
                 v.ip = s.ip;
+                // A join that gave up waiting for an address is made good
+                // when the address comes: the poll clears its failure.
+                if v.ip.is_some()
+                    && v.ssid.is_some()
+                    && v.busy == Busy::Idle
+                    && v.failure == Some(JoinError::NoAddress)
+                {
+                    v.failure = None;
+                }
                 if !s.powered {
                     v.networks.clear();
                     v.scanned = false;

@@ -326,7 +326,8 @@ pub struct Timing {
     pub poll: Duration,
     /// For the handshake to complete.
     pub associate: Duration,
-    /// For an address after that.
+    /// For an address after that. The first DHCP on a new network can be
+    /// slow (20 s was too short on the Forma).
     pub address: Duration,
     /// For a scan to finish.
     pub scan: Duration,
@@ -337,7 +338,7 @@ impl Timing {
     pub const DEFAULT: Self = Self {
         poll: Duration::from_millis(500),
         associate: Duration::from_secs(25),
-        address: Duration::from_secs(20),
+        address: Duration::from_secs(40),
         scan: Duration::from_secs(10),
     };
 }
@@ -594,7 +595,11 @@ pub fn merge(found: Vec<Found>, saved: &[Saved]) -> Vec<Network> {
 mod tests {
     use super::*;
     use std::sync::atomic::AtomicBool;
-    use std::sync::{Arc, Mutex};
+    use std::sync::{Arc, Mutex, MutexGuard};
+
+    /// The tests share the temp dir, where the one that counts client
+    /// sockets must see only its own: they take turns.
+    static TURN: Mutex<()> = Mutex::new(());
 
     const SCAN: &str = "bssid / frequency / signal level / flags / ssid\n\
         aa:aa:aa:aa:aa:01\t2412\t-70\t[WPA2-PSK-CCMP][ESS]\tHome\n\
@@ -700,6 +705,7 @@ mod tests {
         dir: PathBuf,
         log: Arc<Mutex<Vec<String>>>,
         stop: Arc<AtomicBool>,
+        _turn: MutexGuard<'static, ()>,
     }
 
     #[derive(Clone)]
@@ -719,6 +725,9 @@ mod tests {
 
     impl Fake {
         fn start(tag: &str, b: Behaviour) -> Self {
+            let turn = TURN
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             let dir =
                 std::env::temp_dir().join(format!("sigma-wpa-test-{}-{tag}", std::process::id()));
             let _ = std::fs::remove_dir_all(&dir);
@@ -833,7 +842,12 @@ mod tests {
                     let _ = sock.send_to(reply.as_bytes(), &to);
                 }
             });
-            Self { dir, log, stop }
+            Self {
+                dir,
+                log,
+                stop,
+                _turn: turn,
+            }
         }
 
         fn sent(&self) -> Vec<String> {
@@ -852,13 +866,29 @@ mod tests {
     struct TestNet {
         kicked: u32,
         has_ip: bool,
+        /// An address that comes this long after DHCP was asked.
+        after: Option<Duration>,
+        kicked_at: Option<Instant>,
+    }
+    impl TestNet {
+        fn new(has_ip: bool) -> Self {
+            Self {
+                kicked: 0,
+                has_ip,
+                after: None,
+                kicked_at: None,
+            }
+        }
     }
     impl Net for TestNet {
         fn kick_dhcp(&mut self) {
             self.kicked += 1;
+            self.kicked_at = Some(Instant::now());
         }
         fn address(&mut self) -> Option<String> {
-            self.has_ip.then(|| "10.0.0.5".to_owned())
+            let late =
+                matches!((self.after, self.kicked_at), (Some(d), Some(t)) if t.elapsed() >= d);
+            (self.has_ip || late).then(|| "10.0.0.5".to_owned())
         }
     }
 
@@ -911,10 +941,7 @@ mod tests {
     fn a_new_network_is_added_selected_and_saved_once_it_has_an_address() {
         let f = Fake::start("join", behaviour());
         let s = Supplicant::new(&f.dir, "wlan0").with_timing(fast());
-        let mut net = TestNet {
-            kicked: 0,
-            has_ip: true,
-        };
+        let mut net = TestNet::new(true);
         s.join("Office", Security::Wpa, Some("hunter2hunter2"), &mut net)
             .unwrap();
         assert_eq!(net.kicked, 1, "DHCP was asked once the handshake was done");
@@ -938,10 +965,7 @@ mod tests {
     fn a_wrong_key_removes_the_new_network_and_saves_nothing() {
         let f = Fake::start("wrong", behaviour());
         let s = Supplicant::new(&f.dir, "wlan0").with_timing(fast());
-        let mut net = TestNet {
-            kicked: 0,
-            has_ip: true,
-        };
+        let mut net = TestNet::new(true);
         let e = s
             .join("Office", Security::Wpa, Some("not-the-key"), &mut net)
             .unwrap_err();
@@ -958,10 +982,7 @@ mod tests {
     fn a_saved_network_is_selected_without_a_key_and_keeps_the_key_it_has() {
         let f = Fake::start("saved", behaviour());
         let s = Supplicant::new(&f.dir, "wlan0").with_timing(fast());
-        let mut net = TestNet {
-            kicked: 0,
-            has_ip: true,
-        };
+        let mut net = TestNet::new(true);
         s.join("Home", Security::Wpa, None, &mut net).unwrap();
         let sent = f.sent();
         assert!(sent.contains(&"SELECT_NETWORK 0".to_owned()));
@@ -974,10 +995,7 @@ mod tests {
     fn a_key_typed_again_replaces_the_one_a_saved_network_has() {
         let f = Fake::start("rekey", behaviour());
         let s = Supplicant::new(&f.dir, "wlan0").with_timing(fast());
-        let mut net = TestNet {
-            kicked: 0,
-            has_ip: true,
-        };
+        let mut net = TestNet::new(true);
         s.join("Home", Security::Wpa, Some("hunter2hunter2"), &mut net)
             .unwrap();
         let sent = f.sent();
@@ -995,10 +1013,7 @@ mod tests {
             },
         );
         let s = Supplicant::new(&f.dir, "wlan0").with_timing(fast());
-        let mut net = TestNet {
-            kicked: 0,
-            has_ip: false,
-        };
+        let mut net = TestNet::new(false);
         let e = s.join("Cafe", Security::Open, None, &mut net).unwrap_err();
         assert_eq!(e, JoinError::NoAddress);
         let sent = f.sent();
@@ -1007,6 +1022,62 @@ mod tests {
             sent.contains(&"SAVE_CONFIG".to_owned()),
             "the handshake worked"
         );
+    }
+
+    #[test]
+    fn the_kobo_waits_longer_for_an_address_than_the_20_s_that_failed_on_the_forma() {
+        // 25 s is a first DHCP that is slow, not a failure.
+        assert!(Timing::DEFAULT.address >= Duration::from_secs(35));
+    }
+
+    #[test]
+    fn a_slow_address_still_counts_as_joined() {
+        // The same shape as an address after 25 s of a 40 s wait.
+        let f = Fake::start(
+            "slow",
+            Behaviour {
+                ip: false,
+                ..behaviour()
+            },
+        );
+        let t = Timing {
+            address: Duration::from_millis(400),
+            ..fast()
+        };
+        let s = Supplicant::new(&f.dir, "wlan0").with_timing(t);
+        let mut net = TestNet::new(false);
+        net.after = Some(Duration::from_millis(250));
+        let started = Instant::now();
+        s.join("Cafe", Security::Open, None, &mut net).unwrap();
+        assert!(started.elapsed() >= Duration::from_millis(250), "it waited");
+        assert!(f.sent().contains(&"SAVE_CONFIG".to_owned()));
+    }
+
+    #[test]
+    fn an_address_the_status_reports_ends_the_wait_too() {
+        let f = Fake::start("status-ip", behaviour());
+        let s = Supplicant::new(&f.dir, "wlan0").with_timing(fast());
+        let mut net = TestNet::new(false);
+        s.join("Office", Security::Wpa, Some("hunter2hunter2"), &mut net)
+            .unwrap();
+    }
+
+    #[test]
+    fn a_wrong_key_is_refused_long_before_the_address_wait_would_end() {
+        let f = Fake::start("wrong-fast", behaviour());
+        let t = Timing {
+            address: Duration::from_secs(30),
+            ..fast()
+        };
+        let s = Supplicant::new(&f.dir, "wlan0").with_timing(t);
+        let mut net = TestNet::new(false);
+        let started = Instant::now();
+        let e = s
+            .join("Office", Security::Wpa, Some("not-the-key"), &mut net)
+            .unwrap_err();
+        assert_eq!(e, JoinError::WrongKey);
+        assert!(started.elapsed() < Duration::from_secs(5));
+        assert_eq!(net.kicked, 0);
     }
 
     #[test]
@@ -1032,10 +1103,7 @@ mod tests {
     fn a_bad_key_or_an_unsupported_network_is_refused_before_anything_is_sent() {
         let f = Fake::start("refuse", behaviour());
         let s = Supplicant::new(&f.dir, "wlan0").with_timing(fast());
-        let mut net = TestNet {
-            kicked: 0,
-            has_ip: true,
-        };
+        let mut net = TestNet::new(true);
         assert_eq!(
             s.join("Office", Security::Wpa, Some("short"), &mut net),
             Err(JoinError::BadKey)

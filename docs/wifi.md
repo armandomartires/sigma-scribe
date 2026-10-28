@@ -87,7 +87,7 @@ title bar button ── menu (render: wifi_menu.rs) ── App (app/src/wifi.rs)
     (raw between quotes: the supplicant takes everything up to the last quote
     and has no escapes) or `key_mgmt NONE`, `SELECT_NETWORK`. Then it waits up
     to 25 s for `wpa_state=COMPLETED` on that name, asks DHCP for an address
-    (`wifi.sh dhcp`) and waits up to 20 s for one. Only then, `ENABLE_NETWORK
+    (`wifi.sh dhcp`) and waits up to 40 s for one (a first DHCP on a new network can be slow; 20 s was too short on the Forma). If none comes, the failure "gave no address" is shown and the network stays saved, but the service's regular poll (every 4 s) keeps looking: when an address appears the failure is cleared and the log says `wifi: address came late`. Only then, `ENABLE_NETWORK
     all` (a select disables the others) and `SAVE_CONFIG`. A network that the
     supplicant holds off after failed handshakes (`[TEMP-DISABLED]`) ends the
     wait at once as a wrong password.
