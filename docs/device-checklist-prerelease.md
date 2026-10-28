@@ -229,7 +229,7 @@ The full list, with what to measure, is `docs/sync.md` §12. In short:
 
 ## Wi-Fi button (Unreleased, v1.17): not tried on the Forma yet
 The full list, with the two things most likely to need changing (module reload, the `wpa_supplicant` driver flag), is `docs/wifi.md` §6. In short:
-- [ ] The Wi-Fi button sits between Graph and Settings; its icon is `wifi-off`, a dot with one arc, or the full `wifi` as the radio is off, on, or joined. At 200 % and in landscape nothing overlaps and the file name keeps room.
+- [ ] The light button (sun) sits third from the right, then the Wi-Fi button, then Settings; its icon is `wifi-off`, a dot with one arc, or the full `wifi` as the radio is off, on, or joined. At 200 % and in landscape nothing overlaps and the file name keeps room.
 - [ ] Switch off, then on: `wifi:` lines in the log, no error; it rejoins a saved network and shows its name and address.
 - [ ] Join an open network, a saved one, and one with a password typed on the on-screen keyboard; a wrong password is refused within about 30 s and nothing is added to `/etc/wpa_supplicant/wpa_supplicant.conf`.
 - [ ] A network joined here is known to the stock reader after the reboot; Forget removes it from the conf.

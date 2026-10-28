@@ -131,7 +131,8 @@ title bar button ── menu (render: wifi_menu.rs) ── App (app/src/wifi.rs)
   `expect-wifi off|on|joined:NAME|saved:NAME|unsaved:NAME|failure|no-failure`
   and the controls `Wi-Fi`, `WifiSwitch`, `Rescan`, `Net:NAME`, `Forget:NAME`,
   `ShowPassword`.
-- **Title bar**: one more icon slot (`TITLE_ICONS` is 8). The existing rule
+- **Title bar**: one more icon slot (`TITLE_ICONS` is 9 with the light
+  button); the order ends Graph, Light, Wi-Fi, Settings. The existing rule
   holds: the gaps shrink, then the icons, never below 44 brief px, and the
   name keeps at least 200 brief px. Tests cover portrait and landscape at UI
   scales 100, 150 and 200 %.
