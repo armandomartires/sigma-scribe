@@ -836,6 +836,12 @@ Backlight
 = Bakgrundsbelysning
 Light
 = Ljus
+Warmth
+= Värme
+Warm
+= Varm
+Cool
+= Kall
 Enhanced keyboard
 = Utökat tangentbord
 

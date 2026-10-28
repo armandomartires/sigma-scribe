@@ -1,0 +1,31 @@
+# v1.17: Display → Warmth, the warm-to-cool slider of the front light.
+# Run with an empty notes folder: `SIGMA_NOTES=$(mktemp -d) scripts/sim.sh
+# --headless tests/emu/v1.17-warmth.script docs/screenshots/v1.17`.
+copy-notes tests/test-notes/_test
+light 4
+warmth 2
+tap-on Options
+tap-on Display
+shot v1.17-display-warmth
+tap-on Warmth/Warm
+expect-warmth 10
+expect-setting warmth=10
+shot v1.17-display-warmth-warm
+tap-on Warmth/Cool
+expect-warmth 0
+expect-setting warmth=0
+tap-on Warmth/60 %
+expect-warmth 6
+expect-setting warmth=6
+# The light and its colour are separate rows and do not disturb each other.
+expect-light 4
+esc
+esc
+esc
+# No mixer: no Warmth row (the Backlight slider is still there).
+warmth none
+tap-on Options
+tap-on Display
+shot v1.17-display-no-warmth
+esc
+esc

@@ -792,6 +792,21 @@ fn main() -> ExitCode {
                     app.change(sigma_core::settings::Change::Backlight(n));
                 }
             }
+            "warmth" => {
+                // v1.17: pretend a warm-to-cool mixer at this step (0 to 10),
+                // or none. `warmth 3 unreadable` cannot be read back, as the
+                // stock reader never does.
+                let mut it = arg.split_whitespace();
+                dev.warmth = it.next().and_then(|n| n.parse::<u8>().ok());
+                dev.warmth_readable = it.next() != Some("unreadable");
+                app.sync_warmth(&mut dev);
+            }
+            "expect-warmth" => {
+                app.sync_warmth(&mut dev);
+                if dev.warmth.map_or(String::new(), |n| n.to_string()) != arg {
+                    return fail(format!("warmth is {:?}", dev.warmth));
+                }
+            }
             "expect-light" => {
                 app.sync_light(&mut dev);
                 if dev.light.map_or(String::new(), |n| n.to_string()) != arg {

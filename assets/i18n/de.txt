@@ -836,6 +836,12 @@ Backlight
 = Hintergrundbeleuchtung
 Light
 = Licht
+Warmth
+= Wärme
+Warm
+= Warm
+Cool
+= Kalt
 Enhanced keyboard
 = Erweiterte Tastatur
 

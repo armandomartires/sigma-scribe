@@ -836,6 +836,12 @@ Backlight
 = Baggrundslys
 Light
 = Lys
+Warmth
+= Varme
+Warm
+= Varm
+Cool
+= Kold
 Enhanced keyboard
 = Udvidet tastatur
 
