@@ -836,6 +836,12 @@ Backlight
 = Retroilluminazione
 Light
 = Luce
+Warmth
+= Calore
+Warm
+= Calda
+Cool
+= Fredda
 Enhanced keyboard
 = Tastiera avanzata
 

@@ -212,6 +212,13 @@ pub struct App {
     light_step: u8,
     light_want: Option<u8>,
     light_probed: bool,
+    /// The warm-to-cool mixer (v1.17): whether the device has one, the step
+    /// shown, and a step waiting to be sent. The first sync takes the saved
+    /// step, else what the device reads back, else the cool end.
+    warmth_have: bool,
+    warmth_step: u8,
+    warmth_want: Option<u8>,
+    warmth_probed: bool,
     /// USB mouse / touchpad (v0.8.1).
     pub pointer: PointerState,
     /// The ink panel (v1.5.0); `Some` while open.
@@ -332,6 +339,10 @@ impl App {
             light_step: 0,
             light_want: None,
             light_probed: false,
+            warmth_have: false,
+            warmth_step: 0,
+            warmth_want: None,
+            warmth_probed: false,
             pointer: PointerState::default(),
             ink: None,
             hwr: Hwr::default(),

@@ -454,6 +454,7 @@ impl App {
         while self.running {
             self.sync_usb_host(dev);
             self.sync_light(dev);
+            self.sync_warmth(dev);
             let Some(e) = dev.next_event() else { break };
             let t0 = std::time::Instant::now();
             let e = self.to_logical(e);

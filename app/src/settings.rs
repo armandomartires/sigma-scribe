@@ -113,6 +113,11 @@ impl App {
             self.light_want = Some(self.light_step);
             return Refresh::Partial;
         }
+        if let Change::Warmth(n) = c {
+            // Saved (below), and sent to the mixer by the loop.
+            self.warmth_step = n.min(sigma_core::settings::WARMTH_MAX);
+            self.warmth_want = Some(self.warmth_step);
+        }
         self.settings.apply(c);
         if matches!(c, Change::Log(_) | Change::LogLevel(_)) {
             self.apply_logging();
@@ -200,6 +205,7 @@ impl App {
             focus: self.settings_focus,
             hw_samples: self.hwr.samples,
             light: self.light_have.then_some(self.light_step),
+            warmth: self.warmth_have.then_some(self.warmth_step),
             ui_scale_pending: self.ui_scale_drag,
             plugins: &self.plugin_list,
             repository: &self.repo_rows,
@@ -297,6 +303,9 @@ impl App {
                     // The same light step again (every drag event repeats it): no
                     // redraw, no sysfs write, no log line.
                     Some(Change::Backlight(n)) if n == self.light_step => None,
+                    // The same for the mixer, against the saved step, so the
+                    // first touch after a start with nothing chosen is kept.
+                    Some(Change::Warmth(n)) if Some(n) == self.settings.warmth => None,
                     Some(c) => Some(self.change(c)),
                     None => None,
                 })
@@ -361,6 +370,31 @@ impl App {
         if let Some(n) = self.light_want.take() {
             if let Err(e) = dev.set_light(n) {
                 sigma_core::error!("light", "{e}");
+            }
+        }
+    }
+
+    /// Finds out once whether the front light has a warm-to-cool mixer, then
+    /// sends the step Display → Warmth asked for (v1.17). At start the saved
+    /// step is applied; with none saved the mixer is left as it is. A failure
+    /// is logged; the slider keeps its place.
+    pub fn sync_warmth(&mut self, dev: &mut dyn Device) {
+        if !self.warmth_probed {
+            self.warmth_probed = true;
+            if dev.has_warmth() {
+                self.warmth_have = true;
+                self.warmth_step = self
+                    .settings
+                    .warmth
+                    .or_else(|| dev.warmth_step())
+                    .unwrap_or(0)
+                    .min(sigma_core::settings::WARMTH_MAX);
+                self.warmth_want = self.settings.warmth;
+            }
+        }
+        if let Some(n) = self.warmth_want.take() {
+            if let Err(e) = dev.set_warmth(n) {
+                sigma_core::error!("light", "warmth: {e}");
             }
         }
     }

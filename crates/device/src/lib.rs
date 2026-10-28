@@ -223,6 +223,24 @@ pub trait Device {
     fn set_light(&mut self, _step: u8) -> io::Result<()> {
         Ok(())
     }
+    /// Whether the front light has a warm-to-cool mixer (v1.17). Default:
+    /// no, so Display shows no Warmth row.
+    fn has_warmth(&self) -> bool {
+        false
+    }
+    /// The mixer's step, 0 (cool) to 10 (warm), if it can be read. The
+    /// stock reader never reads it back, so this may be `None` on a device
+    /// that has a mixer; the app then keeps its own record (v1.17).
+    fn warmth_step(&mut self) -> Option<u8> {
+        None
+    }
+    /// Sets the mixer to a step, 0 (cool) to 10 (warm) (v1.17).
+    ///
+    /// # Errors
+    /// The mixer could not be written (the app carries on without it).
+    fn set_warmth(&mut self, _step: u8) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 /// Keys from a physical keyboard, already mapped to characters.

@@ -837,6 +837,12 @@ Backlight
 = Brilho
 Light
 = Luz
+Warmth
+= Calor
+Warm
+= Quente
+Cool
+= Fria
 Enhanced keyboard
 = Teclado avançado
 

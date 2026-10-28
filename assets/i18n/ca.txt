@@ -836,6 +836,12 @@ Backlight
 = Retroil·luminació
 Light
 = Llum
+Warmth
+= Calidesa
+Warm
+= Càlida
+Cool
+= Freda
 Enhanced keyboard
 = Teclat avançat
 
