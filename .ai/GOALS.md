@@ -84,7 +84,7 @@ Status: Done; PRs #76, #77 and #78 merged 2026-10-27
 
 ## Sprint 7 — Device verification and next
 Goal: One pass on the Forma over everything built since v1.0.2
-Status: Everything that can be done without the Forma is built and merged to `main` (PRs #80 to #85, #89); and the drawer button (PR #90). `main` (a247885, 1.15.0) was installed on the Forma on 2026-10-27; the device pass is the user's, then the logs are read. `main` 5b976fe (Warmth, Trash, Sync; still labelled 1.15.0) installed on the Forma 2026-10-28 01:35 with the perf notes (backup kept, 39 files checked, notes and plugin state unchanged). Runbook: `.ai/device-pass-s7.md`.
+Status: Everything that can be done without the Forma is built and merged to `main` (PRs #80 to #85, #89); and the drawer button (PR #90). `main` (a247885, 1.15.0) was installed on the Forma on 2026-10-27; the device pass is the user's, then the logs are read. `main` 5b976fe (Warmth, Trash, Sync; still labelled 1.15.0) installed on the Forma 2026-10-28 01:35 with the perf notes (backup kept, 39 files checked, notes and plugin state unchanged). Then `main` b587310 (PRs #94 loopback for Sync, #95 light probe in the log, #96 Files More fix and Files log lines) installed 2026-10-28 02:27, same checks. Runbook: `.ai/device-pass-s7.md`.
 - [x] Install 1.15.0 on the Forma and run `docs/device-checklist-prerelease.md`
   `main` is installed on the Forma (2026-10-27, backup kept, package checked). Closed by the user 2026-10-28: the tests that matter were done on the device during the sprint; the checklist is not run.
 - [x] Verify the USB K400 Plus receiver and touchpad, including two-finger scroll
