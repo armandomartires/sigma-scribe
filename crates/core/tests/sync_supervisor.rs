@@ -493,3 +493,74 @@ fn stopping_while_it_is_still_starting_does_not_wait_for_it() {
     assert!(!Path::new(&format!("/proc/{pid}")).exists());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn a_down_loopback_is_reported_and_nothing_is_started() {
+    let dir = tmp("noloop");
+    let pidfile = dir.join("pid");
+    let mut cfg = config(
+        &dir,
+        1,
+        &format!("echo $$ > {}\nexec sleep 120", pidfile.display()),
+    );
+    cfg.loopback_probe = || false;
+    let sup = Supervisor::start(cfg);
+    let v = until(&sup, "no loopback", |v| v.run == Run::NoLoopback);
+    assert_eq!(v.status(), Status::NoLoopback);
+    // Still looking (retry_wait is 50 ms in tests), and never spawned.
+    std::thread::sleep(Duration::from_millis(300));
+    assert_eq!(sup.view().run, Run::NoLoopback);
+    assert!(
+        !pidfile.exists(),
+        "Syncthing was started without a loopback"
+    );
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn the_last_error_syncthing_logged_explains_the_failure() {
+    let dir = tmp("reason");
+    let log = dir.join("log/syncthing.log");
+    std::fs::create_dir_all(log.parent().unwrap()).unwrap();
+    // An old error from an earlier run must not be blamed on this one.
+    std::fs::write(&log, "2026-10-27 09:00:00 ERR Old problem\n").unwrap();
+    let script = r#"for a in "$@"; do case $a in --log-file=*) f=${a#--log-file=};; esac; done
+echo '2026-10-28 15:23:44 INF Starting' >> "$f"
+echo '2026-10-28 15:23:45 ERR Failed to start API/GUI (error="listen tcp 127.0.0.1:8484: bind: cannot assign requested address")' >> "$f"
+exit 1"#;
+    let cfg = config(&dir, 1, script);
+    let sup = Supervisor::start(cfg);
+    let v = until(
+        &sup,
+        "a failure with its reason",
+        |v| matches!(&v.run, Run::Failed(w) if w.contains("cannot assign requested address")),
+    );
+    let Run::Failed(why) = v.run else {
+        unreachable!()
+    };
+    // The reason is Syncthing's own words, not the exit status.
+    assert!(!why.starts_with("exited"), "{why}");
+    assert!(why.contains("Failed to start API/GUI"), "{why}");
+    assert!(!why.contains("Old problem"), "{why}");
+    sup.stop();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn last_error_reads_only_the_tail_after_the_offset_and_is_short() {
+    use sigma_core::sync::last_error;
+    let dir = tmp("tail");
+    let log = dir.join("l.log");
+    std::fs::write(&log, "t ERR first\nt INF ok\n").unwrap();
+    assert_eq!(last_error(&log, 0).as_deref(), Some("first"));
+    let len = std::fs::metadata(&log).unwrap().len();
+    assert_eq!(last_error(&log, len), None);
+    // A log shorter than the offset was rotated: read it all.
+    assert_eq!(last_error(&log, len + 100).as_deref(), Some("first"));
+    assert_eq!(last_error(&dir.join("missing"), 0), None);
+    std::fs::write(&log, format!("t ERR {}\n", "x".repeat(500))).unwrap();
+    let long = last_error(&log, 0).unwrap();
+    assert!(long.chars().count() <= 111 && long.ends_with('…'), "{long}");
+    let _ = std::fs::remove_dir_all(&dir);
+}

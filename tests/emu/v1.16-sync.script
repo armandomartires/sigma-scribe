@@ -43,6 +43,9 @@ expect-sync NotConnected
 sync-demo failed
 expect-sync Failed
 shot v1.16-sync-failed
+sync-demo noloopback
+expect-sync NoLoopback
+shot v1.16-sync-no-loopback
 # Off again.
 tap-on Sync notes/Off
 expect-setting sync=off

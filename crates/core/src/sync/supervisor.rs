@@ -49,6 +49,17 @@ pub struct Config {
     /// child of its own, which a kill of the parent would leave behind. Only
     /// for the Kobo; on a desktop it could end the reader's own Syncthing.
     pub kill_by_name: bool,
+    /// Whether 127.0.0.1 can be bound; checked before every start. Tests
+    /// replace it.
+    pub loopback_probe: fn() -> bool,
+}
+
+/// Whether a socket can be bound on 127.0.0.1. On the Kobo the loopback
+/// interface is down unless the launcher brings it up; Syncthing then dies at
+/// start with "cannot assign requested address".
+#[must_use]
+pub fn loopback_up() -> bool {
+    std::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0)).is_ok()
 }
 
 impl Config {
@@ -65,6 +76,7 @@ impl Config {
             stop_wait: Duration::from_secs(8),
             retry_wait: Duration::from_secs(15),
             kill_by_name: false,
+            loopback_probe: loopback_up,
         }
     }
 }
@@ -225,6 +237,22 @@ fn worker(cfg: &Config, sh: &Shared, rx: &Receiver<Msg>) {
     }
     let mut failures = 0u32;
     loop {
+        // No point starting what cannot listen: say why, and look again in
+        // a while (it costs nothing and a later fix needs no restart).
+        if !(cfg.loopback_probe)() {
+            crate::warn!(
+                "sync",
+                "127.0.0.1 cannot be bound: the loopback network is down"
+            );
+            sh.put(View {
+                run: Run::NoLoopback,
+                ..View::default()
+            });
+            if wait_or_stop(rx, cfg.retry_wait) {
+                return;
+            }
+            continue;
+        }
         sh.put(View {
             run: Run::Starting,
             ..View::default()
@@ -317,6 +345,8 @@ fn spawn(cfg: &Config, key: &str) -> io::Result<Child> {
 fn session(cfg: &Config, sh: &Shared, rx: &Receiver<Msg>) -> Ended {
     let key = random_key();
     let client = Client::new(cfg.port, &key);
+    // Only what Syncthing logs from now on says why this start failed.
+    let log_from = std::fs::metadata(&cfg.log_file).map_or(0, |m| m.len());
     let mut child = match spawn(cfg, &key) {
         Ok(c) => c,
         Err(e) => return Ended::Died(format!("cannot start: {e}")),
@@ -332,7 +362,11 @@ fn session(cfg: &Config, sh: &Shared, rx: &Receiver<Msg>) -> Ended {
             Ok(_) | Err(RecvTimeoutError::Timeout) => {}
         }
         if let Ok(Some(st)) = child.try_wait() {
-            return Ended::Died(format!("exited at start ({st})"));
+            return Ended::Died(with_reason(
+                format!("exited at start ({st})"),
+                &cfg.log_file,
+                log_from,
+            ));
         }
         if client.get_json("/rest/system/ping").is_ok() {
             break;
@@ -368,10 +402,50 @@ fn session(cfg: &Config, sh: &Shared, rx: &Receiver<Msg>) -> Ended {
             Ok(Msg::Poll) | Err(RecvTimeoutError::Timeout) => {}
         }
         if let Ok(Some(st)) = child.try_wait() {
-            return Ended::Died(format!("exited ({st})"));
+            return Ended::Died(with_reason(
+                format!("exited ({st})"),
+                &cfg.log_file,
+                log_from,
+            ));
         }
         poller.poll(cfg, &client, sh);
     }
+}
+
+/// The last error Syncthing logged after byte `from` of its log (the one
+/// that explains the exit), else `what`. The exit status goes to the log.
+fn with_reason(what: String, log: &Path, from: u64) -> String {
+    crate::warn!("sync", "{what}");
+    last_error(log, from).unwrap_or(what)
+}
+
+/// Longest reason shown on the Sync page.
+const REASON_MAX: usize = 110;
+
+/// The message of the last `ERR` line Syncthing wrote at or after byte
+/// `from` of `log` (a log that is shorter now was rotated: read it all).
+/// Only the tail is read. `2026-10-28 15:23:44 ERR Failed to start (…)`
+/// gives `Failed to start (…)`.
+#[must_use]
+pub fn last_error(log: &Path, from: u64) -> Option<String> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut f = std::fs::File::open(log).ok()?;
+    let len = f.metadata().ok()?.len();
+    let from = if from > len { 0 } else { from };
+    let start = from.max(len.saturating_sub(16 * 1024));
+    f.seek(SeekFrom::Start(start)).ok()?;
+    let mut raw = Vec::new();
+    f.take(16 * 1024).read_to_end(&mut raw).ok()?;
+    let text = String::from_utf8_lossy(&raw);
+    let line = text.lines().rev().find_map(|l| {
+        let i = l.find(" ERR ")?;
+        Some(l[i + 5..].trim())
+    })?;
+    let mut out: String = line.chars().take(REASON_MAX).collect();
+    if line.chars().count() > REASON_MAX {
+        out.push('…');
+    }
+    (!out.is_empty()).then_some(out)
 }
 
 /// Asks Syncthing to shut down; kills it when it does not.

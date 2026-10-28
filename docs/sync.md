@@ -107,6 +107,17 @@ vfat volume; this is the first thing to watch on the Forma (§12).
   /rest/system/pause`.
 - **Network.** Sync needs the Wi-Fi the launcher leaves up (PR #89). Without
   it, Syncthing runs and reports no connection; nothing is lost.
+- **Loopback.** Syncthing's API listens on 127.0.0.1, which needs the `lo`
+  interface. With Nickel stopped the Forma's `lo` has no address (found on the
+  device, 2026-10-28: "listen tcp 127.0.0.1:8484: bind: cannot assign
+  requested address", three starts in a row, then Failed). The launcher now
+  gives `lo` 127.0.0.1 when it has none (`ifconfig lo 127.0.0.1 up`, else `ip`)
+  and logs `net: lo …` lines; it never takes it down. The supervisor also
+  tries to bind 127.0.0.1 before every start: if that fails it does not start
+  Syncthing, the page says **Loopback network is down**, and it looks again
+  every 15 s. When Syncthing does exit, the last `ERR` line it logged during
+  that start is shown on a Reason row under Status (the exit status goes to the `sync:` log), so the next
+  failure explains itself on screen.
 
 ## 4. The local API
 
@@ -352,6 +363,12 @@ did not touch the device. For `docs/device-checklist-prerelease.md`:
    a PEM). Local discovery on the same Wi-Fi does not need it.
 10. Syncing a few hundred notes the first time: does the app stay responsive
     (typing latency in `perf:` lines) while Syncthing hashes?
+11. Loopback (found on the Forma, fix not yet tried there): the launcher log has
+    `net: lo has no 127.0.0.1, bringing it up` then a `net: lo: inet …` line;
+    `.adds/sigma-scribe/log/syncthing.log` has no "cannot assign requested
+    address"; Settings → Sync leaves *Starting* for *No devices yet*. If `lo`
+    stays down, the page must say "Loopback network is down" (not "Stopped"),
+    and a Stopped status must show Syncthing's own last error under it.
 
 ## 13. Not done / later
 

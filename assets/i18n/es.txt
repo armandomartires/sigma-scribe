@@ -1123,3 +1123,9 @@ Syncing {n} files
 
 {n} MB
 = {n} MB
+
+Loopback network is down
+= La red de bucle local está caída
+
+Reason
+= Motivo
