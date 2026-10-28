@@ -119,6 +119,9 @@ pub struct FilesLayout {
     pub bottom: [Rect; 3],
     /// How many rows are shown.
     pub visible: usize,
+    /// The first row shown: the model's `first`, or later when the open
+    /// row's actions would not otherwise fit above the bottom buttons.
+    pub first: usize,
 }
 
 impl EditorScreen {
@@ -149,6 +152,13 @@ impl EditorScreen {
             self.height as i32
         } - bottom_h;
         let by = bottom_y + self.files_px(12.0);
+        // A status line ("Restored to ...") sits just above the buttons; the
+        // rows leave it room instead of drawing under it.
+        let list_bottom = if m.message.is_some() {
+            bottom_y - self.files_px(40.0)
+        } else {
+            bottom_y
+        };
         let bottom = if m.trash_count > 0 && !m.trash && m.moving.is_none() {
             let bw = (w - 4 * pad) / 3;
             [
@@ -170,8 +180,16 @@ impl EditorScreen {
         let act_h = btn + self.files_px(16.0);
         let mut rows = Vec::new();
         let mut actions = None;
-        let mut i = m.first;
-        while i < m.rows.len() && y + row_h <= bottom_y {
+        // Opening More on a row scrolls the list just far enough that the row
+        // and its Rename / Move / Delete row both sit above the bottom
+        // buttons (or the keyboard); at least the row itself stays in view.
+        let mut first = m.first;
+        if let Some(open) = m.more.filter(|&o| !plain && o >= first && o < m.rows.len()) {
+            let fit = ((list_bottom - y - act_h) / row_h).max(1) as usize;
+            first = first.max((open + 1).saturating_sub(fit));
+        }
+        let mut i = first;
+        while i < m.rows.len() && y + row_h <= list_bottom {
             let r = Rect::new(0, y, w, row_h);
             let more = Rect::new(
                 w - pad - self.files_px(80.0),
@@ -181,7 +199,7 @@ impl EditorScreen {
             );
             rows.push((i, r, if plain { Rect::default() } else { more }));
             y += row_h;
-            if m.more == Some(i) && !plain && y + act_h <= bottom_y {
+            if m.more == Some(i) && !plain && y + act_h <= list_bottom {
                 let aw = (w - 4 * pad) / 3;
                 let ay = y + self.files_px(8.0);
                 actions = Some([
@@ -202,6 +220,7 @@ impl EditorScreen {
             actions,
             bottom,
             visible,
+            first,
         }
     }
 
@@ -658,5 +677,126 @@ mod tests {
         let none: Vec<Row> = Vec::new();
         m.rows = &none;
         e.draw_files(&mut c, &m);
+    }
+
+    /// Opening More on any row, wherever it sits on the page, shows the
+    /// whole action row above the bottom buttons (the rows scroll to make
+    /// room).
+    #[test]
+    fn more_on_any_row_shows_its_actions_above_the_bottom_buttons() {
+        for (w, h) in [(1440, 1920), (1920, 1440)] {
+            let e = EditorScreen::new(w, h);
+            let (r, kb) = (rows(), Keyboard::default());
+            for trash_count in [0, 4] {
+                for first in [0, 5, 12] {
+                    let mut m = model(&r, &kb);
+                    m.first = first;
+                    m.trash_count = trash_count;
+                    m.crumb = Some("Up to Files".into());
+                    let page = e.files_layout(&m);
+                    // The last row on the page is the one that used to lose
+                    // its actions; try every row on and after the page.
+                    let last = page.first + page.visible - 1;
+                    for open in [first, last, last + 1, r.len() - 1] {
+                        m.more = Some(open);
+                        let l = e.files_layout(&m);
+                        let a = l.actions.unwrap_or_else(|| {
+                            panic!("{w}x{h} first {first} More on {open}: no actions")
+                        });
+                        let (_, row, _) = *l
+                            .rows
+                            .iter()
+                            .find(|(i, _, _)| *i == open)
+                            .expect("the open row is shown");
+                        assert!(a[0].y >= row.y + row.h, "actions sit under the row");
+                        for b in a {
+                            assert!(b.y + b.h < l.bottom[0].y, "{b:?} over the buttons");
+                            assert!(b.w >= 44 && b.h >= 44);
+                        }
+                        // Taps land where they are drawn.
+                        assert_eq!(
+                            e.files_hit(&m, a[0].x + 5, a[0].y + 5),
+                            FilesHit::Rename(open)
+                        );
+                        assert_eq!(
+                            e.files_hit(&m, a[2].x + 5, a[2].y + 5),
+                            FilesHit::Delete(open)
+                        );
+                        assert_eq!(e.files_hit(&m, row.x + 40, row.y + 5), FilesHit::Open(open));
+                        let mut c = Canvas::new(w, h, 255);
+                        e.draw_files(&mut c, &m);
+                    }
+                }
+            }
+        }
+    }
+
+    /// The row only sits where it did when its actions already fit.
+    #[test]
+    fn more_does_not_scroll_a_row_that_already_fits() {
+        let e = EditorScreen::new(1440, 1920);
+        let (r, kb) = (rows(), Keyboard::default());
+        let mut m = model(&r, &kb);
+        let before = e.files_layout(&m);
+        m.more = Some(1);
+        let l = e.files_layout(&m);
+        assert_eq!(l.first, 0);
+        assert_eq!(l.rows[0].0, before.rows[0].0);
+        assert_eq!(l.rows[0].1, before.rows[0].1);
+    }
+
+    /// The only row, and a short list: actions show, nothing scrolls.
+    #[test]
+    fn more_on_the_only_row_shows_its_actions() {
+        let e = EditorScreen::new(1440, 1920);
+        let (r, kb) = (rows(), Keyboard::default());
+        let one = &r[..1];
+        let mut m = model(one, &kb);
+        m.more = Some(0);
+        let l = e.files_layout(&m);
+        assert_eq!(l.first, 0);
+        assert!(l.actions.is_some());
+    }
+
+    /// Renaming from the actions raises the keyboard; the open row and its
+    /// actions stay above it.
+    #[test]
+    fn more_stays_in_view_with_the_keyboard_up() {
+        let e = EditorScreen::new(1440, 1920);
+        let (r, kb) = (rows(), Keyboard::default());
+        let field = Buffer::new("note 7.md");
+        let mut m = model(&r, &kb);
+        m.rename = Some(&field);
+        m.keyboard = &kb;
+        for open in [0, 7, 30] {
+            m.more = Some(open);
+            let l = e.files_layout(&m);
+            assert!(
+                l.rows.iter().any(|(i, _, _)| *i == open),
+                "row {open} shown"
+            );
+            let a = l.actions.expect("actions above the keyboard");
+            for b in a {
+                assert!(b.y + b.h <= l.base.keyboard.y, "{b:?} under the keys");
+            }
+        }
+    }
+
+    /// A status line has the room above the buttons to itself.
+    #[test]
+    fn a_status_line_does_not_sit_on_a_row() {
+        let e = EditorScreen::new(1440, 1920);
+        let (r, kb) = (rows(), Keyboard::default());
+        let mut m = model(&r, &kb);
+        m.message = Some("Restored to a.md");
+        let l = e.files_layout(&m);
+        let last = l.rows.last().expect("rows").1;
+        // The text's baseline is 16 px over the buttons, and rises about 30.
+        assert!(last.y + last.h <= l.bottom[0].y - 12 - 30, "{last:?}");
+        m.trash = true;
+        m.more = None;
+        let l = e.files_layout(&m);
+        let last = l.rows.last().expect("rows").1;
+        assert!(last.y + last.h <= l.bottom[0].y - 12 - 30, "{last:?}");
     }
 }

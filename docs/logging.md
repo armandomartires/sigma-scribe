@@ -30,8 +30,14 @@ overrides the folder; `target/emu-log` on a desktop). One line per entry:
 - **Time** is UTC. A Kobo whose clock is not set shows question marks
   (before 2020); the uptime next to it still orders the lines.
 - **Source** is where the line came from: `app`, `ui`, `settings`, `usb`,
-  `light`, `touch`, `perf`, `panic`, `plugin` (the app talking about a plugin),
-  or `plugin/<id>` for a line the plugin wrote itself.
+  `light`, `touch`, `perf`, `panic`, `files`, `plugin` (the app talking about a
+  plugin), or `plugin/<id>` for a line the plugin wrote itself.
+- `files` lines say what Files did, with paths and never note text, at INFO:
+  `new note`, `new folder`, `rename a -> b`, `move a -> b`,
+  `delete a -> .trash/<time>/…`, `restore a` (or `restore a as b (the name was
+  taken)`) and `empty trash (n items)`. A failure is a WARNING with the
+  reason (`files: delete a.md: …`). Opening the Trash is `ui: open trash` at
+  DEBUG, like `ui: open files`.
 - A multi-line message (a panic) stays one entry, its continuation lines
   indented.
 - At **512 KB** the file becomes `sigma-scribe.log.1` (one backup is kept) and
