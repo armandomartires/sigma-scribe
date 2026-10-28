@@ -30,6 +30,17 @@ Entering preview parses and lays out the whole note on the UI thread. `app/tests
 | 250 KB | 163 ms | 181 |
 | 500 KB | 337 ms | 361 |
 
-About 0.65 ms per KB, linear. At the 8 to 10 times slowdown assumed for the Forma that is roughly 0.5 s for a 100 KB note and 3 s for 500 KB. **Not yet measured on the Forma.** With Settings → Logging on at Debug level, every preview entry logs `preview layout of <note> (<bytes> bytes): <n> ms`, so one preview of a large note on the device settles it. Run the desktop table again with:
+About 0.65 ms per KB, linear, on the desktop.
+
+On the Forma (2026-10-28, build 5b976fe, Settings → Logging at Debug, one preview of each note, `perf-100k.md` and `perf-500k.md` from `sigma-scribe-backups/perf-notes/`):
+
+| note | desktop | Forma | Forma ÷ desktop |
+|---|---|---|---|
+| 100 KB (102,700 B) | 60 ms | 929 ms | 15× |
+| 500 KB (512,236 B) | 337 ms | 1,905 ms | 5.7× |
+
+Not linear on the device: the first preview of the session (100 KB) cost more per KB than the second (500 KB, about 3.7 ms per KB), so part of the 929 ms is one-off warm-up (fonts and caches on first use), not the note. A note of ordinary size (under 20 KB) enters preview in well under 0.5 s. A 500 KB note takes about 2 s with no feedback; if that matters, the next step is to lay out the first screen first and the rest in the background. Not needed for this release.
+
+Each preview entry logs `preview layout of <note> (<bytes> bytes): <n> ms` at Debug level. Run the desktop table again with:
 
     cargo test --release -p sigma-scribe --test preview_perf -- --ignored --nocapture

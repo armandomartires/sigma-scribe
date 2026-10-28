@@ -89,8 +89,8 @@ Status: Everything that can be done without the Forma is built and merged to `ma
   `main` is installed on the Forma (2026-10-27, backup kept, package checked). Closed by the user 2026-10-28: the tests that matter were done on the device during the sprint; the checklist is not run.
 - [x] Verify the USB K400 Plus receiver and touchpad, including two-finger scroll
   Done by the user several times on the Forma: the K400 types and the touchpad is acceptable for an e-ink device (2026-10-28).
-- [!] Measure preview layout time on a large note on the device
-  2026-10-28: test notes `perf-100k.md` (102,700 B) and `perf-500k.md` (512,236 B) are on the Forma (2026-10-28). To do on the device: Logging on at Debug, open each, tap the eye; then the log is read. Desktop done: about 0.65 ms per KB (100 KB in 60 ms), see `docs/perf.md`. The app now logs the time at Debug level, so one preview of a large note on the Forma settles it.
+- [x] Measure preview layout time on a large note on the device
+  Done 2026-10-28 on the Forma (5b976fe): 100 KB in 929 ms, 500 KB in 1,905 ms (desktop 60 / 337 ms); the first preview carries warm-up. Table in `docs/perf.md`.
 - [?] Backlight colour slider (warm to cool)
   Merged (PR #91, 2026-10-28): Display → Warmth, 11 stops, saved and applied at start. KOReader (`device.lua` KoboFrost) drives the Forma's warmth through `tlc5947_bl/color`, 0 to 10, inverted (10 cold, 0 warm), never read back. Unverified on the device: the file exists, which end is orange. Was blocked on one device check: what `tlc5947_bl` (0 to 4096) does when written. Probe in `.ai/device-pass-s7.md`. Then: a second slider under Display → Backlight, a `Device` call for it, one string in the nine catalogs, tests.
 - [x] Draggable handle on the drawer edge
