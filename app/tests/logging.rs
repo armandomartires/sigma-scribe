@@ -301,3 +301,36 @@ fn a_saved_setting_starts_logging_with_the_app() {
     assert!(text.contains("started: screen 1440x1920"), "{text}");
     sigma_core::log::configure(false, Level::Info, None);
 }
+
+/// The device opens (and probes the light) before logging is on, so it hands
+/// its report to the app, which logs it once the app runs: after the
+/// "logging on" line, once.
+#[test]
+fn what_the_light_probe_found_is_logged_when_the_app_runs() {
+    let _turn = TURN.lock().unwrap_or_else(|e| e.into_inner());
+    let d = std::env::temp_dir().join(format!("sigma-logging-probe-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    let (notes, log) = (d.join("notes"), d.join("log"));
+    std::fs::create_dir_all(&notes).unwrap();
+    std::fs::write(notes.join(".sigma-settings"), "log=on\nlog_level=info\n").unwrap();
+    std::env::set_var("SIGMA_LOG_DIR", &log);
+    let mut app = App::new(1440, 1920, notes);
+    std::env::remove_var("SIGMA_LOG_DIR");
+    let mut dev = DesktopDevice::new(1440, 1920);
+    dev.light_report = vec![
+        "using mxc_msp430.0 (step Some(4))".to_owned(),
+        "warmth mixer /sys/class/backlight/tlc5947_bl/color (step None)".to_owned(),
+    ];
+    app.run(&mut dev).unwrap(); // no events: it returns at once
+    let text = std::fs::read_to_string(log.join(FILE_NAME)).unwrap();
+    let on = text.find("logging on (level INFO)").expect(&text);
+    let at = text.find("light: using mxc_msp430.0").expect(&text);
+    assert!(on < at, "after the header: {text}");
+    assert!(
+        text.contains("light: warmth mixer /sys/class/backlight/tlc5947_bl/color (step None)"),
+        "{text}"
+    );
+    assert!(dev.light_report.is_empty(), "handed over once");
+    sigma_core::log::configure(false, Level::Info, None);
+    let _ = std::fs::remove_dir_all(&d);
+}

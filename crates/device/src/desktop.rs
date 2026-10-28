@@ -32,6 +32,9 @@ pub struct DesktopDevice {
     pub warmth: Option<u8>,
     /// Whether the pretend mixer can be read back (the Forma's may not be).
     pub warmth_readable: bool,
+    /// What the light probe "found" at start, handed over once (the Kobo's
+    /// is real; tests set this to see the app log it).
+    pub light_report: Vec<String>,
 }
 
 impl DesktopDevice {
@@ -49,6 +52,7 @@ impl DesktopDevice {
             light: None,
             warmth: None,
             warmth_readable: true,
+            light_report: Vec::new(),
         }
     }
 
@@ -137,6 +141,10 @@ impl Device for DesktopDevice {
             self.light = Some(step);
         }
         Ok(())
+    }
+
+    fn light_report(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.light_report)
     }
 
     fn has_warmth(&self) -> bool {

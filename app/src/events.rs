@@ -453,6 +453,10 @@ impl App {
     /// The device failed to present a frame.
     pub fn run(&mut self, dev: &mut dyn Device) -> std::io::Result<()> {
         self.set_gsensor(dev.has_gsensor());
+        // The device opened before the log was on: say what its probe found.
+        for line in dev.light_report() {
+            sigma_core::info!("light", "{line}");
+        }
         sigma_device::usbkbd::set_layout(self.settings.kb_layout);
         self.render(dev, Refresh::Full)?;
         self.apply_sync();
