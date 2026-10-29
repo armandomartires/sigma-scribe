@@ -150,7 +150,7 @@ pub struct App {
     panes_builtin: bool,
     /// Where the log file goes while Settings → Logging is on.
     log_dir: PathBuf,
-    /// Syncthing, while Settings → Sync is on (`docs/sync.md`), how to run
+    /// Syncthing, while Settings → Sync is on (`docs/dev/sync-design.md`), how to run
     /// it, and what it last reported (`sync_gen` counts the supervisor's
     /// changes the app has taken in).
     sync: Option<sigma_core::sync::Supervisor>,
@@ -416,7 +416,7 @@ impl App {
         let rev = self.buffer.revision();
         let dirty = self.autosave.dirty(rev);
         // Syncthing may have delivered a newer version of this note since
-        // it was read: never write over it (docs/sync.md §9).
+        // it was read: never write over it (docs/dev/sync-design.md §9).
         if dirty && self.guard_note_write() {
             return;
         }

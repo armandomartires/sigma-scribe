@@ -25,7 +25,7 @@ for id in $BUNDLED_PLUGINS; do
   cp "app/tests/fixtures/$id/plugin.conf" "app/tests/fixtures/$id/SOURCE.txt" \
      "app/tests/fixtures/$id/"*.wasm "$OUT/.adds/sigma-scribe/plugins/$id/"
 done
-# Syncthing for Settings -> Sync (docs/sync.md): the pinned release's binary,
+# Syncthing for Settings -> Sync (docs/dev/sync-design.md): the pinned release's binary,
 # unmodified, with its licence (MPL-2.0) and the notice from packaging/. No
 # syncthing-home/: that is the device's identity and database, kept across
 # updates.

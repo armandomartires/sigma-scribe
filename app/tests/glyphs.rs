@@ -36,7 +36,7 @@ fn catalog() -> (Vec<String>, Vec<String>) {
 }
 
 /// Hangul, kana, Han and full-width punctuation come from the optional script
-/// font pack (docs/font-packs.md), which CI does not have; the bundled faces
+/// font pack (docs/user/font-packs.md), which CI does not have; the bundled faces
 /// are not expected to draw them.
 fn from_font_pack(c: char) -> bool {
     matches!(c as u32,

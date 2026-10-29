@@ -1,4 +1,4 @@
-# v1.16: Settings → Sync (docs/sync.md). No Syncthing runs here: `sync-demo`
+# v1.16: Settings → Sync (docs/dev/sync-design.md). No Syncthing runs here: `sync-demo`
 # puts what it would report on the page. Run with an empty notes folder:
 # `SIGMA_NOTES=$(mktemp -d) scripts/sim.sh --headless
 # tests/emu/v1.16-sync.script target/shots`.

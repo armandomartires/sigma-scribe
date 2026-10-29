@@ -528,7 +528,7 @@ impl App {
         }
         self.save();
         self.save_scratch();
-        // After the notes are written: ask Syncthing to shut down (docs/sync.md §3).
+        // After the notes are written: ask Syncthing to shut down (docs/dev/sync-design.md §3).
         self.stop_sync();
         if self.usb_host {
             let _ = dev.usb_host(false);

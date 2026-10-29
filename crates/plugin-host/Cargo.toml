@@ -13,7 +13,7 @@ sigma-core = { path = "../core" }
 sigma-plugin-api = { path = "../plugin-api" }
 # portable-dispatch: a plain loop, so stack use never depends on the compiler
 # turning tail calls into jumps (auto-dispatch overflowed the stack in some
-# build configurations). About 2.7x slower; see docs/plugins.md.
+# build configurations). About 2.7x slower; see docs/dev/plugin-api.md.
 wasmi = { version = "2", default-features = false, features = ["std", "validate", "portable-dispatch"] }
 
 [dev-dependencies]

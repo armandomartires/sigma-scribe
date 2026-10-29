@@ -34,7 +34,7 @@ sleep 2
   ifconfig lo 2>&1 | grep -E 'inet |UP' | sed 's/^ */net: lo: /'
 } >>"$LOG" 2>&1
 # The network as the app finds it (Nickel sets INTERFACE and WIFI_MODULE).
-# The app's Wi-Fi button (docs/wifi.md) uses both, through wifi.sh, to turn
+# The app's Wi-Fi button (docs/dev/wifi-design.md) uses both, through wifi.sh, to turn
 # the radio on and off: keep them for the app, with the Forma's values when
 # the launcher was not started from Nickel.
 export INTERFACE="${INTERFACE:-eth0}" WIFI_MODULE="${WIFI_MODULE:-8192es}"

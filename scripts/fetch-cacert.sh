@@ -4,11 +4,11 @@
 # through SSL_CERT_FILE: the Kobo has no root certificates Syncthing finds, so
 # its relays and global discovery failed with "certificate signed by unknown
 # authority". The file is checked against the sha256 below; a file that does
-# not match is deleted and the script fails. See docs/sync.md §1.
+# not match is deleted and the script fails. See docs/dev/sync-design.md §1.
 #
 # To change the pin: pick a dated file from https://curl.se/docs/caextract.html,
 # edit both lines (curl publishes the sha256 beside it), and update the table
-# in docs/sync.md §1.
+# in docs/dev/sync-design.md §1.
 set -eu
 cd "$(dirname "$0")/.."
 CACERT_DATE=2026-10-20

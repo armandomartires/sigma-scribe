@@ -15,7 +15,7 @@
 //!   take in on its ticks, as the Syncthing supervisor does.
 //!
 //! Nothing here logs or keeps a Wi-Fi password beyond the call that uses it.
-//! `docs/wifi.md` has the design.
+//! `docs/dev/wifi-design.md` has the design.
 
 pub mod fake;
 #[cfg(target_arch = "arm")]

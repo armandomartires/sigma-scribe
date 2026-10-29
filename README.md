@@ -49,7 +49,7 @@ Screenshots from the desktop emulator (`tests/emu/v1.15-readme.script`); e-ink-l
   - **Right to left:** Arabic, Persian, Urdu, Hebrew, with shaped letters and mixed-direction lines.
   - **Indic and Thai:** Hindi, Marathi, Nepali, Bengali, Tamil, Thai, with conjuncts and clusters.
   - **East Asian:** Korean, Japanese (romaji to kana, kanji conversion with the SKK dictionary), Chinese Simplified and Traditional (pinyin).
-- Korean, Japanese and Chinese characters need a font pack (`fonts/cjk.ttf`; see [`docs/font-packs.md`](docs/font-packs.md)). The dictionaries are included.
+- Korean, Japanese and Chinese characters need a font pack (`fonts/cjk.ttf`; see [`docs/user/font-packs.md`](docs/user/font-packs.md)). The dictionaries are included.
 
 **Device**
 - Paper or Night, Literata or Atkinson Hyperlegible, keyboard tone.
@@ -63,13 +63,13 @@ Screenshots from the desktop emulator (`tests/emu/v1.15-readme.script`); e-ink-l
 - An optional log file (Settings → Logging) for the app and its plugins.
 
 **Wi-Fi**
-- A Wi-Fi button in the title bar turns the radio on and off, shows the network and its address, lists the networks around (signal, lock), joins one (the password typed on the on-screen keyboard) and forgets a saved one. With Settings → Sync on, Wi-Fi off stops Syncthing. See `docs/wifi.md`.
+- A Wi-Fi button in the title bar turns the radio on and off, shows the network and its address, lists the networks around (signal, lock), joins one (the password typed on the on-screen keyboard) and forgets a saved one. With Settings → Sync on, Wi-Fi off stops Syncthing. See `docs/user/wifi.md`.
 
 **Sync**
-- Settings → Sync runs Syncthing on the reader while Σscribe is open, to keep the notes folder in step with your computers; no account and no server of ours. Pair by entering the reader's device ID on the computer, then tap Accept on the reader. Off by default; see `docs/sync.md`.
+- Settings → Sync runs Syncthing on the reader while Σscribe is open, to keep the notes folder in step with your computers; no account and no server of ours. Pair by entering the reader's device ID on the computer, then tap Accept on the reader. Off by default; see `docs/user/sync.md`.
 
 ## Install, update, uninstall
-See [`docs/install.md`](docs/install.md). In short: install NickelMenu, unpack `sigma-scribe-<ver>-kobo.tar.gz` onto the Kobo drive's root, eject, then *Σscribe* is in the NickelMenu. Notes live in `sigma-scribe/notes` on the drive. An update keeps your notes, settings and plugin choices. Uninstall = delete `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`.
+See [`docs/user/install.md`](docs/user/install.md). In short: install NickelMenu, unpack `sigma-scribe-<ver>-kobo.tar.gz` onto the Kobo drive's root, eject, then *Σscribe* is in the NickelMenu. Notes live in `sigma-scribe/notes` on the drive. An update keeps your notes, settings and plugin choices. Uninstall = delete `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`.
 
 ## Run it on your desktop
 ```sh
@@ -81,12 +81,14 @@ cargo test --workspace
 Window controls: mouse = touch, PageUp/PageDown = page-turn buttons, keyboard = USB keyboard, Esc = power (save & quit).
 
 ## Build for the Kobo
-`scripts/package-kobo.sh` → `dist/sigma-scribe-<ver>-kobo/` + reproducible `.tar.gz` + `.sha256`, checked by `scripts/check-package.sh`. Release packages are built by `.github/workflows/release.yml` (pinned FBInk); see `docs/release/checklist.md`.
+`scripts/package-kobo.sh` → `dist/sigma-scribe-<ver>-kobo/` + reproducible `.tar.gz` + `.sha256`, checked by `scripts/check-package.sh`. Release packages are built by `.github/workflows/release.yml` (pinned FBInk); see [`docs/dev/release/checklist.md`](docs/dev/release/checklist.md).
 
 ## Develop
 Rust edition 2021, minimum Rust version in `Cargo.toml` (`rust-version`). Targets: desktop Linux for development and tests, and `armv7-unknown-linux-musleabihf` for the Kobo. Build, check and code conventions are in [`CONTRIBUTING.md`](CONTRIBUTING.md). The handwriting models are built with `tools/hwr-train`.
 
 ## Docs
-`CONTRIBUTING.md` · `CHANGELOG.md` · `docs/install.md` · `docs/testing.md` · `docs/plugins.md` · `docs/logging.md` · `docs/sync.md` · `docs/wifi.md` · `docs/font-packs.md` · `docs/japanese.md` · `docs/chinese.md` · `docs/usb-keyboard.md` · `docs/perf.md` · `docs/publishing.md` · `docs/release/`
+For readers of the app: [`docs/user/`](docs/user/README.md) (install, USB keyboard, Wi-Fi, sync, logging, Japanese and Chinese input, font packs, plugins). `CHANGELOG.md` lists the changes by version.
+
+For developers: [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/dev/`](docs/dev/README.md) (testing, deployment, design pages, release checklist).
 
 Planning and working notes (the plan, design brief, sprints, sprint board, device-pass runbooks and session handovers) are in [`.ai/`](.ai/README.md).
