@@ -110,7 +110,7 @@ Status: Everything that can be done without the Forma is built and merged to `ma
 
 ## Sprint 8 — Documentation and repository cleanup
 Goal: User documentation and project/development documentation are separate, and the repository is tidy
-Status: Started 2026-10-29.
+Status: Docs split committed on branch `docs-user-dev-split` (f4dc03c), not yet merged. Cleanup 2026-10-29: five merged, clean worktrees (about 35 GB, mostly `target/`) moved to `../99.ARCHIVE/2026-10-29-sigma-scribe.wt-*`; the root `GOALS.md` copy archived to `../99.ARCHIVE/2026-10-29-sigma-scribe-GOALS-copy/`.
 - [?] Documentation refactoring: separate project / development documentation from user documentation
   `docs/` splits into `docs/user/` and `docs/dev/`; mixed pages (sync, wifi, usb-keyboard, japanese, chinese, plugins) are split in two; links, tests, scripts and CI paths follow.
-- [ ] Repository update and cleanup
+- [>] Repository update and cleanup
