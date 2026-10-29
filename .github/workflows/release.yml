@@ -3,7 +3,7 @@ name: release
 # same container as ci.yml), checks it and uploads it as an artifact on
 # every PR and push to main (release candidate). On a v* tag pushed by the
 # maintainer it also creates a DRAFT GitHub Release; publishing the draft
-# is a manual step (docs/release/checklist.md). This workflow never creates
+# is a manual step (docs/dev/release/checklist.md). This workflow never creates
 # tags and never publishes.
 on:
   pull_request:
@@ -74,5 +74,5 @@ jobs:
           V=${{ needs.package.outputs.version }}
           gh release create "v$V" --draft --verify-tag \
             --title "Σscribe $V for Kobo Forma" \
-            --notes-file "docs/release/v$V-notes.md" \
+            --notes-file "docs/dev/release/v$V-notes.md" \
             dist/sigma-scribe-$V-kobo.tar.gz dist/sigma-scribe-$V-kobo.tar.gz.sha256 dist/sigma-scribe-$V-kobo.sha256

@@ -8,7 +8,7 @@
 //! progress bar), which is what stops the app looking hung.
 //!
 //! Ignored by default: timings depend on the machine. On the Forma, expect
-//! roughly 8 to 10 times the desktop numbers (docs/perf.md).
+//! roughly 8 to 10 times the desktop numbers (docs/dev/perf.md).
 
 use sigma_core::NotePath;
 use sigma_device::desktop::DesktopDevice;

@@ -1,7 +1,7 @@
 //! Notes that change on disk while the app has them open (Syncthing
 //! delivering a newer version): the app takes the new text in when the
 //! reader has no unsaved edit, and never writes over it when they do.
-//! `docs/sync.md` §9.
+//! `docs/dev/sync-design.md` §9.
 
 use sigma_device::{Event, HwKey};
 use sigma_scribe::App;

@@ -279,7 +279,7 @@ pub struct Settings {
     pub warmth: Option<u8>,
     /// Settings → Sync (v1.16): run Syncthing on the Kobo while the app is
     /// open and keep the notes folder in step with the reader's other
-    /// computers (`docs/sync.md`). Per device, off by default. `sync=`.
+    /// computers (`docs/dev/sync-design.md`). Per device, off by default. `sync=`.
     pub sync: bool,
 }
 

@@ -339,7 +339,7 @@ fn spawn(cfg: &Config, key: &str) -> io::Result<Child> {
         .env("STGUIAPIKEY", key)
         .env("STNODEFAULTFOLDER", "1")
         // A soft memory limit and one core: the Forma has 512 MB and a
-        // single Cortex-A9. See docs/sync.md §11.
+        // single Cortex-A9. See docs/dev/sync-design.md §11.
         .env("GOMEMLIMIT", "96MiB")
         .env("GOGC", "50")
         .env("GOMAXPROCS", "1")

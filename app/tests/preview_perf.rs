@@ -6,7 +6,7 @@
 //! Ignored by default: timings depend on the machine. On the Forma the same
 //! number is logged at Debug level (Settings -> Logging) as
 //! `preview layout of <note> (<bytes> bytes): <n> ms`; expect roughly 8 to
-//! 10 times the desktop figure (docs/perf.md).
+//! 10 times the desktop figure (docs/dev/perf.md).
 
 use sigma_core::NotePath;
 use sigma_scribe::App;

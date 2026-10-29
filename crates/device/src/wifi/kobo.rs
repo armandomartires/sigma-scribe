@@ -6,7 +6,7 @@
 //! The interface and the driver come from the stock reader's environment
 //! (`INTERFACE`, `WIFI_MODULE`; the Forma: `eth0`, `8192es`), which
 //! `launch.sh` keeps. Nothing in the device tree here is verified on a
-//! Forma yet; `docs/wifi.md` lists what the first run must check.
+//! Forma yet; `docs/dev/wifi-design.md` lists what the first run must check.
 
 use super::wpa::{Net, Supplicant};
 use super::{Backend, JoinError, Network, Security, Status};

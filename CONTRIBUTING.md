@@ -1,7 +1,7 @@
 # Contributing to Σscribe
 
 How to build, check and change this repository. The user-facing overview is
-in `README.md`; the test layers are in `docs/testing.md`.
+in `README.md`; the test layers are in `docs/dev/testing.md`.
 
 ## Layout
 
@@ -18,7 +18,7 @@ in `README.md`; the test layers are in `docs/testing.md`.
 
 No crate is published to crates.io (`publish = false`).
 
-Planning and working notes (plan, design brief, sprints, the sprint board `GOALS.md`, device-pass runbooks, session handovers) live in `.ai/`; see `.ai/README.md`. User and developer documentation stays in `docs/`, `README.md` and this file.
+Planning and working notes (plan, design brief, sprints, the sprint board `GOALS.md`, device-pass runbooks, session handovers) live in `.ai/`; see `.ai/README.md`. User documentation is in `docs/user/`, developer documentation in `docs/dev/` (index: `docs/dev/README.md`), besides `README.md` and this file.
 
 ## Toolchain and targets
 
@@ -77,8 +77,8 @@ it locally, install it once with `cargo install --locked cargo-deny`.
 - A new advisory does not block a pull request, but fix it or add it to
   `ignore` in `deny.toml` with a reason.
 
-A UI change also follows `docs/ui-rulebook.md`. A release follows
-`docs/release/checklist.md`.
+A UI change also follows `docs/dev/ui-rulebook.md`. A release follows
+`docs/dev/release/checklist.md`.
 
 ## Code conventions
 
@@ -107,7 +107,7 @@ These describe how the code is already written. Keep new code consistent.
 **Logging.**
 - Use the `sigma_core` macros (`debug!`, `info!`, `warning!`, `error!`,
   `critical!`) with a target such as `"app"` or `"usb"`. See
-  `docs/logging.md`.
+  `docs/user/logging.md` (and `docs/dev/plugin-api.md` for plugin authors).
 - Do not log note text or what the reader types.
 - `println!` and `eprintln!` belong only in tools, build scripts and
   `sigma-emu`.
@@ -162,8 +162,9 @@ crate is for.
   what you add or change.
 
 **User-facing docs.**
-- User-facing behaviour goes in `README.md`, `docs/` and `CHANGELOG.md`
-  (under "Unreleased").
+- User-facing behaviour goes in `README.md`, `docs/user/` and `CHANGELOG.md`
+  (under "Unreleased"); design, internals and device-trial notes go in
+  `docs/dev/`. A page that serves both is split and each half links the other.
 - Keep them in step with the code in the same pull request.
 
 ## Tests

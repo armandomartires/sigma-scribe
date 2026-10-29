@@ -1004,7 +1004,7 @@ fn main() -> ExitCode {
     ExitCode::SUCCESS
 }
 
-/// v1.16: a state of Syncthing for the Sync page (see `docs/sync.md` §10).
+/// v1.16: a state of Syncthing for the Sync page (see `docs/dev/sync-design.md` §10).
 fn demo_sync(name: &str) -> Option<sigma_core::sync::View> {
     use sigma_core::sync::{FolderView, Peer, PendingDevice, PendingFolder, Run, View};
     const ME: &str = "MFZWI3D-BONSGYC-YLTMRWG-C43ENR5-QXGZDMM-FZWI3DP-BONSGYY-LTMRWAD";

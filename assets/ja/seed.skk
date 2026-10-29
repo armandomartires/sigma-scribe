@@ -1,6 +1,6 @@
 ;; Σscribe seed dictionary (SKK format): common words, written for this
 ;; project (AGPL-3.0-only). A fuller SKK dictionary can be added on the
-;; device; see docs/japanese.md.
+;; device; see docs/dev/japanese-internals.md.
 ;; okuri-nasi entries.
 ごぜん /午前/
 ごご /午後/

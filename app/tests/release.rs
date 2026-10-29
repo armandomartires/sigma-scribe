@@ -15,9 +15,9 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[test]
 fn changelog_and_notes_cover_this_version() {
     assert!(read("CHANGELOG.md").contains(&format!("## {VERSION} ")));
-    let notes = read(&format!("docs/release/v{VERSION}-notes.md"));
+    let notes = read(&format!("docs/dev/release/v{VERSION}-notes.md"));
     assert!(notes.contains(VERSION) && notes.contains("DRAFT"));
-    assert!(read("docs/release/mobileread-draft.md").contains("NOT posted"));
+    assert!(read("docs/dev/release/mobileread-draft.md").contains("NOT posted"));
 }
 
 #[test]

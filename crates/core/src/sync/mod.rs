@@ -1,6 +1,6 @@
 //! Sync (v1.16): Syncthing on the Kobo, and what the app needs to run it.
 //!
-//! The design is in `docs/sync.md`. In short: the app starts a bundled
+//! The design is in `docs/dev/sync-design.md`. In short: the app starts a bundled
 //! Syncthing while Settings → Sync is on, talks to its REST API on the
 //! loopback ([`rest`], [`json`]), and shows what it reads ([`model`]). The
 //! [`supervisor`] owns the process in a thread, so the input loop never
@@ -22,7 +22,7 @@ use std::path::Path;
 
 /// The `.stignore` written into the notes folder when sync sets it up and
 /// there is none: the files that belong to this device, and the app's
-/// temporary files. See `docs/sync.md` §5.
+/// temporary files. See `docs/dev/sync-design.md` §5.
 pub const STIGNORE: &str = "\
 // Σscribe: files that belong to this device, or that the app makes and removes.
 .trash

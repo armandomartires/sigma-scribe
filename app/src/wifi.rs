@@ -1,4 +1,4 @@
-//! Wi-Fi in the app (v1.18, `docs/wifi.md`): the title-bar button, its
+//! Wi-Fi in the app (v1.18, `docs/dev/wifi-design.md`): the title-bar button, its
 //! menu, the password typed into the title bar, and Syncthing following
 //! the radio.
 //!

@@ -1,4 +1,4 @@
-//! Sync in the app (v1.16, `docs/sync.md`): the Syncthing supervisor behind
+//! Sync in the app (v1.16, `docs/dev/sync-design.md`): the Syncthing supervisor behind
 //! Settings → Sync, and noticing that a note changed on disk underneath the
 //! app, so that what Syncthing delivers is never written over.
 

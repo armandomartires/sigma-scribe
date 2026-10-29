@@ -2,9 +2,9 @@
 # Fetches the pinned Syncthing release for the Kobo (32-bit ARM Linux) into
 # target/syncthing/ and prints the folder holding the unpacked files. The
 # tarball is checked against the sha256 below before it is unpacked; a file
-# that does not match is deleted and the script fails. See docs/sync.md §1.
+# that does not match is deleted and the script fails. See docs/dev/sync-design.md §1.
 #
-# To change the pin: edit both lines, run the Forma checklist in docs/sync.md
+# To change the pin: edit both lines, run the Forma checklist in docs/dev/sync-design.md
 # §12, and update the table in §1.
 set -eu
 cd "$(dirname "$0")/.."

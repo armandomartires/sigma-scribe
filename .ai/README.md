@@ -1,6 +1,6 @@
 # .ai — planning and working notes
 
-Documents written to plan and steer the work, mostly with AI assistants. They are not user or developer documentation: that is in `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md` and `docs/`. `CLAUDE.md` stays at the top level because Claude Code only loads it from there.
+Documents written to plan and steer the work, mostly with AI assistants. They are not user or developer documentation: that is in `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `docs/user/` (for readers of the app) and `docs/dev/` (for developers). `CLAUDE.md` stays at the top level because Claude Code only loads it from there.
 
 | Path | What it is |
 |---|---|
@@ -15,4 +15,4 @@ Documents written to plan and steer the work, mostly with AI assistants. They ar
 | `device-pass-run-order.md`, `device-pass-s7.md` | Runbooks for device passes on the Forma. |
 | `handover-*.md` | Handover notes for a new session picking up a piece of work. |
 
-Paths inside these files are written from the repository root (`.ai/plan.md`, `docs/install.md`).
+Paths inside these files are written from the repository root (`.ai/plan.md`, `docs/user/install.md`). Files here, the sprint and task files and past release notes may still use the old `docs/*.md` paths from before the split into `docs/user/` and `docs/dev/`; they are history and are not updated.
