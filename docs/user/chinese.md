@@ -1,6 +1,6 @@
-# Chinese input (v1.11)
+# Chinese input
 
-Settings → Keyboard & input → Layout → **Chinese Simplified (pinyin)** or **Chinese Traditional (pinyin)**. The Full on-screen keyboard or a USB keyboard.
+Settings → Keyboard & input → Layout → **Chinese Simplified (pinyin)** or **Chinese Traditional (pinyin)**. These layouts are experimental: they appear in the list only with Settings → Experimental features on. The Full on-screen keyboard or a USB keyboard.
 
 ## Typing
 - Type pinyin; it shows underlined, and the **candidate bar** above the keyboard updates with every letter. The first candidate is the best guess for the whole input (`woaizhongguo` → 我爱中国), then the words that start the input, longest first, then single characters.

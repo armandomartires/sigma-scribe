@@ -1,9 +1,11 @@
-# User documentation
+# Σscribe user guide
 
 For people who use Σscribe on a Kobo. Developer documentation is in [../dev/README.md](../dev/README.md); the app itself is described in the [README](../../README.md).
 
 | Page | What it covers |
 |---|---|
+| [getting-started.md](getting-started.md) | A tour: opening the app, the title-bar buttons, files, preview, settings, quitting |
+| [handwriting.md](handwriting.md) | The Write panel: modes, the key block, the guide line, word mode, training, gestures |
 | [install.md](install.md) | Install, update, uninstall, getting notes off |
 | [usb-keyboard.md](usb-keyboard.md) | USB keyboard and mouse: hardware, use, export |
 | [wifi.md](wifi.md) | The Wi-Fi button: joining networks, passwords, limits |

@@ -251,6 +251,12 @@ pub struct Settings {
     /// handwriting (`.handwriting/learned.txt`). On by default.
     /// `ink_learn=`.
     pub ink_learn: bool,
+    /// The writing panel's dotted guide line (v1.16): Line in every mode
+    /// of the panel. On by default. `ink_guide=`.
+    pub ink_guide: bool,
+    /// Which side of the writing panel its key block is on (v1.16); the
+    /// other side is for writing. Left by default. `ink_keys=`.
+    pub ink_keys: Side,
     /// Language → Override system language (v1.5.5, decision 57). Off: the
     /// interface follows the Kobo's `CurrentLocale` (read-only, never
     /// written). `ui_lang_override=`.
@@ -404,6 +410,8 @@ impl Default for Settings {
             ink_words: false,
             ink_boxes: false,
             ink_learn: true,
+            ink_guide: true,
+            ink_keys: Side::Left,
             lang_override: false,
             ui_lang: UiLang::En,
             experimental: false,
@@ -532,6 +540,10 @@ pub enum Change {
     InkBoxes(bool),
     /// Learn from corrections on / off.
     InkLearn(bool),
+    /// The writing panel's dotted guide on / off (v1.16).
+    InkGuide(bool),
+    /// The side of the writing panel's key block (v1.16).
+    InkKeys(Side),
     /// Override system language on / off (v1.5.5).
     LangOverride(bool),
     /// Interface language while the override is on (v1.5.5).
@@ -639,6 +651,8 @@ impl Settings {
             Change::InkWords(on) => self.ink_words = on,
             Change::InkBoxes(on) => self.ink_boxes = on,
             Change::InkLearn(on) => self.ink_learn = on,
+            Change::InkGuide(on) => self.ink_guide = on,
+            Change::InkKeys(s) => self.ink_keys = s,
             Change::LangOverride(on) => self.lang_override = on,
             Change::UiLang(l) => self.ui_lang = l,
             Change::TrainSamples => {}
@@ -1116,6 +1130,8 @@ pub const FIELDS: &[Field] = &[
     toggle!("ink_words", ink_words),
     toggle!("ink_boxes", ink_boxes),
     toggle!("ink_learn", ink_learn),
+    toggle!("ink_guide", ink_guide),
+    words!("ink_keys", ink_keys),
     toggle!("ui_lang_override", lang_override),
     Field {
         key: "ui_lang",
@@ -1179,6 +1195,8 @@ mod tests {
             ink_words: true,
             ink_boxes: true,
             ink_learn: false,
+            ink_guide: false,
+            ink_keys: Side::Right,
             lang_override: true,
             ui_lang: UiLang::Pt,
             experimental: true,
@@ -1202,7 +1220,7 @@ mod tests {
              drawer_width=4\nusb=off\nscroll=traditional\norientation=auto\nupside_down=off\n\
              rotation=0\nlandscape_keys=centre\npad=numbers\npad_side=right\nui_scale=200\n\
              layout=us\nkeyboard_size=auto\nink_pen=finger\nink_a2=off\nink_words=off\n\
-             ink_boxes=off\nink_learn=on\nui_lang_override=off\nui_lang=en\nexperimental=off\n\
+             ink_boxes=off\nink_learn=on\nink_guide=on\nink_keys=left\nui_lang_override=off\nui_lang=en\nexperimental=off\n\
              enhanced_keyboard=on\nlog=off\nlog_level=info\nwarmth=keep\nsync=off\n"
         );
         assert_eq!(
@@ -1212,7 +1230,7 @@ mod tests {
              drawer_width=1\nusb=on\nscroll=natural\norientation=landscape\nupside_down=on\n\
              rotation=270\nlandscape_keys=split\npad=arrows\npad_side=left\nui_scale=150\n\
              layout=de\nkeyboard_size=125\nink_pen=stylus\nink_a2=on\nink_words=on\n\
-             ink_boxes=on\nink_learn=off\nui_lang_override=on\nui_lang=pt\nexperimental=on\n\
+             ink_boxes=on\nink_learn=off\nink_guide=off\nink_keys=right\nui_lang_override=on\nui_lang=pt\nexperimental=on\n\
              enhanced_keyboard=off\nlog=on\nlog_level=error\nwarmth=7\nsync=on\n"
         );
     }

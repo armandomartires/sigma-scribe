@@ -261,7 +261,12 @@ fn panel_fits_portrait_and_landscape_at_every_ui_scale() {
                 );
             }
         }
-        assert!(l.area.h > 300 && l.area.w > 1000, "{:?}", l.area);
+        // The keys take a third of the width (v1.16); the rest is for drawing.
+        assert!(
+            l.area.h > 300 && l.area.w >= w as i32 * 60 / 100,
+            "{:?}",
+            l.area
+        );
         let base = r.black_in_area();
         r.stroke(0);
         assert!(r.black_in_area() > base);

@@ -18,6 +18,7 @@ impl App {
     pub fn open_ink(&mut self) {
         self.sel_ui = None;
         self.screen.ink_words = self.settings.word_mode();
+        self.panel_prefs();
         // v1.5.3 (decision 55): the free writing area is the main input;
         // boxes only with Settings → Letter boxes; Draw is one ⇄ away.
         self.ink = Some(InkState {
@@ -28,6 +29,12 @@ impl App {
             },
             ..InkState::default()
         });
+    }
+
+    /// The panel's saved choices: the dotted guide and the key block's side.
+    pub(crate) fn panel_prefs(&mut self) {
+        self.screen.sketch_guide = self.settings.ink_guide;
+        self.screen.ink_keys_right = self.settings.ink_keys == sigma_core::settings::Side::Right;
     }
 
     /// The live-ink refresh: DU, or A2 when Settings → Fast ink is on.
@@ -45,8 +52,21 @@ impl App {
         use sigma_render::ink::{InkButton, InkMode};
         let mode = self.ink.as_ref()?.mode;
         match (mode, b) {
-            (InkMode::Draw, InkButton::Guide) => {
-                self.screen.sketch_guide = !self.screen.sketch_guide;
+            // Every mode (v1.16): Line shows or hides the dotted guide, ⇄
+            // moves the key block to the other side; both are saved.
+            (_, InkButton::Guide) => {
+                self.change(sigma_core::settings::Change::InkGuide(
+                    !self.settings.ink_guide,
+                ));
+                return Some(Refresh::Partial);
+            }
+            (_, InkButton::Side) => {
+                use sigma_core::settings::Side;
+                let other = match self.settings.ink_keys {
+                    Side::Left => Side::Right,
+                    Side::Right => Side::Left,
+                };
+                self.change(sigma_core::settings::Change::InkKeys(other));
                 return Some(Refresh::Partial);
             }
             (InkMode::Draw, InkButton::Mode) => {
@@ -197,7 +217,7 @@ impl App {
                 self.save();
                 return Some(Refresh::Partial);
             }
-            (InkMode::Letters, InkButton::Train) => {
+            (InkMode::Letters | InkMode::Free, InkButton::Train) => {
                 let _ = self.read_letter();
                 let ink = self.ink.as_mut()?;
                 ink.mode = InkMode::Train(0);

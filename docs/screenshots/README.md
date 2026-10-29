@@ -4,6 +4,8 @@ Emulator screenshots (`sigma-emu`, 1440×1920 Forma panel; landscape 1920×1440)
 
 E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existed; re-running today's emulator would show today's UI, not that version's) and for the three v1.0 title-bar comparison images (composites of cropped bars).
 
+The current set used by the README is in [`readme/`](readme/) (`tests/emu/readme.script`, refreshed in place; `readme/eink/` has the e-ink-look copies): write, preview, drawer (with its menu), graph, settings, handwriting (the Write panel), sync (QR code), Wi-Fi menu, front-light menu, night, landscape, Arabic and Japanese.
+
 | Version | Screenshot | What it shows | E-ink copy |
 |---|---|---|---|
 | v0.1 | [v0.1-keys-hidden.png](v0.1/v0.1-keys-hidden.png) | keys hidden | missing |
@@ -205,3 +207,12 @@ E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existe
 | v1.15 | [v1.15-handwriting.png](v1.15/v1.15-handwriting.png) | Free writing read as "note idea", candidate bar | [eink](v1.15/eink/v1.15-handwriting.png) |
 | v1.15 | [v1.15-arabic.png](v1.15/v1.15-arabic.png) | Arabic, right to left | [eink](v1.15/eink/v1.15-arabic.png) |
 | v1.15 | [v1.15-japanese.png](v1.15/v1.15-japanese.png) | Japanese, kanji candidates | [eink](v1.15/eink/v1.15-japanese.png) |
+| v1.16 | [v1.16-write-left.png](v1.16/v1.16-write-left.png) | Write: key block on the left, guide on | [eink](v1.16/eink/v1.16-write-left.png) |
+| v1.16 | [v1.16-write-read.png](v1.16/v1.16-write-read.png) | Write: a reading and its candidates | [eink](v1.16/eink/v1.16-write-read.png) |
+| v1.16 | [v1.16-write-right.png](v1.16/v1.16-write-right.png) | Write: ⇄ moved the block to the right | [eink](v1.16/eink/v1.16-write-right.png) |
+| v1.16 | [v1.16-write-no-guide.png](v1.16/v1.16-write-no-guide.png) | Write: Line off, no guide | [eink](v1.16/eink/v1.16-write-no-guide.png) |
+| v1.16 | [v1.16-sketch.png](v1.16/v1.16-sketch.png) | Sketch: same block, Insert dark | [eink](v1.16/eink/v1.16-sketch.png) |
+| v1.16 | [v1.16-train.png](v1.16/v1.16-train.png) | Train from Write | [eink](v1.16/eink/v1.16-train.png) |
+| v1.16 | [v1.16-letters.png](v1.16/v1.16-letters.png) | Letter boxes | [eink](v1.16/eink/v1.16-letters.png) |
+| v1.16 | [v1.16-letters-landscape.png](v1.16/v1.16-letters-landscape.png) | Letter boxes, landscape | [eink](v1.16/eink/v1.16-letters-landscape.png) |
+| v1.16 | [v1.16-sketch-landscape.png](v1.16/v1.16-sketch-landscape.png) | Sketch, landscape | [eink](v1.16/eink/v1.16-sketch-landscape.png) |

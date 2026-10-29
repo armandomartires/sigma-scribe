@@ -68,6 +68,24 @@ scripts/sim.sh --headless tests/emu/v1.0-tour.script target/shots
 The first prints the handwriting accuracy and latency figures. The second is
 one emulator script; CI runs every `tests/emu/*.script` this way.
 
+**Run it on your desktop.**
+
+```sh
+scripts/sim.sh            # live window, 1440x1920 scaled to fit
+scripts/sim.sh --eink     # with e-ink flash/ghosting look
+SIGMA_NOTES=$(mktemp -d) scripts/sim.sh --headless tests/emu/readme.script docs/screenshots/readme   # PNGs, no window
+```
+
+Window controls: mouse = touch, PageUp/PageDown = page-turn buttons,
+keyboard = USB keyboard, Esc = power (save and quit).
+
+**Build for the Kobo.** `scripts/package-kobo.sh` builds
+`dist/sigma-scribe-<ver>-kobo/` and a reproducible `.tar.gz` and `.sha256`,
+checked by `scripts/check-package.sh`. Release packages are built by
+`.github/workflows/release.yml` (pinned FBInk); see
+`docs/dev/release/checklist.md`. The handwriting models are built with
+`tools/hwr-train`.
+
 **Dependencies.** The `deny` job in CI runs `cargo deny check` against
 `deny.toml`: RustSec advisories, licences, banned crates and sources. To run
 it locally, install it once with `cargo install --locked cargo-deny`.
@@ -190,6 +208,12 @@ crate is for.
 - Plugin fixtures in `app/tests/fixtures/` are built from the plugins
   repository by `scripts/update-plugin-fixtures.sh`. Do not edit them by
   hand.
+
+## Repository history
+
+The git history was cleaned for publication (author identities unified,
+machine names removed). Device serial numbers are masked as `<FORMA-SERIAL>`
+in the docs.
 
 ## Repository folders
 

@@ -46,9 +46,8 @@ it ships.
 
 Settings → Plugins → **Repository** → **Check for plugins** fetches the list of
 plugins from the repository and shows what it offers, each with **Install**,
-**Update** or "Up to date" (or "Needs a newer app"). It needs Wi-Fi: turn the
-Kobo's Wi-Fi on in the Kobo's own reader before Σscribe starts (see
-[wifi.md](wifi.md)). The screen waits while a download runs.
+**Update** or "Up to date" (or "Needs a newer app"). It needs Wi-Fi: turn it on with
+the Wi-Fi button in the title bar (see [wifi.md](wifi.md)). The screen waits while a download runs.
 
 Packages are verified before anything is installed, and a failed install leaves
 the version you had. A new plugin starts on; an update keeps its on/off choice

@@ -9,7 +9,7 @@ For people who build, test, release and extend Σscribe. Start with [../../CONTR
 | [ui-rulebook.md](ui-rulebook.md) | Rules for any UI change |
 | [ui-reference/](ui-reference/README.md) | Photographs and captures of the stock reader, for comparison |
 | [deployment.md](deployment.md) | Backup, install and rollback on the Forma |
-| [publishing.md](publishing.md) | Distribution and licences |
+| [publishing.md](publishing.md) | Distribution, licences, the project page and the user-guide wiki (`site/`, `scripts/wiki-sync.sh`) |
 | [release/checklist.md](release/checklist.md) | The release steps; drafts and per-version notes are in [release/](release/) |
 | [device-checklist-prerelease.md](device-checklist-prerelease.md) | What to check on the device before a release |
 | [sync-design.md](sync-design.md) | Sync: packaging, lifecycle, API, settings, status, trial notes (user page: [../user/sync.md](../user/sync.md)) |
