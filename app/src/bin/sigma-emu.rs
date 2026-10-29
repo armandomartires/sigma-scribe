@@ -8,11 +8,13 @@
 //!   long-press-word W | double-tap-word W | grab-handle start|end
 //!   move-handle-end W | move-handle-start W | expect-bar A,B|none
 //!   expect-clipboard T | expect-caret-after W |
-//!   expect-not TEXT | expect-selection TEXT | clear-field | expect-file PATH | expect-no-file PATH | expect-open PATH
+//!   age-trash N SECS | expect-not TEXT | expect-selection TEXT | clear-field | expect-file PATH | expect-no-file PATH | expect-open PATH
 //!   v0.4: tap-on Options | tap-on Row/Cell (in Options, e.g. Dark mode/On, Size/+)
 //!   tap-on Split|Full|Centre|Arrows|123|Pad left|Pad right (landscape bar)
 //!   expect-setting KEY=VALUE | expect-words N | expect-screen WxH | restart
-//!   v0.5: tap-on Contents|To-dos|Scratch (icons) | tap-on Heading:TEXT |
+//!   v0.5: tap-on Contents|To-dos|Scratch (v1.16: rows of the drawer menu,
+//!   opened by tap-on Panels) | pane Contents|To-dos|Scratch (open the
+//!   menu, tap the row, close it) | tap-on Heading:TEXT |
 //!   tap-on Todo:TEXT | tap-on TodoBox:TEXT | tap-on Filter | tap-on ScratchPane
 //!   expect-scratch TEXT | expect-file-contains PATH|TEXT | expect-line N
 //!   v0.6: tap-on Find|Graph (icons) | tap-on FindField|ReplaceField|Prev|Next|
@@ -139,6 +141,16 @@ fn main() -> ExitCode {
                     None => return fail(format!("no control {arg:?} on this screen")),
                 }
             }
+            // v1.16: `pane Contents|To-dos|Scratch` shows or hides a drawer
+            // pane through the drawer menu: open it, tap the row, close it.
+            "pane" => {
+                for name in app.control_steps(arg) {
+                    match app.control_centre(&name) {
+                        Some((x, y)) => step(&mut app, &mut dev, Event::Tap { x, y }),
+                        None => return fail(format!("no control {name:?} on this screen")),
+                    }
+                }
+            }
             "expect-file" => {
                 if !app.library.root().join(arg).exists() {
                     return fail("file missing".into());
@@ -147,6 +159,37 @@ fn main() -> ExitCode {
             "expect-no-file" => {
                 if app.library.root().join(arg).exists() {
                     return fail("file still exists".into());
+                }
+            }
+            // `age-trash N SECS`: the Nth newest item in the trash (0 is the
+            // newest) looks SECS seconds old, so the screenshots show more
+            // than "Just now".
+            "age-trash" => {
+                let v: Vec<u64> = arg
+                    .split_whitespace()
+                    .filter_map(|x| x.parse().ok())
+                    .collect();
+                let (Some(&n), Some(&secs)) = (v.first(), v.get(1)) else {
+                    return fail("expected N SECS".into());
+                };
+                let Some(t) = app
+                    .library
+                    .list_trash()
+                    .ok()
+                    .and_then(|l| l.into_iter().nth(n as usize))
+                else {
+                    return fail("no such trash item".into());
+                };
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_or(0, |d| d.as_secs());
+                let base = app.library.root().join(sigma_core::library::TRASH);
+                let to = base.join(now.saturating_sub(secs).to_string());
+                if to.exists() {
+                    return fail("another item has that time".into());
+                }
+                if let Err(e) = std::fs::rename(base.join(&t.id), to) {
+                    return fail(e.to_string());
                 }
             }
             "expect-open" => {
@@ -780,6 +823,21 @@ fn main() -> ExitCode {
                     app.change(sigma_core::settings::Change::Backlight(n));
                 }
             }
+            "warmth" => {
+                // v1.17: pretend a warm-to-cool mixer at this step (0 to 10),
+                // or none. `warmth 3 unreadable` cannot be read back, as the
+                // stock reader never does.
+                let mut it = arg.split_whitespace();
+                dev.warmth = it.next().and_then(|n| n.parse::<u8>().ok());
+                dev.warmth_readable = it.next() != Some("unreadable");
+                app.sync_warmth(&mut dev);
+            }
+            "expect-warmth" => {
+                app.sync_warmth(&mut dev);
+                if dev.warmth.map_or(String::new(), |n| n.to_string()) != arg {
+                    return fail(format!("warmth is {:?}", dev.warmth));
+                }
+            }
             "expect-light" => {
                 app.sync_light(&mut dev);
                 if dev.light.map_or(String::new(), |n| n.to_string()) != arg {
@@ -870,6 +928,63 @@ fn main() -> ExitCode {
                     return fail(e.to_string());
                 }
             }
+            "sync-demo" => {
+                // v1.16: what Settings → Sync shows for a state of Syncthing,
+                // without running it. `expect-sync` checks the status word.
+                match demo_sync(arg) {
+                    Some(v) => app.set_sync_view(v),
+                    None => return fail("unknown sync state".into()),
+                }
+                let _ = app.render(&mut dev, sigma_device::Refresh::Partial);
+            }
+            "expect-sync" => {
+                let got = format!("{:?}", app.sync_view().status());
+                if !got.starts_with(arg) {
+                    return fail(format!("sync status is {got}"));
+                }
+            }
+            "expect-sync-pending" => {
+                let v = app.sync_view();
+                let got = format!("{},{}", v.pending_devices.len(), v.pending_folders.len());
+                if got != arg {
+                    return fail(format!("pending devices,folders: {got}"));
+                }
+            }
+            // v1.18: `wifi-demo [online]` gives the app a pretend radio, so the
+            // title bar gets the Wi-Fi button (an app with none shows none).
+            // `expect-wifi off|on|joined:NAME|saved:NAME|unsaved:NAME|failure|no-failure`.
+            "wifi-demo" => {
+                use sigma_device::wifi::{fake::FakeWifi, Service};
+                app.set_wifi(Service::inline(if arg == "online" {
+                    FakeWifi::demo_online()
+                } else {
+                    FakeWifi::demo()
+                }));
+                let _ = app.render(&mut dev, sigma_device::Refresh::Full);
+            }
+            "expect-wifi" => {
+                let v = app.wifi_view();
+                let saved = |n: &str| v.networks.iter().any(|x| x.ssid == n && x.saved);
+                let ok = match arg.split_once(':') {
+                    None => match arg {
+                        "off" => !v.powered,
+                        "on" => v.powered && v.ssid.is_none(),
+                        "failure" => v.failure.is_some(),
+                        "no-failure" => v.failure.is_none(),
+                        _ => return fail("unknown Wi-Fi state".into()),
+                    },
+                    Some(("joined", n)) => v.ssid.as_deref() == Some(n),
+                    Some(("saved", n)) => saved(n),
+                    Some(("unsaved", n)) => !saved(n),
+                    Some(_) => return fail("unknown Wi-Fi state".into()),
+                };
+                if !ok {
+                    return fail(format!(
+                        "Wi-Fi: powered {}, joined {:?}, failure {:?}",
+                        v.powered, v.ssid, v.failure
+                    ));
+                }
+            }
             "expect-status" => {
                 if app.autosave.state.label() != arg {
                     return fail(format!("status is {:?}", app.autosave.state.label()));
@@ -887,6 +1002,96 @@ fn main() -> ExitCode {
         dev.refreshes.len()
     );
     ExitCode::SUCCESS
+}
+
+/// v1.16: a state of Syncthing for the Sync page (see `docs/dev/sync-design.md` §10).
+fn demo_sync(name: &str) -> Option<sigma_core::sync::View> {
+    use sigma_core::sync::{FolderView, Peer, PendingDevice, PendingFolder, Run, View};
+    const ME: &str = "MFZWI3D-BONSGYC-YLTMRWG-C43ENR5-QXGZDMM-FZWI3DP-BONSGYY-LTMRWAD";
+    const LAPTOP: &str = "P56IOI7-MZJNU2Y-IQGDREY-DM2MGTI-MGL3BXN-PQ6W5BM-TBBZ4TJ-XZWICQ2";
+    let running = View {
+        run: Run::Running,
+        device_id: ME.into(),
+        ..View::default()
+    };
+    let laptop = |connected| Peer {
+        id: LAPTOP.into(),
+        name: "Laptop".into(),
+        connected,
+    };
+    let folder = |state: &str, need: u64| FolderView {
+        id: "notes".into(),
+        state: state.into(),
+        need_files: need,
+        need_bytes: need * 4096,
+        ..FolderView::default()
+    };
+    Some(match name {
+        "off" => View::default(),
+        "missing" => View {
+            run: Run::NotInstalled,
+            ..View::default()
+        },
+        "starting" => View {
+            run: Run::Starting,
+            ..View::default()
+        },
+        "failed" => View {
+            run: Run::Failed(
+                "Failed to start API/GUI (error=\"listen tcp 127.0.0.1:8484: bind: cannot assign requested address\")".into(),
+            ),
+            ..View::default()
+        },
+        "noloopback" => View {
+            run: Run::NoLoopback,
+            ..View::default()
+        },
+        "alone" => running,
+        "pending-device" => View {
+            pending_devices: vec![PendingDevice {
+                id: LAPTOP.into(),
+                name: "Laptop".into(),
+                address: "192.168.1.20:22000".into(),
+            }],
+            ..running
+        },
+        "pending-folder" => View {
+            peers: vec![laptop(true)],
+            pending_folders: vec![PendingFolder {
+                id: "abcde-fghij".into(),
+                label: "Notes".into(),
+                device: LAPTOP.into(),
+                device_name: "Laptop".into(),
+            }],
+            ..running
+        },
+        "syncing" => View {
+            peers: vec![laptop(true)],
+            folder: Some(folder("syncing", 3)),
+            last_sync: Some("2026-10-28 13:58".into()),
+            ..running
+        },
+        "waiting" => View {
+            peers: vec![laptop(true)],
+            folder: Some(folder("idle", 0)),
+            waiting: vec!["Laptop".into()],
+            ..running
+        },
+        "idle" => View {
+            peers: vec![laptop(true)],
+            folder: Some(folder("idle", 0)),
+            last_sync: Some("2026-10-28 14:05".into()),
+            conflicts: 2,
+            ..running
+        },
+        "offline" => View {
+            peers: vec![laptop(false)],
+            folder: Some(folder("idle", 0)),
+            last_sync: Some("2026-10-27 21:40".into()),
+            ..running
+        },
+        _ => return None,
+    })
 }
 
 /// v1.4.2: taps through Settings pages until `name` is on screen.

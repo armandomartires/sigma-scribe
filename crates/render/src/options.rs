@@ -8,7 +8,7 @@
 use crate::canvas::{Canvas, Rect};
 use crate::editor::{EditorScreen, Layout};
 use crate::fonts::Face;
-use crate::i18n::tr;
+use crate::i18n::{tr, tr_name};
 use crate::theme::Theme;
 use sigma_core::keyboard::Layout as KbLayout;
 use sigma_core::settings::{Change, Orientation, Settings, Words};
@@ -357,6 +357,8 @@ pub enum SettingsPage {
     /// A plugin's own settings: its place in the Plugins list. Reachable
     /// only while the plugin is on.
     Plugin(usize),
+    /// The device ID as a QR code, from Settings → Sync (v1.16).
+    SyncQr,
 }
 
 /// Categories: name, then (section heading, row labels).
@@ -370,8 +372,11 @@ pub const PLUGINS_CATEGORY: usize = 6;
 /// The Logging category: a switch and, once it is on, the level.
 pub const LOGGING_CATEGORY: usize = 7;
 
+/// The Sync category: its rows come from what Syncthing reports.
+pub const SYNC_CATEGORY: usize = 8;
+
 /// The Settings categories, in order: name, then its sections.
-pub const CATEGORIES: [(&str, &[Section]); 9] = [
+pub const CATEGORIES: [(&str, &[Section]); 10] = [
     (
         "Writing",
         &[
@@ -384,7 +389,7 @@ pub const CATEGORIES: [(&str, &[Section]); 9] = [
         "Display",
         &[
             ("Page", &["Dark mode", "UI scale", "Drawer", "Drawer width"]),
-            ("Light", &["Backlight"]),
+            ("Light", &["Backlight", "Warmth"]),
             ("Orientation", &["Orientation", "Upside down"]),
         ],
     ),
@@ -426,6 +431,7 @@ pub const CATEGORIES: [(&str, &[Section]); 9] = [
     ),
     ("Plugins", &[]),
     ("Logging", &[("Log file", &["Logging", "Level"])]),
+    ("Sync", &[]),
     (
         "Help & about",
         &[(
@@ -475,6 +481,8 @@ pub enum Kind {
     Open(SettingsPage),
     /// Read-only value.
     Info(String),
+    /// Text across the whole row, centred, with no label (the device ID).
+    Block(String),
     /// A disabled choice (v1.5.5): its value in the slider's grey, no tap.
     Muted(String),
     /// Stepped slider (v1.4.4, `crate::slider`): one cell per stop, the
@@ -585,6 +593,9 @@ pub struct OptionsModel<'a> {
     /// The front light's step when the device has one (v1.12); `None`
     /// hides Display → Backlight.
     pub light: Option<u8>,
+    /// The warm-to-cool step when the front light has a mixer (v1.17);
+    /// `None` hides Display → Warmth.
+    pub warmth: Option<u8>,
     /// UI scale while its slider is being dragged: the thumb moves and the
     /// value shows, but the scale itself only changes on release (v1.13.1).
     pub ui_scale_pending: Option<u16>,
@@ -595,6 +606,8 @@ pub struct OptionsModel<'a> {
     /// How the last check went, in small print under "Check for plugins";
     /// empty before the first.
     pub repo_note: &'a str,
+    /// What Syncthing last reported, for Settings → Sync (v1.16).
+    pub sync: &'a sigma_core::sync::View,
 }
 
 /// One drawn line of a page: a section band or a row.
@@ -602,6 +615,8 @@ pub struct OptionsModel<'a> {
 pub enum Item {
     /// A section heading.
     Band(&'static str),
+    /// The QR code of this text, centred, in black on white.
+    Qr(String),
     /// A setting.
     Row(DRow),
     /// A category on the root page, with its summary.
@@ -790,6 +805,29 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
                 ends: true,
             }
         }
+        // v1.17: eleven steps from cool to warm; only with a mixer.
+        "Warmth" => {
+            let n = m.warmth?;
+            let stops: Vec<Cell> = (0..=sigma_core::settings::WARMTH_MAX)
+                .map(|i| {
+                    let text = match i {
+                        0 => tr("Cool").into_owned(),
+                        sigma_core::settings::WARMTH_MAX => tr("Warm").into_owned(),
+                        i => format!(
+                            "{} %",
+                            usize::from(i) * 100 / usize::from(sigma_core::settings::WARMTH_MAX)
+                        ),
+                    };
+                    choice(&text, Change::Warmth(i), i == n)
+                })
+                .collect();
+            Kind::Slider {
+                value: usize::from(n),
+                stops,
+                enabled: true,
+                ends: true,
+            }
+        }
         "UI scale" => {
             let shown = m.ui_scale_pending.unwrap_or(m.settings.ui_scale);
             let stops: Vec<Cell> = sigma_core::settings::UI_SCALES
@@ -958,8 +996,212 @@ fn summary(m: &OptionsModel<'_>, cat: usize) -> String {
                 on_off(false)
             }
         }
+        SYNC_CATEGORY => {
+            if s.sync {
+                sync_status_text(&m.sync.status())
+            } else {
+                on_off(false)
+            }
+        }
         _ => m.version.to_owned(),
     }
+}
+
+/// A size as the Sync page writes it: KB, or MB from 1 MB.
+fn size_text(bytes: u64) -> String {
+    if bytes >= 1024 * 1024 {
+        format!("{} MB", bytes.div_ceil(1024 * 1024))
+    } else {
+        format!("{} KB", bytes.div_ceil(1024))
+    }
+}
+
+/// The one line for the state of sync, in the interface language.
+fn sync_status_text(st: &sigma_core::sync::Status) -> String {
+    use sigma_core::sync::Status;
+    match st {
+        Status::Off => tr("Off").into_owned(),
+        Status::NotInstalled => tr("Syncthing is not installed").into_owned(),
+        Status::Starting => tr("Starting").into_owned(),
+        Status::Failed(_) => tr("Stopped").into_owned(),
+        Status::NoLoopback => tr("Loopback network is down").into_owned(),
+        Status::NoDevices => tr("No devices yet").into_owned(),
+        Status::NotConnected => tr("No device connected").into_owned(),
+        Status::NotShared => tr("Not shared yet").into_owned(),
+        Status::WaitingFor(name, more) => {
+            let who = if *more > 0 {
+                format!("{name} +{more}")
+            } else {
+                name.clone()
+            };
+            tr_name("Waiting for {name} to accept", &who)
+        }
+        Status::Scanning => tr("Scanning").into_owned(),
+        Status::Syncing(files, bytes) => format!(
+            "{} \u{b7} {}",
+            tr(&format!("Syncing {files} files")),
+            tr(&size_text(*bytes))
+        ),
+        Status::UpToDate => tr("Up to date").into_owned(),
+        Status::Error(_) => tr("Error").into_owned(),
+    }
+}
+
+/// The reason under a Stopped or Error status, in small print (it is
+/// Syncthing's own English text, not translated).
+fn sync_status_note(st: &sigma_core::sync::Status) -> Option<String> {
+    use sigma_core::sync::Status;
+    match st {
+        Status::Failed(why) | Status::Error(why) => Some(why.clone()),
+        _ => None,
+    }
+}
+
+fn info_row(label: &'static str, value: String) -> Item {
+    Item::Row(DRow {
+        label: Cow::Borrowed(label),
+        kind: Kind::Info(value),
+        note: None,
+    })
+}
+
+fn accept_ignore(accept: Change, ignore: Change) -> Kind {
+    Kind::Inline(vec![
+        choice("Accept", accept, false),
+        choice("Ignore", ignore, false),
+    ])
+}
+
+/// The Sync page: the switch, and while it is on, the state of things, this
+/// device's ID, and whatever waits to be accepted.
+fn sync_items(m: &OptionsModel<'_>) -> Vec<Item> {
+    let v = m.sync;
+    let mut out = vec![
+        Item::Band("Syncthing"),
+        Item::Row(DRow {
+            label: Cow::Borrowed("Sync notes"),
+            kind: Kind::Check {
+                on: m.settings.sync,
+                change: Change::Sync(!m.settings.sync),
+            },
+            note: Some(Cow::Borrowed(
+                "Keeps the notes in step with your computers while Σscribe is open",
+            )),
+        }),
+    ];
+    if !m.settings.sync {
+        return out;
+    }
+    out.push(Item::Band("Status"));
+    let status = v.status();
+    out.push(info_row("Status", sync_status_text(&status)));
+    // The reason has a row of its own: a note under Status would run under
+    // the value.
+    if matches!(status, sigma_core::sync::Status::WaitingFor(..)) {
+        // What to do, translated (the reason below is Syncthing's own text).
+        out.push(Item::Row(DRow {
+            label: Cow::Borrowed("Next step"),
+            kind: Kind::Info(String::new()),
+            note: Some(Cow::Owned(
+                tr("Accept \u{201c}Σscribe notes\u{201d} in Syncthing on that device").into_owned(),
+            )),
+        }));
+    }
+    if let Some(why) = sync_status_note(&status) {
+        out.push(Item::Row(DRow {
+            label: Cow::Borrowed("Reason"),
+            kind: Kind::Info(String::new()),
+            note: Some(Cow::Owned(why)),
+        }));
+    }
+    if !v.peers.is_empty() {
+        out.push(info_row(
+            "Devices",
+            tr(&format!("{} of {} connected", v.connected(), v.peers.len())).into_owned(),
+        ));
+    }
+    out.push(info_row(
+        "Last sync",
+        v.last_sync
+            .clone()
+            .unwrap_or_else(|| tr("Never").into_owned()),
+    ));
+    if v.conflicts > 0 {
+        out.push(Item::Row(DRow {
+            label: Cow::Borrowed("Conflicts"),
+            kind: Kind::Info(tr(&format!("{} files", v.conflicts)).into_owned()),
+            note: Some(Cow::Borrowed("Look for conflict in the Files list")),
+        }));
+    }
+    if !v.device_id.is_empty() {
+        out.push(Item::Band("Device ID"));
+        for line in sigma_core::sync::model::id_lines(&v.device_id) {
+            out.push(Item::Row(DRow {
+                label: Cow::Borrowed("Device ID"),
+                kind: Kind::Block(line),
+                note: None,
+            }));
+        }
+        out.push(Item::Row(DRow {
+            label: Cow::Borrowed("Show QR code"),
+            kind: Kind::Open(SettingsPage::SyncQr),
+            note: None,
+        }));
+    }
+    if !v.pending_devices.is_empty() || !v.pending_folders.is_empty() {
+        out.push(Item::Band("Waiting for you"));
+    }
+    for (i, d) in v.pending_devices.iter().enumerate() {
+        let name = if d.name.is_empty() {
+            tr("New device").into_owned()
+        } else {
+            d.name.clone()
+        };
+        let first = d.id.split('-').next().unwrap_or(&d.id);
+        out.push(Item::Row(DRow {
+            label: Cow::Owned(name),
+            kind: accept_ignore(
+                Change::SyncAcceptDevice(i as u8),
+                Change::SyncIgnoreDevice(i as u8),
+            ),
+            note: Some(Cow::Owned(if d.address.is_empty() {
+                first.to_owned()
+            } else {
+                format!("{first} \u{b7} {}", d.address)
+            })),
+        }));
+    }
+    for (i, f) in v.pending_folders.iter().enumerate() {
+        let from = if f.device_name.is_empty() {
+            f.device.split('-').next().unwrap_or(&f.device)
+        } else {
+            &f.device_name
+        };
+        out.push(Item::Row(DRow {
+            label: Cow::Owned(if f.label.is_empty() {
+                f.id.clone()
+            } else {
+                f.label.clone()
+            }),
+            kind: accept_ignore(
+                Change::SyncAcceptFolder(i as u8),
+                Change::SyncIgnoreFolder(i as u8),
+            ),
+            note: Some(Cow::Owned(format!("{} {from}", tr("Folder from")))),
+        }));
+    }
+    // Pairing help points at the ID above, so it waits for the ID.
+    if !v.device_id.is_empty() && v.peers.is_empty() && v.pending_devices.is_empty() {
+        out.push(Item::Band("Pairing"));
+        out.push(Item::Row(DRow {
+            label: Cow::Borrowed("Add this device on your computer"),
+            kind: Kind::Info(String::new()),
+            note: Some(Cow::Borrowed(
+                "In Syncthing there choose Add Remote Device and enter the ID above",
+            )),
+        }));
+    }
+    out
 }
 
 /// The Plugins page: one switch per installed plugin, then what the
@@ -1098,7 +1340,9 @@ pub fn page_items(m: &OptionsModel<'_>) -> Vec<Item> {
             .map(|i| Item::Category(i, summary(m, i)))
             .collect(),
         SettingsPage::Category(PLUGINS_CATEGORY) => plugin_items(m),
+        SettingsPage::Category(SYNC_CATEGORY) => sync_items(m),
         SettingsPage::Plugin(i) => plugin_setting_items(m, i),
+        SettingsPage::SyncQr => vec![Item::Band("Device ID"), Item::Qr(m.sync.device_id.clone())],
         SettingsPage::Category(c) => {
             let mut out = Vec::new();
             for (band, rows) in CATEGORIES[c.min(CATEGORIES.len() - 1)].1 {
@@ -1137,6 +1381,7 @@ pub fn page_title(p: SettingsPage) -> &'static str {
         SettingsPage::Category(c) => CATEGORIES[c.min(CATEGORIES.len() - 1)].0,
         SettingsPage::Choice(_, l) => l,
         SettingsPage::Plugin(_) => CATEGORIES[PLUGINS_CATEGORY].0,
+        SettingsPage::SyncQr => "QR code",
     }
 }
 
@@ -1163,6 +1408,7 @@ pub fn parent(p: SettingsPage) -> Option<SettingsPage> {
         SettingsPage::Category(_) => Some(SettingsPage::Root),
         SettingsPage::Choice(c, _) => Some(SettingsPage::Category(c)),
         SettingsPage::Plugin(_) => Some(SettingsPage::Category(PLUGINS_CATEGORY)),
+        SettingsPage::SyncQr => Some(SettingsPage::Category(SYNC_CATEGORY)),
     }
 }
 
@@ -1373,8 +1619,15 @@ impl EditorScreen {
         // Split into sub-pages; a band never ends a page.
         let all = page_items(m);
         let slider_h = s.px(84.0);
+        // The QR code is as big as the page allows, at most 14 px a module.
+        let qr_h = |text: &str| {
+            let n = crate::qr::modules(text).map_or(21, |(n, _)| n);
+            let px = crate::qr::module_px(n, w - 2 * pad, bottom - top - band_h);
+            (n as i32 + 2 * crate::qr::QUIET) * px
+        };
         let item_h = |it: &Item| match it {
             Item::Band(_) => band_h,
+            Item::Qr(t) => qr_h(t),
             Item::Row(DRow {
                 kind: Kind::Slider { .. },
                 ..
@@ -1506,7 +1759,7 @@ impl EditorScreen {
                         },
                         Kind::Link(i) => OptionsHit::Help(*i),
                         Kind::Open(p) => OptionsHit::Open(*p),
-                        Kind::Info(_) | Kind::Muted(_) => OptionsHit::Nothing,
+                        Kind::Info(_) | Kind::Muted(_) | Kind::Block(_) => OptionsHit::Nothing,
                         Kind::Slider { stops, enabled, .. } => {
                             if !*enabled {
                                 return OptionsHit::Nothing;
@@ -1517,7 +1770,7 @@ impl EditorScreen {
                                 .map_or(OptionsHit::Nothing, OptionsHit::Change)
                         }
                     },
-                    Item::Band(_) => OptionsHit::Nothing,
+                    Item::Band(_) | Item::Qr(_) => OptionsHit::Nothing,
                 };
             }
         }
@@ -1568,7 +1821,7 @@ impl EditorScreen {
                     Kind::Pick(_) | Kind::Link(_) | Kind::Open(_) => {
                         out.push((d.label.to_string(), cells[0]));
                     }
-                    Kind::Info(_) | Kind::Muted(_) => {}
+                    Kind::Info(_) | Kind::Muted(_) | Kind::Block(_) => {}
                     Kind::Slider { stops, .. } => {
                         out.push((d.label.to_string(), cells[0]));
                         for (i, (cell, r)) in stops.iter().zip(&cells[1..]).enumerate() {
@@ -1582,7 +1835,7 @@ impl EditorScreen {
                         }
                     }
                 },
-                Item::Band(_) => {}
+                Item::Band(_) | Item::Qr(_) => {}
             }
         }
         // Names from the 1.4 sheet: `Layout/+` / `Layout/-` on the Layout
@@ -1656,7 +1909,9 @@ impl EditorScreen {
                 let n = ch.len() as i32;
                 Some(ch[(cur + d).rem_euclid(n) as usize].0.clone())
             }
-            SettingsPage::Choice(..) | SettingsPage::Plugin(_) => Some("Back".into()),
+            SettingsPage::Choice(..) | SettingsPage::Plugin(_) | SettingsPage::SyncQr => {
+                Some("Back".into())
+            }
             SettingsPage::Category(c) if c != cat => Some("Back".into()),
             SettingsPage::Category(_) => {
                 let here = self.options_controls(m);
@@ -1726,6 +1981,11 @@ impl EditorScreen {
                     );
                     continue;
                 }
+                Item::Qr(text) => {
+                    let n = crate::qr::modules(text).map_or(21, |(n, _)| n);
+                    let px = crate::qr::module_px(n, band.w, band.h);
+                    crate::qr::draw(c, text, band.x + band.w / 2, band.y, px);
+                }
                 Item::Category(i, sum) => {
                     self.fonts.draw(
                         c,
@@ -1744,6 +2004,13 @@ impl EditorScreen {
                     crate::radio::draw(c, s, cells[0], *on, t);
                 }
                 Item::Row(d) => {
+                    if let Kind::Block(text) = &d.kind {
+                        let tw = self.fonts.width(Face::AtkinsonBold, ui, text);
+                        let x = band.x as f32 + (band.w as f32 - tw) / 2.0;
+                        self.fonts
+                            .draw(c, Face::AtkinsonBold, ui, x, base, text, t.ink);
+                        continue;
+                    }
                     if let Some(note) = &d.note {
                         // Label up, the reason in small print under it.
                         let nb = mid + ui * 1.0;
@@ -1792,6 +2059,8 @@ impl EditorScreen {
                         Kind::Pick(v) => italic(c, &tr(v), t.ink),
                         Kind::Link(_) | Kind::Open(_) => italic(c, &tr("Open"), t.ink),
                         Kind::Info(v) => italic(c, v, t.mute),
+                        // Drawn above, across the row.
+                        Kind::Block(_) => {}
                         Kind::Muted(v) => italic(c, v, crate::slider::MUTED),
                         Kind::Slider {
                             stops,
@@ -1860,6 +2129,19 @@ impl EditorScreen {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn the_waiting_status_names_the_device_and_counts_the_rest() {
+        use sigma_core::sync::Status;
+        assert_eq!(
+            sync_status_text(&Status::WaitingFor("Joe".into(), 0)),
+            "Waiting for Joe to accept"
+        );
+        assert_eq!(
+            sync_status_text(&Status::WaitingFor("Joe".into(), 2)),
+            "Waiting for Joe +2 to accept"
+        );
+    }
+
     use super::*;
 
     fn model<'a>(
@@ -1880,10 +2162,12 @@ mod tests {
             focus: None,
             hw_samples: 0,
             light: None,
+            warmth: None,
             ui_scale_pending: None,
             plugins: &[],
             repository: &[],
             repo_note: "",
+            sync: &sigma_core::sync::model::NO_SYNC,
         }
     }
 

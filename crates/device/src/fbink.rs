@@ -42,6 +42,11 @@ pub struct KoboDevice {
     gsensor: bool,
     /// The front light (v1.12), when sysfs shows one.
     light: Option<crate::light::Light>,
+    /// The warm-to-cool mixer (v1.17), when sysfs shows one.
+    warmth: Option<crate::light::Warmth>,
+    /// What the light probe found, until the app asks for it to be logged
+    /// (the log is not on yet when the device opens).
+    light_report: Vec<String>,
 }
 
 impl KoboDevice {
@@ -162,6 +167,7 @@ impl KoboDevice {
             });
         }
         spawn_usb_watcher(tx, epoch);
+        let probe = crate::light::probe(std::path::Path::new(crate::light::ROOT));
         Ok(Self {
             otg: OtgSwitch::new(CHIPIDEA_ROLE),
             width: w,
@@ -171,27 +177,18 @@ impl KoboDevice {
             pointer_updates: 0,
             last_full: None,
             gsensor,
-            light: open_light(),
+            light: probe.light,
+            warmth: probe.warmth,
+            light_report: probe.report,
         })
     }
 }
 
-/// Finds the front light and logs what sysfs shows, so a wrong pick is easy
-/// to see in the log (v1.12).
-fn open_light() -> Option<crate::light::Light> {
-    let root = std::path::Path::new(crate::light::ROOT);
-    for line in crate::light::describe(root) {
-        sigma_core::info!("light", "sysfs {line}");
-    }
-    let l = crate::light::Light::find(root);
-    match &l {
-        Some(l) => sigma_core::info!("light", "using {} (step {:?})", l.name(), l.step()),
-        None => sigma_core::info!("light", "no front light found"),
-    }
-    l
-}
-
 impl Device for KoboDevice {
+    fn light_report(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.light_report)
+    }
+
     fn size(&self) -> (u32, u32) {
         (self.width, self.height)
     }
@@ -276,6 +273,24 @@ impl Device for KoboDevice {
             .ok_or_else(|| io::Error::other("no front light"))?;
         let r = l.set_step(step);
         sigma_core::info!("light", "{} -> step {step}: {r:?}", l.name());
+        r
+    }
+
+    fn has_warmth(&self) -> bool {
+        self.warmth.is_some()
+    }
+
+    fn warmth_step(&mut self) -> Option<u8> {
+        self.warmth.as_ref()?.step()
+    }
+
+    fn set_warmth(&mut self, step: u8) -> io::Result<()> {
+        let w = self
+            .warmth
+            .as_ref()
+            .ok_or_else(|| io::Error::other("no warmth mixer"))?;
+        let r = w.set_step(step);
+        sigma_core::info!("light", "warmth -> step {step}: {r:?}");
         r
     }
 

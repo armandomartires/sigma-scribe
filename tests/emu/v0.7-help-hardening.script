@@ -31,11 +31,11 @@ expect-mode write
 tap-on Help
 tap-on Close
 # Drawer after the touch-target audit (44 px heading rows and Filter).
-tap-on Contents
-tap-on To-dos
+pane Contents
+pane To-dos
 shot v0.7-drawer-targets
-tap-on Contents
-tap-on To-dos
+pane Contents
+pane To-dos
 # Rotation pass: every sheet in landscape, then back.
 tap-on Options
 tap-on Orientation/Landscape

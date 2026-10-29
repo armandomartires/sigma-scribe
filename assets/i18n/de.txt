@@ -836,6 +836,12 @@ Backlight
 = Hintergrundbeleuchtung
 Light
 = Licht
+Warmth
+= Wärme
+Warm
+= Warm
+Cool
+= Kalt
 Enhanced keyboard
 = Erweiterte Tastatur
 
@@ -983,3 +989,208 @@ Up to date
 Remove
 = Entfernen
 
+
+Trash
+= Papierkorb
+
+Trash ({n})
+= Papierkorb ({n})
+
+Restore
+= Wiederherstellen
+
+Empty trash
+= Papierkorb leeren
+
+Tap again to empty
+= Zum Leeren erneut tippen
+
+The trash is empty.
+= Der Papierkorb ist leer.
+
+Tap a note to restore it
+= Notiz antippen, um sie wiederherzustellen
+
+Restored to {name}
+= Wiederhergestellt nach {name}
+
+Trash emptied
+= Papierkorb geleert
+
+in {name}
+= in {name}
+
+Just now
+= Gerade eben
+
+{n} min ago
+= vor {n} Min.
+
+{n} h ago
+= vor {n} Std.
+
+Yesterday
+= Gestern
+
+{n} days ago
+= vor {n} Tagen
+
+# Settings -> Sync (v1.16)
+
+Sync
+= Sync
+
+Sync notes
+= Notizen synchronisieren
+
+Keeps the notes in step with your computers while Σscribe is open
+= Hält die Notizen mit deinen Computern abgeglichen, solange Σscribe geöffnet ist
+
+Status
+= Status
+
+Devices
+= Geräte
+
+Last sync
+= Letzter Abgleich
+
+Conflicts
+= Konflikte
+
+Look for conflict in the Files list
+= Suche conflict in der Dateiliste
+
+Device ID
+= Geräte-ID
+
+Waiting for you
+= Wartet auf dich
+
+Pairing
+= Koppeln
+
+Add this device on your computer
+= Füge dieses Gerät auf deinem Computer hinzu
+
+In Syncthing there choose Add Remote Device and enter the ID above
+= Wähle dort in Syncthing „Gerät hinzufügen“ und gib die ID oben ein
+
+Accept
+= Annehmen
+
+Ignore
+= Ignorieren
+
+New device
+= Neues Gerät
+
+Never
+= Nie
+
+Folder from
+= Ordner von
+
+Syncthing is not installed
+= Syncthing ist nicht installiert
+
+Starting
+= Startet
+
+Stopped
+= Gestoppt
+
+No devices yet
+= Noch keine Geräte
+
+No device connected
+= Kein Gerät verbunden
+
+Scanning
+= Durchsuche
+
+Syncing {n} files
+= Gleiche {n} Dateien ab
+
+{n} of {m} connected
+= {n} von {m} verbunden
+
+{n} files
+= {n} Dateien
+
+{n} KB
+= {n} KB
+
+{n} MB
+= {n} MB
+
+Loopback network is down
+= Das Loopback-Netzwerk ist ausgefallen
+
+Reason
+= Grund
+
+Show QR code
+= QR-Code anzeigen
+
+
+QR code
+= QR-Code
+
+Not shared yet
+= Noch nicht geteilt
+
+Waiting for {name} to accept
+= Warten auf Bestätigung von {name}
+
+Next step
+= Nächster Schritt
+
+Accept “Σscribe notes” in Syncthing on that device
+= „Σscribe notes“ in Syncthing auf diesem Gerät annehmen
+
+Wi-Fi
+= Wi-Fi
+
+Not connected
+= Nicht verbunden
+
+Connected
+= Verbunden
+
+Turning on…
+= Wird eingeschaltet…
+
+Turning off…
+= Wird ausgeschaltet…
+
+Connecting…
+= Verbindung wird hergestellt…
+
+Scanning…
+= Suche läuft…
+
+Scan again
+= Erneut suchen
+
+No networks found
+= Keine Netzwerke gefunden
+
+Password
+= Passwort
+
+
+A Wi-Fi password has 8 to 63 characters
+= Ein WLAN-Passwort hat 8 bis 63 Zeichen
+
+This kind of network is not supported here
+= Diese Art von Netzwerk wird hier nicht unterstützt
+
+Could not join: wrong password? Forget it and try again
+= Verbindung fehlgeschlagen: falsches Passwort? Netzwerk vergessen und erneut versuchen
+
+Joined, but the network gave no address
+= Verbunden, aber das Netzwerk hat keine Adresse vergeben
+
+Wi-Fi did not answer
+= WLAN antwortet nicht

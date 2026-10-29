@@ -8,6 +8,10 @@
 //! else any device that has both files, and logs every device it sees.
 //! `SIGMA_LIGHT_DEVICE=<name>` picks one by hand. The light keeps its
 //! level when the app leaves, as it does for the stock reader.
+//!
+//! The warm-to-cool mixer ([`Warmth`], v1.17) is a separate file, `color`
+//! in `tlc5947_bl` on the Forma. KOReader writes it as `10 - warmth` and
+//! never reads it back; see [`Warmth`].
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -135,6 +139,102 @@ impl Light {
     }
 }
 
+/// The mixer file of the Forma ("Frost"), under [`ROOT`].
+const MIXER: &str = "tlc5947_bl/color";
+
+/// Warmth steps above the coolest light (eleven stops, 0 to 10).
+pub const WARMTH_MAX: u8 = 10;
+
+/// The natural-light mixer: cool white (0) to warm orange ([`WARMTH_MAX`]).
+///
+/// The Forma's `tlc5947_bl/color` takes 0 to 10 and runs the wrong way
+/// round: 10 is cold and 0 is warm. KOReader (`frontend/device/kobo/device.lua`,
+/// the `KoboFrost` entry: `nl_min = 0`, `nl_max = 10`, `nl_inverted = true`;
+/// `frontend/device/sysfs_light.lua`, `setNaturalBrightness`) writes
+/// `nl_max - warmth`, with no dependence on the white light being on or on
+/// the order of the two writes. This does the same; the stock reader never
+/// reads the file back, so [`Warmth::step`] may find nothing readable.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Warmth {
+    file: PathBuf,
+}
+
+impl Warmth {
+    /// The mixer under `root`, if there is one.
+    #[must_use]
+    pub fn find(root: &Path) -> Option<Self> {
+        let file = root.join(MIXER);
+        file.exists().then_some(Self { file })
+    }
+
+    /// The mixer's path, for the log.
+    #[must_use]
+    pub fn path(&self) -> &Path {
+        &self.file
+    }
+
+    /// The file's value for a warmth step: the scale is inverted.
+    #[must_use]
+    pub fn step_to_value(step: u8) -> u8 {
+        WARMTH_MAX - step.min(WARMTH_MAX)
+    }
+
+    /// The current step, if the file can be read and holds a number.
+    #[must_use]
+    pub fn step(&self) -> Option<u8> {
+        let v = read_u32(&self.file)?;
+        let v = u8::try_from(v.min(u32::from(WARMTH_MAX))).ok()?;
+        Some(WARMTH_MAX - v)
+    }
+
+    /// Sets the mixer to `step`.
+    ///
+    /// # Errors
+    /// The `color` file could not be written.
+    pub fn set_step(&self, step: u8) -> io::Result<()> {
+        std::fs::write(&self.file, Self::step_to_value(step).to_string())
+    }
+}
+
+/// What the start-up probe found, and what to tell the log about it.
+///
+/// The probe runs when the device is opened, before the app has read its
+/// settings and switched the log on, so it cannot log then: the lines are
+/// kept and handed over later ([`crate::Device::light_report`]).
+#[derive(Debug, Default)]
+pub struct Probe {
+    /// The front light, if sysfs shows one.
+    pub light: Option<Light>,
+    /// The warm-to-cool mixer, if there is one.
+    pub warmth: Option<Warmth>,
+    /// What sysfs shows and what was picked, one line each.
+    pub report: Vec<String>,
+}
+
+/// Looks for the front light and the warmth mixer under `root`.
+#[must_use]
+pub fn probe(root: &Path) -> Probe {
+    let mut report: Vec<String> = describe(root)
+        .into_iter()
+        .map(|l| format!("sysfs {l}"))
+        .collect();
+    let light = Light::find(root);
+    report.push(match &light {
+        Some(l) => format!("using {} (step {:?})", l.name(), l.step()),
+        None => "no front light found".to_owned(),
+    });
+    let warmth = Warmth::find(root);
+    report.push(match &warmth {
+        Some(w) => format!("warmth mixer {} (step {:?})", w.path().display(), w.step()),
+        None => "no warmth mixer found".to_owned(),
+    });
+    Probe {
+        light,
+        warmth,
+        report,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -198,5 +298,76 @@ mod tests {
         assert_eq!(l.step(), Some(MAX_STEP));
         l.set_step(0).unwrap();
         assert_eq!(l.step(), Some(0));
+    }
+
+    #[test]
+    fn the_mixer_is_inverted_like_koreaders() {
+        let root = fake("mixer", &[]);
+        assert!(Warmth::find(&root).is_none(), "no file, no mixer");
+        let d = root.join("tlc5947_bl");
+        std::fs::create_dir_all(&d).unwrap();
+        std::fs::write(d.join("color"), "10").unwrap();
+        let w = Warmth::find(&root).unwrap();
+        assert_eq!(w.step(), Some(0), "10 in the file is the coolest");
+        w.set_step(WARMTH_MAX).unwrap();
+        assert_eq!(std::fs::read_to_string(d.join("color")).unwrap(), "0");
+        assert_eq!(w.step(), Some(WARMTH_MAX));
+        w.set_step(3).unwrap();
+        assert_eq!(std::fs::read_to_string(d.join("color")).unwrap(), "7");
+        assert_eq!(w.step(), Some(3));
+        w.set_step(200).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(d.join("color")).unwrap(),
+            "0",
+            "clamped"
+        );
+        for s in 0..=WARMTH_MAX {
+            w.set_step(s).unwrap();
+            assert_eq!(w.step(), Some(s));
+        }
+    }
+
+    #[test]
+    fn an_unreadable_mixer_has_no_step() {
+        let root = fake("mixer-bad", &[]);
+        let d = root.join("tlc5947_bl");
+        std::fs::create_dir_all(&d).unwrap();
+        std::fs::write(d.join("color"), "warm").unwrap();
+        let w = Warmth::find(&root).unwrap();
+        assert_eq!(w.step(), None);
+        std::fs::write(d.join("color"), "999").unwrap();
+        assert_eq!(w.step(), Some(0), "an out-of-range value is the coolest");
+    }
+
+    #[test]
+    fn the_probe_reports_what_it_found_for_the_log() {
+        let root = fake(
+            "probe",
+            &[("mxc_msp430.0", 0, 100), ("tlc5947_bl", 0, 4096)],
+        );
+        std::fs::write(root.join(MIXER), "7").unwrap();
+        let p = probe(&root);
+        assert!(p.light.is_some() && p.warmth.is_some());
+        let text = p.report.join("\n");
+        assert!(
+            text.contains("sysfs mxc_msp430.0 brightness 0 of 100"),
+            "{text}"
+        );
+        assert!(text.contains("using "), "{text}");
+        assert!(
+            text.contains("tlc5947_bl/color (step Some(3))"),
+            "10 - 7: {text}"
+        );
+        // A file that does not hold a number is found but has no step.
+        std::fs::write(root.join(MIXER), "x").unwrap();
+        assert!(probe(&root).report.join("\n").contains("(step None)"));
+        // No mixer, no light: both said.
+        let none = probe(&root.join("missing"));
+        assert!(none.light.is_none() && none.warmth.is_none());
+        assert_eq!(
+            none.report,
+            ["no front light found", "no warmth mixer found"]
+        );
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

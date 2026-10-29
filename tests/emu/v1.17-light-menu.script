@@ -1,0 +1,46 @@
+# v1.17: the front-light button in the title bar opens a menu with the
+# Backlight and Warmth sliders (the Settings → Display ones); every step is
+# one tap and the menu stays open until a tap elsewhere or Escape.
+# Run with an empty notes folder: `SIGMA_NOTES=$(mktemp -d) scripts/sim.sh
+# --headless tests/emu/v1.17-light-menu.script docs/screenshots/v1.17`.
+open-fixture tests/emu/fixtures/markdown-tour.md
+# No light: no button (the title bar is as before).
+shot v1.17-light-none
+# A light without a mixer: Backlight only.
+light 4
+shot v1.17-light-button
+tap-on Light
+shot v1.17-light-menu-backlight-only
+tap-on Light:Backlight/Full
+expect-light 8
+esc
+# With the mixer: both sliders.
+warmth 2
+tap-on Light
+shot v1.17-light-menu
+tap-on Light:Warmth/Warm
+expect-warmth 10
+expect-setting warmth=10
+tap-on Light:Warmth/Cool
+expect-warmth 0
+tap-on Light:Warmth/60 %
+expect-warmth 6
+expect-setting warmth=6
+tap-on Light:Backlight/50 %
+expect-light 4
+shot v1.17-light-menu-set
+# Off: the sun goes dim.
+tap-on Light:Backlight/Off
+expect-light 0
+shot v1.17-light-menu-off
+# A tap elsewhere closes it and does nothing else.
+tap 300 900
+shot v1.17-light-menu-closed
+# In preview too, and in landscape.
+tap-on Preview
+tap-on Light
+tap-on Light:Backlight/75 %
+expect-light 6
+shot v1.17-light-menu-preview
+esc
+tap-on Pencil

@@ -22,6 +22,18 @@ fn tap(app: &mut App, name: &str) {
     app.handle(Event::Tap { x, y });
 }
 
+/// Turns the Settings pages until `name` is on screen: in landscape the root
+/// list has ten categories, one more than fit, so Help & about is on its
+/// second page.
+fn reach(app: &mut App, name: &str) {
+    for _ in 0..4 {
+        if app.control_centre(name).is_some() {
+            return;
+        }
+        app.handle(Event::PageTurn { forward: true });
+    }
+}
+
 #[test]
 fn aa_opens_the_root_and_back_esc_walk_up() {
     let mut app = App::new(1440, 1920, fresh("nav"));
@@ -49,6 +61,7 @@ fn aa_opens_the_root_and_back_esc_walk_up() {
     assert!(!app.options, "Esc at the root closes");
     tap(&mut app, "Options");
     assert_eq!(app.settings_page, SettingsPage::Root, "reopens at the root");
+    reach(&mut app, "Help & about");
     tap(&mut app, "Help & about");
     tap(&mut app, "App info");
     assert!(!app.options && app.help.is_some());

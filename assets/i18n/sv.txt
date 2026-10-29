@@ -836,6 +836,12 @@ Backlight
 = Bakgrundsbelysning
 Light
 = Ljus
+Warmth
+= Värme
+Warm
+= Varm
+Cool
+= Kall
 Enhanced keyboard
 = Utökat tangentbord
 
@@ -983,3 +989,208 @@ Up to date
 Remove
 = Ta bort
 
+
+Trash
+= Papperskorg
+
+Trash ({n})
+= Papperskorg ({n})
+
+Restore
+= Återställ
+
+Empty trash
+= Töm papperskorgen
+
+Tap again to empty
+= Tryck igen för att tömma
+
+The trash is empty.
+= Papperskorgen är tom.
+
+Tap a note to restore it
+= Tryck på en anteckning för att återställa den
+
+Restored to {name}
+= Återställd till {name}
+
+Trash emptied
+= Papperskorgen är tömd
+
+in {name}
+= i {name}
+
+Just now
+= Nyss
+
+{n} min ago
+= för {n} min sedan
+
+{n} h ago
+= för {n} tim sedan
+
+Yesterday
+= I går
+
+{n} days ago
+= för {n} dagar sedan
+
+# Settings -> Sync (v1.16)
+
+Sync
+= Synkronisering
+
+Sync notes
+= Synkronisera anteckningar
+
+Keeps the notes in step with your computers while Σscribe is open
+= Håller anteckningarna i takt med dina datorer medan Σscribe är öppet
+
+Status
+= Status
+
+Devices
+= Enheter
+
+Last sync
+= Senaste synkronisering
+
+Conflicts
+= Konflikter
+
+Look for conflict in the Files list
+= Leta efter conflict i fillistan
+
+Device ID
+= Enhets-ID
+
+Waiting for you
+= Väntar på dig
+
+Pairing
+= Parkoppling
+
+Add this device on your computer
+= Lägg till den här enheten på din dator
+
+In Syncthing there choose Add Remote Device and enter the ID above
+= Välj Lägg till fjärrenhet i Syncthing där och ange ID:t ovan
+
+Accept
+= Godkänn
+
+Ignore
+= Ignorera
+
+New device
+= Ny enhet
+
+Never
+= Aldrig
+
+Folder from
+= Mapp från
+
+Syncthing is not installed
+= Syncthing är inte installerat
+
+Starting
+= Startar
+
+Stopped
+= Stoppad
+
+No devices yet
+= Inga enheter ännu
+
+No device connected
+= Ingen enhet ansluten
+
+Scanning
+= Skannar
+
+Syncing {n} files
+= Synkroniserar {n} filer
+
+{n} of {m} connected
+= {n} av {m} anslutna
+
+{n} files
+= {n} filer
+
+{n} KB
+= {n} KB
+
+{n} MB
+= {n} MB
+
+Loopback network is down
+= Loopback-nätverket är nere
+
+Reason
+= Orsak
+
+Show QR code
+= Visa QR-kod
+
+
+QR code
+= QR-kod
+
+Not shared yet
+= Inte delad än
+
+Waiting for {name} to accept
+= Väntar på att {name} ska acceptera
+
+Next step
+= Nästa steg
+
+Accept “Σscribe notes” in Syncthing on that device
+= Acceptera ”Σscribe notes” i Syncthing på den enheten
+
+Wi-Fi
+= Wi-Fi
+
+Not connected
+= Ej ansluten
+
+Connected
+= Ansluten
+
+Turning on…
+= Slår på…
+
+Turning off…
+= Stänger av…
+
+Connecting…
+= Ansluter…
+
+Scanning…
+= Söker…
+
+Scan again
+= Sök igen
+
+No networks found
+= Inga nätverk hittades
+
+Password
+= Lösenord
+
+
+A Wi-Fi password has 8 to 63 characters
+= Ett Wi-Fi-lösenord har 8 till 63 tecken
+
+This kind of network is not supported here
+= Den här typen av nätverk stöds inte här
+
+Could not join: wrong password? Forget it and try again
+= Kunde inte ansluta: fel lösenord? Glöm nätverket och försök igen
+
+Joined, but the network gave no address
+= Ansluten, men nätverket gav ingen adress
+
+Wi-Fi did not answer
+= Wi-Fi svarar inte

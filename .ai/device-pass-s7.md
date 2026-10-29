@@ -23,11 +23,14 @@ With the Logitech K400 Plus receiver on the USB adapter (powered hub if the Form
 3. Read `.adds/sigma-scribe/log/sigma-scribe.log`: `preview layout of <note> (<bytes> bytes): <n> ms`.
 4. Put the numbers in `docs/perf.md` next to the desktop table (about 60 ms per 100 KB there; the Forma is expected to be 8 to 10 times slower, so about 0.5 s per 100 KB).
 
-## 7.4 Backlight colour: what does `tlc5947_bl` do?
-The Forma lists two backlight devices, `mxc_msp430.0` (brightness, 0 to 100, confirmed) and `tlc5947_bl` (0 to 4096). Before a warm/cool slider can be built, someone has to see what the second one does. With your yes, from a shell on the Forma or over telnet/ssh:
+## 7.4 Backlight colour: Display → Warmth
+KOReader's Forma ("Frost") entry settles what the second backlight device is for (`frontend/device/kobo/device.lua`, `KoboFrost`): the natural-light mixer is `/sys/class/backlight/tlc5947_bl/color`, range 0 to 10, **inverted** (10 is cold, 0 is warm), written independently of the white light on `mxc_msp430.0` (`frontend/device/sysfs_light.lua`, `setNaturalBrightness`). The slider is built on that; there is no shell on the Forma, so the slider is the device check.
 
-    cat /sys/class/backlight/tlc5947_bl/brightness
-    echo 2048 > /sys/class/backlight/tlc5947_bl/brightness   # watch the light
-    echo 0 > /sys/class/backlight/tlc5947_bl/brightness      # put it back (or the value cat printed)
+With the build installed (not before your yes), Settings → Display → Light:
+1. The Warmth row is there under Backlight, with Cool on the left and Warm on the right. If it is missing, the log has `light: no warmth mixer found` and the mixer file is not where KOReader says.
+2. With the light on (Backlight about 50 %), move Warmth from Cool to Warm. **Cool should look white, Warm should look orange**, with the change visible by the middle. If it is the other way round, the inversion is wrong: report it, do not turn it round by hand.
+3. Leave Settings, quit, start again: the light keeps its colour, and the slider shows the same stop (the step is saved and written at start).
+4. Turn Backlight to Off, move Warmth, turn Backlight back up: the colour should follow (KOReader writes the mixer whatever the white light does).
+5. In `sigma-scribe.log`: `light: warmth mixer /sys/class/backlight/tlc5947_bl/color (step …)` at start, just after the `logging on` line (`Some(n)` if the file reads back, `None` if not; Logging must be on before the start, or these lines are not written), one `light: warmth -> step n: Ok(())` per stop and no repeats while dragging.
 
-Note the result in `.ai/GOALS.md` (7.4): which end of the range is warm, and whether it needs `mxc_msp430.0` on to be visible.
+Note in `.ai/GOALS.md` (7.4): which end is orange, and whether the file reads back (`step Some(..)` in the start line).

@@ -1,0 +1,70 @@
+# v1.17: the Wi-Fi button in the title bar and its menu: the switch, the
+# network joined and its address, the networks found (signal, lock, a cross
+# to forget a saved one), a password typed in the title bar, and the same in
+# landscape. The radio is the pretend one (`wifi-demo`): the app on the
+# Forma drives wpa_supplicant instead.
+# Run with an empty notes folder: `SIGMA_NOTES=$(mktemp -d) scripts/sim.sh
+# --headless tests/emu/v1.17-wifi.script docs/screenshots/v1.17`.
+open-fixture tests/emu/fixtures/markdown-tour.md
+wifi-demo
+expect-wifi off
+shot v1.17-wifi-title-off
+tap-on Wi-Fi
+shot v1.17-wifi-menu-off
+tap-on WifiSwitch
+expect-wifi joined:Home
+shot v1.17-wifi-menu-joined
+# An open network joins with one tap; a saved one does too.
+tap-on Net:Café Central
+expect-wifi joined:Café Central
+tap-on Net:Home
+expect-wifi joined:Home
+# A network that cannot be joined here says so.
+tap-on Net:Campus
+expect-wifi failure
+shot v1.17-wifi-unsupported
+# A network with a password: the title bar is the field, the keyboard is up.
+tap-on Net:Office-5G
+shot v1.17-wifi-password-empty
+hw correct horse
+shot v1.17-wifi-password-hidden
+tap-on ShowPassword
+shot v1.17-wifi-password-shown
+tap-on OK
+expect-wifi joined:Office-5G
+expect-wifi saved:Office-5G
+shot v1.17-wifi-menu-office
+# A wrong password is refused and the network is not kept.
+tap-on Net:Neighbour
+hw wrong-password
+tap-on OK
+expect-wifi failure
+expect-wifi unsaved:Neighbour
+expect-wifi joined:Office-5G
+shot v1.17-wifi-wrong-password
+# Forget a saved network; one out of range leaves the list.
+tap-on Forget:Home
+expect-wifi unsaved:Home
+tap-on Forget:Holiday house
+shot v1.17-wifi-forgotten
+tap-on WifiSwitch
+expect-wifi off
+shot v1.17-wifi-menu-switched-off
+tap-on Wi-Fi
+shot v1.17-wifi-title-off-again
+# Landscape: the menu fits under the title bar and the bar does not overflow.
+tap-on Options
+tap-on Orientation/Landscape
+tap-on Close
+tap-on Wi-Fi
+tap-on WifiSwitch
+shot v1.17-wifi-landscape-menu
+tap-on Wi-Fi
+# In preview the button and menu work too.
+tap-on Options
+tap-on Orientation/Portrait
+tap-on Close
+tap-on Eye
+expect-mode preview
+tap-on Wi-Fi
+shot v1.17-wifi-preview-menu

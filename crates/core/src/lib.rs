@@ -26,6 +26,7 @@ pub mod pluginpkg;
 pub mod plugins;
 pub mod settings;
 pub mod store;
+pub mod sync;
 pub mod text;
 pub mod viet;
 pub mod wrap;
@@ -33,7 +34,7 @@ pub mod zh;
 
 pub use buffer::Buffer;
 pub use keyboard::{Key, KeyAction, Keyboard, Layer};
-pub use library::{Entry, Kind, Library, NotePath};
+pub use library::{Entry, Kind, Library, NotePath, Trashed};
 pub use settings::{Change, Settings};
 pub use store::{Autosave, FsNoteStore, MemoryNoteStore, NoteStore, SaveState};
 pub use wrap::{wrap, MonoMeasure, TextMeasure, VisualLine};

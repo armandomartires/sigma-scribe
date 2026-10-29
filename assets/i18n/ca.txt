@@ -836,6 +836,12 @@ Backlight
 = Retroil·luminació
 Light
 = Llum
+Warmth
+= Calidesa
+Warm
+= Càlida
+Cool
+= Freda
 Enhanced keyboard
 = Teclat avançat
 
@@ -983,3 +989,208 @@ Up to date
 Remove
 = Elimina
 
+
+Trash
+= Paperera
+
+Trash ({n})
+= Paperera ({n})
+
+Restore
+= Restaura
+
+Empty trash
+= Buida la paperera
+
+Tap again to empty
+= Torna a tocar per buidar
+
+The trash is empty.
+= La paperera és buida.
+
+Tap a note to restore it
+= Toca una nota per restaurar-la
+
+Restored to {name}
+= Restaurada a {name}
+
+Trash emptied
+= Paperera buidada
+
+in {name}
+= a {name}
+
+Just now
+= Ara mateix
+
+{n} min ago
+= fa {n} min
+
+{n} h ago
+= fa {n} h
+
+Yesterday
+= Ahir
+
+{n} days ago
+= fa {n} dies
+
+# Settings -> Sync (v1.16)
+
+Sync
+= Sincronització
+
+Sync notes
+= Sincronitza les notes
+
+Keeps the notes in step with your computers while Σscribe is open
+= Manté les notes al dia amb els teus ordinadors mentre Σscribe és obert
+
+Status
+= Estat
+
+Devices
+= Dispositius
+
+Last sync
+= Última sincronització
+
+Conflicts
+= Conflictes
+
+Look for conflict in the Files list
+= Cerca conflict a la llista de fitxers
+
+Device ID
+= ID del dispositiu
+
+Waiting for you
+= Esperant la teva resposta
+
+Pairing
+= Aparellament
+
+Add this device on your computer
+= Afegeix aquest dispositiu al teu ordinador
+
+In Syncthing there choose Add Remote Device and enter the ID above
+= A Syncthing tria Afegeix un dispositiu remot i introdueix l'ID de dalt
+
+Accept
+= Accepta
+
+Ignore
+= Ignora
+
+New device
+= Dispositiu nou
+
+Never
+= Mai
+
+Folder from
+= Carpeta de
+
+Syncthing is not installed
+= Syncthing no està instal·lat
+
+Starting
+= Iniciant
+
+Stopped
+= Aturat
+
+No devices yet
+= Encara no hi ha dispositius
+
+No device connected
+= Cap dispositiu connectat
+
+Scanning
+= Analitzant
+
+Syncing {n} files
+= Sincronitzant {n} fitxers
+
+{n} of {m} connected
+= {n} de {m} connectats
+
+{n} files
+= {n} fitxers
+
+{n} KB
+= {n} KB
+
+{n} MB
+= {n} MB
+
+Loopback network is down
+= La xarxa de bucle local està caiguda
+
+Reason
+= Motiu
+
+Show QR code
+= Mostra el codi QR
+
+
+QR code
+= Codi QR
+
+Not shared yet
+= Encara no compartit
+
+Waiting for {name} to accept
+= Esperant que {name} accepti
+
+Next step
+= Pas següent
+
+Accept “Σscribe notes” in Syncthing on that device
+= Accepta «Σscribe notes» al Syncthing d’aquest dispositiu
+
+Wi-Fi
+= Wi-Fi
+
+Not connected
+= No connectat
+
+Connected
+= Connectat
+
+Turning on…
+= S'està activant…
+
+Turning off…
+= S'està desactivant…
+
+Connecting…
+= S'està connectant…
+
+Scanning…
+= S'està cercant…
+
+Scan again
+= Torna a cercar
+
+No networks found
+= No s'ha trobat cap xarxa
+
+Password
+= Contrasenya
+
+
+A Wi-Fi password has 8 to 63 characters
+= Una contrasenya Wi-Fi té de 8 a 63 caràcters
+
+This kind of network is not supported here
+= Aquest tipus de xarxa no és compatible aquí
+
+Could not join: wrong password? Forget it and try again
+= No s'ha pogut connectar: contrasenya incorrecta? Oblida la xarxa i torna-ho a provar
+
+Joined, but the network gave no address
+= Connectat, però la xarxa no ha donat cap adreça
+
+Wi-Fi did not answer
+= El Wi-Fi no respon

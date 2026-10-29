@@ -837,6 +837,12 @@ Backlight
 = Rétroéclairage
 Light
 = Lumière
+Warmth
+= Chaleur
+Warm
+= Chaude
+Cool
+= Froide
 Enhanced keyboard
 = Clavier amélioré
 
@@ -984,3 +990,208 @@ Up to date
 Remove
 = Supprimer
 
+
+Trash
+= Corbeille
+
+Trash ({n})
+= Corbeille ({n})
+
+Restore
+= Restaurer
+
+Empty trash
+= Vider la corbeille
+
+Tap again to empty
+= Touchez encore pour vider
+
+The trash is empty.
+= La corbeille est vide.
+
+Tap a note to restore it
+= Touchez une note pour la restaurer
+
+Restored to {name}
+= Restaurée dans {name}
+
+Trash emptied
+= Corbeille vidée
+
+in {name}
+= dans {name}
+
+Just now
+= À l'instant
+
+{n} min ago
+= il y a {n} min
+
+{n} h ago
+= il y a {n} h
+
+Yesterday
+= Hier
+
+{n} days ago
+= il y a {n} jours
+
+# Settings -> Sync (v1.16)
+
+Sync
+= Synchronisation
+
+Sync notes
+= Synchroniser les notes
+
+Keeps the notes in step with your computers while Σscribe is open
+= Garde les notes à jour avec vos ordinateurs tant que Σscribe est ouvert
+
+Status
+= État
+
+Devices
+= Appareils
+
+Last sync
+= Dernière synchro
+
+Conflicts
+= Conflits
+
+Look for conflict in the Files list
+= Cherchez conflict dans la liste des fichiers
+
+Device ID
+= ID de l'appareil
+
+Waiting for you
+= En attente de vous
+
+Pairing
+= Jumelage
+
+Add this device on your computer
+= Ajoutez cet appareil sur votre ordinateur
+
+In Syncthing there choose Add Remote Device and enter the ID above
+= Dans Syncthing, choisissez Ajouter un appareil distant et entrez l'ID ci-dessus
+
+Accept
+= Accepter
+
+Ignore
+= Ignorer
+
+New device
+= Nouvel appareil
+
+Never
+= Jamais
+
+Folder from
+= Dossier de
+
+Syncthing is not installed
+= Syncthing n'est pas installé
+
+Starting
+= Démarrage
+
+Stopped
+= Arrêté
+
+No devices yet
+= Aucun appareil pour l'instant
+
+No device connected
+= Aucun appareil connecté
+
+Scanning
+= Analyse
+
+Syncing {n} files
+= Synchronisation de {n} fichiers
+
+{n} of {m} connected
+= {n} sur {m} connectés
+
+{n} files
+= {n} fichiers
+
+{n} KB
+= {n} Ko
+
+{n} MB
+= {n} Mo
+
+Loopback network is down
+= Le réseau de bouclage est inactif
+
+Reason
+= Raison
+
+Show QR code
+= Afficher le code QR
+
+
+QR code
+= Code QR
+
+Not shared yet
+= Pas encore partagé
+
+Waiting for {name} to accept
+= En attente de l’acceptation par {name}
+
+Next step
+= Étape suivante
+
+Accept “Σscribe notes” in Syncthing on that device
+= Acceptez « Σscribe notes » dans Syncthing sur cet appareil
+
+Wi-Fi
+= Wi-Fi
+
+Not connected
+= Non connecté
+
+Connected
+= Connecté
+
+Turning on…
+= Activation…
+
+Turning off…
+= Désactivation…
+
+Connecting…
+= Connexion…
+
+Scanning…
+= Recherche…
+
+Scan again
+= Rechercher à nouveau
+
+No networks found
+= Aucun réseau trouvé
+
+Password
+= Mot de passe
+
+
+A Wi-Fi password has 8 to 63 characters
+= Un mot de passe Wi-Fi compte de 8 à 63 caractères
+
+This kind of network is not supported here
+= Ce type de réseau n'est pas pris en charge ici
+
+Could not join: wrong password? Forget it and try again
+= Connexion impossible : mauvais mot de passe ? Oubliez le réseau et réessayez
+
+Joined, but the network gave no address
+= Connecté, mais le réseau n'a donné aucune adresse
+
+Wi-Fi did not answer
+= Le Wi-Fi ne répond pas

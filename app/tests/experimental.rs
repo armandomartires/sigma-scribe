@@ -28,10 +28,12 @@ fn rows(s: &Settings, page: SettingsPage) -> Vec<&'static str> {
         focus: None,
         hw_samples: 0,
         light: None,
+        warmth: None,
         ui_scale_pending: None,
         plugins: &[],
         repository: &[],
         repo_note: "",
+        sync: &sigma_core::sync::model::NO_SYNC,
     };
     page_items(&m)
         .into_iter()
@@ -142,10 +144,12 @@ fn the_switch_is_a_checkbox_row() {
         focus: None,
         hw_samples: 0,
         light: None,
+        warmth: None,
         ui_scale_pending: None,
         plugins: &[],
         repository: &[],
         repo_note: "",
+        sync: &sigma_core::sync::model::NO_SYNC,
     };
     let row = display_row(&m, "Experimental features").unwrap();
     assert!(matches!(row.kind, Kind::Check { on: false, .. }));
@@ -158,7 +162,7 @@ use sigma_device::desktop::DesktopDevice;
 use sigma_device::{Device, Event, Phase, Refresh};
 use sigma_scribe::App;
 
-fn display_rows(light: Option<u8>) -> Vec<(&'static str, Option<usize>)> {
+fn display_rows(light: Option<u8>, warmth: Option<u8>) -> Vec<(&'static str, Option<usize>)> {
     let s = Settings::default();
     let kb = sigma_core::keyboard::Keyboard::default();
     let m = OptionsModel {
@@ -173,10 +177,12 @@ fn display_rows(light: Option<u8>) -> Vec<(&'static str, Option<usize>)> {
         focus: None,
         hw_samples: 0,
         light,
+        warmth,
         ui_scale_pending: None,
         plugins: &[],
         repository: &[],
         repo_note: "",
+        sync: &sigma_core::sync::model::NO_SYNC,
     };
     page_items(&m)
         .into_iter()
@@ -198,9 +204,9 @@ fn display_rows(light: Option<u8>) -> Vec<(&'static str, Option<usize>)> {
 
 #[test]
 fn the_backlight_slider_is_shown_only_when_the_device_has_a_light() {
-    let none = display_rows(None);
+    let none = display_rows(None, None);
     assert!(none.iter().all(|(l, _)| *l != "Backlight"));
-    let some = display_rows(Some(3));
+    let some = display_rows(Some(3), None);
     assert!(some.contains(&("Backlight", Some(3))));
 }
 

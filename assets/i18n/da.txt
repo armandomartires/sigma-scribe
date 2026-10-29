@@ -836,6 +836,12 @@ Backlight
 = Baggrundslys
 Light
 = Lys
+Warmth
+= Varme
+Warm
+= Varm
+Cool
+= Kold
 Enhanced keyboard
 = Udvidet tastatur
 
@@ -983,3 +989,208 @@ Up to date
 Remove
 = Fjern
 
+
+Trash
+= Papirkurv
+
+Trash ({n})
+= Papirkurv ({n})
+
+Restore
+= Gendan
+
+Empty trash
+= Tøm papirkurv
+
+Tap again to empty
+= Tryk igen for at tømme
+
+The trash is empty.
+= Papirkurven er tom.
+
+Tap a note to restore it
+= Tryk på en note for at gendanne den
+
+Restored to {name}
+= Gendannet til {name}
+
+Trash emptied
+= Papirkurven er tømt
+
+in {name}
+= i {name}
+
+Just now
+= Lige nu
+
+{n} min ago
+= for {n} min. siden
+
+{n} h ago
+= for {n} t. siden
+
+Yesterday
+= I går
+
+{n} days ago
+= for {n} dage siden
+
+# Settings -> Sync (v1.16)
+
+Sync
+= Synkronisering
+
+Sync notes
+= Synkronisér noter
+
+Keeps the notes in step with your computers while Σscribe is open
+= Holder noterne ajour med dine computere, mens Σscribe er åben
+
+Status
+= Status
+
+Devices
+= Enheder
+
+Last sync
+= Seneste synkronisering
+
+Conflicts
+= Konflikter
+
+Look for conflict in the Files list
+= Søg efter conflict i fillisten
+
+Device ID
+= Enheds-ID
+
+Waiting for you
+= Venter på dig
+
+Pairing
+= Parring
+
+Add this device on your computer
+= Tilføj denne enhed på din computer
+
+In Syncthing there choose Add Remote Device and enter the ID above
+= Vælg Tilføj fjernenhed i Syncthing dér, og skriv ID'et ovenfor
+
+Accept
+= Acceptér
+
+Ignore
+= Ignorér
+
+New device
+= Ny enhed
+
+Never
+= Aldrig
+
+Folder from
+= Mappe fra
+
+Syncthing is not installed
+= Syncthing er ikke installeret
+
+Starting
+= Starter
+
+Stopped
+= Stoppet
+
+No devices yet
+= Ingen enheder endnu
+
+No device connected
+= Ingen enhed forbundet
+
+Scanning
+= Scanner
+
+Syncing {n} files
+= Synkroniserer {n} filer
+
+{n} of {m} connected
+= {n} af {m} forbundet
+
+{n} files
+= {n} filer
+
+{n} KB
+= {n} KB
+
+{n} MB
+= {n} MB
+
+Loopback network is down
+= Loopback-netværket er nede
+
+Reason
+= Årsag
+
+Show QR code
+= Vis QR-kode
+
+
+QR code
+= QR-kode
+
+Not shared yet
+= Endnu ikke delt
+
+Waiting for {name} to accept
+= Venter på at {name} accepterer
+
+Next step
+= Næste skridt
+
+Accept “Σscribe notes” in Syncthing on that device
+= Accepter “Σscribe notes” i Syncthing på den enhed
+
+Wi-Fi
+= Wi-Fi
+
+Not connected
+= Ikke forbundet
+
+Connected
+= Forbundet
+
+Turning on…
+= Tænder…
+
+Turning off…
+= Slukker…
+
+Connecting…
+= Forbinder…
+
+Scanning…
+= Søger…
+
+Scan again
+= Søg igen
+
+No networks found
+= Ingen netværk fundet
+
+Password
+= Adgangskode
+
+
+A Wi-Fi password has 8 to 63 characters
+= En Wi-Fi-adgangskode har 8 til 63 tegn
+
+This kind of network is not supported here
+= Denne type netværk understøttes ikke her
+
+Could not join: wrong password? Forget it and try again
+= Kunne ikke forbinde: forkert adgangskode? Glem netværket og prøv igen
+
+Joined, but the network gave no address
+= Forbundet, men netværket gav ingen adresse
+
+Wi-Fi did not answer
+= Wi-Fi svarer ikke

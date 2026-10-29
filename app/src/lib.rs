@@ -26,6 +26,7 @@ mod handwriting;
 mod help;
 mod ink;
 mod keyboard;
+mod light_menu;
 mod nav;
 mod paged_bar;
 mod perf;
@@ -39,6 +40,8 @@ mod rotation;
 mod script;
 mod settings;
 mod splash;
+mod sync;
+mod wifi;
 
 use crate::files::RenameTarget;
 use crate::ink::ReadInk;
@@ -61,6 +64,7 @@ pub use pointer::{
 pub use preview::PreviewState;
 pub use rotation::{TILT_STABLE_MS, TILT_TYPING_PAUSE_MS};
 pub use splash::Splash;
+pub use sync::{sync_config, syncthing_binary, syncthing_home};
 
 fn merge(a: Option<Refresh>, b: Option<Refresh>) -> Option<Refresh> {
     match (a, b) {
@@ -146,6 +150,29 @@ pub struct App {
     panes_builtin: bool,
     /// Where the log file goes while Settings → Logging is on.
     log_dir: PathBuf,
+    /// Syncthing, while Settings → Sync is on (`docs/dev/sync-design.md`), how to run
+    /// it, and what it last reported (`sync_gen` counts the supervisor's
+    /// changes the app has taken in).
+    sync: Option<sigma_core::sync::Supervisor>,
+    sync_cfg: sigma_core::sync::Config,
+    sync_view: sigma_core::sync::View,
+    sync_gen: u64,
+    /// The Wi-Fi radio (v1.18), what it last reported and which report that
+    /// was. `None`: no Wi-Fi button.
+    wifi: Option<sigma_device::wifi::Service>,
+    wifi_view: sigma_device::wifi::View,
+    wifi_gen: u64,
+    /// The password being typed is shown, not starred.
+    wifi_show: bool,
+    /// The open note's and the scratch pad's files as the app last read or
+    /// wrote them, to notice a change made by someone else.
+    note_stamp: Option<sync::Stamp>,
+    scratch_stamp: Option<sync::Stamp>,
+    /// Hashes of the text those files held then.
+    note_hash: u64,
+    scratch_hash: u64,
+    /// When the stamps are next compared, ms.
+    watch_at: u64,
     /// Show the Graph icon even with the Graph plugin off, and open the
     /// built-in Graph (the reference the plugin is tested against, and the
     /// emulator's Graph). Off in the app.
@@ -173,8 +200,14 @@ pub struct App {
     phys: (u32, u32),
     /// Rotated copy of the canvas sent to the panel in landscape.
     phys_canvas: Canvas,
-    /// A finger on the drawer's edge grip: the width stop it would give.
-    handle_drag: Option<u8>,
+    /// A finger on the drawer's edge grip, or on the closed drawer's tab.
+    handle_drag: Option<drawer::GripTouch>,
+    /// When the last tap on the grip lifted: a second one soon after
+    /// closes the drawer (v1.16).
+    grip_tap: Option<u64>,
+    /// The panes (and scratch focus) the grip closed, which the tab at the
+    /// screen edge reopens (v1.16). Not kept across a restart.
+    drawer_stash: Option<([bool; 3], bool)>,
     /// Side drawer (v0.5): open panes (Contents, To-dos, Scratch).
     pub drawer: [bool; 3],
     pub filter: Filter,
@@ -206,6 +239,15 @@ pub struct App {
     light_step: u8,
     light_want: Option<u8>,
     light_probed: bool,
+    /// The warm-to-cool mixer (v1.17): whether the device has one, the step
+    /// shown, and a step waiting to be sent. The first sync takes the saved
+    /// step, else what the device reads back, else the cool end.
+    warmth_have: bool,
+    warmth_step: u8,
+    warmth_want: Option<u8>,
+    warmth_probed: bool,
+    /// The light-menu slider the finger is on (a drag moves it).
+    light_touch: Option<sigma_render::light_menu::LightRow>,
     /// USB mouse / touchpad (v0.8.1).
     pub pointer: PointerState,
     /// The ink panel (v1.5.0); `Some` while open.
@@ -284,6 +326,19 @@ impl App {
             pane_failed: [false; 3],
             panes_builtin: false,
             log_dir: log_dir(),
+            sync: None,
+            sync_cfg: sync::sync_config(&root, &log_dir()),
+            sync_view: sigma_core::sync::View::default(),
+            sync_gen: 0,
+            wifi: None,
+            wifi_view: sigma_device::wifi::View::default(),
+            wifi_gen: 0,
+            wifi_show: false,
+            note_stamp: None,
+            scratch_stamp: None,
+            note_hash: 0,
+            scratch_hash: 0,
+            watch_at: 0,
             graph_builtin: false,
             preview: None,
             canvas: Canvas::new(lw, lh, 255),
@@ -307,6 +362,8 @@ impl App {
             phys: (width, height),
             phys_canvas: Canvas::new(width, height, 255),
             handle_drag: None,
+            grip_tap: None,
+            drawer_stash: None,
             drawer: [false; 3],
             filter: Filter::All,
             scratch_save: Autosave::new(scratch.revision()),
@@ -324,6 +381,11 @@ impl App {
             light_step: 0,
             light_want: None,
             light_probed: false,
+            warmth_have: false,
+            warmth_step: 0,
+            warmth_want: None,
+            warmth_probed: false,
+            light_touch: None,
             pointer: PointerState::default(),
             ink: None,
             hwr: Hwr::default(),
@@ -331,6 +393,8 @@ impl App {
             perf: Perf::default(),
             running: true,
         };
+        app.remember_note_stamp();
+        app.remember_scratch_stamp();
         app.set_gsensor(false);
         app.sync_keyboard_style();
         app.sync_plugin_icons();
@@ -350,12 +414,21 @@ impl App {
             return;
         }
         let rev = self.buffer.revision();
+        let dirty = self.autosave.dirty(rev);
+        // Syncthing may have delivered a newer version of this note since
+        // it was read: never write over it (docs/dev/sync-design.md §9).
+        if dirty && self.guard_note_write() {
+            return;
+        }
         self.autosave.sync(
             &mut self.store,
             self.current.as_str(),
             self.buffer.text(),
             rev,
         );
+        if dirty && self.autosave.state == sigma_core::SaveState::Saved {
+            self.remember_note_stamp();
+        }
     }
 
     /// Saves the open note and opens another.
@@ -370,6 +443,7 @@ impl App {
         if unreadable {
             self.autosave.failed("could not read the note");
         }
+        self.remember_note_stamp();
         self.screen.scroll = 0;
         let _ = self.library.set_last_opened(p);
         if self.drawer[1] {

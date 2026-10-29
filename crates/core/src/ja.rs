@@ -460,7 +460,7 @@ fn dict() -> &'static RwLock<Dict> {
     D.get_or_init(|| {
         let mut d = Dict::default();
         d.load_seed();
-        // A fuller SKK dictionary, when one is installed (docs/japanese.md).
+        // A fuller SKK dictionary, when one is installed (docs/dev/japanese-internals.md).
         let extra = std::env::var("SIGMA_SKK_DICT").ok();
         // The env override first, then enabled plugins, then the loose files.
         let plugins = crate::plugins::enabled_files("dict/skk-jisyo.txt");

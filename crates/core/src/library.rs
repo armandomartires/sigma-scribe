@@ -18,6 +18,9 @@ pub const SCRATCH: &str = ".scratchpad.md";
 const STATE: &str = ".sigma-last-opened";
 /// Folder under the library root that deleted notes are moved into.
 pub const TRASH: &str = ".trash";
+/// File in each trash folder (`.trash/<id>/`) that names the path the item had.
+/// A path cannot start with a dot, so it never clashes with the item.
+const ORIGIN: &str = ".origin";
 
 /// A validated path relative to the library root ("" = root folder).
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -132,6 +135,23 @@ pub struct Entry {
     pub words: usize,
 }
 
+/// One deleted note or folder in the trash, as returned by
+/// [`Library::list_trash`].
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Trashed {
+    /// The trash folder it sits in (`.trash/<id>/`): the deletion time in
+    /// unix seconds, with `-2`, `-3`… when several went in the same second.
+    pub id: String,
+    /// The path it had in the library.
+    pub path: NotePath,
+    /// When it was deleted, in unix seconds.
+    pub deleted: u64,
+    /// Bytes in it, a note's ink included.
+    pub size: u64,
+    /// Whether it was a folder (with everything in it).
+    pub folder: bool,
+}
+
 /// `.md` or `.txt` (case-insensitive).
 #[must_use]
 pub fn is_note_name(name: &str) -> bool {
@@ -164,6 +184,90 @@ pub fn clean_note_name(raw: &str, default_ext: &str) -> String {
         ext.to_ascii_lowercase()
     };
     format!("{stem}{ext}")
+}
+
+/// The deletion time in a trash folder's name (`1730000000`, `1730000000-2`).
+fn bin_time(id: &str) -> Option<u64> {
+    let (secs, n) = id.split_once('-').unwrap_or((id, "2"));
+    if n.is_empty() || !n.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    secs.parse().ok()
+}
+
+/// The path the item in the trash folder `bin` had: its record, or, for a
+/// folder from before there were records, the single chain of folders down
+/// to a note (or to a folder with several things in it).
+fn bin_origin(bin: &Path) -> Option<NotePath> {
+    if let Ok(s) = fs::read_to_string(bin.join(ORIGIN)) {
+        return NotePath::parse(&s).ok().filter(|p| !p.is_root());
+    }
+    let mut parts: Vec<String> = Vec::new();
+    let mut dir = bin.to_path_buf();
+    loop {
+        let mut kids: Vec<(String, bool)> = fs::read_dir(&dir)
+            .ok()?
+            .flatten()
+            .filter_map(|e| {
+                let n = e.file_name().to_str()?.to_owned();
+                (!n.starts_with('.')).then(|| (n, e.path().is_dir()))
+            })
+            .collect();
+        match (kids.len(), kids.pop()) {
+            (1, Some((n, true))) => {
+                parts.push(n.clone());
+                dir.push(n);
+            }
+            (1, Some((n, false))) => {
+                parts.push(n);
+                break;
+            }
+            _ => break,
+        }
+    }
+    NotePath::parse(&parts.join("/"))
+        .ok()
+        .filter(|p| !p.is_root())
+}
+
+/// Bytes in a file, or in every file under a folder.
+fn tree_size(p: &Path) -> u64 {
+    let Ok(md) = fs::symlink_metadata(p) else {
+        return 0;
+    };
+    if !md.is_dir() {
+        return md.len();
+    }
+    fs::read_dir(p)
+        .map(|rd| rd.flatten().map(|e| tree_size(&e.path())).sum())
+        .unwrap_or(0)
+}
+
+/// Removes the trash folder `bin` once nothing is left in it but its record
+/// and empty folders. Anything else stays where it is.
+fn prune(bin: &Path) {
+    fn empty_dirs(d: &Path) -> bool {
+        let Ok(rd) = fs::read_dir(d) else {
+            return false;
+        };
+        let mut all = true;
+        for e in rd.flatten() {
+            let p = e.path();
+            if !(p.is_dir() && !e.file_type().is_ok_and(|t| t.is_symlink()) && empty_dirs(&p)) {
+                all = false;
+            }
+        }
+        all && fs::remove_dir(d).is_ok()
+    }
+    let origin = bin.join(ORIGIN);
+    let record = fs::read_to_string(&origin).ok();
+    let _ = fs::remove_file(&origin);
+    if !empty_dirs(bin) {
+        // Something is left: keep the record so it can still be found.
+        if let Some(r) = record {
+            let _ = fs::write(origin, r);
+        }
+    }
 }
 
 /// The note library: a root folder on disk and the operations on the notes
@@ -471,12 +575,158 @@ impl Library {
         if let Some(d) = to.parent() {
             fs::create_dir_all(d)?;
         }
+        // Written first, so that a folder holding one subfolder is not taken
+        // for a note in a subfolder when it is listed.
+        fs::write(bin.join(ORIGIN), p.as_str())?;
         let was_dir = from.is_dir();
-        fs::rename(&from, &to)?;
+        if let Err(e) = fs::rename(&from, &to) {
+            prune(&bin);
+            return Err(e);
+        }
         if !was_dir {
             crate::ink::carry(&from, &to)?;
         }
         Ok(to)
+    }
+
+    /// What is in the trash, newest first: the path each item had, when it
+    /// was deleted and how big it is. Items whose folder was made by an
+    /// older version (no record of the path) are told apart as well as the
+    /// layout allows.
+    ///
+    /// # Errors
+    /// The trash folder exists and cannot be read.
+    pub fn list_trash(&self) -> io::Result<Vec<Trashed>> {
+        let base = self.root.join(TRASH);
+        if !base.is_dir() {
+            return Ok(Vec::new());
+        }
+        let mut out = Vec::new();
+        for e in fs::read_dir(&base)? {
+            let e = e?;
+            let Some(id) = e.file_name().to_str().map(str::to_owned) else {
+                continue;
+            };
+            let Some(deleted) = bin_time(&id) else {
+                continue;
+            };
+            let bin = e.path();
+            let Some(path) = bin_origin(&bin) else {
+                continue;
+            };
+            let item = bin.join(path.as_str());
+            let folder = item.is_dir();
+            if !folder && !item.is_file() {
+                continue;
+            }
+            let mut size = tree_size(&item);
+            if !folder {
+                if let Some(ink) = item.parent().zip(item.file_stem()) {
+                    size += tree_size(&ink.0.join(".ink").join(ink.1));
+                }
+            }
+            out.push(Trashed {
+                id,
+                path,
+                deleted,
+                size,
+                folder,
+            });
+        }
+        out.sort_by(|a, b| (b.deleted, b.id.len(), &b.id).cmp(&(a.deleted, a.id.len(), &a.id)));
+        Ok(out)
+    }
+
+    /// How many items are in the trash. Cheaper than [`Library::list_trash`]:
+    /// it does not measure them.
+    #[must_use]
+    pub fn trash_len(&self) -> usize {
+        let Ok(rd) = fs::read_dir(self.root.join(TRASH)) else {
+            return 0;
+        };
+        rd.flatten()
+            .filter(|e| {
+                let bin = e.path();
+                e.file_name().to_str().and_then(bin_time).is_some()
+                    && bin_origin(&bin).is_some_and(|p| bin.join(p.as_str()).exists())
+            })
+            .count()
+    }
+
+    /// Puts the trash item `id` (from [`Trashed::id`]) back at the path it
+    /// had, making its folders again. If that path is taken, it comes back
+    /// as `name (restored).md` (`(restored 2)`… and so on) and nothing is
+    /// overwritten. A note's ink comes with it. Returns the path it got.
+    ///
+    /// # Errors
+    /// No such item, or a filesystem error.
+    pub fn restore(&self, id: &str) -> io::Result<NotePath> {
+        if bin_time(id).is_none() {
+            return Err(invalid(format!("{id:?} is not in the trash")));
+        }
+        let bin = self.root.join(TRASH).join(id);
+        let path = bin_origin(&bin)
+            .filter(|p| bin.join(p.as_str()).exists())
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "not in the trash"))?;
+        let from = bin.join(path.as_str());
+        let was_dir = from.is_dir();
+        let folder = path.parent();
+        let name = path.name();
+        let mut target = path.clone();
+        if self.taken(&target) {
+            let (stem, ext) = if was_dir { (name, "") } else { split_ext(name) };
+            let mut n = 1;
+            loop {
+                let tag = if n == 1 {
+                    "restored".to_owned()
+                } else {
+                    format!("restored {n}")
+                };
+                target = folder.join(&format!("{stem} ({tag}){ext}"));
+                if !self.taken(&target) {
+                    break;
+                }
+                n += 1;
+            }
+        }
+        let to = self.fs_path(&target);
+        if let Some(d) = to.parent() {
+            fs::create_dir_all(d)?;
+        }
+        fs::rename(&from, &to)?;
+        if !was_dir {
+            crate::ink::carry(&from, &to)?;
+        }
+        prune(&bin);
+        Ok(target)
+    }
+
+    /// Deletes everything in the trash for good, and returns how many items
+    /// there were. The one permanent delete: it only follows the user asking
+    /// for it.
+    ///
+    /// # Errors
+    /// A filesystem error.
+    pub fn empty_trash(&self) -> io::Result<usize> {
+        let n = self.list_trash()?.len();
+        match fs::remove_dir_all(self.root.join(TRASH)) {
+            Ok(()) => Ok(n),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(0),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Whether anything is at `p`, ignoring case like [`Library::unique`].
+    fn taken(&self, p: &NotePath) -> bool {
+        fs::read_dir(self.fs_path(&p.parent()))
+            .ok()
+            .is_some_and(|rd| {
+                rd.flatten().any(|e| {
+                    e.file_name()
+                        .to_str()
+                        .is_some_and(|x| x.eq_ignore_ascii_case(p.name()))
+                })
+            })
     }
 
     /// After `old` (a note or folder) became `new` (v1.5.2): rewrites
@@ -809,6 +1059,247 @@ mod tests {
         assert!(l.trash(&r).is_err());
         fs::write(l.fs_path(&r).join(SCRATCH), "").unwrap();
         assert!(l.trash(&NotePath::parse(SCRATCH).unwrap()).is_err());
+    }
+
+    /// The trash items as (path, id), newest first.
+    fn bin(l: &Library) -> Vec<(String, String)> {
+        l.list_trash()
+            .unwrap()
+            .into_iter()
+            .map(|t| (t.path.as_str().to_owned(), t.id))
+            .collect()
+    }
+
+    /// Moves a trash folder's time back, so that the order is not a matter
+    /// of the clock's second.
+    fn age(l: &Library, id: &str, secs: u64) -> String {
+        let new = secs.to_string();
+        let base = l.root().join(TRASH);
+        fs::rename(base.join(id), base.join(&new)).unwrap();
+        new
+    }
+
+    #[test]
+    fn the_trash_lists_newest_first_with_path_time_and_size() {
+        let l = lib("trash-list");
+        let r = NotePath::root();
+        assert_eq!(l.list_trash().unwrap(), vec![], "no trash folder yet");
+        assert_eq!(l.trash_len(), 0);
+        l.create_note(&r, "keep").unwrap();
+        let f = l.create_folder(&r, "f").unwrap();
+        let old = l.create_note(&f, "old").unwrap();
+        fs::write(l.fs_path(&old), "12345").unwrap();
+        let new = l.create_note(&r, "new").unwrap();
+        fs::write(l.fs_path(&new), "abc").unwrap();
+        l.trash(&old).unwrap();
+        l.trash(&new).unwrap();
+        let ids: Vec<String> = bin(&l).into_iter().map(|(_, id)| id).collect();
+        assert_eq!(ids.len(), 2);
+        age(&l, &ids[0], 1_000);
+        age(&l, &ids[1], 2_000);
+        let t = l.list_trash().unwrap();
+        assert_eq!(t.len(), 2);
+        assert_eq!(l.trash_len(), 2);
+        let (a, b) = (&t[0], &t[1]);
+        assert_eq!((a.deleted, b.deleted), (2_000, 1_000), "newest first");
+        assert_eq!(a.path.as_str(), "f/old.md");
+        assert_eq!(a.size, 5);
+        assert!(!a.folder);
+        assert_eq!(b.path.as_str(), "new.md");
+        assert_eq!(b.size, 3);
+    }
+
+    #[test]
+    fn a_note_deleted_twice_in_a_second_lists_twice_newest_first() {
+        let l = lib("trash-same-second");
+        let r = NotePath::root();
+        l.create_note(&r, "keep").unwrap();
+        for body in ["one", "two", "three"] {
+            let a = l.create_note(&r, "a").unwrap();
+            fs::write(l.fs_path(&a), body).unwrap();
+            l.trash(&a).unwrap();
+        }
+        // Make all three the same second, which is what a quick run does.
+        let base = l.root().join(TRASH);
+        let ids: Vec<String> = bin(&l).into_iter().map(|(_, id)| id).collect();
+        assert_eq!(ids.len(), 3);
+        let t = l.list_trash().unwrap();
+        assert!(t
+            .windows(2)
+            .all(|w| (w[0].deleted, w[0].id.len()) >= (w[1].deleted, w[1].id.len())));
+        // The newest of the same second is the one with the highest suffix.
+        let newest = &t[0];
+        assert_eq!(
+            fs::read_to_string(base.join(&newest.id).join("a.md")).unwrap(),
+            "three"
+        );
+    }
+
+    #[test]
+    fn restore_puts_a_note_back_and_makes_its_folders() {
+        let l = lib("restore");
+        let r = NotePath::root();
+        l.create_note(&r, "keep").unwrap();
+        let deep = l.create_folder(&r, "a").unwrap();
+        let deep = l.create_folder(&deep, "b").unwrap();
+        let n = l.create_note(&deep, "x").unwrap();
+        fs::write(l.fs_path(&n), "words").unwrap();
+        l.trash(&n).unwrap();
+        // The folders go too, as when the user deletes them.
+        let a = NotePath::parse("a").unwrap();
+        l.trash(&a).unwrap();
+        assert!(!l.exists(&a));
+        let t = l.list_trash().unwrap();
+        assert_eq!(
+            t.iter().map(|t| t.path.as_str()).collect::<Vec<_>>(),
+            ["a", "a/b/x.md"],
+            "the folder, then the note in it",
+        );
+        // The note first: its folders are made again.
+        let note = t.iter().find(|t| t.path == n).unwrap();
+        // (The folder was trashed last, so the note's own bin is older.)
+        assert!(!note.folder);
+        let back = l.restore(&note.id).unwrap();
+        assert_eq!(back, n);
+        assert_eq!(fs::read_to_string(l.fs_path(&n)).unwrap(), "words");
+        assert_eq!(l.all_notes().unwrap().len(), 2);
+        assert_eq!(l.trash_len(), 1);
+        // Its trash folder is gone, not left empty.
+        assert!(!l.root().join(TRASH).join(&note.id).exists());
+    }
+
+    #[test]
+    fn restore_never_overwrites_it_takes_a_free_name() {
+        let l = lib("restore-clash");
+        let r = NotePath::root();
+        let f = l.create_folder(&r, "f").unwrap();
+        l.create_note(&r, "keep").unwrap();
+        let a = l.create_note(&f, "a").unwrap();
+        fs::write(l.fs_path(&a), "first").unwrap();
+        l.trash(&a).unwrap();
+        // A new note took the name.
+        let a2 = l.create_note(&f, "a").unwrap();
+        assert_eq!(a2, a);
+        fs::write(l.fs_path(&a2), "second").unwrap();
+        let id = l.list_trash().unwrap()[0].id.clone();
+        let back = l.restore(&id).unwrap();
+        assert_eq!(back.as_str(), "f/a (restored).md");
+        assert_eq!(fs::read_to_string(l.fs_path(&a)).unwrap(), "second");
+        assert_eq!(fs::read_to_string(l.fs_path(&back)).unwrap(), "first");
+        // And again: the next free name.
+        l.trash(&a).unwrap();
+        let a3 = l.create_note(&f, "a").unwrap();
+        fs::write(l.fs_path(&a3), "third").unwrap();
+        let id = l.list_trash().unwrap()[0].id.clone();
+        assert_eq!(l.restore(&id).unwrap().as_str(), "f/a (restored 2).md");
+        assert_eq!(fs::read_to_string(l.fs_path(&a3)).unwrap(), "third");
+        assert_eq!(l.trash_len(), 0);
+    }
+
+    #[test]
+    fn restore_brings_back_a_folder_and_a_notes_ink() {
+        let l = lib("restore-folder");
+        let r = NotePath::root();
+        l.create_note(&r, "keep").unwrap();
+        // A folder holding one folder holding one note: not a note in a
+        // folder in a folder.
+        let g = l.create_folder(&r, "g").unwrap();
+        let h = l.create_folder(&g, "h").unwrap();
+        let n = l.create_note(&h, "n").unwrap();
+        l.trash(&g).unwrap();
+        let t = l.list_trash().unwrap();
+        assert_eq!(t.len(), 1);
+        assert!(t[0].folder);
+        assert_eq!(t[0].path, g);
+        // The folder name is taken: the folder comes back under a free name.
+        l.create_folder(&r, "g").unwrap();
+        let back = l.restore(&t[0].id).unwrap();
+        assert_eq!(back.as_str(), "g (restored)");
+        assert!(l.fs_path(&back).join("h/n.md").is_file());
+        assert!(!l.exists(&n), "the other g is still empty");
+        // A note with ink: the ink goes to the trash and comes back.
+        let p = l.create_note(&r, "pic").unwrap();
+        let ink = l.root().join(".ink/pic");
+        fs::create_dir_all(&ink).unwrap();
+        fs::write(ink.join("1.svg"), "<svg/>").unwrap();
+        fs::write(l.fs_path(&p), "![](.ink/pic/1.svg)").unwrap();
+        l.trash(&p).unwrap();
+        assert!(!ink.exists());
+        let t = l.list_trash().unwrap();
+        assert_eq!(
+            t[0].size,
+            "![](.ink/pic/1.svg)".len() as u64 + 6,
+            "ink counted"
+        );
+        assert_eq!(l.restore(&t[0].id).unwrap(), p);
+        assert!(ink.join("1.svg").is_file());
+        assert_eq!(l.trash_len(), 0);
+        assert!(!l.root().join(TRASH).join(&t[0].id).exists());
+    }
+
+    #[test]
+    fn restore_refuses_what_is_not_in_the_trash() {
+        let l = lib("restore-bad");
+        let r = NotePath::root();
+        l.create_note(&r, "keep").unwrap();
+        for id in ["", "..", "../x", "1/2", "abc", "12-", "nope"] {
+            assert!(l.restore(id).is_err(), "{id:?}");
+        }
+        assert!(l.restore("12345").is_err(), "no such folder");
+        assert!(l.exists(&NotePath::parse("keep.md").unwrap()));
+    }
+
+    #[test]
+    fn a_trash_folder_from_before_the_records_is_still_listed_and_restored() {
+        let l = lib("trash-legacy");
+        let r = NotePath::root();
+        l.create_note(&r, "keep").unwrap();
+        let b = l.root().join(TRASH);
+        fs::create_dir_all(b.join("100/f/.ink/n")).unwrap();
+        fs::write(b.join("100/f/n.md"), "old").unwrap();
+        fs::write(b.join("100/f/.ink/n/1.svg"), "s").unwrap();
+        fs::create_dir_all(b.join("200/g")).unwrap();
+        fs::write(b.join("200/g/x.md"), "x").unwrap();
+        fs::write(b.join("200/g/y.md"), "y").unwrap();
+        let t = l.list_trash().unwrap();
+        assert_eq!(
+            t.iter()
+                .map(|t| (t.path.as_str(), t.folder))
+                .collect::<Vec<_>>(),
+            [("g", true), ("f/n.md", false)]
+        );
+        assert_eq!(l.restore("100").unwrap().as_str(), "f/n.md");
+        assert!(
+            l.root().join("f/.ink/n/1.svg").is_file(),
+            "ink beside the note"
+        );
+        assert_eq!(l.restore("200").unwrap().as_str(), "g");
+        assert_eq!(l.trash_len(), 0);
+    }
+
+    #[test]
+    fn empty_trash_removes_everything_under_it_and_nothing_else() {
+        let l = lib("trash-empty");
+        let r = NotePath::root();
+        assert_eq!(l.empty_trash().unwrap(), 0, "nothing to empty");
+        l.create_note(&r, "keep").unwrap();
+        for n in ["a", "b"] {
+            let p = l.create_note(&r, n).unwrap();
+            l.trash(&p).unwrap();
+        }
+        let g = l.create_folder(&r, "g").unwrap();
+        l.create_note(&g, "c").unwrap();
+        l.trash(&g).unwrap();
+        assert_eq!(l.trash_len(), 3);
+        assert_eq!(l.empty_trash().unwrap(), 3);
+        assert!(!l.root().join(TRASH).exists());
+        assert_eq!(l.trash_len(), 0);
+        assert!(l.list_trash().unwrap().is_empty());
+        assert_eq!(names(&l, &r), ["keep.md"], "the library is untouched");
+        // It can be used again afterwards.
+        let p = l.create_note(&r, "again").unwrap();
+        l.trash(&p).unwrap();
+        assert_eq!(l.trash_len(), 1);
     }
 
     #[test]

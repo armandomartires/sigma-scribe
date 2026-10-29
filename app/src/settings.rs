@@ -81,6 +81,15 @@ impl App {
         if let Change::PluginGet(i) = c {
             return self.plugin_get(usize::from(i));
         }
+        if matches!(
+            c,
+            Change::SyncAcceptDevice(_)
+                | Change::SyncIgnoreDevice(_)
+                | Change::SyncAcceptFolder(_)
+                | Change::SyncIgnoreFolder(_)
+        ) {
+            return self.sync_command(c);
+        }
         if let Change::PluginSetting(p, s, o) = c {
             return self.set_plugin_setting(usize::from(p), usize::from(s), usize::from(o));
         }
@@ -111,7 +120,14 @@ impl App {
             // Not a saved setting: the front light keeps its level.
             self.light_step = n.min(sigma_core::settings::BACKLIGHT_MAX);
             self.light_want = Some(self.light_step);
+            self.sync_light_screen();
             return Refresh::Partial;
+        }
+        if let Change::Warmth(n) = c {
+            // Saved (below), and sent to the mixer by the loop.
+            self.warmth_step = n.min(sigma_core::settings::WARMTH_MAX);
+            self.warmth_want = Some(self.warmth_step);
+            self.sync_light_screen();
         }
         self.settings.apply(c);
         if matches!(c, Change::Log(_) | Change::LogLevel(_)) {
@@ -119,6 +135,9 @@ impl App {
             if self.settings.log {
                 sigma_core::info!("app", "logging level {}", self.settings.log_level.label());
             }
+        }
+        if matches!(c, Change::Sync(_)) {
+            self.apply_sync();
         }
         sigma_core::debug!("settings", "{c:?}");
         self.screen.ink_words = self.settings.word_mode();
@@ -201,10 +220,12 @@ impl App {
             focus: self.settings_focus,
             hw_samples: self.hwr.samples,
             light: self.light_have.then_some(self.light_step),
+            warmth: self.warmth_have.then_some(self.warmth_step),
             ui_scale_pending: self.ui_scale_drag,
             plugins: &self.plugin_list,
             repository: &self.repo_rows,
             repo_note: &self.repo_note,
+            sync: &self.sync_view,
         }
     }
 
@@ -298,6 +319,9 @@ impl App {
                     // The same light step again (every drag event repeats it): no
                     // redraw, no sysfs write, no log line.
                     Some(Change::Backlight(n)) if n == self.light_step => None,
+                    // The same for the mixer, against the saved step, so the
+                    // first touch after a start with nothing chosen is kept.
+                    Some(Change::Warmth(n)) if Some(n) == self.settings.warmth => None,
                     Some(c) => Some(self.change(c)),
                     None => None,
                 })
@@ -358,10 +382,37 @@ impl App {
                 self.light_have = true;
                 self.light_step = n;
             }
+            self.sync_light_screen();
         }
         if let Some(n) = self.light_want.take() {
             if let Err(e) = dev.set_light(n) {
                 sigma_core::error!("light", "{e}");
+            }
+        }
+    }
+
+    /// Finds out once whether the front light has a warm-to-cool mixer, then
+    /// sends the step Display → Warmth asked for (v1.17). At start the saved
+    /// step is applied; with none saved the mixer is left as it is. A failure
+    /// is logged; the slider keeps its place.
+    pub fn sync_warmth(&mut self, dev: &mut dyn Device) {
+        if !self.warmth_probed {
+            self.warmth_probed = true;
+            if dev.has_warmth() {
+                self.warmth_have = true;
+                self.warmth_step = self
+                    .settings
+                    .warmth
+                    .or_else(|| dev.warmth_step())
+                    .unwrap_or(0)
+                    .min(sigma_core::settings::WARMTH_MAX);
+                self.warmth_want = self.settings.warmth;
+            }
+            self.sync_light_screen();
+        }
+        if let Some(n) = self.warmth_want.take() {
+            if let Err(e) = dev.set_warmth(n) {
+                sigma_core::error!("light", "warmth: {e}");
             }
         }
     }

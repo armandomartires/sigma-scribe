@@ -836,6 +836,12 @@ Backlight
 = Retroiluminación
 Light
 = Luz
+Warmth
+= Calidez
+Warm
+= Cálida
+Cool
+= Fría
 Enhanced keyboard
 = Teclado mejorado
 
@@ -983,3 +989,208 @@ Up to date
 Remove
 = Quitar
 
+
+Trash
+= Papelera
+
+Trash ({n})
+= Papelera ({n})
+
+Restore
+= Restaurar
+
+Empty trash
+= Vaciar papelera
+
+Tap again to empty
+= Toca de nuevo para vaciar
+
+The trash is empty.
+= La papelera está vacía.
+
+Tap a note to restore it
+= Toca una nota para restaurarla
+
+Restored to {name}
+= Restaurada en {name}
+
+Trash emptied
+= Papelera vaciada
+
+in {name}
+= en {name}
+
+Just now
+= Ahora mismo
+
+{n} min ago
+= hace {n} min
+
+{n} h ago
+= hace {n} h
+
+Yesterday
+= Ayer
+
+{n} days ago
+= hace {n} días
+
+# Settings -> Sync (v1.16)
+
+Sync
+= Sincronización
+
+Sync notes
+= Sincronizar notas
+
+Keeps the notes in step with your computers while Σscribe is open
+= Mantiene las notas al día con tus ordenadores mientras Σscribe está abierto
+
+Status
+= Estado
+
+Devices
+= Dispositivos
+
+Last sync
+= Última sincronización
+
+Conflicts
+= Conflictos
+
+Look for conflict in the Files list
+= Busca conflict en la lista de archivos
+
+Device ID
+= ID del dispositivo
+
+Waiting for you
+= Esperando tu respuesta
+
+Pairing
+= Emparejar
+
+Add this device on your computer
+= Añade este dispositivo en tu ordenador
+
+In Syncthing there choose Add Remote Device and enter the ID above
+= En Syncthing elige Añadir dispositivo remoto e introduce el ID de arriba
+
+Accept
+= Aceptar
+
+Ignore
+= Ignorar
+
+New device
+= Dispositivo nuevo
+
+Never
+= Nunca
+
+Folder from
+= Carpeta de
+
+Syncthing is not installed
+= Syncthing no está instalado
+
+Starting
+= Iniciando
+
+Stopped
+= Detenido
+
+No devices yet
+= Aún no hay dispositivos
+
+No device connected
+= Ningún dispositivo conectado
+
+Scanning
+= Analizando
+
+Syncing {n} files
+= Sincronizando {n} archivos
+
+{n} of {m} connected
+= {n} de {m} conectados
+
+{n} files
+= {n} archivos
+
+{n} KB
+= {n} KB
+
+{n} MB
+= {n} MB
+
+Loopback network is down
+= La red de bucle local está caída
+
+Reason
+= Motivo
+
+Show QR code
+= Mostrar código QR
+
+
+QR code
+= Código QR
+
+Not shared yet
+= Aún sin compartir
+
+Waiting for {name} to accept
+= Esperando a que {name} acepte
+
+Next step
+= Siguiente paso
+
+Accept “Σscribe notes” in Syncthing on that device
+= Acepta «Σscribe notes» en Syncthing en ese dispositivo
+
+Wi-Fi
+= Wi-Fi
+
+Not connected
+= No conectado
+
+Connected
+= Conectado
+
+Turning on…
+= Activando…
+
+Turning off…
+= Desactivando…
+
+Connecting…
+= Conectando…
+
+Scanning…
+= Buscando…
+
+Scan again
+= Buscar de nuevo
+
+No networks found
+= No se encontraron redes
+
+Password
+= Contraseña
+
+
+A Wi-Fi password has 8 to 63 characters
+= Una contraseña Wi-Fi tiene de 8 a 63 caracteres
+
+This kind of network is not supported here
+= Este tipo de red no es compatible aquí
+
+Could not join: wrong password? Forget it and try again
+= No se pudo conectar: ¿contraseña incorrecta? Olvide la red e inténtelo de nuevo
+
+Joined, but the network gave no address
+= Conectado, pero la red no dio ninguna dirección
+
+Wi-Fi did not answer
+= El Wi-Fi no responde

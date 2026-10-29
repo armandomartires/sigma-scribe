@@ -20,6 +20,19 @@ fn open() -> std::io::Result<Box<dyn Device>> {
     }
 }
 
+/// The radio: the Kobo's own, or on a desktop a pretend one so the Wi-Fi
+/// menu can be tried.
+fn wifi() -> sigma_device::wifi::Service {
+    #[cfg(target_arch = "arm")]
+    {
+        sigma_device::wifi::Service::spawn(sigma_device::wifi::kobo::KoboWifi::from_env())
+    }
+    #[cfg(not(target_arch = "arm"))]
+    {
+        sigma_device::wifi::Service::inline(sigma_device::wifi::fake::FakeWifi::demo())
+    }
+}
+
 fn main() -> ExitCode {
     // A panic goes to the log file too (when logging is on); the default hook
     // still prints it to stderr, which the launcher keeps.
@@ -44,6 +57,7 @@ fn main() -> ExitCode {
     let (w, h) = dev.size();
     splash.progress(dev.as_mut(), 0.3);
     let mut app = App::new(w, h, notes);
+    app.set_wifi(wifi());
     splash.progress(dev.as_mut(), 1.0);
     match app.run(dev.as_mut()) {
         Ok(()) => {

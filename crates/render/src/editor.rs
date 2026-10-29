@@ -110,8 +110,13 @@ pub enum Hit {
     Find,
     /// Connected nodes: the Graph sheet (v0.6).
     Graph,
-    /// Contents / To-dos / Scratch icon: toggle that drawer pane (v0.5).
-    Drawer(crate::drawer::Pane),
+    /// The drawer button: open or close the drawer menu, where each pane
+    /// is shown or hidden (v1.16; one icon per pane before).
+    DrawerMenu,
+    /// The Wi-Fi button: open or close the Wi-Fi menu (v1.18).
+    Wifi,
+    /// The front-light button: open or close the light menu.
+    LightMenu,
     /// Landscape keyboard bar: Split / Full / Centre, pad toggles (v0.4).
     KbButton(KbButton),
     /// OK of the rename field.
@@ -173,14 +178,18 @@ pub struct Layout {
     pub cancel_rect: Rect,
     /// The Settings (gear) button, the rightmost icon.
     pub options_button: Rect,
-    /// Drawer pane icons after Find: Scratch, To-dos, Contents.
-    pub scratch_button: Rect,
-    /// The To-dos pane icon (zero-sized when it is off).
-    pub todos_button: Rect,
-    /// The Contents pane icon (zero-sized when it is off).
-    pub contents_button: Rect,
-    /// Find (between the eye and Scratch) and Graph (between Contents and
-    /// Options).
+    /// The drawer button after Find (v1.16): opens the drawer menu.
+    /// Zero-sized when no pane is available.
+    pub drawer_button: Rect,
+    /// The Wi-Fi button between the light button and Options (v1.18).
+    /// Zero-sized when the device has no Wi-Fi control.
+    pub wifi_button: Rect,
+    /// The front-light button between Graph and Wi-Fi, third from the
+    /// right on the Forma: opens the light menu. Zero-sized when the device
+    /// has no front light.
+    pub light_button: Rect,
+    /// Find (between the eye and the drawer button) and Graph (between the
+    /// drawer button and Options).
     pub find_button: Rect,
     /// The Graph icon (zero-sized when it is off).
     pub graph_button: Rect,
@@ -194,7 +203,8 @@ pub struct Layout {
 }
 
 /// Icon slots in the title bar (S9.2; v1.0.2 adds Back before Files, so
-/// sizing always reserves room for it).
+/// sizing always reserves room for it; v1.16 one drawer button for three;
+/// v1.18 adds the front-light and Wi-Fi buttons, before Settings).
 pub const TITLE_ICONS: i32 = 9;
 
 /// The editor screen: layout, drawing and hit-testing for write and
@@ -217,14 +227,32 @@ pub struct EditorScreen {
     /// The Graph icon is shown: the Graph plugin is on (or the built-in
     /// Graph is wanted). Off closes the icon's place up.
     pub graph_on: bool,
-    /// The drawer pane icons are shown: Contents, To-dos and Scratch each
-    /// come from a pane plugin (or the built-in pane is wanted). Off closes
-    /// the icon's place up.
+    /// The drawer panes on offer: Contents, To-dos and Scratch each come
+    /// from a pane plugin (or the built-in pane is wanted). A pane that is
+    /// off is not in the drawer menu; with none, the drawer button's place
+    /// closes up.
     pub contents_on: bool,
-    /// The To-dos icon is shown.
+    /// The To-dos pane is on offer.
     pub todos_on: bool,
-    /// The Scratch icon is shown.
+    /// The Scratch pane is on offer.
     pub scratch_on: bool,
+    /// The drawer menu is open under the drawer button (v1.16).
+    pub drawer_menu: bool,
+    /// The Wi-Fi button is shown (v1.18): the app has a Wi-Fi backend.
+    /// Off closes the button's place up.
+    pub wifi_on: bool,
+    /// The Wi-Fi menu is open under the Wi-Fi button (v1.18).
+    pub wifi_menu: bool,
+    /// What the Wi-Fi button shows: off, on, or connected.
+    pub wifi_state: crate::wifi_menu::WifiState,
+    /// The device has a front light: the light button is shown.
+    pub light_on: bool,
+    /// The light menu is open under the light button.
+    pub light_menu: bool,
+    /// The brightness step, 0 (off) to `BACKLIGHT_MAX`.
+    pub light_level: u8,
+    /// The warmth step, 0 (cool) to `WARMTH_MAX`; `None` without a mixer.
+    pub warmth_level: Option<u8>,
     /// Settings → Word mode is on (v1.5.3): Letters offers Words.
     pub ink_words: bool,
     /// The writing panel's dotted guide line is shown (Sketch v1.13.1, every
@@ -251,7 +279,8 @@ pub struct EditorScreen {
     pub key_theme: Option<Theme>,
     /// The settings in force (landscape keyboard, Line, USB flag).
     pub cfg: Settings,
-    /// Open drawer panes (Contents, To-dos, Scratch): their icons draw active.
+    /// Open drawer panes (Contents, To-dos, Scratch): ticked in the drawer
+    /// menu; the drawer button draws active while any is open.
     pub drawer_open: [bool; 3],
     /// The Find bar is open: it sits under the title bar and the page
     /// starts below it; the magnifier draws active.
@@ -300,6 +329,14 @@ impl EditorScreen {
             contents_on: true,
             todos_on: true,
             scratch_on: true,
+            drawer_menu: false,
+            wifi_on: false,
+            wifi_menu: false,
+            wifi_state: crate::wifi_menu::WifiState::Off,
+            light_on: false,
+            light_menu: false,
+            light_level: 0,
+            warmth_level: None,
             ink_words: false,
             sketch_guide: true,
             ink_keys_right: false,
@@ -497,12 +534,7 @@ impl EditorScreen {
         };
         let by = (title.h - btn) / 2;
         // Right-aligned group, mockup order left to right.
-        let optional = [
-            self.scratch_on,
-            self.todos_on,
-            self.contents_on,
-            self.graph_on,
-        ];
+        let optional = [self.panes_on(), self.graph_on, self.light_on, self.wifi_on];
         let shown = TITLE_ICONS - optional.iter().filter(|on| !**on).count() as i32;
         let x0 = w - self.px(12.0) - shown * btn - (shown - 1) * icon_gap;
         let slot = |i: i32| Rect::new(x0 + i * (btn + icon_gap), by, btn, btn);
@@ -521,10 +553,10 @@ impl EditorScreen {
                 Rect::default()
             }
         };
-        let scratch_button = place(self.scratch_on);
-        let todos_button = place(self.todos_on);
-        let contents_button = place(self.contents_on);
+        let drawer_button = place(self.panes_on());
         let graph_button = place(self.graph_on);
+        let light_button = place(self.light_on);
+        let wifi_button = place(self.wifi_on);
         let options_button = slot(next);
         // Help opens from Settings → Help & about; the far-right slot is the
         // Settings button, and Close takes its place on the other screens.
@@ -562,9 +594,9 @@ impl EditorScreen {
             ok_rect,
             cancel_rect,
             options_button,
-            scratch_button,
-            todos_button,
-            contents_button,
+            drawer_button,
+            wifi_button,
+            light_button,
             find_button,
             graph_button,
             find_bar,
@@ -1209,10 +1241,14 @@ impl EditorScreen {
         if self.graph_on && l.graph_button.inset(-self.px(4.0)).contains(x, y) {
             return Hit::Graph;
         }
-        for (_, p, _, r) in self.drawer_icons(&l) {
-            if r.inset(-self.px(4.0)).contains(x, y) {
-                return Hit::Drawer(p);
-            }
+        if self.panes_on() && l.drawer_button.inset(-self.px(4.0)).contains(x, y) {
+            return Hit::DrawerMenu;
+        }
+        if self.wifi_on && l.wifi_button.inset(-self.px(4.0)).contains(x, y) {
+            return Hit::Wifi;
+        }
+        if self.light_on && l.light_button.inset(-self.px(4.0)).contains(x, y) {
+            return Hit::LightMenu;
         }
         if let Some((_, b)) = l.kb_buttons.iter().find(|(r, _)| r.contains(x, y)) {
             return Hit::KbButton(*b);
@@ -1268,19 +1304,14 @@ impl EditorScreen {
             if self.graph_on {
                 crate::icons::draw_icon(c, crate::icons::Icon::Graph, l.graph_button, t.ink);
             }
-            for (i, _, icon, r) in self.drawer_icons(&l) {
-                if self.drawer_open[i] {
-                    c.fill(r, t.wash);
-                    c.stroke(r, 2, t.ink);
-                }
-                crate::icons::draw_icon(c, icon, r, t.ink);
-            }
+            self.draw_drawer_button(c, &l, t);
+            self.draw_wifi_button(c, &l, t);
+            self.draw_light_button(c, &l, t);
         }
 
         // Page.
         let area = self.text_area(l.page);
         let rows = self.rows(model.buffer, l.page);
-        self.draw_scroll_bar(c, l.page, rows.len(), self.visible_rows(l.page), t);
         let text = model.buffer.text();
         let lh = self.line_h();
         let asc = self.fonts.ascent(self.face, self.body());
@@ -1393,6 +1424,16 @@ impl EditorScreen {
                 }
             }
         }
+        // v1.16: a drawer on the right stops short of the bar's strip; the
+        // rows it covers would show in that strip, so it is cleared.
+        if self.drawer_open.iter().any(|&o| o)
+            && self.cfg.drawer == sigma_core::settings::Side::Right
+        {
+            let r = crate::scrollbar::reserve(self.page_s);
+            let p = l.page;
+            c.fill(Rect::new(p.x + p.w - r, p.y, r, p.h), self.bar_bg(t));
+        }
+        self.draw_scroll_bar(c, l.page, rows.len(), self.visible_rows(l.page), t);
         if let Some((cands, sel)) = model.keyboard.composer.candidates() {
             self.draw_cands(c, l.page, cands, sel, t);
         }
@@ -2171,13 +2212,13 @@ impl EditorScreen {
             Hit::Find
         } else if self.graph_on && l.graph_button.inset(-self.px(4.0)).contains(x, y) {
             Hit::Graph
-        } else if let Some((_, p, _, _)) = self
-            .drawer_icons(&l)
-            .into_iter()
-            .find(|(_, _, _, r)| r.inset(-self.px(4.0)).contains(x, y))
-        {
+        } else if self.panes_on() && l.drawer_button.inset(-self.px(4.0)).contains(x, y) {
             // v1.0.3: the drawer panes open in preview too.
-            Hit::Drawer(p)
+            Hit::DrawerMenu
+        } else if self.wifi_on && l.wifi_button.inset(-self.px(4.0)).contains(x, y) {
+            Hit::Wifi
+        } else if self.light_on && l.light_button.inset(-self.px(4.0)).contains(x, y) {
+            Hit::LightMenu
         } else {
             Hit::Nothing
         }
@@ -2196,37 +2237,6 @@ impl EditorScreen {
         crate::scrollbar::Paged::new(self.page_s, l.page, n, at)
     }
 
-    /// The drawer pane icons that are in the title bar: the pane's index in
-    /// `drawer_open`, the pane, its icon and its button.
-    fn drawer_icons(
-        &self,
-        l: &Layout,
-    ) -> Vec<(usize, crate::drawer::Pane, crate::icons::Icon, Rect)> {
-        use crate::drawer::Pane;
-        use crate::icons::Icon;
-        [
-            (
-                0,
-                Pane::Contents,
-                Icon::Contents,
-                l.contents_button,
-                self.contents_on,
-            ),
-            (1, Pane::Todos, Icon::Todos, l.todos_button, self.todos_on),
-            (
-                2,
-                Pane::Scratch,
-                Icon::Scratch,
-                l.scratch_button,
-                self.scratch_on,
-            ),
-        ]
-        .into_iter()
-        .filter(|e| e.4)
-        .map(|e| (e.0, e.1, e.2, e.3))
-        .collect()
-    }
-
     /// Draws preview mode: title with the pencil, one page, status bar.
     pub fn draw_preview(&self, c: &mut Canvas, m: &PreviewModel<'_>) -> Layout {
         let t = m.theme;
@@ -2240,14 +2250,10 @@ impl EditorScreen {
         if self.graph_on {
             crate::icons::draw_icon(c, crate::icons::Icon::Graph, l.graph_button, t.ink);
         }
-        // v1.0.3: the drawer pane buttons, active while open (as in write).
-        for (i, _, icon, r) in self.drawer_icons(&l) {
-            if self.drawer_open[i] {
-                c.fill(r, t.wash);
-                c.stroke(r, 2, t.ink);
-            }
-            crate::icons::draw_icon(c, icon, r, t.ink);
-        }
+        // v1.0.3: the drawer button, active while a pane is open (as in write).
+        self.draw_drawer_button(c, &l, t);
+        self.draw_wifi_button(c, &l, t);
+        self.draw_light_button(c, &l, t);
         let area = self.preview_area(m.keyboard);
         let page = m.page.min(m.doc.pages.len().saturating_sub(1));
         // The same bar as the editor's: the page's place among the pages.
@@ -2527,9 +2533,7 @@ mod tests {
                 l.files_button,
                 l.preview_button,
                 l.find_button,
-                l.scratch_button,
-                l.todos_button,
-                l.contents_button,
+                l.drawer_button,
                 l.options_button,
             ];
             for r in order {
@@ -2548,8 +2552,8 @@ mod tests {
             );
             assert_eq!(l.close_button, l.options_button);
             assert_eq!(l.graph_button, Rect::default(), "no button");
-            // The place the Graph icon had is the Contents icon's now.
-            assert!(l.contents_button.x > with.contents_button.x);
+            // The place the Graph icon had is the drawer button's now.
+            assert!(l.drawer_button.x > with.drawer_button.x);
             // Nothing answers where the Graph icon was, nor in the corner a
             // default rectangle would cover.
             let b = Buffer::new("x");
@@ -2565,9 +2569,7 @@ mod tests {
                 Hit::Files,
                 Hit::TogglePreview,
                 Hit::Find,
-                Hit::Drawer(crate::drawer::Pane::Scratch),
-                Hit::Drawer(crate::drawer::Pane::Todos),
-                Hit::Drawer(crate::drawer::Pane::Contents),
+                Hit::DrawerMenu,
                 Hit::Options,
             ];
             for (r, h) in order.iter().zip(want) {
@@ -2587,9 +2589,7 @@ mod tests {
                 l.files_button,
                 l.preview_button,
                 l.find_button,
-                l.scratch_button,
-                l.todos_button,
-                l.contents_button,
+                l.drawer_button,
                 l.graph_button,
                 l.options_button,
             ];
@@ -2616,9 +2616,7 @@ mod tests {
                 Hit::Files,
                 Hit::TogglePreview,
                 Hit::Find,
-                Hit::Drawer(crate::drawer::Pane::Scratch),
-                Hit::Drawer(crate::drawer::Pane::Todos),
-                Hit::Drawer(crate::drawer::Pane::Contents),
+                Hit::DrawerMenu,
                 Hit::Graph,
                 Hit::Options,
             ];
@@ -2627,9 +2625,7 @@ mod tests {
                 assert_eq!(e.hit(&m, x, y), h, "{w}x{h:?}");
             }
             for (r, h) in order.iter().zip(want) {
-                if !matches!(h, Hit::Drawer(_)) {
-                    assert_eq!(e.preview_hit(&k, r.x + r.w / 2, r.y + r.h / 2), h);
-                }
+                assert_eq!(e.preview_hit(&k, r.x + r.w / 2, r.y + r.h / 2), h);
             }
         }
     }
@@ -2868,6 +2864,39 @@ mod tests {
 #[cfg(test)]
 mod scroll_bar_tests {
     use super::*;
+
+    #[test]
+    fn a_drawer_on_the_right_stops_short_of_the_bars_strip() {
+        use sigma_core::settings::Side;
+        let mut e = EditorScreen::new(1440, 1920);
+        let b = Buffer::new("line\n".repeat(300));
+        let page = e.layout(true, &Keyboard::default()).page;
+        let (alone, _) = e.scroll_bar_zone(&b, page).unwrap();
+        assert_eq!(alone.x + alone.w, page.x + page.w, "at the page edge");
+        e.drawer_open = [true, false, false];
+        let base = Layout {
+            page,
+            ..Layout::default()
+        };
+        let d = e.drawer_rect(&base, Side::Right);
+        let (zone, _) = e.scroll_bar_zone(&b, page).unwrap();
+        assert_eq!(zone, alone, "the bar does not move");
+        let (strip, _) = e.scroll_bar(page, 300, 10).unwrap();
+        let edge_gap = page.x + page.w - (strip.x + strip.w);
+        assert_eq!(
+            strip.x - (d.x + d.w),
+            edge_gap,
+            "as far from the drawer as from the edge"
+        );
+        assert!(d.x + d.w < zone.x, "the drawer is off the bar's touch zone");
+        // Closed from the grip: the tab stays where the drawer's edge was.
+        let tab = e.drawer_tab(&base, Side::Right);
+        assert_eq!(tab.x + tab.w, d.x + d.w, "left of the bar and its margin");
+        // On the left the drawer never meets the bar: flush with the page.
+        e.cfg.drawer = Side::Left;
+        assert_eq!(e.drawer_rect(&base, Side::Left).x, page.x);
+        assert_eq!(e.scroll_bar_zone(&b, page).unwrap().0, alone);
+    }
 
     #[test]
     fn thumb_tracks_the_note_and_is_pure_black_and_white() {

@@ -837,6 +837,12 @@ Backlight
 = Brilho
 Light
 = Luz
+Warmth
+= Calor
+Warm
+= Quente
+Cool
+= Fria
 Enhanced keyboard
 = Teclado avançado
 
@@ -984,3 +990,208 @@ Up to date
 Remove
 = Remover
 
+
+Trash
+= Reciclagem
+
+Trash ({n})
+= Reciclagem ({n})
+
+Restore
+= Restaurar
+
+Empty trash
+= Esvaziar reciclagem
+
+Tap again to empty
+= Toque de novo para esvaziar
+
+The trash is empty.
+= A reciclagem está vazia.
+
+Tap a note to restore it
+= Toque numa nota para a restaurar
+
+Restored to {name}
+= Restaurada em {name}
+
+Trash emptied
+= Reciclagem esvaziada
+
+in {name}
+= em {name}
+
+Just now
+= Agora mesmo
+
+{n} min ago
+= há {n} min
+
+{n} h ago
+= há {n} h
+
+Yesterday
+= Ontem
+
+{n} days ago
+= há {n} dias
+
+# Settings -> Sync (v1.16)
+
+Sync
+= Sincronização
+
+Sync notes
+= Sincronizar notas
+
+Keeps the notes in step with your computers while Σscribe is open
+= Mantém as notas em sintonia com os seus computadores enquanto o Σscribe estiver aberto
+
+Status
+= Estado
+
+Devices
+= Dispositivos
+
+Last sync
+= Última sincronização
+
+Conflicts
+= Conflitos
+
+Look for conflict in the Files list
+= Procure conflict na lista de ficheiros
+
+Device ID
+= ID do dispositivo
+
+Waiting for you
+= À sua espera
+
+Pairing
+= Emparelhamento
+
+Add this device on your computer
+= Adicione este dispositivo no seu computador
+
+In Syncthing there choose Add Remote Device and enter the ID above
+= No Syncthing, escolha Adicionar dispositivo remoto e introduza o ID acima
+
+Accept
+= Aceitar
+
+Ignore
+= Ignorar
+
+New device
+= Novo dispositivo
+
+Never
+= Nunca
+
+Folder from
+= Pasta de
+
+Syncthing is not installed
+= O Syncthing não está instalado
+
+Starting
+= A iniciar
+
+Stopped
+= Parado
+
+No devices yet
+= Ainda sem dispositivos
+
+No device connected
+= Nenhum dispositivo ligado
+
+Scanning
+= A analisar
+
+Syncing {n} files
+= A sincronizar {n} ficheiros
+
+{n} of {m} connected
+= {n} de {m} ligados
+
+{n} files
+= {n} ficheiros
+
+{n} KB
+= {n} KB
+
+{n} MB
+= {n} MB
+
+Loopback network is down
+= A rede de loopback está desativada
+
+Reason
+= Motivo
+
+Show QR code
+= Mostrar código QR
+
+
+QR code
+= Código QR
+
+Not shared yet
+= Ainda não partilhado
+
+Waiting for {name} to accept
+= A aguardar que {name} aceite
+
+Next step
+= Passo seguinte
+
+Accept “Σscribe notes” in Syncthing on that device
+= Aceite «Σscribe notes» no Syncthing desse dispositivo
+
+Wi-Fi
+= Wi-Fi
+
+Not connected
+= Sem ligação
+
+Connected
+= Ligado
+
+Turning on…
+= A ligar…
+
+Turning off…
+= A desligar…
+
+Connecting…
+= A ligar à rede…
+
+Scanning…
+= A procurar…
+
+Scan again
+= Procurar de novo
+
+No networks found
+= Nenhuma rede encontrada
+
+Password
+= Palavra-passe
+
+
+A Wi-Fi password has 8 to 63 characters
+= Uma palavra-passe Wi-Fi tem 8 a 63 caracteres
+
+This kind of network is not supported here
+= Este tipo de rede não é suportado aqui
+
+Could not join: wrong password? Forget it and try again
+= Não foi possível ligar: palavra-passe errada? Esqueça a rede e tente de novo
+
+Joined, but the network gave no address
+= Ligado, mas a rede não deu nenhum endereço
+
+Wi-Fi did not answer
+= O Wi-Fi não respondeu

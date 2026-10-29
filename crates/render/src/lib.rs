@@ -6,6 +6,7 @@
 
 pub mod canvas;
 pub mod drawer;
+pub mod drawer_menu;
 pub mod editor;
 pub mod files;
 pub mod findbar;
@@ -16,10 +17,12 @@ pub mod help;
 pub mod i18n;
 pub mod icons;
 pub mod ink;
+pub mod light_menu;
 pub mod options;
 pub mod plugin_screen;
 pub mod pointer;
 pub mod preview;
+pub mod qr;
 pub mod radio;
 pub mod scrollbar;
 pub(crate) mod shape;
@@ -27,6 +30,7 @@ pub mod slider;
 pub mod switch;
 pub mod theme;
 pub mod typeface;
+pub mod wifi_menu;
 
 pub use canvas::{Canvas, Rect};
 pub use drawer::{DrawerHit, DrawerModel, Pane};

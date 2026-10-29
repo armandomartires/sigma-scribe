@@ -836,6 +836,12 @@ Backlight
 = Achtergrondverlichting
 Light
 = Licht
+Warmth
+= Warmte
+Warm
+= Warm
+Cool
+= Koel
 Enhanced keyboard
 = Uitgebreid toetsenbord
 
@@ -983,3 +989,208 @@ Up to date
 Remove
 = Verwijderen
 
+
+Trash
+= Prullenbak
+
+Trash ({n})
+= Prullenbak ({n})
+
+Restore
+= Herstel
+
+Empty trash
+= Prullenbak legen
+
+Tap again to empty
+= Tik nogmaals om te legen
+
+The trash is empty.
+= De prullenbak is leeg.
+
+Tap a note to restore it
+= Tik op een notitie om die te herstellen
+
+Restored to {name}
+= Hersteld naar {name}
+
+Trash emptied
+= Prullenbak geleegd
+
+in {name}
+= in {name}
+
+Just now
+= Zojuist
+
+{n} min ago
+= {n} min geleden
+
+{n} h ago
+= {n} u geleden
+
+Yesterday
+= Gisteren
+
+{n} days ago
+= {n} dagen geleden
+
+# Settings -> Sync (v1.16)
+
+Sync
+= Synchronisatie
+
+Sync notes
+= Notities synchroniseren
+
+Keeps the notes in step with your computers while Σscribe is open
+= Houdt de notities gelijk met je computers zolang Σscribe open is
+
+Status
+= Status
+
+Devices
+= Apparaten
+
+Last sync
+= Laatste synchronisatie
+
+Conflicts
+= Conflicten
+
+Look for conflict in the Files list
+= Zoek conflict in de bestandenlijst
+
+Device ID
+= Apparaat-ID
+
+Waiting for you
+= Wacht op jou
+
+Pairing
+= Koppelen
+
+Add this device on your computer
+= Voeg dit apparaat toe op je computer
+
+In Syncthing there choose Add Remote Device and enter the ID above
+= Kies daar in Syncthing Extern apparaat toevoegen en voer het ID hierboven in
+
+Accept
+= Accepteren
+
+Ignore
+= Negeren
+
+New device
+= Nieuw apparaat
+
+Never
+= Nooit
+
+Folder from
+= Map van
+
+Syncthing is not installed
+= Syncthing is niet geïnstalleerd
+
+Starting
+= Starten
+
+Stopped
+= Gestopt
+
+No devices yet
+= Nog geen apparaten
+
+No device connected
+= Geen apparaat verbonden
+
+Scanning
+= Scannen
+
+Syncing {n} files
+= {n} bestanden synchroniseren
+
+{n} of {m} connected
+= {n} van {m} verbonden
+
+{n} files
+= {n} bestanden
+
+{n} KB
+= {n} KB
+
+{n} MB
+= {n} MB
+
+Loopback network is down
+= Het loopback-netwerk is uitgevallen
+
+Reason
+= Reden
+
+Show QR code
+= QR-code tonen
+
+
+QR code
+= QR-code
+
+Not shared yet
+= Nog niet gedeeld
+
+Waiting for {name} to accept
+= Wachten tot {name} accepteert
+
+Next step
+= Volgende stap
+
+Accept “Σscribe notes” in Syncthing on that device
+= Accepteer “Σscribe notes” in Syncthing op dat apparaat
+
+Wi-Fi
+= Wi-Fi
+
+Not connected
+= Niet verbonden
+
+Connected
+= Verbonden
+
+Turning on…
+= Inschakelen…
+
+Turning off…
+= Uitschakelen…
+
+Connecting…
+= Verbinden…
+
+Scanning…
+= Zoeken…
+
+Scan again
+= Opnieuw zoeken
+
+No networks found
+= Geen netwerken gevonden
+
+Password
+= Wachtwoord
+
+
+A Wi-Fi password has 8 to 63 characters
+= Een wifi-wachtwoord heeft 8 tot 63 tekens
+
+This kind of network is not supported here
+= Dit type netwerk wordt hier niet ondersteund
+
+Could not join: wrong password? Forget it and try again
+= Verbinden mislukt: verkeerd wachtwoord? Vergeet het netwerk en probeer opnieuw
+
+Joined, but the network gave no address
+= Verbonden, maar het netwerk gaf geen adres
+
+Wi-Fi did not answer
+= Wifi antwoordt niet

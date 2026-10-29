@@ -9,6 +9,7 @@ impl App {
     /// Applies one event; returns the refresh it needs (or `None`).
     pub fn handle(&mut self, e: Event) -> Option<Refresh> {
         self.sync_pane_plugins();
+        self.sync_drawer_open();
         match e {
             Event::Tilt { tilt, t } => {
                 self.now = self.now.max(t);
@@ -74,6 +75,52 @@ impl App {
         let page = self.screen.layout(self.keys_visible(), &self.keyboard).page;
         match e {
             Event::Tilt { .. } => None,
+            // The open light menu takes every tap and touch; a slider moves
+            // while the finger is on it.
+            Event::Tap { x, y } if self.screen.light_menu && self.drawer_allowed() => {
+                self.light_menu_tap(x, y)
+            }
+            Event::Touch { phase, x, y, t } if self.screen.light_menu && self.drawer_allowed() => {
+                if let Some(r) = self.light_menu_touch(phase, x, y) {
+                    return r;
+                }
+                let g = match phase {
+                    Phase::Down => self.gestures.down(x, y, t),
+                    Phase::Move => self.gestures.moved(x, y, t),
+                    Phase::Up => self.gestures.up(x, y, t),
+                };
+                self.apply(g)
+            }
+            Event::Key(HwKey::Escape) if self.screen.light_menu && self.drawer_allowed() => {
+                self.screen.light_menu = false;
+                self.light_touch = None;
+                Some(Refresh::Partial)
+            }
+            // v1.16: the open drawer menu takes every tap and touch.
+            Event::Tap { x, y } if self.screen.drawer_menu && self.drawer_allowed() => {
+                self.drawer_menu_tap(x, y)
+            }
+            // v1.18: so does the Wi-Fi menu.
+            Event::Tap { x, y } if self.screen.wifi_menu && self.drawer_allowed() => {
+                self.wifi_menu_tap(x, y)
+            }
+            Event::Touch { phase, x, y, t } if self.any_menu_open() && self.drawer_allowed() => {
+                let g = match phase {
+                    Phase::Down => self.gestures.down(x, y, t),
+                    Phase::Move => self.gestures.moved(x, y, t),
+                    Phase::Up => self.gestures.up(x, y, t),
+                };
+                self.apply(g)
+            }
+            // v1.16: the closed drawer's tab (a mouse click or a script tap).
+            Event::Tap { x, y } if self.on_drawer_tab(x, y) => self.reopen_drawer(),
+            Event::Key(HwKey::Escape) if self.any_menu_open() && self.drawer_allowed() => {
+                self.screen.drawer_menu = false;
+                self.screen.wifi_menu = false;
+                Some(Refresh::Partial)
+            }
+            // v1.18: the eye of the Wi-Fi password field.
+            Event::Tap { x, y } if self.wifi_eye_at(x, y) => Some(self.wifi_toggle_show()),
             Event::Tap { x, y } if self.paged_bar().is_some_and(|(_, b)| b.zone.contains(x, y)) => {
                 self.bar_tap(x, y).flatten()
             }
@@ -89,7 +136,7 @@ impl App {
                 if let Some(r) = self.ink_touch(phase, x, y, t) {
                     return r;
                 }
-                if let Some(r) = self.handle_touch(phase, x, y) {
+                if let Some(r) = self.handle_touch(phase, x, y, t) {
                     return r;
                 }
                 if let Some(r) = self.bar_touch(phase, x, y) {
@@ -114,6 +161,14 @@ impl App {
                 // A plugin screen with more to do (loading, or building a
                 // layout) takes its next step while the app is idle.
                 if let Some(r) = self.plugin_step() {
+                    return Some(r);
+                }
+                // Syncthing's news, and notes changed on disk (v1.16).
+                if let Some(r) = self.sync_tick(t) {
+                    return Some(r);
+                }
+                // The radio's news (v1.18).
+                if let Some(r) = self.wifi_tick() {
                     return Some(r);
                 }
                 if let Some(items) = self.indexer.poll() {
@@ -219,20 +274,23 @@ impl App {
             Event::Tap { x, y } if self.files.is_some() => self.files_tap(x, y),
             Event::PageTurn { forward } if self.files.is_some() => {
                 let rows = self.rows();
-                let visible = self
-                    .files_model(&rows)
-                    .map_or(1, |m| self.screen.files_layout(&m).visible.max(1));
+                let (first, visible) = self.files_model(&rows).map_or((0, 1), |m| {
+                    let l = self.screen.files_layout(&m);
+                    (l.first, l.visible.max(1))
+                });
                 let f = self.files.as_mut()?;
-                let n = if f.moving.is_some() {
-                    f.targets.len()
-                } else {
-                    f.entries.len()
-                };
+                let n = rows.len();
                 f.first = if forward {
-                    (f.first + visible).min(n.saturating_sub(1))
+                    (first + visible).min(n.saturating_sub(1))
                 } else {
-                    f.first.saturating_sub(visible)
+                    first.saturating_sub(visible)
                 };
+                // The open row and the armed delete may have left the page,
+                // and so may the Trash's selection: Restore only acts on
+                // what is on screen.
+                f.more = None;
+                f.armed = None;
+                f.selected = None;
                 Some(Refresh::Partial)
             }
             Event::Key(HwKey::Escape) if self.files.is_some() => {
@@ -323,7 +381,10 @@ impl App {
                 Some(Refresh::Fast)
             }
             Event::Tap { x, y } => {
-                let renaming = matches!(&self.rename, Some((RenameTarget::Current, _)));
+                let renaming = matches!(
+                    &self.rename,
+                    Some((RenameTarget::Current | RenameTarget::WifiPassword(_), _))
+                );
                 let model = Model {
                     file_name: self.current.name(),
                     buffer: &self.buffer,
@@ -369,7 +430,9 @@ impl App {
                         self.open_graph();
                         Some(Refresh::Full)
                     }
-                    Hit::Drawer(p) => Some(self.toggle_pane(p)),
+                    Hit::DrawerMenu => Some(self.toggle_drawer_menu()),
+                    Hit::Wifi => Some(self.toggle_wifi_menu()),
+                    Hit::LightMenu => Some(self.toggle_light_menu()),
                     Hit::Candidate(i) => {
                         self.keyboard.composer.pick(&mut self.buffer, i);
                         self.save();
@@ -434,11 +497,21 @@ impl App {
     /// The device failed to present a frame.
     pub fn run(&mut self, dev: &mut dyn Device) -> std::io::Result<()> {
         self.set_gsensor(dev.has_gsensor());
+        // The device opened before the log was on: say what its probe found.
+        for line in dev.light_report() {
+            sigma_core::info!("light", "{line}");
+        }
         sigma_device::usbkbd::set_layout(self.settings.kb_layout);
+        // The light before the first frame: the title bar's light button is
+        // there only once the probe has found a light.
+        self.sync_light(dev);
+        self.sync_warmth(dev);
         self.render(dev, Refresh::Full)?;
+        self.apply_sync();
         while self.running {
             self.sync_usb_host(dev);
             self.sync_light(dev);
+            self.sync_warmth(dev);
             let Some(e) = dev.next_event() else { break };
             let t0 = std::time::Instant::now();
             let e = self.to_logical(e);
@@ -454,6 +527,9 @@ impl App {
             }
         }
         self.save();
+        self.save_scratch();
+        // After the notes are written: ask Syncthing to shut down (docs/dev/sync-design.md §3).
+        self.stop_sync();
         if self.usb_host {
             let _ = dev.usb_host(false);
             self.usb_host = false;

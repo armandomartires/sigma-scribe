@@ -61,11 +61,9 @@ impl App {
             Event::Tap { x, y } if self.in_drawer(x, y) => self.drawer_tap(x, y),
             Event::Tap { x, y } => match self.screen.preview_hit(&self.keyboard, x, y) {
                 Hit::Back => self.go_back(),
-                Hit::Drawer(p) => {
-                    let r = self.toggle_pane(p);
-                    self.rebuild_preview();
-                    Some(r)
-                }
+                Hit::DrawerMenu => Some(self.toggle_drawer_menu()),
+                Hit::Wifi => Some(self.toggle_wifi_menu()),
+                Hit::LightMenu => Some(self.toggle_light_menu()),
                 Hit::TogglePreview => {
                     self.exit_preview();
                     Some(Refresh::Full)

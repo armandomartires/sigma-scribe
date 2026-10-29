@@ -30,7 +30,7 @@ cargo test --workspace
 - After adding or updating a dependency, run `cargo deny check` (the `deny`
   job in CI); licences must be on the allow list in `deny.toml`.
 - `sigma-plugin-api` is a contract with plugins built elsewhere. Changing the
-  encoding means bumping `ABI` and updating `docs/plugins.md` and the
+  encoding means bumping `ABI` and updating `docs/dev/plugin-api.md` and the
   plugins repository.
 - The emulator (`sigma-emu`, `tests/emu/*.script`) is the end-to-end test
   layer and produces `docs/screenshots/`.

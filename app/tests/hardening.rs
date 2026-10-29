@@ -25,11 +25,14 @@ fn tap_on(app: &mut App, label: &str) {
         app.handle(Event::Tap { x, y });
         app.settle();
     }
-    let (x, y) = app
-        .control_centre(label)
-        .unwrap_or_else(|| panic!("no control {label}"));
-    app.handle(Event::Tap { x, y });
-    app.settle();
+    // A pane is shown or hidden through the drawer menu (v1.16).
+    for step in app.control_steps(label) {
+        let (x, y) = app
+            .control_centre(&step)
+            .unwrap_or_else(|| panic!("no control {step}"));
+        app.handle(Event::Tap { x, y });
+        app.settle();
+    }
 }
 
 /// Every control on screen is at least 44 px (scaled) both ways and lies

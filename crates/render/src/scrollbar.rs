@@ -93,6 +93,15 @@ pub fn bar(
     Some((strip, thumb(strip, total, visible, at, m.min_thumb)))
 }
 
+/// The width kept for the bar at the right of a page (v1.16): the strip
+/// with its margin on both sides, so a drawer on the right ends as far from
+/// the bar as the bar is from the screen edge, and never covers it.
+#[must_use]
+pub fn reserve(s: crate::theme::Scale) -> i32 {
+    let m = Metrics::new(s);
+    m.clearance() + m.margin
+}
+
 /// Where a finger grabs a bar: the strip widened to a touch target, out to
 /// the page's right edge, the whole height of `page`. Shared by every screen
 /// that lets the bar be dragged or tapped.

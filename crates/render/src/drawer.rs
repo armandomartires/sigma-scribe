@@ -7,6 +7,7 @@
 use crate::canvas::{Canvas, Rect};
 use crate::editor::{EditorScreen, Layout};
 use crate::fonts::{Face, Measure};
+use crate::graphmap::fill_round;
 use crate::i18n::tr;
 use crate::theme::Theme;
 use sigma_core::outline::{Filter, Heading, TodoItem};
@@ -14,6 +15,30 @@ use sigma_core::settings::Side;
 use sigma_core::wrap::{caret_cell, offset_at, wrap, VisualLine};
 use sigma_core::Buffer;
 use sigma_plugin_api::Frame;
+
+/// The grip's fill (v1.16): 50 % grey, an exact level of the panel's 16
+/// (the disabled slider's grey).
+pub const GRIP_FILL: u8 = crate::slider::MUTED;
+
+/// A square checkbox in `b`: filled with a paper check mark when `on`,
+/// else an outline `stroke` px wide (to-dos, the drawer menu).
+pub(crate) fn draw_check(c: &mut Canvas, b: Rect, on: bool, stroke: i32, t: Theme) {
+    let side = b.w;
+    if on {
+        c.fill(b, t.ink);
+        // Check mark in paper.
+        for k in 0..side / 2 {
+            let (x0, y0) = (b.x + side / 5 + k / 2, b.y + side / 2 + k / 2);
+            c.fill(Rect::new(x0, y0, 2, 2), t.paper);
+            c.fill(
+                Rect::new(b.x + side / 2 - 2 + k, b.y + side * 3 / 4 - k, 2, 2),
+                t.paper,
+            );
+        }
+    } else {
+        c.stroke(b, stroke, t.ink);
+    }
+}
 
 /// A pane of the side drawer.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -157,7 +182,7 @@ impl EditorScreen {
         let w = self.drawer_width_at(base, self.cfg.drawer_width);
         let x = match side {
             Side::Left => p.x,
-            Side::Right => p.x + p.w - w,
+            Side::Right => self.drawer_right(base) - w,
         };
         Rect::new(x, p.y, w, p.h)
     }
@@ -188,9 +213,78 @@ impl EditorScreen {
         let z = self.drawer_handle(base, side);
         let (bw, bh) = (self.d(10.0), self.d(80.0));
         let bar = Rect::new(z.x + (z.w - bw) / 2, z.y + (z.h - bh) / 2, bw, bh);
+        self.draw_grip(c, bar, t);
+    }
+
+    /// The grip's look, for the open drawer's grip and the closed one's tab
+    /// (v1.16): a bar with fully rounded ends, an ink outline as wide as the
+    /// scroll bar thumb's round a 50 % grey fill, and three white dots down
+    /// its middle so it reads as something to hold. A white rim at its sides
+    /// keeps text off it; none above or below, so the drawer's edge line
+    /// runs into its ends.
+    fn draw_grip(&self, c: &mut Canvas, bar: Rect, t: Theme) {
         let pad = self.d(4.0);
-        c.fill(bar.inset(-pad), t.paper);
-        c.fill(bar, t.ink);
+        let side = Rect::new(bar.x - pad, bar.y, bar.w + 2 * pad, bar.h);
+        fill_round(c, side, side.w / 2, t.paper);
+        let line = crate::scrollbar::Metrics::new(self.page_scale()).line;
+        fill_round(c, bar, bar.w / 2, t.ink);
+        fill_round(c, bar.inset(line), bar.w / 2 - line, GRIP_FILL);
+        let dot = (bar.w * 2 / 5).max(2);
+        let step = dot + self.d(5.0);
+        let x = bar.x + (bar.w - dot) / 2;
+        let y0 = bar.y + bar.h / 2 - dot / 2 - step;
+        for i in 0..3 {
+            let r = Rect::new(x, y0 + i * step, dot, dot);
+            fill_round(c, r, dot / 2, t.paper);
+        }
+    }
+
+    /// A grip dragged to screen column `x` closes the drawer (v1.16): the
+    /// finger is nearer the outer edge than half the narrowest drawer.
+    #[must_use]
+    pub fn drawer_closes_at(&self, base: &Layout, side: Side, x: i32) -> bool {
+        let p = base.page;
+        let half = self.drawer_width_at(base, 0) / 2;
+        match side {
+            Side::Left => x < p.x + half,
+            Side::Right => x > self.drawer_right(base) - half,
+        }
+    }
+
+    /// The tab left where the drawer's outer edge was while it is closed
+    /// from its grip (v1.16): on the right, left of the scroll bar's strip
+    /// (and its margin), never on the bar; on the left, at the screen edge.
+    /// A finger wide, as tall as the grip's area, mid-page.
+    #[must_use]
+    pub fn drawer_tab(&self, base: &Layout, side: Side) -> Rect {
+        let p = base.page;
+        let (w, h) = (self.d(44.0), self.d(150.0));
+        let x = match side {
+            Side::Left => p.x,
+            Side::Right => self.drawer_right(base) - w,
+        };
+        Rect::new(x, p.y + (p.h - h) / 2, w, h)
+    }
+
+    /// Draws the tab: the grip's bar against the drawer's outer edge, white
+    /// on its inner side so it stays visible over the text.
+    pub fn draw_drawer_tab(&self, c: &mut Canvas, base: &Layout, side: Side, t: Theme) {
+        let z = self.drawer_tab(base, side);
+        let (bw, bh) = (self.d(10.0), self.d(80.0));
+        let x = match side {
+            Side::Left => z.x,
+            Side::Right => z.x + z.w - bw,
+        };
+        let bar = Rect::new(x, z.y + (z.h - bh) / 2, bw, bh);
+        self.draw_grip(c, bar, t);
+    }
+
+    /// Where a drawer on the right ends (v1.16): left of the scroll bar's
+    /// strip and a margin as wide as the bar's own, which stay the bar's (the bar is on the right in every
+    /// language; a drawer on the left never meets it).
+    fn drawer_right(&self, base: &Layout) -> i32 {
+        let p = base.page;
+        p.x + p.w - crate::scrollbar::reserve(self.page_scale())
     }
 
     /// The Drawer width stop whose drawer is closest to one whose inner edge
@@ -200,7 +294,7 @@ impl EditorScreen {
         let p = base.page;
         let want = match side {
             Side::Left => x - p.x,
-            Side::Right => p.x + p.w - x,
+            Side::Right => self.drawer_right(base) - x,
         };
         (0..sigma_core::settings::DRAWER_WIDTH_STOPS)
             .min_by_key(|&s| (self.drawer_width_at(base, s) - want).abs())
@@ -517,20 +611,7 @@ impl EditorScreen {
                         let it = &items[*idx];
                         let side = self.d(18.0);
                         let b = Rect::new(bx.x + self.d(4.0), tx.y + self.d(10.0), side, side);
-                        if it.todo.done {
-                            c.fill(b, t.ink);
-                            // Check mark in paper.
-                            for k in 0..side / 2 {
-                                let (x0, y0) = (b.x + side / 5 + k / 2, b.y + side / 2 + k / 2);
-                                c.fill(Rect::new(x0, y0, 2, 2), t.paper);
-                                c.fill(
-                                    Rect::new(b.x + side / 2 - 2 + k, b.y + side * 3 / 4 - k, 2, 2),
-                                    t.paper,
-                                );
-                            }
-                        } else {
-                            c.stroke(b, self.d(1.75).max(2), t.ink);
-                        }
+                        draw_check(c, b, it.todo.done, self.d(1.75).max(2), t);
                         let (ink, line) = if it.todo.done {
                             (t.mute, true)
                         } else {
@@ -640,6 +721,51 @@ mod tests {
     use super::*;
     use sigma_core::outline::{headings, Todo};
     use sigma_core::{Keyboard, NotePath};
+
+    #[test]
+    fn the_grip_is_outlined_like_the_scroll_thumb_grey_with_three_white_dots() {
+        let e = EditorScreen::new(1440, 1920);
+        let t = Theme::DAY;
+        let base = e.layout(true, &Keyboard::default());
+        let px = |c: &Canvas, x: i32, y: i32| c.pixels[(y * c.width as i32 + x) as usize];
+        let (bw, bh) = (e.d(10.0), e.d(80.0));
+        let line = crate::scrollbar::Metrics::new(e.page_scale()).line;
+        // A colour neither the grip nor its rim uses: what it leaves alone.
+        let bg = 0x40;
+        for tab in [false, true] {
+            let mut c = Canvas::new(1440, 1920, bg);
+            let z = if tab {
+                e.draw_drawer_tab(&mut c, &base, Side::Right, t);
+                e.drawer_tab(&base, Side::Right)
+            } else {
+                e.draw_drawer_handle(&mut c, &base, Side::Right, t);
+                e.drawer_handle(&base, Side::Right)
+            };
+            let x = if tab {
+                z.x + z.w - bw
+            } else {
+                z.x + (z.w - bw) / 2
+            };
+            let bar = Rect::new(x, z.y + (z.h - bh) / 2, bw, bh);
+            let (cx, cy) = (bar.x + bar.w / 2, bar.y + bar.h / 2);
+            assert_eq!(px(&c, bar.x, bar.y), bg, "{tab}: rounded corner");
+            assert_eq!(px(&c, cx, bar.y - 1), bg, "{tab}: no rim above");
+            assert_eq!(px(&c, cx, bar.y + bar.h), bg, "{tab}: no rim below");
+            assert_eq!(px(&c, bar.x - 1, cy), t.paper, "{tab}: rim at the side");
+            // The outline is as wide as the scroll bar thumb's.
+            assert!(line >= 2);
+            assert_eq!(px(&c, cx, bar.y + line - 1), t.ink, "{tab}: outline");
+            assert_eq!(px(&c, cx, bar.y + line), GRIP_FILL, "{tab}: grey inside");
+            assert_eq!(px(&c, bar.x + line - 1, cy), t.ink, "{tab}: outline");
+            assert_eq!(px(&c, bar.x + line, cy), GRIP_FILL);
+            // Down the middle: outline, grey, then three white dots on the
+            // grey (six edges), grey, outline.
+            let col: Vec<u8> = (bar.y..bar.y + bar.h).map(|y| px(&c, cx, y)).collect();
+            let runs = col.windows(2).filter(|w| w[0] != w[1]).count();
+            assert_eq!(runs, 8, "{tab}: outline, three dots, outline");
+            assert_eq!(px(&c, cx, cy), t.paper, "{tab}: the middle dot");
+        }
+    }
 
     fn items() -> Vec<TodoItem> {
         (0..30)

@@ -27,6 +27,14 @@ pub struct DesktopDevice {
     pub gsensor: bool,
     /// Pretend a front light is present at this step (v1.12). `None`: none.
     pub light: Option<u8>,
+    /// Pretend a warm-to-cool mixer is present at this step (v1.17).
+    /// `None`: none.
+    pub warmth: Option<u8>,
+    /// Whether the pretend mixer can be read back (the Forma's may not be).
+    pub warmth_readable: bool,
+    /// What the light probe "found" at start, handed over once (the Kobo's
+    /// is real; tests set this to see the app log it).
+    pub light_report: Vec<String>,
 }
 
 impl DesktopDevice {
@@ -42,6 +50,9 @@ impl DesktopDevice {
             usb_host: Vec::new(),
             gsensor: false,
             light: None,
+            warmth: None,
+            warmth_readable: true,
+            light_report: Vec::new(),
         }
     }
 
@@ -128,6 +139,25 @@ impl Device for DesktopDevice {
     fn set_light(&mut self, step: u8) -> io::Result<()> {
         if self.light.is_some() {
             self.light = Some(step);
+        }
+        Ok(())
+    }
+
+    fn light_report(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.light_report)
+    }
+
+    fn has_warmth(&self) -> bool {
+        self.warmth.is_some()
+    }
+
+    fn warmth_step(&mut self) -> Option<u8> {
+        self.warmth.filter(|_| self.warmth_readable)
+    }
+
+    fn set_warmth(&mut self, step: u8) -> io::Result<()> {
+        if self.warmth.is_some() {
+            self.warmth = Some(step.min(crate::light::WARMTH_MAX));
         }
         Ok(())
     }

@@ -32,4 +32,5 @@ minifb = { version = "0.27", default-features = false, features = ["x11"] }
 workspace = true
 
 [dev-dependencies]
+rqrr = { version = "0.11", default-features = false }
 wat = "1"

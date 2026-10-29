@@ -19,6 +19,7 @@ pub mod light;
 pub mod otg;
 pub mod pointer;
 pub mod usbkbd;
+pub mod wifi;
 
 use sigma_render::{Canvas, Rect};
 use std::io;
@@ -211,6 +212,13 @@ pub trait Device {
     fn has_gsensor(&self) -> bool {
         false
     }
+    /// What the start-up probe of the front light and the warmth mixer found,
+    /// one line each, handed over once. The device opens before the log is
+    /// switched on, so the app logs these itself when it starts. Default:
+    /// nothing to say.
+    fn light_report(&mut self) -> Vec<String> {
+        Vec::new()
+    }
     /// The front light's step, 0 (off) to 8 (full), when the device has
     /// one (v1.12). Default: no light, so Display shows no Backlight row.
     fn light_step(&mut self) -> Option<u8> {
@@ -221,6 +229,24 @@ pub trait Device {
     /// # Errors
     /// The light could not be written (the app carries on without it).
     fn set_light(&mut self, _step: u8) -> io::Result<()> {
+        Ok(())
+    }
+    /// Whether the front light has a warm-to-cool mixer (v1.17). Default:
+    /// no, so Display shows no Warmth row.
+    fn has_warmth(&self) -> bool {
+        false
+    }
+    /// The mixer's step, 0 (cool) to 10 (warm), if it can be read. The
+    /// stock reader never reads it back, so this may be `None` on a device
+    /// that has a mixer; the app then keeps its own record (v1.17).
+    fn warmth_step(&mut self) -> Option<u8> {
+        None
+    }
+    /// Sets the mixer to a step, 0 (cool) to 10 (warm) (v1.17).
+    ///
+    /// # Errors
+    /// The mixer could not be written (the app carries on without it).
+    fn set_warmth(&mut self, _step: u8) -> io::Result<()> {
         Ok(())
     }
 }
