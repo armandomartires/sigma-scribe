@@ -31,16 +31,9 @@ jobs:
           mkdir -p _site/screenshots
           cp -r site/. _site/
           rm -f _site/README.md
-          if [ -d docs/screenshots/readme ]; then
-            for f in docs/screenshots/readme/readme-*.png; do
-              b=$(basename "$f"); cp "$f" "_site/screenshots/${b#readme-}"
-            done
-          else
-            for f in docs/screenshots/v1.15/v1.15-*.png; do
-              b="$(basename "$f")"
-              cp "$f" "_site/screenshots/${b#v1.15-}"
-            done
-          fi
+          for f in docs/screenshots/readme/readme-*.png; do
+            b=$(basename "$f"); cp "$f" "_site/screenshots/${b#readme-}"
+          done
           missing=0
           for img in $(grep -o 'src="screenshots/[^"]*"' _site/index.html | sed 's/^src="//; s/"$//'); do
             if [ ! -f "_site/$img" ]; then

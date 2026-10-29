@@ -16,6 +16,7 @@ The note's name is at the left. The buttons, left to right:
 
 | Button | What it does |
 |---|---|
+| Back arrow | **Back**, left of Files. It appears only when there is history to go back through. |
 | Folder | **Files**: your notes and folders. New note, New folder, a note's More (Rename, Move, Delete), and the **Trash**, where a deleted note waits until you restore it or empty the Trash. |
 | Eye / pencil | Switches between **Write** (the text, with the keyboard) and **Preview** (the note as it reads, in pages you turn with the page buttons). |
 | Magnifier | **Find** and replace in the note. |
@@ -36,7 +37,7 @@ The note's name is at the left. The buttons, left to right:
 
 ## Settings
 
-The cog opens Settings: Writing (font, size, margins), Display (Paper or Night, UI scale, drawer, backlight and warmth, orientation), Keyboard & input (keyboard, layout, handwriting), Language, USB & devices, Plugins, Logging, Sync and Help & about. Changes apply at once and are kept.
+The cog opens Settings: Writing (font, size, margins), Display (Paper or Night, UI scale, drawer, backlight and warmth, orientation), Keyboard & input (keyboard, layout, handwriting), Language, USB & devices, Experimental features, Plugins, Logging, Sync and Help & about. **Experimental features** is one switch for things not fully tested yet: Word mode and Fast ink for handwriting, and the Asian, right-to-left and Indic keyboard layouts, which stay hidden until it is on. Changes apply at once and are kept.
 
 ## Quitting
 

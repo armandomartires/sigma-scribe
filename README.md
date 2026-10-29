@@ -4,8 +4,6 @@ A distraction-free Markdown notebook for the **Kobo Forma** — native Rust, dra
 
 Licence: **AGPL-3.0-only** (`LICENSE`) · Author: **SIGMArecon** · Statically links FBInk (GPL-3.0-or-later) · Fonts: Literata, Atkinson Hyperlegible and Noto (SIL OFL 1.1) · Icons: [Lucide](https://lucide.dev) (ISC) — see `packaging/kobo/.adds/sigma-scribe/THIRD-PARTY.txt`.
 
-> This repository's git history was cleaned for publication (author identities unified; machine names removed). Device serial numbers are masked as `<FORMA-SERIAL>` in the docs.
-
 Status: **1.15.0**; the changes since are listed under Unreleased in `CHANGELOG.md`, which also says for each version whether it was tested on the Forma. Tested model/firmware: Kobo Forma, 4.38.23697.
 
 | Write | Preview | Drawer | Graph | Settings |
@@ -39,10 +37,10 @@ Screenshots from the desktop emulator (`tests/emu/readme.script`); e-ink-look co
 **Handwriting** (Write panel; see [`docs/user/handwriting.md`](docs/user/handwriting.md))
 - The keys sit in one block, grouped by use (panel, editing, typing, moving), on a third of the width; the rest is the writing area. **⇄** moves the block to the other side and **Line** shows or hides a dotted guide line.
 - Write anywhere in the writing area. The ink is split into letters and read; spaces come from the gaps. A candidate bar offers other readings, and keys type punctuation, digits and spaces.
-- **Word mode** (experimental) reads whole words against a word list and the words in your notes.
+- **Word mode** and **Fast ink** (experimental; Settings → Experimental features) reads whole words against a word list and the words in your notes.
 - **Letter boxes**, one character per box, as an alternative.
 - **Train** the recogniser with samples of your writing. With **Learn from corrections** on, it also keeps learning each time you fix a letter by picking a candidate.
-- **Draw**: sketches kept in the note, shown in the preview.
+- **Sketch**: drawings kept in the note, shown in the preview.
 - Gestures: scratch out to erase, flick to delete or add a space.
 
 **Languages**
@@ -54,6 +52,7 @@ Screenshots from the desktop emulator (`tests/emu/readme.script`); e-ink-look co
   - **Right to left:** Arabic, Persian, Urdu, Hebrew, with shaped letters and mixed-direction lines.
   - **Indic and Thai:** Hindi, Marathi, Nepali, Bengali, Tamil, Thai, with conjuncts and clusters.
   - **East Asian:** Korean, Japanese (romaji to kana, kanji conversion with the SKK dictionary), Chinese Simplified and Traditional (pinyin).
+- Korean, Japanese, Chinese, Arabic, Persian, Urdu, Hebrew, Hindi, Marathi, Nepali, Bengali, Tamil and Thai are experimental: they appear in the layout list only with Settings → Experimental features on.
 - Korean, Japanese and Chinese characters need a font pack (`fonts/cjk.ttf`; see [`docs/user/font-packs.md`](docs/user/font-packs.md)). The dictionaries are included.
 
 **Device**
@@ -77,24 +76,7 @@ Screenshots from the desktop emulator (`tests/emu/readme.script`); e-ink-look co
 ## Install, update, uninstall
 See [`docs/user/install.md`](docs/user/install.md). In short: install NickelMenu, unpack `sigma-scribe-<ver>-kobo.tar.gz` onto the Kobo drive's root, eject, then *Σscribe* is in the NickelMenu. Notes live in `sigma-scribe/notes` on the drive. An update keeps your notes, settings and plugin choices. Uninstall = delete `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`.
 
-## Run it on your desktop
-```sh
-scripts/sim.sh            # live window, 1440x1920 scaled to fit
-scripts/sim.sh --eink     # with e-ink flash/ghosting look
-SIGMA_NOTES=$(mktemp -d) scripts/sim.sh --headless tests/emu/readme.script docs/screenshots/readme   # PNGs, no window
-cargo test --workspace
-```
-Window controls: mouse = touch, PageUp/PageDown = page-turn buttons, keyboard = USB keyboard, Esc = power (save & quit).
-
-## Build for the Kobo
-`scripts/package-kobo.sh` → `dist/sigma-scribe-<ver>-kobo/` + reproducible `.tar.gz` + `.sha256`, checked by `scripts/check-package.sh`. Release packages are built by `.github/workflows/release.yml` (pinned FBInk); see [`docs/dev/release/checklist.md`](docs/dev/release/checklist.md).
-
-## Develop
-Rust edition 2021, minimum Rust version in `Cargo.toml` (`rust-version`). Targets: desktop Linux for development and tests, and `armv7-unknown-linux-musleabihf` for the Kobo. Build, check and code conventions are in [`CONTRIBUTING.md`](CONTRIBUTING.md). The handwriting models are built with `tools/hwr-train`.
-
 ## Docs
 For readers of the app: [`docs/user/`](docs/user/README.md) (getting started, handwriting, install, USB keyboard, Wi-Fi, sync, logging, Japanese and Chinese input, font packs, plugins), the [wiki](https://github.com/armandomartires/sigma-scribe/wiki) and the [project page](https://armandomartires.github.io/sigma-scribe/). `CHANGELOG.md` lists the changes by version.
 
-For developers: [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/dev/`](docs/dev/README.md) (testing, deployment, design pages, release checklist).
-
-Planning and working notes (the plan, design brief, sprints, sprint board, device-pass runbooks and session handovers) are in [`.ai/`](.ai/README.md).
+Building and contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/dev/`](docs/dev/README.md).

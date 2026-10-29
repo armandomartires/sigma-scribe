@@ -2,7 +2,7 @@
 # Build the GitHub wiki from docs/user/ into a checkout of the wiki repository.
 #
 #   git clone https://github.com/armandomartires/sigma-scribe.wiki.git /tmp/wiki
-#   scripts/wiki-sync.sh /tmp/wiki
+#   scripts/wiki-sync.sh [--force] /tmp/wiki
 #   (cd /tmp/wiki && git status && git add -A && git commit && git push)
 #
 # One wiki page per docs/user/*.md (README.md becomes Home), named from the
@@ -10,15 +10,19 @@
 # to other repository files absolute GitHub URLs, images raw.githubusercontent
 # URLs. Also writes _Sidebar.md and _Footer.md. Every generated page starts with
 # a marker comment; pages that carry it but no longer have a source are
-# removed, other wiki pages are never touched. Nothing is committed or pushed.
+# removed, other wiki pages are never touched. If a page to be written exists
+# without the marker on its first line, the script refuses, before writing
+# anything, unless --force is given. Nothing is committed or pushed.
 set -eu
 
-[ $# -eq 1 ] && [ -d "$1" ] || { echo "usage: $0 <wiki-checkout-dir>" >&2; exit 2; }
+FORCE=0
+if [ "${1:-}" = "--force" ]; then FORCE=1; shift; fi
+[ $# -eq 1 ] && [ -d "$1" ] || { echo "usage: $0 [--force] <wiki-checkout-dir>" >&2; exit 2; }
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-exec python3 - "$ROOT" "$1" <<'PY'
+exec python3 - "$ROOT" "$1" "$FORCE" <<'PY'
 import os, re, sys
 
-root, wiki = sys.argv[1], os.path.abspath(sys.argv[2])
+root, wiki, force = sys.argv[1], os.path.abspath(sys.argv[2]), sys.argv[3] == "1"
 REPO = "https://github.com/armandomartires/sigma-scribe"
 BLOB, TREE = REPO + "/blob/main/", REPO + "/tree/main/"
 RAW = "https://raw.githubusercontent.com/armandomartires/sigma-scribe/main/"
@@ -100,6 +104,17 @@ for f in seq:
 side += ["", "[Source](%s) · [Project page](https://armandomartires.github.io/sigma-scribe/)" % REPO]
 generated["_Sidebar.md"] = MARK + "\n\n" + "\n".join(side) + "\n"
 generated["_Footer.md"] = MARK + "\n\nGenerated from docs/user in the repository; edit there.\n"
+
+if not force:
+    clash = []
+    for name in sorted(generated):
+        p = os.path.join(wiki, name)
+        if os.path.isfile(p):
+            with open(p, encoding="utf-8") as fh:
+                if fh.readline().strip() != MARK:
+                    clash.append(name)
+    if clash:
+        sys.exit("refusing to overwrite wiki pages not written by this script (no marker on the first line): %s\nNothing was written. Use --force to overwrite them." % ", ".join(clash))
 
 created, updated, same, removed = [], [], [], []
 for name, content in sorted(generated.items()):
