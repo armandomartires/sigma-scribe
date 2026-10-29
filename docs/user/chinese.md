@@ -1,4 +1,4 @@
-# Chinese input (v1.11)
+# Chinese input
 
 Settings → Keyboard & input → Layout → **Chinese Simplified (pinyin)** or **Chinese Traditional (pinyin)**. The Full on-screen keyboard or a USB keyboard.
 

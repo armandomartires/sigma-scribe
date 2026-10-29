@@ -1,4 +1,4 @@
-# Install, update and uninstall (users)
+# Install, update and uninstall
 
 Tested on: **Kobo Forma, firmware 4.38.23697**. Other Kobo models are untested.
 

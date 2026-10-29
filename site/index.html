@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Σscribe — a Markdown notebook for the Kobo Forma</title>
+<meta name="description" content="Σscribe is a distraction-free Markdown notebook for the Kobo Forma, written in Rust. Plain .md notes, handwriting, 35 keyboard layouts, plugins and optional Syncthing sync.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23111'/%3E%3Ctext x='32' y='47' font-family='Georgia,serif' font-size='44' text-anchor='middle' fill='%23fff'%3E%CE%A3%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,400;7..72,600&display=swap">
+<style>
+:root {
+  --bg: #fafafa;
+  --fg: #151515;
+  --muted: #505050;
+  --rule: #cfcfcf;
+  --panel: #f0f0f0;
+  --link: #151515;
+  --serif: "Literata", Georgia, "Times New Roman", serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121212; --fg: #ececec; --muted: #a8a8a8;
+    --rule: #3a3a3a; --panel: #1b1b1b; --link: #ececec;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121212; --fg: #ececec; --muted: #a8a8a8;
+  --rule: #3a3a3a; --panel: #1b1b1b; --link: #ececec;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 17px/1.65 var(--serif);
+}
+.wrap { max-width: 46rem; margin: 0 auto; padding: 0 16px; }
+header.top { padding: 4rem 0 2.5rem; border-bottom: 1px solid var(--rule); }
+h1 { font: 600 clamp(2.6rem, 9vw, 4rem)/1.05 var(--serif); margin: 0 0 1rem; letter-spacing: -0.01em; }
+.pitch { font-size: 1.3rem; line-height: 1.5; margin: 0 0 1.5rem; max-width: 34rem; }
+h2 { font: 600 1.6rem/1.25 var(--serif); margin: 0 0 1rem; }
+h3 { font: 600 1.05rem/1.3 var(--serif); margin: 1.4rem 0 .3rem; }
+section { padding: 2.75rem 0; border-bottom: 1px solid var(--rule); }
+p, ul, ol { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.3rem; }
+li { margin-bottom: .35rem; }
+a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+a:focus-visible, .btn:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
+.btn {
+  display: inline-block; padding: .65rem 1.2rem; border: 2px solid var(--fg);
+  background: var(--fg); color: var(--bg); text-decoration: none; font-family: var(--sans);
+  font-size: .95rem; font-weight: 600; margin: 0 .6rem .6rem 0;
+}
+.btn.alt { background: transparent; color: var(--fg); }
+.note { background: var(--panel); border-left: 3px solid var(--fg); padding: .8rem 1rem; font-size: .95rem; color: var(--muted); }
+.note strong { color: var(--fg); }
+.gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem 1rem; margin: 0; padding: 0; list-style: none; }
+.gallery li { margin: 0; }
+.gallery figure { margin: 0; }
+.gallery img { width: 100%; height: auto; display: block; border: 1px solid var(--rule); background: #fff; }
+.gallery figcaption { font: .85rem/1.3 var(--sans); color: var(--muted); margin-top: .4rem; }
+@media (min-width: 40rem) { .gallery { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 56rem) { .gallery { grid-template-columns: repeat(5, 1fr); } .wrap.wide { max-width: 64rem; } }
+.cols { display: grid; gap: 0 2.5rem; }
+@media (min-width: 40rem) { .cols { grid-template-columns: 1fr 1fr; } }
+ol.steps { counter-reset: s; list-style: none; padding: 0; }
+ol.steps li { counter-increment: s; padding-left: 2.6rem; position: relative; margin-bottom: 1rem; }
+ol.steps li::before {
+  content: counter(s); position: absolute; left: 0; top: .1rem; width: 1.8rem; height: 1.8rem;
+  border: 2px solid var(--fg); border-radius: 50%; text-align: center; font: 600 .9rem/1.5rem var(--sans);
+}
+code { font: .88em ui-monospace, Menlo, Consolas, monospace; background: var(--panel); padding: .05em .3em; }
+.links { list-style: none; padding: 0; }
+footer { padding: 2rem 0 3rem; font-size: .9rem; color: var(--muted); }
+footer a { color: var(--muted); }
+.skip { position: absolute; left: -999px; }
+.skip:focus { left: 16px; top: 8px; background: var(--bg); padding: .3rem .6rem; z-index: 1; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap">
+    <h1>Σscribe</h1>
+    <p class="pitch">A distraction-free Markdown notebook for the Kobo Forma. Native Rust, plain <code>.md</code> files, typed or handwritten.</p>
+    <p>
+      <a class="btn" href="https://github.com/armandomartires/sigma-scribe/releases/latest">Download the latest release</a>
+      <a class="btn alt" href="https://github.com/armandomartires/sigma-scribe/wiki">User guide</a>
+      <a class="btn alt" href="https://github.com/armandomartires/sigma-scribe">Source</a>
+    </p>
+  </div>
+</header>
+
+<main id="main">
+
+<section aria-labelledby="shots">
+  <div class="wrap wide">
+    <h2 id="shots">Screenshots</h2>
+    <p>Captured from the desktop emulator, which draws the same screen the Kobo does.</p>
+    <ul class="gallery">
+      <li><figure><img src="screenshots/write.png" width="1440" height="1920" loading="lazy" alt="The editor in Paper mode: a Markdown note above the on-screen keyboard"><figcaption>Write</figcaption></figure></li>
+      <li><figure><img src="screenshots/preview.png" width="1440" height="1920" loading="lazy" alt="The Markdown preview of a note, laid out in pages"><figcaption>Preview</figcaption></figure></li>
+      <li><figure><img src="screenshots/drawer.png" width="1440" height="1920" loading="lazy" alt="The side drawer open beside a note, listing its Contents and the To-dos from all notes"><figcaption>Drawer</figcaption></figure></li>
+      <li><figure><img src="screenshots/graph.png" width="1440" height="1920" loading="lazy" alt="The Graph in Map view: four notes joined by their wiki links"><figcaption>Graph</figcaption></figure></li>
+      <li><figure><img src="screenshots/settings.png" width="1440" height="1920" loading="lazy" alt="The Settings list: Writing, Display, Keyboard and input, Language, USB, Plugins, Logging and Help"><figcaption>Settings</figcaption></figure></li>
+      <li><figure><img src="screenshots/handwriting.png" width="1440" height="1920" loading="lazy" alt="Handwriting input: a candidate bar with alternative readings of the word just written, above a keypad for punctuation and editing"><figcaption>Handwriting</figcaption></figure></li>
+      <li><figure><img src="screenshots/arabic.png" width="1440" height="1920" loading="lazy" alt="A line of Arabic written right to left, above the Arabic on-screen keyboard"><figcaption>Arabic</figcaption></figure></li>
+      <li><figure><img src="screenshots/japanese.png" width="1440" height="1920" loading="lazy" alt="A line of Japanese with a bar of kanji conversion candidates, above the keyboard"><figcaption>Japanese</figcaption></figure></li>
+      <li><figure><img src="screenshots/night.png" width="1440" height="1920" loading="lazy" alt="The editor in Night mode: light text on a dark page"><figcaption>Night</figcaption></figure></li>
+      <li><figure><img src="screenshots/landscape.png" width="1920" height="1440" loading="lazy" alt="The editor in landscape orientation with the keyboard in Centre layout"><figcaption>Landscape</figcaption></figure></li>
+    </ul>
+  </div>
+</section>
+
+<section aria-labelledby="features">
+  <div class="wrap">
+    <h2 id="features">What it does</h2>
+    <div class="cols">
+      <div>
+        <h3>Writing</h3>
+        <ul>
+          <li>On-screen keyboard, Compact or Full, with a size slider and Split, Full or Centre in landscape.</li>
+          <li>Touch selection, cut, copy, paste, undo, redo, autosave.</li>
+          <li>Find and Replace, line mode, size, leading, margin, tabs.</li>
+        </ul>
+        <h3>Notes and links</h3>
+        <ul>
+          <li>A library of notes and folders, with a Trash you can restore from. Notes are plain Markdown on the Kobo drive.</li>
+          <li>Markdown preview in pages.</li>
+          <li>Wiki links <code>[[note]]</code> with backlinks; renaming a note updates the links to it.</li>
+          <li>A side drawer with Contents, To-dos across all notes and a Scratch pad, and a Graph of how notes connect.</li>
+        </ul>
+        <h3>Handwriting</h3>
+        <ul>
+          <li>Write anywhere in a blank area; the ink is split into letters and read, with a candidate bar for other readings.</li>
+          <li>Word mode (experimental), letter boxes, training on your own writing, and sketches kept in the note.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Languages</h3>
+        <ul>
+          <li>Interface in 10 languages: English, French, Portuguese, German, Spanish, Italian, Dutch, Catalan, Danish and Swedish.</li>
+          <li>35 keyboard layouts, on screen and on a USB keyboard: Latin, Cyrillic, Greek, Vietnamese, Arabic, Persian, Urdu, Hebrew, Hindi, Bengali, Tamil, Thai, Korean, Japanese and Chinese, among others.</li>
+          <li>Korean, Japanese and Chinese characters need a font pack; the dictionaries are included.</li>
+        </ul>
+        <h3>Device</h3>
+        <ul>
+          <li>Paper or Night, Literata or Atkinson Hyperlegible, portrait and landscape, backlight control.</li>
+          <li>A Wi-Fi button in the title bar to turn the radio on and off and join networks.</li>
+          <li>USB keyboard and mouse over USB-OTG through a powered hub or powered cable.</li>
+        </ul>
+        <h3>Plugins</h3>
+        <ul>
+          <li>WebAssembly plugins in a sandbox, switched on and off in Settings, each with its own settings page. See the <a href="https://armandomartires.github.io/sigma-scribe-plugins/">plugins page</a>.</li>
+        </ul>
+        <h3>Sync</h3>
+        <ul>
+          <li>Optional Syncthing keeps the notes folder in step with your computers while Σscribe is open. No account, no server of ours. Off by default.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="install">
+  <div class="wrap">
+    <h2 id="install">Install in three steps</h2>
+    <ol class="steps">
+      <li>Install <a href="https://github.com/pgaskin/NickelMenu/releases">NickelMenu</a> on the Kobo from its own release.</li>
+      <li>Download <code>sigma-scribe-&lt;ver&gt;-kobo.tar.gz</code> from the <a href="https://github.com/armandomartires/sigma-scribe/releases/latest">latest release</a> and unpack it onto the root of the Kobo drive over USB.</li>
+      <li>Eject. Σscribe is now in the NickelMenu. Your notes live in <code>sigma-scribe/notes</code> on the drive, and an update keeps them.</li>
+    </ol>
+    <p>Details, checksums, update and uninstall are in the <a href="https://github.com/armandomartires/sigma-scribe/blob/main/docs/user/install.md">install guide</a>.</p>
+    <p class="note"><strong>Tested on the Kobo Forma, firmware 4.38.x</strong> (4.38.23697). Other Kobo models are untested. Firmware 5.x is not supported.</p>
+  </div>
+</section>
+
+<section aria-labelledby="docs">
+  <div class="wrap">
+    <h2 id="docs">Documentation and source</h2>
+    <ul class="links">
+      <li><a href="https://github.com/armandomartires/sigma-scribe/wiki">User guide</a> (wiki): install, USB keyboard, Wi-Fi, sync, Japanese and Chinese input, font packs, plugins.</li>
+      <li><a href="https://github.com/armandomartires/sigma-scribe">Source code</a> on GitHub.</li>
+      <li><a href="https://github.com/armandomartires/sigma-scribe/blob/main/CHANGELOG.md">Changelog</a>, which says for each version whether it was tested on the Forma.</li>
+      <li><a href="https://armandomartires.github.io/sigma-scribe-plugins/">Plugins</a>: the plugin repository.</li>
+      <li>For developers: <a href="https://github.com/armandomartires/sigma-scribe/blob/main/docs/dev/README.md">developer docs</a> and <a href="https://github.com/armandomartires/sigma-scribe/blob/main/CONTRIBUTING.md">CONTRIBUTING</a>.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Licence:</strong> AGPL-3.0-only. Author: SIGMArecon.</p>
+    <p><strong>Credits:</strong> drawn with <a href="https://github.com/NiLuJe/FBInk">FBInk</a> (GPL-3.0-or-later, statically linked) and launched from <a href="https://github.com/pgaskin/NickelMenu">NickelMenu</a>. Fonts: Literata, Atkinson Hyperlegible and Noto (SIL OFL 1.1). Icons: <a href="https://lucide.dev">Lucide</a> (ISC). Sync by <a href="https://syncthing.net">Syncthing</a>. Full notices in <a href="https://github.com/armandomartires/sigma-scribe/blob/main/packaging/kobo/.adds/sigma-scribe/THIRD-PARTY.txt">THIRD-PARTY.txt</a>.</p>
+  </div>
+</footer>
+</body>
+</html>

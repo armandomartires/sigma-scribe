@@ -1,4 +1,4 @@
-# Japanese input (v1.10)
+# Japanese input
 
 ## Using it
 Settings → Keyboard & input → Layout → **Japanese (romaji)**. The Full on-screen keyboard or a USB keyboard.

@@ -1,0 +1,57 @@
+# Publishes the project page (site/) on GitHub Pages. The screenshots are not
+# stored in site/: they are copied in at build time from docs/screenshots/.
+name: pages
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "docs/screenshots/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble _site
+        run: |
+          set -eu
+          rm -rf _site
+          mkdir -p _site/screenshots
+          cp -r site/. _site/
+          rm -f _site/README.md
+          if [ -d docs/screenshots/readme ]; then
+            for f in docs/screenshots/readme/readme-*.png; do
+              b=$(basename "$f"); cp "$f" "_site/screenshots/${b#readme-}"
+            done
+          else
+            for f in docs/screenshots/v1.15/v1.15-*.png; do
+              b="$(basename "$f")"
+              cp "$f" "_site/screenshots/${b#v1.15-}"
+            done
+          fi
+          missing=0
+          for img in $(grep -o 'src="screenshots/[^"]*"' _site/index.html | sed 's/^src="//; s/"$//'); do
+            if [ ! -f "_site/$img" ]; then
+              echo "missing image: $img" >&2
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ]
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4

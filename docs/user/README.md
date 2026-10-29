@@ -1,4 +1,4 @@
-# User documentation
+# Σscribe user guide
 
 For people who use Σscribe on a Kobo. Developer documentation is in [../dev/README.md](../dev/README.md); the app itself is described in the [README](../../README.md).
 
