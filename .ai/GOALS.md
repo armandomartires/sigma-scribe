@@ -110,17 +110,17 @@ Status: Everything that can be done without the Forma is built and merged to `ma
 
 ## Sprint 8 — Documentation and repository cleanup
 Goal: User documentation and project/development documentation are separate, and the repository is tidy
-Status: Docs split merged (PR #108). Cleanup 2026-10-29: five merged, clean worktrees (about 35 GB, mostly `target/`) moved to `../99.ARCHIVE/2026-10-29-sigma-scribe.wt-*`; the root `GOALS.md` copy archived to `../99.ARCHIVE/2026-10-29-sigma-scribe-GOALS-copy/`.
+Status: Done 2026-10-29. Docs split merged (PR #108); docs, screenshots, project page and wiki script merged (PR #109, with PR #75); plugins landing page merged (plugins PR #3). Cleanup 2026-10-29: five merged, clean worktrees (about 35 GB, mostly `target/`) moved to `../99.ARCHIVE/2026-10-29-sigma-scribe.wt-*`; the root `GOALS.md` copy archived to `../99.ARCHIVE/2026-10-29-sigma-scribe-GOALS-copy/`.
 - [x] Documentation refactoring: separate project / development documentation from user documentation
   `docs/` splits into `docs/user/` and `docs/dev/`; mixed pages (sync, wifi, usb-keyboard, japanese, chinese, plugins) are split in two; links, tests, scripts and CI paths follow.
 - [x] Repository update and cleanup
 - [x] Writing panel: keys in one grouped block, the rest for writing (PR #75)
   `main` merged in (7b0c8ee), all checks pass; installed on the Forma 2026-10-29 09:09 (backup kept, 41 files checked, notes and plugin state unchanged). The user tried it: good (2026-10-29).
-- [>] Documentation and screenshots for the current app
+- [x] Documentation and screenshots for the current app
   README screenshots retaken from the emulator with the current UI (title-bar light and Wi-Fi buttons, drawer menu, writing panel); a user page for handwriting and the writing panel; user index updated.
-- [ ] User documentation in the GitHub wiki
-  The wiki is generated from `docs/user/` by a script, so `docs/user/` stays the source.
-- [?] Project page on GitHub Pages
+- [x] User documentation in the GitHub wiki
+  The wiki is generated from `docs/user/` by `scripts/wiki-sync.sh`, so `docs/user/` stays the source. Live 2026-10-29 at https://github.com/armandomartires/sigma-scribe/wiki (12 pages, sidebar, footer; wiki commit e77896a from fd5c5a0). Rerun the script after changing `docs/user/`.
+- [x] Project page on GitHub Pages
   `site/` in this repository, published by a Pages workflow; links to the wiki, releases, docs and the plugins page.
-- [?] Landing page for the plugins repository's Pages site
+- [x] Landing page for the plugins repository's Pages site
   An `index.html` beside `index.json` at https://armandomartires.github.io/sigma-scribe-plugins/ listing the plugins.
