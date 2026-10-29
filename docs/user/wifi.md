@@ -3,8 +3,8 @@
 Σscribe stops the stock reader (Nickel) when it starts, and with it the thing
 that turned Wi-Fi on and picked a network. Settings → Sync and Settings →
 Plugins → Check for plugins need a network, so the app has a **Wi-Fi button**
-in the title bar, between the Graph button and Settings. Tapping it opens a
-menu under it.
+in the title bar, just left of Settings (after the front-light button, when
+the reader has one). Tapping it opens a menu under it.
 
 Design, internals, strings and the first-run checklist for the Forma are in [../dev/wifi-design.md](../dev/wifi-design.md).
 

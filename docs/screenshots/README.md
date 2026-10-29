@@ -4,6 +4,8 @@ Emulator screenshots (`sigma-emu`, 1440×1920 Forma panel; landscape 1920×1440)
 
 E-ink copies are **missing** for v0.1–v0.3 (taken before the e-ink look existed; re-running today's emulator would show today's UI, not that version's) and for the three v1.0 title-bar comparison images (composites of cropped bars).
 
+The current set used by the README is in [`readme/`](readme/) (`tests/emu/readme.script`, refreshed in place; `readme/eink/` has the e-ink-look copies): write, preview, drawer (with its menu), graph, settings, handwriting (the Write panel), sync (QR code), Wi-Fi menu, front-light menu, night, landscape, Arabic and Japanese.
+
 | Version | Screenshot | What it shows | E-ink copy |
 |---|---|---|---|
 | v0.1 | [v0.1-keys-hidden.png](v0.1/v0.1-keys-hidden.png) | keys hidden | missing |

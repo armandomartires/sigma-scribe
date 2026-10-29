@@ -6,17 +6,21 @@ Licence: **AGPL-3.0-only** (`LICENSE`) · Author: **SIGMArecon** · Statically l
 
 > This repository's git history was cleaned for publication (author identities unified; machine names removed). Device serial numbers are masked as `<FORMA-SERIAL>` in the docs.
 
-Status: **1.15.0**. `CHANGELOG.md` says for each version whether it was tested on the Forma. Tested model/firmware: Kobo Forma, 4.38.23697.
+Status: **1.15.0**; the changes since are listed under Unreleased in `CHANGELOG.md`, which also says for each version whether it was tested on the Forma. Tested model/firmware: Kobo Forma, 4.38.23697.
 
 | Write | Preview | Drawer | Graph | Settings |
 |---|---|---|---|---|
-| ![](docs/screenshots/v1.15/v1.15-write.png) | ![](docs/screenshots/v1.15/v1.15-preview.png) | ![](docs/screenshots/v1.15/v1.15-drawer.png) | ![](docs/screenshots/v1.15/v1.15-graph.png) | ![](docs/screenshots/v1.15/v1.15-settings.png) |
+| ![](docs/screenshots/readme/readme-write.png) | ![](docs/screenshots/readme/readme-preview.png) | ![](docs/screenshots/readme/readme-drawer.png) | ![](docs/screenshots/readme/readme-graph.png) | ![](docs/screenshots/readme/readme-settings.png) |
 
-| Handwriting | Arabic | Japanese | Night | Landscape |
+| Handwriting | Sync (QR code) | Wi-Fi | Front light | Night |
 |---|---|---|---|---|
-| ![](docs/screenshots/v1.15/v1.15-handwriting.png) | ![](docs/screenshots/v1.15/v1.15-arabic.png) | ![](docs/screenshots/v1.15/v1.15-japanese.png) | ![](docs/screenshots/v1.15/v1.15-night.png) | ![](docs/screenshots/v1.15/v1.15-landscape.png) |
+| ![](docs/screenshots/readme/readme-handwriting.png) | ![](docs/screenshots/readme/readme-sync.png) | ![](docs/screenshots/readme/readme-wifi.png) | ![](docs/screenshots/readme/readme-light.png) | ![](docs/screenshots/readme/readme-night.png) |
 
-Screenshots from the desktop emulator (`tests/emu/v1.15-readme.script`); e-ink-look copies in [`docs/screenshots/v1.15/eink/`](docs/screenshots/v1.15/eink/), older versions in [`docs/screenshots/`](docs/screenshots/README.md).
+| Landscape | Arabic | Japanese |
+|---|---|---|
+| ![](docs/screenshots/readme/readme-landscape.png) | ![](docs/screenshots/readme/readme-arabic.png) | ![](docs/screenshots/readme/readme-japanese.png) |
+
+Screenshots from the desktop emulator (`tests/emu/readme.script`); e-ink-look copies in [`docs/screenshots/readme/eink/`](docs/screenshots/readme/eink/), older versions in [`docs/screenshots/`](docs/screenshots/README.md).
 
 ## Features
 
@@ -29,11 +33,12 @@ Screenshots from the desktop emulator (`tests/emu/v1.15-readme.script`); e-ink-l
 - A library of notes and folders: new, rename, move, delete (to a Trash in Files, where you can restore a note or empty it). Notes are plain Markdown in `sigma-scribe/notes` on the Kobo drive; nothing else is needed to read them.
 - Markdown preview with pages, turned with the page buttons.
 - Wiki links `[[note]]` with backlinks; renaming or moving a note updates the links to it.
-- A side drawer (drag its grip to set the width, or to the screen edge to tuck it away): the note's **Contents**, **To-dos** across all notes (tick them off from the drawer), and a **Scratch** pad.
+- A side drawer, opened from one **drawer menu** button in the title bar (tick Contents, To-dos or Scratch; drag the grip to set the width, double tap it to tuck the drawer away): the note's **Contents**, **To-dos** across all notes (tick them off from the drawer), and a **Scratch** pad.
 - The **Graph**: a map of notes and their links, or a list, with its own settings.
 
-**Handwriting** (Write panel)
-- Write anywhere in a blank area. The ink is split into letters and read; spaces come from the gaps. A candidate bar offers other readings, and keys type punctuation, digits and spaces.
+**Handwriting** (Write panel; see [`docs/user/handwriting.md`](docs/user/handwriting.md))
+- The keys sit in one block, grouped by use (panel, editing, typing, moving), on a third of the width; the rest is the writing area. **⇄** moves the block to the other side and **Line** shows or hides a dotted guide line.
+- Write anywhere in the writing area. The ink is split into letters and read; spaces come from the gaps. A candidate bar offers other readings, and keys type punctuation, digits and spaces.
 - **Word mode** (experimental) reads whole words against a word list and the words in your notes.
 - **Letter boxes**, one character per box, as an alternative.
 - **Train** the recogniser with samples of your writing. With **Learn from corrections** on, it also keeps learning each time you fix a letter by picking a candidate.
@@ -53,7 +58,8 @@ Screenshots from the desktop emulator (`tests/emu/v1.15-readme.script`); e-ink-l
 
 **Device**
 - Paper or Night, Literata or Atkinson Hyperlegible, keyboard tone.
-- Portrait and landscape, following the Kobo's accelerometer or set by hand. Backlight control.
+- Portrait and landscape, following the Kobo's accelerometer or set by hand.
+- A **front-light button** in the title bar: Backlight and, on the Forma, Warmth sliders.
 - USB keyboard and mouse or touchpad over USB-OTG, through a powered hub or a powered OTG cable.
 - Help pages, and Σscribe's files kept out of the Kobo library.
 
@@ -63,10 +69,10 @@ Screenshots from the desktop emulator (`tests/emu/v1.15-readme.script`); e-ink-l
 - An optional log file (Settings → Logging) for the app and its plugins.
 
 **Wi-Fi**
-- A Wi-Fi button in the title bar turns the radio on and off, shows the network and its address, lists the networks around (signal, lock), joins one (the password typed on the on-screen keyboard) and forgets a saved one. With Settings → Sync on, Wi-Fi off stops Syncthing. See `docs/user/wifi.md`.
+- A Wi-Fi button in the title bar (left of Settings) turns the radio on and off, shows the network and its address, lists the networks around (signal, lock), joins one (the password typed on the on-screen keyboard) and forgets a saved one. With Settings → Sync on, Wi-Fi off stops Syncthing. See `docs/user/wifi.md`.
 
 **Sync**
-- Settings → Sync runs Syncthing on the reader while Σscribe is open, to keep the notes folder in step with your computers; no account and no server of ours. Pair by entering the reader's device ID on the computer, then tap Accept on the reader. Off by default; see `docs/user/sync.md`.
+- Settings → Sync runs Syncthing on the reader while Σscribe is open, to keep the notes folder in step with your computers; no account and no server of ours. Pair by entering the reader's device ID on the computer, or by scanning its QR code with the Syncthing app on a phone, then tap Accept on the reader. Off by default; see `docs/user/sync.md`.
 
 ## Install, update, uninstall
 See [`docs/user/install.md`](docs/user/install.md). In short: install NickelMenu, unpack `sigma-scribe-<ver>-kobo.tar.gz` onto the Kobo drive's root, eject, then *Σscribe* is in the NickelMenu. Notes live in `sigma-scribe/notes` on the drive. An update keeps your notes, settings and plugin choices. Uninstall = delete `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`.
@@ -75,7 +81,7 @@ See [`docs/user/install.md`](docs/user/install.md). In short: install NickelMenu
 ```sh
 scripts/sim.sh            # live window, 1440x1920 scaled to fit
 scripts/sim.sh --eink     # with e-ink flash/ghosting look
-SIGMA_NOTES=$(mktemp -d) scripts/sim.sh --headless tests/emu/v1.15-readme.script docs/screenshots/v1.15   # PNGs, no window
+SIGMA_NOTES=$(mktemp -d) scripts/sim.sh --headless tests/emu/readme.script docs/screenshots/readme   # PNGs, no window
 cargo test --workspace
 ```
 Window controls: mouse = touch, PageUp/PageDown = page-turn buttons, keyboard = USB keyboard, Esc = power (save & quit).
@@ -87,7 +93,7 @@ Window controls: mouse = touch, PageUp/PageDown = page-turn buttons, keyboard = 
 Rust edition 2021, minimum Rust version in `Cargo.toml` (`rust-version`). Targets: desktop Linux for development and tests, and `armv7-unknown-linux-musleabihf` for the Kobo. Build, check and code conventions are in [`CONTRIBUTING.md`](CONTRIBUTING.md). The handwriting models are built with `tools/hwr-train`.
 
 ## Docs
-For readers of the app: [`docs/user/`](docs/user/README.md) (install, USB keyboard, Wi-Fi, sync, logging, Japanese and Chinese input, font packs, plugins). `CHANGELOG.md` lists the changes by version.
+For readers of the app: [`docs/user/`](docs/user/README.md) (getting started, handwriting, install, USB keyboard, Wi-Fi, sync, logging, Japanese and Chinese input, font packs, plugins), the [wiki](https://github.com/armandomartires/sigma-scribe/wiki) and the [project page](https://armandomartires.github.io/sigma-scribe/). `CHANGELOG.md` lists the changes by version.
 
 For developers: [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/dev/`](docs/dev/README.md) (testing, deployment, design pages, release checklist).
 
