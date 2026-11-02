@@ -7,7 +7,7 @@ Each top-level list item is a story; its checkbox is its status:
 Indented lines under a story are its details, shown when you hover its dot.
 -->
 
-Status as of 2026-10-27: v1.15.0 is tagged and CI builds the release. Everything from v0.1 to v0.4 and v1.0.0 to v1.0.2 passed on the Forma. v1.0.3 to v1.4.6 also passed on the Forma. v1.5 to v1.15 (handwriting, languages, plugins) are accepted as complete; 524 tests pass on the desktop and in the emulator. Sources: `.ai/plan.md`, `.ai/sprints/`, `CHANGELOG.md`, git tags.
+Status as of 2026-11-03: v1.20.0 is tagged and published on GitHub as the Latest release (the CI-built package passed on the Forma first); the v1.15.0 release is still an unpublished draft. Everything from v0.1 to v0.4 and v1.0.0 to v1.0.2 passed on the Forma. v1.0.3 to v1.4.6 also passed on the Forma. v1.5 to v1.15 (handwriting, languages, plugins) are accepted as complete. Sources: `.ai/plan.md`, `.ai/sprints/`, `CHANGELOG.md`, git tags.
 
 ## Sprint 1 — Editor, library, preview, options (v0.1 – v0.4)
 Goal: A usable notebook on the Forma: write, organise, preview, configure
