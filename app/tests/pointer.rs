@@ -428,5 +428,5 @@ fn a_double_click_on_the_drawer_grip_closes_it_and_a_click_on_the_tab_reopens() 
     let (x, y) = r.app.control_centre("DrawerTab").unwrap();
     r.to(x, y);
     r.click();
-    assert_eq!(r.app.drawer, [false, true, false]);
+    assert_eq!(r.app.drawer, [false, true, false, false]);
 }

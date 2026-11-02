@@ -129,7 +129,14 @@ impl App {
             self.warmth_want = Some(self.warmth_step);
             self.sync_light_screen();
         }
+        let layout_before = self.settings.journal_layout;
         self.settings.apply(c);
+        if let Change::JournalLayout(l) = c {
+            // The layout already in force files nothing and says nothing.
+            if l != layout_before {
+                self.reorganise_journal(l);
+            }
+        }
         if matches!(c, Change::Log(_) | Change::LogLevel(_)) {
             self.apply_logging();
             if self.settings.log {
@@ -198,11 +205,80 @@ impl App {
         self.sel_ui = None;
         self.drag = None;
         self.options = true;
+        self.journal_note.clear();
         self.hwr.samples = crate::all_samples(self.library.root()).len();
         self.settings_page = sigma_render::SettingsPage::Root;
         self.settings_sub = 0;
         self.settings_focus = None;
         self.refresh_plugin_list();
+    }
+
+    /// Files the journal under the new layout: saves the open note first,
+    /// moves the notes (a note that is open follows its file), tells the
+    /// reader how it went and logs what did not move.
+    fn reorganise_journal(&mut self, layout: sigma_core::journal::JournalLayout) {
+        self.save();
+        self.save_scratch();
+        let report = sigma_core::journal::reorganise(&self.library, layout);
+        for (from, to) in &report.moved {
+            sigma_core::info!("journal", "move {} -> {}", from.as_str(), to.as_str());
+            if self.current == *from {
+                self.current = to.clone();
+            }
+            // Back must find the note where it went, not where it was.
+            for h in &mut self.history {
+                if h.note == *from {
+                    h.note = to.clone();
+                }
+            }
+        }
+        // A history entry whose file is gone (moved nowhere, or deleted)
+        // would reopen as an empty note and a keystroke would recreate it.
+        let lib = &self.library;
+        let cur = &self.current;
+        self.history
+            .retain(|h| h.note == *cur || lib.exists(&h.note));
+        for (from, to) in &report.skipped {
+            sigma_core::warn!(
+                "journal",
+                "skipped {}: {} is taken",
+                from.as_str(),
+                to.as_str()
+            );
+        }
+        for (from, to, why) in &report.failed {
+            sigma_core::warn!(
+                "journal",
+                "move {} -> {}: {why}",
+                from.as_str(),
+                to.as_str()
+            );
+        }
+        for p in &report.problems {
+            sigma_core::warn!("journal", "{p}");
+        }
+        if !report.moved.is_empty() {
+            let _ = self.library.set_last_opened(&self.current);
+            // Moving rewrites links, in the open note and the scratch pad too.
+            self.reload_ink_links();
+            self.remember_note_stamp();
+            self.remember_scratch_stamp();
+        }
+        let mut parts = vec![format!("Journal: {} moved", report.moved.len())];
+        if !report.skipped.is_empty() {
+            parts.push(format!("{} skipped", report.skipped.len()));
+        }
+        if !report.failed.is_empty() {
+            parts.push(format!("{} failed", report.failed.len()));
+        }
+        let text = parts.join(" \u{b7} ");
+        sigma_core::info!("journal", "{text}");
+        self.journal_note = text.clone();
+        self.refresh_files();
+        if let Some(f) = &mut self.files {
+            f.message = Some(text);
+        }
+        self.refresh_journal_marks();
     }
 
     pub fn options_model(&self) -> OptionsModel<'_> {
@@ -225,6 +301,7 @@ impl App {
             plugins: &self.plugin_list,
             repository: &self.repo_rows,
             repo_note: &self.repo_note,
+            journal_note: &self.journal_note,
             sync: &self.sync_view,
         }
     }
@@ -236,7 +313,10 @@ impl App {
                 self.settings_page = p;
                 self.settings_sub = 0;
             }
-            None => self.options = false,
+            None => {
+                self.options = false;
+                self.journal_note.clear();
+            }
         }
         Refresh::Full
     }
@@ -333,6 +413,7 @@ impl App {
         match self.screen.options_hit(&self.options_model(), x, y) {
             OptionsHit::Close => {
                 self.options = false;
+                self.journal_note.clear();
                 Some(Refresh::Full)
             }
             OptionsHit::Change(c) => Some(self.change(c)),

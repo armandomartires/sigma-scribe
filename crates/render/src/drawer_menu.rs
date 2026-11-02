@@ -1,7 +1,7 @@
 //! The drawer button and its menu (v1.16). One title-bar icon, the panel
 //! on the drawer's side, stands for the drawer; a tap opens a small menu
 //! under it with a checkbox for each pane on offer (Contents, To-dos,
-//! Scratch, top to bottom as in the drawer). A tap on a row shows or hides
+//! Scratch, Calendar, top to bottom as in the drawer). A tap on a row shows or hides
 //! that pane and the menu stays open; a tap anywhere else closes it.
 
 use crate::canvas::{Canvas, Rect};
@@ -32,6 +32,7 @@ impl Pane {
             Self::Contents => Icon::Contents,
             Self::Todos => Icon::Todos,
             Self::Scratch => Icon::Scratch,
+            Self::Calendar => Icon::Calendar,
         }
     }
 }
@@ -40,7 +41,7 @@ impl EditorScreen {
     /// At least one pane is on offer, so the drawer button is shown.
     #[must_use]
     pub fn panes_on(&self) -> bool {
-        self.contents_on || self.todos_on || self.scratch_on
+        self.contents_on || self.todos_on || self.scratch_on || self.calendar_on
     }
 
     /// The panes on offer, top to bottom.
@@ -50,6 +51,7 @@ impl EditorScreen {
             (Pane::Contents, self.contents_on),
             (Pane::Todos, self.todos_on),
             (Pane::Scratch, self.scratch_on),
+            (Pane::Calendar, self.calendar_on),
         ]
         .into_iter()
         .filter(|e| e.1)
@@ -170,7 +172,10 @@ mod tests {
             let l = e.layout(true, &k);
             let (frame, rows) = e.drawer_menu_rows(&l);
             let order: Vec<Pane> = rows.iter().map(|r| r.0).collect();
-            assert_eq!(order, [Pane::Contents, Pane::Todos, Pane::Scratch]);
+            assert_eq!(
+                order,
+                [Pane::Contents, Pane::Todos, Pane::Scratch, Pane::Calendar]
+            );
             assert_eq!(frame.y, l.title.h, "{w}: just under the title bar");
             assert_eq!(
                 frame.x + frame.w,
@@ -199,7 +204,7 @@ mod tests {
             let (_, rows) = e.drawer_menu_rows(&e.layout(true, &k));
             assert_eq!(
                 rows.iter().map(|r| r.0).collect::<Vec<_>>(),
-                [Pane::Contents, Pane::Scratch]
+                [Pane::Contents, Pane::Scratch, Pane::Calendar]
             );
         }
     }
@@ -209,7 +214,7 @@ mod tests {
         let k = Keyboard::default();
         let mut e = EditorScreen::new(1440, 1920);
         let with = e.layout(true, &k);
-        (e.contents_on, e.todos_on, e.scratch_on) = (false, false, false);
+        (e.contents_on, e.todos_on, e.scratch_on, e.calendar_on) = (false, false, false, false);
         let l = e.layout(true, &k);
         assert!(!e.panes_on());
         assert_eq!(l.drawer_button, Rect::default());

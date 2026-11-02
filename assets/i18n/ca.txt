@@ -1194,3 +1194,134 @@ Joined, but the network gave no address
 
 Wi-Fi did not answer
 = El Wi-Fi no respon
+
+# Journal (v1.5x)
+Journal
+= Diari
+
+Folder layout
+= Organització de carpetes
+
+Week starts on
+= La setmana comença el
+
+UTC offset
+= Desfasament UTC
+
+How journal notes are filed; changing it moves them
+= Com s'arxiven les notes del diari; canviar-ho les mou
+
+The first day of a week in the journal calendar
+= Primer dia de la setmana al calendari del diari
+
+Hours from UTC; decides which day is today
+= Hores respecte d'UTC; decideix quin dia és avui
+
+One folder
+= Una carpeta
+
+Year and month
+= Any i mes
+
+Year and week
+= Any i setmana
+
+Monday
+= Dilluns
+
+Sunday
+= Diumenge
+
+Journal: {n} moved
+= Diari: {n} mogudes
+
+{n} skipped
+= {n} omeses
+
+{n} failed
+= {n} fallides
+
+# Journal calendar
+January
+= gener
+
+February
+= febrer
+
+March
+= març
+
+April
+= abril
+
+May
+= maig
+
+June
+= juny
+
+July
+= juliol
+
+August
+= agost
+
+September
+= setembre
+
+October
+= octubre
+
+November
+= novembre
+
+December
+= desembre
+
+Tuesday
+= Dimarts
+
+Wednesday
+= Dimecres
+
+Thursday
+= Dijous
+
+Friday
+= Divendres
+
+Saturday
+= Dissabte
+
+Mo
+= Dl
+
+Tu
+= Dt
+
+We
+= Dc
+
+Th
+= Dj
+
+Fr
+= Dv
+
+Sa
+= Ds
+
+Su
+= Dg
+
+Calendar
+= Calendari
+
+Today
+= Avui
+
+Previous
+= Anterior
+
+Clock not set
+= Rellotge sense ajustar

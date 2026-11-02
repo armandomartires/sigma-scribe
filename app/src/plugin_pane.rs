@@ -16,6 +16,10 @@ use sigma_plugin_api::{Action, Event as PEvent, Frame, HeadingRow, Note, Redraw,
 use sigma_plugin_host::Plugin;
 use sigma_render::drawer::Pane;
 
+/// How many drawer panes a plugin can draw (Contents, To-dos, Scratch). The
+/// Calendar, the fourth pane, is built in and never claimed.
+pub(crate) const PLUGIN_PANES: usize = 3;
+
 /// The slot of drawer pane number `i` (Contents, To-dos, Scratch).
 fn slot(i: usize) -> PaneSlot {
     match i {
@@ -52,10 +56,11 @@ impl App {
 
     /// Reads which pane plugins are enabled and offers each pane that has
     /// one in the drawer menu (or all of them with the built-in panes
-    /// wanted). A pane that lost its plugin closes; with none left, the
-    /// drawer button and its menu go.
+    /// wanted). A pane that lost its plugin closes. The built-in Calendar is
+    /// always on offer, so the drawer button and its menu stay (with the
+    /// Calendar row alone).
     pub(crate) fn sync_pane_slots(&mut self) {
-        for i in 0..3 {
+        for i in 0..PLUGIN_PANES {
             let found = plugins::enabled_pane_in(&self.plugins_root, slot(i))
                 .map(|(manifest, wasm)| PaneSlotPlugin { manifest, wasm });
             let on = self.panes_builtin || found.is_some();
@@ -76,6 +81,8 @@ impl App {
                 _ => self.screen.scratch_on = on,
             }
         }
+        // The Calendar is always on offer in the app, so this holds only if
+        // a screen is built with every pane (the Calendar too) turned off.
         if !self.screen.panes_on() {
             self.screen.drawer_menu = false;
         }
@@ -89,7 +96,10 @@ impl App {
 
     /// Whether drawer pane `i` is drawn by its plugin right now.
     fn pane_uses_plugin(&self, i: usize) -> bool {
-        !self.panes_builtin && !self.pane_failed[i] && self.pane_slots[i].is_some()
+        i < PLUGIN_PANES
+            && !self.panes_builtin
+            && !self.pane_failed[i]
+            && self.pane_slots[i].is_some()
     }
 
     /// The frame of pane `i`'s plugin, when the pane is open and drawn by one.
@@ -238,6 +248,9 @@ impl App {
     /// host handles): the plugin answers, and its actions run in order.
     pub(crate) fn pane_plugin_tap(&mut self, pane: Pane, x: i32, y: i32) -> Option<Refresh> {
         let i = pane.index();
+        if i >= PLUGIN_PANES {
+            return None;
+        }
         let p = self.pane_plugins[i].as_mut()?;
         let frame = match p.plugin.call(&PEvent::Tap { x, y }) {
             Ok(f) => f,
@@ -273,7 +286,7 @@ impl App {
     /// The tappable regions a pane plugin named, with their labels, for
     /// emulator scripts and the touch-target audit.
     pub(crate) fn pane_hits(&self) -> Vec<(String, sigma_render::Rect)> {
-        (0..3)
+        (0..PLUGIN_PANES)
             .filter_map(|i| self.pane_frame(i))
             .flat_map(|f| f.hits.iter())
             .map(|h| {

@@ -160,7 +160,8 @@ impl App {
             contents: self.drawer[0].then_some(hs),
             todos: self.drawer[1].then_some((todos, self.filter)),
             scratch: self.drawer[2].then_some((&self.scratch, self.scratch_focused())),
-            plugin: [0, 1, 2].map(|i| self.pane_frame(i)),
+            plugin: [0, 1, 2, 3].map(|i| self.pane_frame(i)),
+            calendar: self.drawer[3].then(|| self.calendar_model()),
             theme: self.theme(),
         }
     }
@@ -262,8 +263,14 @@ impl App {
         self.screen.drawer_open = if self.drawer_visible() {
             self.drawer
         } else {
-            [false; 3]
+            [false; 4]
         };
+        // A note changed on disk by the Files sheet may be a journal entry.
+        let files = self.files.is_some();
+        if self.files_was_open && !files && self.drawer[3] {
+            self.refresh_journal_marks();
+        }
+        self.files_was_open = files;
     }
 
     /// The tab at the screen edge is shown: the grip closed the drawer and
@@ -301,7 +308,8 @@ impl App {
             return Refresh::Partial;
         }
         self.drawer_stash = Some((self.drawer, self.scratch_focus));
-        self.drawer = [false; 3];
+        self.drawer = [false; 4];
+        self.calendar_picker = None;
         self.scratch_focus = false;
         self.save_scratch();
         self.screen.drawer_menu = false;
@@ -378,11 +386,7 @@ impl App {
 
     /// Opens or closes one drawer pane (no animation, partial refresh).
     pub fn toggle_pane(&mut self, p: Pane) -> Refresh {
-        let i = match p {
-            Pane::Contents => 0,
-            Pane::Todos => 1,
-            Pane::Scratch => 2,
-        };
+        let i = p.index();
         self.drawer[i] = !self.drawer[i];
         // Showing or hiding a pane by hand forgets what the grip closed.
         self.drawer_stash = None;
@@ -392,6 +396,14 @@ impl App {
         if p == Pane::Scratch {
             self.scratch_focus = self.drawer[2];
             self.save_scratch();
+        }
+        if p == Pane::Calendar {
+            self.calendar_picker = None;
+        }
+        if p == Pane::Calendar && self.drawer[3] {
+            // Opens on the open entry's month, else today's.
+            self.calendar_month = None;
+            self.refresh_journal_marks();
         }
         self.sel_ui = None;
         Refresh::Partial
@@ -532,6 +544,14 @@ impl App {
             DrawerHit::TodoBox(i) => self.drawer_todo_box(i),
             DrawerHit::TodoOpen(i) => self.drawer_todo_open(i),
             DrawerHit::Plugin(p) => self.pane_plugin_tap(p, x, y),
+            DrawerHit::CalDay(d) => self.calendar_open(d),
+            DrawerHit::CalField(f) => self.calendar_field(f),
+            DrawerHit::CalPick(v) => self.calendar_pick(v),
+            DrawerHit::CalToday => self.calendar_today(),
+            DrawerHit::CalPrevMonth => self.calendar_step_month(false),
+            DrawerHit::CalNextMonth => self.calendar_step_month(true),
+            DrawerHit::CalPrevEntry => self.calendar_step_entry(false),
+            DrawerHit::CalNextEntry => self.calendar_step_entry(true),
             DrawerHit::Filter => {
                 self.filter = self.filter.next();
                 Some(Refresh::Partial)

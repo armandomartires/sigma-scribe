@@ -38,7 +38,9 @@ panes, top to bottom: Contents, To-dos, Scratch. Each is drawn by the enabled
 plugin whose manifest says `kind=pane` and its `slot`. One title-bar button
 (a panel on the drawer's side) opens the drawer menu, with a checkbox for each
 pane whose plugin is on; switching a plugin off takes its row out of the menu
-and closes its pane, and with no pane plugin on the button goes. The built-in panes stay in the app as
+and closes its pane, and with no pane plugin on the button stays: a fourth pane,
+Calendar (the journal), is built into the app, has no plugin and is always in
+the menu, below the three. The built-in Contents, To-dos and Scratch panes stay in the app as
 the test reference and the fallback: a plugin that fails to load or fails
 while running is dropped for the session and the built-in pane draws instead.
 

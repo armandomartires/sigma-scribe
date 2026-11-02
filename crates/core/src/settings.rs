@@ -160,6 +160,8 @@ pub const SIZE_RANGE: (f32, f32) = (14.0, 40.0);
 pub const LEADING_RANGE: (f32, f32) = (1.2, 2.0);
 /// The smallest and largest margin, in brief px.
 pub const MARGIN_RANGE: (f32, f32) = (8.0, 400.0);
+/// The journal's UTC offset in whole hours: UTC-12 to UTC+14.
+pub const UTC_OFFSET_RANGE: (i8, i8) = (-12, 14);
 /// The fewest and most words per line in Line mode.
 pub const WORDS_RANGE: (u8, u8) = (8, 16);
 /// One step of the Size stepper, in brief px.
@@ -287,6 +289,13 @@ pub struct Settings {
     /// open and keep the notes folder in step with the reader's other
     /// computers (`docs/dev/sync-design.md`). Per device, off by default. `sync=`.
     pub sync: bool,
+    /// How journal notes are laid out in `journal/`. `journal_layout=`.
+    pub journal_layout: crate::journal::JournalLayout,
+    /// Hours east of UTC for the journal's "today", within
+    /// [`UTC_OFFSET_RANGE`]. `utc_offset=`.
+    pub utc_offset: i8,
+    /// The day a calendar week starts on. `week_start=`.
+    pub week_start: crate::date::WeekStart,
 }
 
 /// Backlight steps above off: nine stops, 0 to 8 (Display → Backlight).
@@ -420,6 +429,9 @@ impl Default for Settings {
             log_level: crate::log::Level::Info,
             warmth: None,
             sync: false,
+            journal_layout: crate::journal::JournalLayout::Flat,
+            utc_offset: 0,
+            week_start: crate::date::WeekStart::Monday,
         }
     }
 }
@@ -503,6 +515,13 @@ pub enum Change {
     LogLevel(crate::log::Level),
     /// Settings → Sync: Syncthing on or off (applied at once).
     Sync(bool),
+    /// How journal notes are laid out. The app then reorganises the journal.
+    JournalLayout(crate::journal::JournalLayout),
+    /// +1 / -1 hour of the journal's UTC offset (kept within
+    /// [`UTC_OFFSET_RANGE`]).
+    UtcOffset(i8),
+    /// The day a calendar week starts on.
+    WeekStart(crate::date::WeekStart),
     /// Settings → Sync: accept pending device number `i` of the list the
     /// page showed. The app applies it.
     SyncAcceptDevice(u8),
@@ -690,6 +709,14 @@ impl Settings {
             Change::LogLevel(l) => self.log_level = l,
             Change::Warmth(n) => self.warmth = Some(n.min(WARMTH_MAX)),
             Change::Sync(on) => self.sync = on,
+            Change::JournalLayout(l) => self.journal_layout = l,
+            Change::UtcOffset(d) => {
+                self.utc_offset = self
+                    .utc_offset
+                    .saturating_add(d)
+                    .clamp(UTC_OFFSET_RANGE.0, UTC_OFFSET_RANGE.1);
+            }
+            Change::WeekStart(w) => self.week_start = w,
             Change::SyncAcceptDevice(_)
             | Change::SyncIgnoreDevice(_)
             | Change::SyncAcceptFolder(_)
@@ -885,6 +912,13 @@ impl Words for KeyTone {
         (Self::Theme, "theme", "Theme"),
         (Self::Light, "light", "Light"),
         (Self::Dark, "dark", "Dark"),
+    ];
+}
+
+impl Words for crate::date::WeekStart {
+    const WORDS: &'static [(Self, &'static str, &'static str)] = &[
+        (Self::Monday, "monday", "Monday"),
+        (Self::Sunday, "sunday", "Sunday"),
     ];
 }
 
@@ -1157,6 +1191,19 @@ pub const FIELDS: &[Field] = &[
         write: |s| s.warmth.map_or("keep".to_owned(), |n| n.to_string()),
     },
     toggle!("sync", sync),
+    words!("journal_layout", journal_layout),
+    Field {
+        key: "utc_offset",
+        read: |s, v| {
+            if let Ok(n) = v.parse::<i8>() {
+                if (UTC_OFFSET_RANGE.0..=UTC_OFFSET_RANGE.1).contains(&n) {
+                    s.utc_offset = n;
+                }
+            }
+        },
+        write: |s| s.utc_offset.to_string(),
+    },
+    words!("week_start", week_start),
 ];
 
 #[cfg(test)]
@@ -1205,6 +1252,9 @@ mod tests {
             log_level: crate::log::Level::Error,
             warmth: Some(7),
             sync: true,
+            journal_layout: crate::journal::JournalLayout::YearWeek,
+            utc_offset: -3,
+            week_start: crate::date::WeekStart::Sunday,
         }
     }
 
@@ -1221,7 +1271,7 @@ mod tests {
              rotation=0\nlandscape_keys=centre\npad=numbers\npad_side=right\nui_scale=200\n\
              layout=us\nkeyboard_size=auto\nink_pen=finger\nink_a2=off\nink_words=off\n\
              ink_boxes=off\nink_learn=on\nink_guide=on\nink_keys=left\nui_lang_override=off\nui_lang=en\nexperimental=off\n\
-             enhanced_keyboard=on\nlog=off\nlog_level=info\nwarmth=keep\nsync=off\n"
+             enhanced_keyboard=on\nlog=off\nlog_level=info\nwarmth=keep\nsync=off\njournal_layout=flat\nutc_offset=0\nweek_start=monday\n"
         );
         assert_eq!(
             every_field_changed().serialize(),
@@ -1231,7 +1281,7 @@ mod tests {
              rotation=270\nlandscape_keys=split\npad=arrows\npad_side=left\nui_scale=150\n\
              layout=de\nkeyboard_size=125\nink_pen=stylus\nink_a2=on\nink_words=on\n\
              ink_boxes=on\nink_learn=off\nink_guide=off\nink_keys=right\nui_lang_override=on\nui_lang=pt\nexperimental=on\n\
-             enhanced_keyboard=off\nlog=on\nlog_level=error\nwarmth=7\nsync=on\n"
+             enhanced_keyboard=off\nlog=on\nlog_level=error\nwarmth=7\nsync=on\njournal_layout=week\nutc_offset=-3\nweek_start=sunday\n"
         );
     }
 
@@ -1251,6 +1301,39 @@ mod tests {
             (f.read)(&mut s, &(f.write)(&c));
             assert_eq!((f.write)(&s), (f.write)(&c), "{}", f.key);
         }
+    }
+
+    #[test]
+    fn journal_options_apply_clamp_and_ignore_bad_values() {
+        let mut s = Settings::default();
+        assert_eq!(s.journal_layout, crate::journal::JournalLayout::Flat);
+        assert_eq!(
+            (s.utc_offset, s.week_start),
+            (0, crate::date::WeekStart::Monday)
+        );
+        for _ in 0..30 {
+            s.apply(Change::UtcOffset(1));
+        }
+        assert_eq!(s.utc_offset, 14);
+        for _ in 0..40 {
+            s.apply(Change::UtcOffset(-1));
+        }
+        assert_eq!(s.utc_offset, -12);
+        s.apply(Change::UtcOffset(i8::MIN));
+        assert_eq!(s.utc_offset, -12);
+        s.apply(Change::JournalLayout(
+            crate::journal::JournalLayout::YearMonth,
+        ));
+        s.apply(Change::WeekStart(crate::date::WeekStart::Sunday));
+        assert_eq!(Settings::parse(&s.serialize()), s);
+        for v in ["15", "-13", "abc", "", "1.5", "300"] {
+            let g = Settings::parse(&format!("utc_offset={v}\n"));
+            assert_eq!(g.utc_offset, 0, "{v}");
+        }
+        let g = Settings::parse("utc_offset=-3\njournal_layout=bogus\nweek_start=friday\n");
+        assert_eq!(g.utc_offset, -3);
+        assert_eq!(g.journal_layout, crate::journal::JournalLayout::Flat);
+        assert_eq!(g.week_start, crate::date::WeekStart::Monday);
     }
 
     #[test]

@@ -12,11 +12,13 @@
 //!   v0.4: tap-on Options | tap-on Row/Cell (in Options, e.g. Dark mode/On, Size/+)
 //!   tap-on Split|Full|Centre|Arrows|123|Pad left|Pad right (landscape bar)
 //!   expect-setting KEY=VALUE | expect-words N | expect-screen WxH | restart
-//!   v0.5: tap-on Contents|To-dos|Scratch (v1.16: rows of the drawer menu,
-//!   opened by tap-on Panels) | pane Contents|To-dos|Scratch (open the
+//!   v0.5: tap-on Contents|To-dos|Scratch|Calendar (v1.16: rows of the drawer menu,
+//!   opened by tap-on Panels) | pane Contents|To-dos|Scratch|Calendar (open the
 //!   menu, tap the row, close it) | tap-on Heading:TEXT |
 //!   tap-on Todo:TEXT | tap-on TodoBox:TEXT | tap-on Filter | tap-on ScratchPane
-//!   expect-scratch TEXT | expect-file-contains PATH|TEXT | expect-line N
+//!   v1.17 journal: today YYYY-MM-DD (the date the emulator calls today) |
+//!   tap-on Day:YYYY-MM-DD|CalPrevMonth|CalNextMonth|CalToday|CalPrevEntry|CalNextEntry
+//!   (the Calendar pane) | expect-scratch TEXT | expect-file-contains PATH|TEXT | expect-line N
 //!   v0.6: tap-on Find|Graph (icons) | tap-on FindField|ReplaceField|Prev|Next|
 //!   Replace|All|Aa|FindClose | tap-on Link:LABEL (preview) | tap-on
 //!   Graph:PATH | expect-find LABEL | expect-mode write|preview|find|graph
@@ -150,6 +152,14 @@ fn main() -> ExitCode {
                         None => return fail(format!("no control {name:?} on this screen")),
                     }
                 }
+            }
+            // v1.17: `today yyyy-mm-dd` sets the date the journal calls today
+            // (the SIGMA_TODAY override of `sigma_core::date::today`).
+            "today" => {
+                if sigma_core::date::Date::parse(arg).is_none() {
+                    return fail("expected yyyy-mm-dd".into());
+                }
+                std::env::set_var("SIGMA_TODAY", arg);
             }
             "expect-file" => {
                 if !app.library.root().join(arg).exists() {

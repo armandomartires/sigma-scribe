@@ -19,7 +19,7 @@ impl App {
     }
 
     /// The controls to tap, in order, to tap `label`: a drawer pane
-    /// (`Contents`, `To-dos`, `Scratch`) while the drawer menu is closed is
+    /// (`Contents`, `To-dos`, `Scratch`, `Calendar`) while the drawer menu is closed is
     /// reached through it (v1.16): the drawer button, the row, the button
     /// again. Anything else is itself.
     #[must_use]
@@ -27,7 +27,7 @@ impl App {
         if label.starts_with("Light:") && !self.screen.light_menu {
             return vec!["Light".into(), label.into()];
         }
-        let pane = matches!(label, "Contents" | "To-dos" | "Scratch");
+        let pane = matches!(label, "Contents" | "To-dos" | "Scratch" | "Calendar");
         if pane && !self.screen.drawer_menu {
             vec!["Panels".into(), label.into(), "Panels".into()]
         } else {
@@ -187,7 +187,7 @@ impl App {
                 Some((g.xs[i], g.track_y))
             }
             // v1.16: the panes are rows of the open drawer menu.
-            "Contents" | "To-dos" | "Scratch" if self.screen.drawer_menu => {
+            "Contents" | "To-dos" | "Scratch" | "Calendar" if self.screen.drawer_menu => {
                 let l = self.screen.layout(
                     self.preview.is_none() && self.keys_visible(),
                     &self.keyboard,
@@ -209,7 +209,10 @@ impl App {
                 || s == "Filter"
                 || s == "DrawerHandle"
                 || s == "DrawerTab"
-                || s == "ScratchPane" =>
+                || s == "ScratchPane"
+                || s.starts_with("Day:")
+                || s.starts_with("Pick:")
+                || s.starts_with("Cal") =>
             {
                 self.drawer_control(s)
             }
@@ -306,7 +309,11 @@ impl App {
     /// Drawer controls for emulator scripts: `Heading:TEXT`, `Todo:TEXT`
     /// (opens), `TodoBox:TEXT` (checks), `Filter`, `DrawerHandle` (the width
     /// grip), `DrawerTab` (the closed drawer's tab, v1.16), `ScratchPane`
-    /// (end of the scratch text).
+    /// (end of the scratch text), and the Calendar's `Day:yyyy-mm-dd`,
+    /// `CalPrevMonth`, `CalNextMonth`, `CalToday`, `CalPrevEntry` and
+    /// `CalNextEntry`, the date line's `CalPickDay`, `CalPickMonth` and
+    /// `CalPickYear`, and `Pick:<n>` (the open picker's cell with that day
+    /// number, month 1 to 12 or year).
     fn drawer_control(&self, name: &str) -> Option<(i32, i32)> {
         if name == "DrawerTab" && self.drawer_tab_shown() {
             let z = self
@@ -333,6 +340,31 @@ impl App {
         }
         if name == "Filter" {
             return l.filter.map(centre);
+        }
+        if let Some(cl) = &l.calendar {
+            let day = name
+                .strip_prefix("Day:")
+                .and_then(sigma_core::date::Date::parse);
+            if let Some(day) = day {
+                return cl.cells.iter().find(|c| c.1 == day).map(|c| centre(c.0));
+            }
+            if let Some(v) = name
+                .strip_prefix("Pick:")
+                .and_then(|v| v.parse::<u16>().ok())
+            {
+                return cl.picks.iter().find(|p| p.1 == v).map(|p| centre(p.0));
+            }
+            match name {
+                "CalPrevMonth" => return Some(centre(cl.prev)),
+                "CalNextMonth" => return Some(centre(cl.next)),
+                "CalToday" => return Some(centre(cl.today)),
+                "CalPickDay" => return Some(centre(cl.fields[0])),
+                "CalPickMonth" => return Some(centre(cl.fields[1])),
+                "CalPickYear" => return Some(centre(cl.fields[2])),
+                "CalPrevEntry" => return cl.entries.map(|e| centre(e.0)),
+                "CalNextEntry" => return cl.entries.map(|e| centre(e.1)),
+                _ => {}
+            }
         }
         if name == "ScratchPane" {
             return l.scratch.map(|r| (r.x + r.w - 4, r.y + r.h - 4));

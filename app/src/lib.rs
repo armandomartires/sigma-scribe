@@ -16,6 +16,7 @@ use std::path::PathBuf;
 // `App` and its state live here; its methods are split by concern across
 // these child modules, each with its own `impl App` block.
 mod bootstrap;
+mod calendar;
 mod drawer;
 mod editor;
 mod events;
@@ -134,6 +135,9 @@ pub struct App {
     repo_rows: Vec<sigma_render::options::RepoRow>,
     /// How the last check or install went.
     repo_note: String,
+    /// How the last journal reorganising went ("Journal: 12 moved ·
+    /// 2 skipped"); empty before the first.
+    pub journal_note: String,
     /// Where plugins are installed.
     plugins_root: PathBuf,
     /// A plugin failed: the built-in Graph serves the rest of the session.
@@ -141,9 +145,12 @@ pub struct App {
     /// The pane plugins of the side drawer (Contents, To-dos, Scratch): the
     /// enabled one for each, the loaded module, and whether it failed (the
     /// built-in pane then draws for the session).
-    pane_slots: [Option<plugin_pane::PaneSlotPlugin>; 3],
-    pane_plugins: [Option<plugin_pane::PanePlugin>; 3],
-    pane_failed: [bool; 3],
+    /// Four entries so a pane's index always fits; only the first three
+    /// (`plugin_pane::PLUGIN_PANES`) can have a plugin, the Calendar is
+    /// built in.
+    pane_slots: [Option<plugin_pane::PaneSlotPlugin>; 4],
+    pane_plugins: [Option<plugin_pane::PanePlugin>; 4],
+    pane_failed: [bool; 4],
     /// Show the drawer icons and draw the built-in panes with the pane
     /// plugins off (the reference the plugins are tested against, and the
     /// emulator's drawer). Off in the app.
@@ -207,9 +214,23 @@ pub struct App {
     grip_tap: Option<u64>,
     /// The panes (and scratch focus) the grip closed, which the tab at the
     /// screen edge reopens (v1.16). Not kept across a restart.
-    drawer_stash: Option<([bool; 3], bool)>,
-    /// Side drawer (v0.5): open panes (Contents, To-dos, Scratch).
-    pub drawer: [bool; 3],
+    drawer_stash: Option<([bool; 4], bool)>,
+    /// Side drawer (v0.5): open panes (Contents, To-dos, Scratch, Calendar).
+    pub drawer: [bool; 4],
+    /// The month the Calendar shows (its first day); `None` follows the open
+    /// journal note, else today.
+    pub calendar_month: Option<sigma_core::date::Date>,
+    /// The date line's picker open in the Calendar pane, if any. Reset when
+    /// the drawer closes or the pane is switched off.
+    pub calendar_picker: Option<sigma_render::calendar::CalPicker>,
+    /// The journal's entries as found on disk, for the Calendar: refreshed
+    /// when the pane opens, a day is opened, the layout is reorganised, a
+    /// note opens and the Files sheet closes (never every frame).
+    journal_entries: std::collections::BTreeMap<sigma_core::date::Date, NotePath>,
+    /// The dates of `journal_entries`.
+    journal_marks: std::collections::BTreeSet<sigma_core::date::Date>,
+    /// The Files sheet was open at the last look (it may have changed notes).
+    files_was_open: bool,
     pub filter: Filter,
     /// The scratch pad (`.scratchpad.md`), always loaded.
     pub scratch: Buffer,
@@ -319,11 +340,12 @@ impl App {
             repo_index: None,
             repo_rows: Vec::new(),
             repo_note: String::new(),
+            journal_note: String::new(),
             plugins_root: sigma_core::plugins::plugins_root(),
             plugin_failed: false,
-            pane_slots: [None, None, None],
-            pane_plugins: [None, None, None],
-            pane_failed: [false; 3],
+            pane_slots: [None, None, None, None],
+            pane_plugins: [None, None, None, None],
+            pane_failed: [false; 4],
             panes_builtin: false,
             log_dir: log_dir(),
             sync: None,
@@ -364,7 +386,12 @@ impl App {
             handle_drag: None,
             grip_tap: None,
             drawer_stash: None,
-            drawer: [false; 3],
+            drawer: [false; 4],
+            calendar_month: None,
+            calendar_picker: None,
+            journal_entries: std::collections::BTreeMap::new(),
+            journal_marks: std::collections::BTreeSet::new(),
+            files_was_open: false,
             filter: Filter::All,
             scratch_save: Autosave::new(scratch.revision()),
             scratch,
@@ -448,6 +475,9 @@ impl App {
         let _ = self.library.set_last_opened(p);
         if self.drawer[1] {
             self.reindex();
+        }
+        if self.drawer[3] {
+            self.refresh_journal_marks();
         }
     }
 

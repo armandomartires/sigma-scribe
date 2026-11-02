@@ -124,3 +124,18 @@ Status: Done 2026-10-29. Docs split merged (PR #108); docs, screenshots, project
   `site/` in this repository, published by a Pages workflow; links to the wiki, releases, docs and the plugins page.
 - [x] Landing page for the plugins repository's Pages site
   An `index.html` beside `index.json` at https://armandomartires.github.io/sigma-scribe-plugins/ listing the plugins.
+
+## Sprint 9 — Journal
+Goal: One Markdown note per day in `journal/`, opened or created from a calendar pane in the drawer
+Built into the app, not a plugin (decided 2026-11-02). Plan: `~/.claude/plans/let-s-plan-a-new-compiled-pumpkin.md`. Branch `journal`.
+- [x] Date core: civil dates, ISO weeks, month grid, today from UTC plus an offset
+  `crates/core/src/date.rs`, no new dependency; `SIGMA_TODAY` override for tests and the emulator.
+- [x] Journal entries and folder layout (flat, year/month, year/week) with reorganising
+  `crates/core/src/journal.rs`; entry from `journal/.template.md` or a date heading; `Library::move_many` relinks once.
+- [x] Journal options: layout, UTC offset, week start
+  Changing the layout moves existing entries; collisions are skipped and reported.
+- [x] Calendar pane in the drawer
+  Today highlighted, days with entries marked, Today button, previous and next entry.
+- [x] Emulator script, user docs, changelog
+- [?] Date line on top of the calendar: day, month and year pickers
+  Asked after the first try on the Forma (2026-11-02). Tapping a field picks a year, month or day in place of the grid.

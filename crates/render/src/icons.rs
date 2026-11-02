@@ -22,6 +22,8 @@ pub enum Icon {
     Todos,
     /// The Contents pane toggle.
     Contents,
+    /// The Calendar pane toggle.
+    Calendar,
     /// The Graph sheet button.
     Graph,
     /// The Help sheet button.
@@ -82,6 +84,8 @@ pub enum Icon {
     Sun,
     /// The front-light button while the light is off.
     SunDim,
+    /// A field that opens a picker (the calendar's date line).
+    ChevronDown,
 }
 
 impl Icon {
@@ -95,6 +99,7 @@ impl Icon {
             Self::Scratch => "sticky-note",
             Self::Todos => "list-todo",
             Self::Contents => "table-of-contents",
+            Self::Calendar => "calendar",
             Self::Graph => "share-2",
             Self::Help => "circle-help",
             Self::Back => "arrow-left",
@@ -125,6 +130,7 @@ impl Icon {
             Self::Refresh => "refresh-cw",
             Self::Sun => "sun",
             Self::SunDim => "sun-dim",
+            Self::ChevronDown => "chevron-down",
         }
     }
 }
@@ -212,6 +218,7 @@ mod tests {
             Icon::Scratch,
             Icon::Todos,
             Icon::Contents,
+            Icon::Calendar,
             Icon::Graph,
             Icon::Help,
             Icon::Back,
@@ -242,6 +249,7 @@ mod tests {
             Icon::Refresh,
             Icon::Sun,
             Icon::SunDim,
+            Icon::ChevronDown,
         ] {
             for &s in SIZES {
                 let m = ICONS

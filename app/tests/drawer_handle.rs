@@ -107,7 +107,7 @@ fn a_double_tap_on_the_grip_closes_the_drawer_and_the_tab_brings_it_back() {
     assert!(app.drawer_visible(), "one tap does nothing");
     tap_at(&mut app, &mut dev, grip, 1200);
     assert!(!app.drawer_visible(), "two close it");
-    assert_eq!(app.drawer, [false; 3]);
+    assert_eq!(app.drawer, [false; 4]);
     assert!(!app.scratch_focus, "the keyboard is the page's");
     assert_eq!(app.settings.drawer_width, DRAWER_WIDTH_DEFAULT);
     let tab = app
@@ -118,7 +118,7 @@ fn a_double_tap_on_the_grip_closes_the_drawer_and_the_tab_brings_it_back() {
     let edge = page.x + page.w - app.drawer_width_px();
     assert!(tab.0 > edge, "where the drawer's outer edge was");
     tap_at(&mut app, &mut dev, tab, 3000);
-    assert_eq!(app.drawer, [true, false, true], "the same panes");
+    assert_eq!(app.drawer, [true, false, true, false], "the same panes");
     assert!(app.scratch_focus, "and the same focus");
     assert!(app.control_centre("DrawerTab").is_none());
 }
@@ -146,7 +146,7 @@ fn dragging_the_grip_to_the_edge_closes_and_dragging_the_tab_in_reopens_at_that_
     // The tab dragged to the middle: open again, at the stop nearest the finger.
     let tab = app.control_centre("DrawerTab").unwrap();
     drag(&mut app, &mut dev, tab, page.x + page.w * 3 / 4);
-    assert_eq!(app.drawer, [true, false, false]);
+    assert_eq!(app.drawer, [true, false, false, false]);
     assert!(app.settings.drawer_width < DRAWER_WIDTH_DEFAULT);
     // A tab drag that stays at the edge leaves the drawer closed.
     let grip = app.control_centre("DrawerHandle").unwrap();

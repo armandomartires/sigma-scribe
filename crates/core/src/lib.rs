@@ -7,12 +7,14 @@
 #![warn(missing_docs)]
 
 pub mod buffer;
+pub mod date;
 pub mod find;
 pub mod gesture;
 pub mod graphmap;
 pub mod hangul;
 pub mod ink;
 pub mod ja;
+pub mod journal;
 pub mod keyboard;
 pub mod layouts;
 pub mod library;

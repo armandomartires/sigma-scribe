@@ -77,6 +77,15 @@ fn stepper(v: String, minus: Change, plus: Change) -> Vec<Cell> {
     ]
 }
 
+/// The journal's offset as the row shows it: `UTC+1`, `UTC\u{2212}3`, `UTC+0`.
+fn utc_label(h: i8) -> String {
+    if h < 0 {
+        format!("UTC\u{2212}{}", -i16::from(h))
+    } else {
+        format!("UTC+{h}")
+    }
+}
+
 /// A slider value as text: whole numbers plain, else one decimal.
 fn num(v: f32) -> String {
     if (v - v.round()).abs() < 0.05 {
@@ -307,6 +316,25 @@ pub fn option_rows(s: &Settings) -> Vec<OptRow> {
             cells: word_cells(s.drawer, Change::Drawer),
         },
         OptRow {
+            label: "Folder layout",
+            hint: "How journal notes are filed; changing it moves them",
+            cells: word_cells(s.journal_layout, Change::JournalLayout),
+        },
+        OptRow {
+            label: "Week starts on",
+            hint: "The first day of a week in the journal calendar",
+            cells: word_cells(s.week_start, Change::WeekStart),
+        },
+        OptRow {
+            label: "UTC offset",
+            hint: "Hours from UTC; decides which day is today",
+            cells: stepper(
+                utc_label(s.utc_offset),
+                Change::UtcOffset(-1),
+                Change::UtcOffset(1),
+            ),
+        },
+        OptRow {
             label: "USB keyboard & mouse",
             hint: "Needs a powered hub: the reader does not power the port",
             cells: toggle(s.usb, Change::Usb),
@@ -375,8 +403,11 @@ pub const LOGGING_CATEGORY: usize = 7;
 /// The Sync category: its rows come from what Syncthing reports.
 pub const SYNC_CATEGORY: usize = 8;
 
+/// The Journal category: folder layout, week start and UTC offset.
+pub const JOURNAL_CATEGORY: usize = 9;
+
 /// The Settings categories, in order: name, then its sections.
-pub const CATEGORIES: [(&str, &[Section]); 10] = [
+pub const CATEGORIES: [(&str, &[Section]); 11] = [
     (
         "Writing",
         &[
@@ -432,6 +463,13 @@ pub const CATEGORIES: [(&str, &[Section]); 10] = [
     ("Plugins", &[]),
     ("Logging", &[("Log file", &["Logging", "Level"])]),
     ("Sync", &[]),
+    (
+        "Journal",
+        &[(
+            "Journal",
+            &["Folder layout", "Week starts on", "UTC offset"],
+        )],
+    ),
     (
         "Help & about",
         &[(
@@ -606,6 +644,10 @@ pub struct OptionsModel<'a> {
     /// How the last check went, in small print under "Check for plugins";
     /// empty before the first.
     pub repo_note: &'a str,
+    /// How the last journal reorganising went, in small print under "Folder
+    /// layout"; empty when there is nothing to say. Cleared when Options
+    /// closes.
+    pub journal_note: &'a str,
     /// What Syncthing last reported, for Settings → Sync (v1.16).
     pub sync: &'a sigma_core::sync::View,
 }
@@ -903,20 +945,25 @@ pub fn display_row(m: &OptionsModel<'_>, label: &'static str) -> Option<DRow> {
         "USB keyboard, mouse & export" => Kind::Link(2),
         _ => row_kind(rows.iter().find(|r| r.label == label)?),
     };
-    let note = match (label, &kind) {
-        ("Upside down", Kind::Muted(_)) => Some("Needs Portrait or Landscape"),
-        ("Interface language", Kind::Muted(_)) => Some("Follows the Kobo's language"),
-        ("Words per line", Kind::Muted(_)) => Some("Needs Line on"),
-        ("Tab width", Kind::Muted(_)) => Some("Used when Tab key is Spaces"),
+    let note: Option<Cow<'static, str>> = match (label, &kind) {
+        ("Folder layout", _) if !m.journal_note.is_empty() => {
+            Some(Cow::Owned(m.journal_note.to_owned()))
+        }
+        ("Upside down", Kind::Muted(_)) => Some(Cow::Borrowed("Needs Portrait or Landscape")),
+        ("Interface language", Kind::Muted(_)) => {
+            Some(Cow::Borrowed("Follows the Kobo's language"))
+        }
+        ("Words per line", Kind::Muted(_)) => Some(Cow::Borrowed("Needs Line on")),
+        ("Tab width", Kind::Muted(_)) => Some(Cow::Borrowed("Used when Tab key is Spaces")),
         ("Keyboard size", Kind::Slider { enabled: false, .. }) => {
-            Some("Turn off Auto keyboard size")
+            Some(Cow::Borrowed("Turn off Auto keyboard size"))
         }
         _ => None,
     };
     Some(DRow {
         label: Cow::Borrowed(label),
         kind,
-        note: note.map(Cow::Borrowed),
+        note,
     })
 }
 
@@ -1003,6 +1050,7 @@ fn summary(m: &OptionsModel<'_>, cat: usize) -> String {
                 on_off(false)
             }
         }
+        JOURNAL_CATEGORY => tr(s.journal_layout.label()).into_owned(),
         _ => m.version.to_owned(),
     }
 }
@@ -2025,9 +2073,16 @@ impl EditorScreen {
                         );
                         // Kept to the column left of the controls: smaller,
                         // then cut, so it never runs under them.
-                        let room = cells.iter().map(|r| r.x).min().unwrap_or(band.x + band.w)
-                            - band.x
-                            - s.px(12.0);
+                        // A Pick row's cell is the whole row, so its column
+                        // ends where the italic value starts.
+                        let edge = match &d.kind {
+                            Kind::Pick(v) => {
+                                right as i32
+                                    - self.fonts.width(Face::LiterataItalic, ui, &tr(v)) as i32
+                            }
+                            _ => cells.iter().map(|r| r.x).min().unwrap_or(band.x + band.w),
+                        };
+                        let room = edge - band.x - s.px(12.0);
                         let text = tr(note).into_owned();
                         let mut size = ui * 0.8;
                         let w = self.fonts.width(Face::Atkinson, size, &text);
@@ -2167,6 +2222,7 @@ mod tests {
             plugins: &[],
             repository: &[],
             repo_note: "",
+            journal_note: "",
             sync: &sigma_core::sync::model::NO_SYNC,
         }
     }
@@ -2196,6 +2252,7 @@ mod tests {
                 plugins: rows,
                 repository: &[],
                 repo_note: "",
+                journal_note: "",
                 ..model(&st, &k, page, 0)
             };
             page_items(&m)

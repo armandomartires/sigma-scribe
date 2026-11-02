@@ -158,7 +158,7 @@ impl App {
         })
     }
 
-    fn refresh_files(&mut self) {
+    pub(crate) fn refresh_files(&mut self) {
         let lib = self.library.clone();
         if let Some(f) = &mut self.files {
             f.entries = lib.list(&f.folder).unwrap_or_default();
@@ -198,7 +198,7 @@ impl App {
     /// After a rename / move rewrote the open note's ink links (v1.5.1,
     /// `sigma_core::ink::carry`) or wiki links (v1.5.2) on disk: take the new text into the
     /// buffer, keeping the caret as close as it can.
-    fn reload_ink_links(&mut self) {
+    pub(crate) fn reload_ink_links(&mut self) {
         let path = self.library.root().join(self.current.as_str());
         let Ok(disk) = std::fs::read_to_string(&path) else {
             return;

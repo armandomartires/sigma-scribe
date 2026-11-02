@@ -236,6 +236,8 @@ pub struct EditorScreen {
     pub todos_on: bool,
     /// The Scratch pane is on offer.
     pub scratch_on: bool,
+    /// The Calendar pane is on offer: always, it is built in (no plugin).
+    pub calendar_on: bool,
     /// The drawer menu is open under the drawer button (v1.16).
     pub drawer_menu: bool,
     /// The Wi-Fi button is shown (v1.18): the app has a Wi-Fi backend.
@@ -281,7 +283,7 @@ pub struct EditorScreen {
     pub cfg: Settings,
     /// Open drawer panes (Contents, To-dos, Scratch): ticked in the drawer
     /// menu; the drawer button draws active while any is open.
-    pub drawer_open: [bool; 3],
+    pub drawer_open: [bool; 4],
     /// The Find bar is open: it sits under the title bar and the page
     /// starts below it; the magnifier draws active.
     pub find_open: bool,
@@ -329,6 +331,7 @@ impl EditorScreen {
             contents_on: true,
             todos_on: true,
             scratch_on: true,
+            calendar_on: true,
             drawer_menu: false,
             wifi_on: false,
             wifi_menu: false,
@@ -340,7 +343,7 @@ impl EditorScreen {
             ink_words: false,
             sketch_guide: true,
             ink_keys_right: false,
-            drawer_open: [false; 3],
+            drawer_open: [false; 4],
             find_open: false,
             cand_reserve: false,
             preview_drawer: None,
@@ -2873,7 +2876,7 @@ mod scroll_bar_tests {
         let page = e.layout(true, &Keyboard::default()).page;
         let (alone, _) = e.scroll_bar_zone(&b, page).unwrap();
         assert_eq!(alone.x + alone.w, page.x + page.w, "at the page edge");
-        e.drawer_open = [true, false, false];
+        e.drawer_open = [true, false, false, false];
         let base = Layout {
             page,
             ..Layout::default()
