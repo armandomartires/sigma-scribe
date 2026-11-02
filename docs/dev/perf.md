@@ -60,3 +60,23 @@ On the Forma (2026-11-02, build 1.19.1 at `9f5b0d3`, Settings → Logging at Deb
 | 5 letters | 303 (all) | 1 | 49–80 ms |
 
 A whole-library read is about 40 ms, around 0.13 ms per note, so the result is on screen before the next keystroke; the 80 ms is the first search of the session (cold file cache). A one-letter query stops after two or three notes because it fills the cap. Keystroke-to-refresh while searching, from the session's `perf:` line: 19 keystrokes, p50 84 ms, p95 155 ms, max 176 ms (the list redraw is included). The gate is met by a factor of about 50; a stored index (decision S22-D4) is not needed at this library size. The numbers that would change it: a library ten times larger, or notes much larger than the pack's.
+
+# Wiki-link autocomplete — S23 (1.20.0, 2026-11-02)
+
+Gate (`.ai/sprints/S23-wiki-autocomplete.md`): typing with the suggestion bar up keeps keystroke-to-refresh near the 116 ms p50 measured on the Forma on 2026-11-02 (1.18.1).
+
+The bar lists the library's notes by name with `Library::note_paths`, which walks the folders without reading any note (`all_notes` reads each one to count words). The list is read once when the bar opens and kept while it stays up; each keystroke then runs `suggest_notes` over it. A heading query reads the one note it names, once.
+
+Desktop (2026-11-02, release build, 2000 notes of about 3 KB in 40 folders; `cargo test -p sigma-core --release -- --ignored --nocapture suggest_timing`):
+
+| step | time |
+|---|---|
+| `all_notes` (for comparison) | 44 ms |
+| `note_paths`, once when the bar opens | 7.5 ms |
+| `suggest_notes`, per keystroke | 1.4 ms |
+
+The first version folded every name through the accent table on each keystroke: 24.6 ms per call, roughly 200 ms on the Forma at its usual 8 to 10 times. ASCII letters now take a direct path, and the cached list is moved from bar to bar instead of copied.
+
+Emulator, test-notes pack (16 notes), 300 keystrokes, release build: p50 19.7 ms without the bar, 20.2 ms with `[[` typed first (`perf-type`). The typed letters stop matching any note after a few keys, so most of those keystrokes ran the lookup and found nothing; the bar was up for the first few only.
+
+On the Forma (2026-11-02, build 1.20.0 at `f945a7f`, Logging at Debug): one session of 94 s, 58 keystrokes, typing and picking with the bar up, including a heading pick from `perf-500k.md` (500 KB, 1621 headings, all named "Section", shown as one chip). `perf:` keystroke-to-refresh p50 125.2 ms, p95 144.7 ms, max 214.4 ms. The five 1.19.1 sessions earlier the same day, without the bar, ranged p50 83.5 to 140.5 ms (116 ms the reference), so 125 ms is inside the day's spread. No error or warning from the bar in the log.

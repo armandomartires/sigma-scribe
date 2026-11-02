@@ -32,6 +32,23 @@ pub struct Model<'a> {
     pub rename: Option<&'a Buffer>,
     /// Touch selection chrome (handles and action bar), v0.2.2.
     pub sel_ui: Option<SelUi>,
+    /// Suggestion chips and the chosen one, shown on the candidate bar
+    /// when the IME has no candidates of its own (wiki-link autocomplete,
+    /// S23).
+    pub suggest: Option<(&'a [String], usize)>,
+}
+
+impl<'a> Model<'a> {
+    /// The chips on the candidate bar: the IME's candidates when it is
+    /// converting, else the suggestions. `true` marks the IME's.
+    fn chips(&self) -> Option<(&'a [String], usize, bool)> {
+        if let Some((c, sel)) = self.keyboard.composer.candidates() {
+            return Some((c, sel, true));
+        }
+        self.suggest
+            .filter(|(c, _)| !c.is_empty())
+            .map(|(c, sel)| (c, sel.min(c.len() - 1), false))
+    }
 }
 
 /// How the touch selection chrome is shown.
@@ -92,6 +109,8 @@ pub enum Hit {
     Caret(usize),
     /// A Japanese conversion candidate on the bar (v1.10).
     Candidate(usize),
+    /// A suggestion chip on the candidate bar (S23 wiki-link autocomplete).
+    Suggest(usize),
     /// Selection handle 0 = start, 1 = end.
     Handle(usize),
     /// A button on the selection action bar.
@@ -925,7 +944,7 @@ impl EditorScreen {
         let m = self.page_s.px(self.margin_px);
         let v = self.page_s.px(16.0);
         let bar = if self.cand_reserve {
-            self.line_h() + self.px(20.0)
+            self.cand_bar_h()
         } else {
             0
         };
@@ -995,11 +1014,35 @@ impl EditorScreen {
         }
     }
 
-    /// The strip of Japanese conversion candidates, along the bottom of the
-    /// page (v1.10).
+    /// The strip of Japanese conversion candidates or suggestions, along
+    /// the bottom of the page (v1.10, S23).
     fn cand_bar(&self, page: Rect) -> Rect {
-        let h = self.line_h() + self.px(20.0);
+        let h = self.cand_bar_h();
         Rect::new(page.x, page.y + page.h - h, page.w, h)
+    }
+
+    /// The candidate bar's height: a text line plus padding, and never so
+    /// low that a chip is under the 44 px minimum target at the page's
+    /// scale (S23).
+    fn cand_bar_h(&self) -> i32 {
+        let gap = self.px(8.0);
+        (self.line_h() + self.px(20.0))
+            .max(self.page_s.px(crate::slider::MIN_TARGET as f32) + 2 * gap)
+    }
+
+    /// The chips on the candidate bar as drawn for `model` (the IME's
+    /// candidates or the suggestions), each with its index; empty when the
+    /// bar is not up. For the emulator's targets and checks.
+    #[must_use]
+    pub fn cand_rects(&self, model: &Model<'_>) -> Vec<(usize, Rect)> {
+        let Some((cands, sel, _)) = model.chips() else {
+            return Vec::new();
+        };
+        let l = self.layout(model.keys_on, model.keyboard);
+        self.cand_chips(self.cand_bar(l.page), cands, sel)
+            .into_iter()
+            .map(|(r, i)| (i, r))
+            .collect()
     }
 
     /// The candidate chips that fit the bar, the chosen one in view.
@@ -1197,14 +1240,15 @@ impl EditorScreen {
                 }
             }
         }
-        if let Some((cands, sel)) = model.keyboard.composer.candidates() {
+        if let Some((cands, sel, ime)) = model.chips() {
             let bar = self.cand_bar(l.page);
             if bar.contains(x, y) {
+                let hit = if ime { Hit::Candidate } else { Hit::Suggest };
                 return self
                     .cand_chips(bar, cands, sel)
                     .into_iter()
                     .find(|(r, _)| r.contains(x, y))
-                    .map_or(Hit::Nothing, |(_, i)| Hit::Candidate(i));
+                    .map_or(Hit::Nothing, |(_, i)| hit(i));
             }
         }
         if model.rename.is_some() {
@@ -1291,7 +1335,7 @@ impl EditorScreen {
     pub fn draw(&mut self, c: &mut Canvas, model: &Model<'_>) -> Layout {
         let t = model.theme;
         let l = self.layout(model.keys_on, model.keyboard);
-        self.cand_reserve = model.keyboard.composer.candidates().is_some();
+        self.cand_reserve = model.chips().is_some();
         self.follow_caret(model.buffer, l.page);
         c.fill(c.bounds(), t.paper);
         draw_gutters(c, &l, t);
@@ -1439,7 +1483,7 @@ impl EditorScreen {
             c.fill(Rect::new(p.x + p.w - r, p.y, r, p.h), self.bar_bg(t));
         }
         self.draw_scroll_bar(c, l.page, rows.len(), self.visible_rows(l.page), t);
-        if let Some((cands, sel)) = model.keyboard.composer.candidates() {
+        if let Some((cands, sel, _)) = model.chips() {
             self.draw_cands(c, l.page, cands, sel, t);
         }
 
@@ -2333,6 +2377,7 @@ mod tests {
             theme: Theme::DAY,
             rename: None,
             sel_ui: None,
+            suggest: None,
         }
     }
 
@@ -2863,6 +2908,137 @@ mod tests {
         assert!(e.status_right(Theme::NIGHT, &s).starts_with("no USB"));
         e.usb_live = true;
         assert!(e.status_right(Theme::NIGHT, &s).starts_with("USB"));
+    }
+
+    fn chips() -> Vec<String> {
+        [
+            "field-notes",
+            "Garden",
+            "Reading list 2026",
+            "Trips",
+            "Recipes",
+            "Kobo",
+            "Ideas",
+            "Work log",
+        ]
+        .map(String::from)
+        .to_vec()
+    }
+
+    #[test]
+    fn suggestion_bar_fits_at_ui_scale_both_orientations_and_keeps_the_caret_line() {
+        let text = "A line of the note that wraps.\n".repeat(120) + "[[Ga";
+        let mut b = Buffer::new(&text);
+        b.set_caret(text.len());
+        let k = Keyboard::default();
+        let s = SaveState::Saved;
+        let names = chips();
+        for (w, h) in [(W, H), (H, W)] {
+            for ui in [100, 125, 150, 175, 200] {
+                let mut e = EditorScreen::new(w, h);
+                let mut st = Settings {
+                    ui_scale: ui,
+                    ..Settings::default()
+                };
+                e.configure(&mut st, None);
+                for sel in [0, names.len() - 1] {
+                    let mut m = model(&b, &k, &s);
+                    m.suggest = Some((&names, sel));
+                    let mut c = Canvas::new(w, h, 255);
+                    let l = e.draw(&mut c, &m);
+                    let at = format!("{w}x{h} ui {ui} sel {sel}");
+                    let bar = e.cand_bar(l.page);
+                    assert!(
+                        bar.y >= l.page.y && bar.y + bar.h <= l.page.y + l.page.h,
+                        "{at}: bar {bar:?} inside page {:?}",
+                        l.page
+                    );
+                    // The text stops above the bar; the caret row is on screen.
+                    let ta = e.text_area(l.page);
+                    assert!(ta.y + ta.h <= bar.y, "{at}: text {ta:?} bar {bar:?}");
+                    let rows = e.rows(&b, l.page);
+                    let (row, _) = caret_cell(b.text(), &rows, b.caret(), &e.measure());
+                    assert!(row >= e.scroll, "{at}");
+                    let bottom = ta.y + (row - e.scroll + 1) as i32 * e.line_h();
+                    assert!(
+                        bottom <= bar.y,
+                        "{at}: caret line ends {bottom}, bar {bar:?}"
+                    );
+                    // Chips sit in the bar, large enough, the chosen one shown.
+                    let got = e.cand_chips(bar, &names, sel);
+                    assert!(got.iter().any(|&(_, i)| i == sel), "{at}");
+                    let pub_rects: Vec<(Rect, usize)> =
+                        e.cand_rects(&m).into_iter().map(|(i, r)| (r, i)).collect();
+                    assert_eq!(pub_rects, got, "{at}: cand_rects as drawn");
+                    let min = e.page_scale().px(crate::slider::MIN_TARGET as f32);
+                    for (r, i) in &got {
+                        // At least a text line, and never under the minimum
+                        // target.
+                        assert!(r.h >= e.line_h(), "{at}: chip {i} {r:?}");
+                        assert!(r.h >= min, "{at}: chip {i} {r:?} under {min}");
+                        assert!(
+                            r.x >= bar.x && r.x + r.w <= bar.x + bar.w,
+                            "{at}: chip {i} {r:?}"
+                        );
+                        assert!(r.y >= bar.y && r.y + r.h <= bar.y + bar.h, "{at}");
+                        // Hit regions map to the chips.
+                        assert_eq!(
+                            e.hit(&m, r.x + r.w / 2, r.y + r.h / 2),
+                            Hit::Suggest(*i),
+                            "{at}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn no_suggestions_no_bar() {
+        let mut e = EditorScreen::new(W, H);
+        let (b, k, s) = (Buffer::new("x"), Keyboard::default(), SaveState::Saved);
+        let mut m = model(&b, &k, &s);
+        let mut c = Canvas::new(W, H, 255);
+        let l = e.draw(&mut c, &m);
+        let full = e.text_area(l.page);
+        let empty: Vec<String> = Vec::new();
+        m.suggest = Some((&empty, 0));
+        e.draw(&mut c, &m);
+        assert_eq!(e.text_area(l.page), full, "an empty list reserves nothing");
+        let bar = e.cand_bar(l.page);
+        assert!(!matches!(
+            e.hit(&m, bar.x + bar.w / 2, bar.y + bar.h / 2),
+            Hit::Suggest(_) | Hit::Candidate(_)
+        ));
+    }
+
+    #[test]
+    fn ime_candidates_win_over_suggestions() {
+        let mut e = EditorScreen::new(W, H);
+        let mut b = Buffer::new("");
+        let mut k = Keyboard::default();
+        for ch in "shi".chars() {
+            k.composer
+                .type_char(&mut b, sigma_core::layouts::KeyLayout::ZhHant, ch);
+        }
+        let (ime, sel) = k.composer.candidates().expect("converting");
+        let ime = ime.to_vec();
+        let s = SaveState::Saved;
+        let names = chips();
+        let mut m = model(&b, &k, &s);
+        m.suggest = Some((&names, 2));
+        let mut c = Canvas::new(W, H, 255);
+        let l = e.draw(&mut c, &m);
+        let bar = e.cand_bar(l.page);
+        let got = e.cand_chips(bar, &ime, sel);
+        assert!(!got.is_empty());
+        for (r, i) in got {
+            assert_eq!(
+                e.hit(&m, r.x + r.w / 2, r.y + r.h / 2),
+                Hit::Candidate(i),
+                "no Suggest hits while the IME converts"
+            );
+        }
     }
 }
 

@@ -25,7 +25,7 @@ pub fn matches(text: &str, query: &str, case: bool) -> Vec<(usize, usize)> {
     out
 }
 
-fn fold(c: char) -> char {
+pub(crate) fn fold(c: char) -> char {
     let mut l = c.to_lowercase();
     match (l.next(), l.next()) {
         (Some(x), None) => x,

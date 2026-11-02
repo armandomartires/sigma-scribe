@@ -1,0 +1,60 @@
+# v1.20.0 (S23) Wiki-link autocomplete: the bar shows right after [[ with
+# the recent notes, narrows as letters are typed, a tap completes the link;
+# after # it lists that note's headings (Forma 1440x1920).
+open-fixture tests/emu/fixtures/lamps.md
+open-fixture tests/emu/fixtures/markdown-tour.md
+tap-on Files
+tap-on New note
+clear-field
+type links
+tap-on OK
+# Notes opened from Files are the recent ones.
+tap-on Files
+tap-on lamps.md
+tap-on Files
+tap-on markdown-tour.md
+tap-on Files
+tap-on links.md
+# Right after [[ the bar shows the recent notes, before any letter.
+hw See [[
+shot v1.20-wiki-recent
+type la
+shot v1.20-wiki-narrowed
+# A tap completes and closes the link; the caret is after it.
+tap-on Suggest0
+expect See [[lamps]]
+expect-caret-after [[lamps]]
+shot v1.20-wiki-picked
+# After # the chips are that note's headings, narrowed the same way.
+hw  and [[markdown-tour#
+shot v1.20-wiki-headings
+type pa
+shot v1.20-wiki-headings-narrowed
+tap-on Suggest0
+expect [[markdown-tour#Paging]]
+# USB: Right moves the choice, Enter picks it.
+hw  then [[markdown-tour#part
+usb-key Right
+usb-key Enter
+expect [[markdown-tour#Part two]]
+# Esc closes the bar; the text stays as typed.
+hw  or [[lam
+esc
+expect-mode write
+expect [[lam
+shot v1.20-wiki-closed
+# Night, landscape.
+hw ps]]
+tap-on Options
+tap-on Dark mode/On
+tap-on Orientation/Landscape
+tap-on Close
+expect-screen 1920x1440
+hw  and [[
+shot v1.20-wiki-night-landscape
+tap-on Suggest0
+tap-on Options
+tap-on Dark mode/Off
+tap-on Orientation/Portrait
+tap-on Close
+expect-status saved

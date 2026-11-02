@@ -33,6 +33,9 @@ The note's name is at the left. The buttons, left to right:
 - At the bottom of the screen, **Keys** shows or hides the on-screen keyboard and **Write** opens the handwriting panel ([handwriting.md](handwriting.md)). A USB keyboard works too ([usb-keyboard.md](usb-keyboard.md)).
 - Notes save by themselves. The line above the keyboard shows the word count and "saved".
 - Link to another note with `[[its name]]`; a dashed link makes the note when you open it.
+- Right after `[[`, a bar of note names shows above the keyboard, the notes you opened last first. Each letter narrows it: names that start with what you typed, then names that contain it, ignoring case and accents. Tap a name to finish the link, `[[lamps]]`. To link a heading, type `#` after the name: the bar lists that note's headings, and a tap gives `[[markdown-tour#Paging]]`. Undo takes a pick back. On a USB keyboard, Left and Right choose, Enter or Tab picks and Esc closes the bar.
+
+  ![The note bar after [[la](../screenshots/v1.20/v1.20-wiki-narrowed.png)
 - Tasks written as `- [ ]` are listed, for all your notes, in the To-dos pane, where you can tick them off.
 
 ## Settings
