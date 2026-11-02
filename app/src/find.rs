@@ -369,6 +369,24 @@ impl App {
         let Some(f) = self.find.as_mut().filter(|f| f.scope == Scope::All) else {
             return false;
         };
+        // One line per answered search: the number `docs/dev/perf.md` wants
+        // from the Forma (query length, not the query: notes are private).
+        sigma_core::info!(
+            "search",
+            "{} chars, {} of {} notes read, {} hits in {} notes{}{}: {} ms",
+            f.query.text().chars().count(),
+            r.scanned,
+            r.scanned + usize::from(r.capped),
+            r.hits.len(),
+            r.notes_with_hits,
+            if r.capped { " (capped)" } else { "" },
+            if r.skipped > 0 {
+                format!(", {} skipped", r.skipped)
+            } else {
+                String::new()
+            },
+            r.elapsed_ms
+        );
         f.rows = search_rows(&r, f.query.text(), f.case);
         if f.first >= f.rows.len() {
             f.first = 0;
