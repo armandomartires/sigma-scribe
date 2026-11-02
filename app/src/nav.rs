@@ -1,6 +1,6 @@
 //! Wiki links between notes and the Back history.
 
-use crate::App;
+use crate::{App, SearchSnapshot};
 use sigma_core::links::Graph;
 use sigma_core::{links, NotePath};
 use sigma_device::Refresh;
@@ -35,6 +35,7 @@ impl App {
             preview: self.preview.as_ref().map(|p| p.page),
             caret: self.buffer.caret(),
             scroll: self.screen.scroll,
+            search: self.search_snapshot(),
         };
         if self.history.last() == Some(&e) {
             return;
@@ -70,8 +71,9 @@ impl App {
     }
 
     /// Back (v1.0.2): the previous note, mode and position. Sheets and the
-    /// find bar close. Entries whose note no longer exists are skipped.
-    /// `None` when no entry is left.
+    /// find bar close; an entry taken from the search results list brings
+    /// the list back with its query and page (S22.1). Entries whose note
+    /// no longer exists are skipped. `None` when no entry is left.
     pub fn go_back(&mut self) -> Option<Refresh> {
         let e = loop {
             let e = self.history.pop()?;
@@ -97,6 +99,9 @@ impl App {
             if let Some(p) = &mut self.preview {
                 p.page = page.min(p.doc.pages.len().saturating_sub(1));
             }
+        }
+        if let Some(s) = &e.search {
+            self.restore_search(s);
         }
         Some(Refresh::Full)
     }
@@ -158,4 +163,6 @@ pub struct HistEntry {
     pub preview: Option<usize>,
     pub caret: usize,
     pub scroll: usize,
+    /// The search results list that was on screen, if any (S22.1).
+    pub search: Option<SearchSnapshot>,
 }

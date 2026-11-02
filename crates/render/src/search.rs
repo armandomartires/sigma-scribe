@@ -464,7 +464,12 @@ mod tests {
                 let m = model(&rs, Theme::DAY);
                 let l = e.search_layout(page, &m);
                 let tag = format!("{scale}% {w}x{h}");
-                assert!(l.visible >= 1, "{tag}: no row fits, page {page:?}");
+                // Landscape at 200 % with the keyboard up leaves the
+                // three-row bar no room for a row: only the status line.
+                assert!(
+                    l.visible >= 1 || page.h < l.row_h + l.foot.h,
+                    "{tag}: no row fits, page {page:?}"
+                );
                 assert!(l.row_h >= 44 && l.row_h >= e.scale().px(44.0), "{tag}");
                 assert!(l.prev.w >= 44 && l.next.w >= 44 && l.prev.h >= 44, "{tag}");
                 for r in [l.prev, l.next, l.foot, l.status] {

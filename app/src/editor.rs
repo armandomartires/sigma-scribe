@@ -126,6 +126,7 @@ impl App {
                 if self.in_editor()
                     && on_page(x, y)
                     && !self.in_drawer(x, y)
+                    && !self.search_list_shown()
                     && self.sel_ui.is_none() =>
             {
                 self.select_word_at(x, y);
@@ -135,7 +136,10 @@ impl App {
             Gesture::DoubleTap { x, y } => self.handle(Event::Tap { x, y }),
             Gesture::LongPress { .. } if self.drag.is_some() => None,
             Gesture::LongPress { x, y }
-                if self.in_editor() && on_page(x, y) && !self.in_drawer(x, y) =>
+                if self.in_editor()
+                    && on_page(x, y)
+                    && !self.in_drawer(x, y)
+                    && !self.search_list_shown() =>
             {
                 self.drag = self.select_word_at(x, y).map(|(a, b)| Drag::Word { a, b });
                 self.sel_ui = Some(SelUi { bar: true });

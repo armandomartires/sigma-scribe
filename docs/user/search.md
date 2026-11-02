@@ -10,7 +10,7 @@ As before: the matches are marked on the page, **‹** and **›** step through 
 
 Tap **All notes** and type. Under the bar, a list of matching lines takes the place of the page.
 
-<!-- screenshot: docs/screenshots/v1.19/search-list.png -->
+![The results list under the Find bar in All notes](../screenshots/v1.19/v1.19-search-list.png)
 
 - Each row shows the note's path and the line number, and below it the line with the hit in bold.
 - Rows are grouped by note, in the order of the Files list.

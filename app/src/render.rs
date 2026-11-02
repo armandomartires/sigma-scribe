@@ -164,10 +164,16 @@ impl App {
                         focus: f.focus,
                         case: f.case,
                         label: &label,
-                        scope: Scope::Note,
+                        scope: f.scope,
                         theme: self.theme(),
                     },
                 );
+                // All notes: the results list in place of the page (S22.1).
+                if f.scope == Scope::All {
+                    let m = self.search_model(f);
+                    let sl = self.screen.search_layout(l.page, &m);
+                    self.screen.draw_search(&mut c, &sl, &m);
+                }
             }
             if self.drawer_visible() {
                 let (hs, todos) = (self.headings(), self.todo_list());

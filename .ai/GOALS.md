@@ -142,7 +142,7 @@ Built into the app, not a plugin (decided 2026-11-02). Plan: `~/.claude/plans/le
 
 ## Sprint 10 — Three fixes and Search across all notes
 Goal: Fix the three defects the 2026-11-02 review found, then search the whole library from the Find bar
-Status: S22.0 built 2026-11-02 on `fixes-s22` (version 1.18.1, agreed with the user; a bare `[[#heading]]` is the current note), PR #111 open; Forma pass 2026-11-02: the user tried Ru Ctrl+C, a `[[note#h]]` tap and rename-then-Back, all fine; merge to do; S22.1 not started (version open). Sprint `.ai/sprints/S22-fixes-and-search.md`, tasks `.ai/tasks/S22-tasks.md`, handover `.ai/handover-s22-2026-11-02.md`. Branches `fixes-s22` then `search-all-notes`.
+Status: S22.0 built 2026-11-02 on `fixes-s22` (version 1.18.1, agreed with the user; a bare `[[#heading]]` is the current note), PR #111 open; Forma pass 2026-11-02: the user tried Ru Ctrl+C, a `[[note#h]]` tap and rename-then-Back, all fine; merged (#111). S22.1: core (#115), find bar (#117), results renderer (#116), strings (#114) and docs (#113) merged; app wiring, emulator script, screenshots, changelog and version 1.19.0 on `search-all-notes` (PR to review, 2026-11-02); the Forma measurement (T15) and pass to do. Sprint `.ai/sprints/S22-fixes-and-search.md`, tasks `.ai/tasks/S22-tasks.md`, handover `.ai/handover-s22-2026-11-02.md`. Branches `fixes-s22` then `search-all-notes`.
 - [x] S22.0 `[[note#heading]]` links open the note instead of creating `note#heading.md`
   `links.rs:37` `resolve`, `links.rs:142` `new_note_place` and the preview's `known` set (`app/src/preview.rs:33`) strip `#…` like `rewrite` already does; tests for `resolve` and a preview tap. Task S22-T01.
 - [x] S22.0 Ctrl shortcuts work on the non-Latin on-screen boards
@@ -151,13 +151,13 @@ Status: S22.0 built 2026-11-02 on `fixes-s22` (version 1.18.1, agreed with the u
   History remapped on rename and move (`files.rs:423-461`), pruned on delete; `go_back` skips missing notes; the Journal reorganise code in `settings.rs:229` shares the helper. Tests in `app/tests/history.rs`. Task S22-T03.
 - [?] S22.0 Changelog, checks, PR, Forma pass
   Task S22-T04.
-- [ ] S22.1 Core search over the library on a background worker
+- [x] S22.1 Core search over the library on a background worker
   `search_notes` with a cap, `.trash/` and `.ink/` skipped; a `Searcher` like the to-do `Indexer`. Task S22-T10.
-- [>] S22.1 Find bar scope: This note | All notes
+- [x] S22.1 Find bar scope: This note | All notes
   Replace disabled in All notes (S22-D3). Task S22-T11.
-- [ ] S22.1 Results list in place of the page, paged like the Graph list
+- [>] S22.1 Results list in place of the page, paged like the Graph list
   Row = path · line, matched line with the hit bold; tap opens the note at that line and Back returns to the list. Tasks S22-T12, S22-T13.
-- [ ] S22.1 Strings in the nine catalogs, emulator script, screenshots
+- [>] S22.1 Strings in the nine catalogs, emulator script, screenshots
   `tests/emu/<version>-search.script`, `docs/screenshots/<version>/`. Tasks S22-T13, S22-T14.
 - [ ] S22.1 Measured on the Forma on the test-notes pack
   Under 2 s for a three-letter query, UI responsive; table in `docs/dev/perf.md`. Task S22-T15.

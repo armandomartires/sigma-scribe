@@ -22,6 +22,9 @@
 //!   v0.6: tap-on Find|Graph (icons) | tap-on FindField|ReplaceField|Prev|Next|
 //!   Replace|All|Aa|FindClose | tap-on Link:LABEL (preview) | tap-on
 //!   Graph:PATH | expect-find LABEL | expect-mode write|preview|find|graph
+//!   S22.1 search: tap-on This note|All notes | tap-on Result:N (row N of the
+//!   shown page) | tap-on SearchPrev|SearchNext | expect-find STATUS (the results
+//!   status line in All notes); the search is settled after every step
 //!   v0.7: tap-on Help | tap-on App info|Markdown reference|Back|Close (Help)
 //!   | perf-type N (time N key taps) | expect-help TITLE | expect-mode help | expect-page N (Help pages too)
 //!   v0.8: usb plug|unplug (hot-plug event) | usb-type TEXT (raw evdev key

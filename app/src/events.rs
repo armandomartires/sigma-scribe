@@ -171,6 +171,10 @@ impl App {
                 if let Some(r) = self.wifi_tick() {
                     return Some(r);
                 }
+                // A finished search across all notes (S22.1).
+                if let Some(r) = self.search_poll() {
+                    return Some(r);
+                }
                 if let Some(items) = self.indexer.poll() {
                     let changed = items != self.disk_todos;
                     self.disk_todos = items;
@@ -298,6 +302,8 @@ impl App {
                 Some(Refresh::Full)
             }
             Event::Key(_) if self.files.is_some() => None,
+            // The results list pages like the Graph list (S22.1).
+            Event::PageTurn { forward } if self.search_list_shown() => self.search_page(forward),
             Event::PageTurn { forward } => {
                 self.screen.page_turn(&mut self.buffer, page, forward);
                 Some(Refresh::Partial)
@@ -305,6 +311,9 @@ impl App {
             Event::Key(k) if self.find_typing() => self.find_hw(k),
             Event::Key(k) if self.scratch_focused() => self.scratch_hw(k),
             Event::Tap { x, y } if self.in_find_bar(x, y) => self.find_tap(x, y),
+            Event::Tap { x, y } if self.search_list_shown() && page.contains(x, y) => {
+                self.search_tap(x, y)
+            }
             Event::Tap { x, y } if self.in_drawer(x, y) => self.drawer_tap(x, y),
             Event::Key(k) => {
                 // Backspace, Return and Esc act on a composition themselves.
