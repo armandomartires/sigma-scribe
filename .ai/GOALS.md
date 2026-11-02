@@ -166,16 +166,16 @@ Status: Done 2026-11-02. S22.0 (1.18.1, PR #111): a bare `[[#heading]]` is the c
 
 ## Sprint 11 — Wiki-link autocomplete
 Goal: Typing `[[` suggests notes, and after `#` that note's headings; a tap completes the link
-Status: Built 2026-11-02 as **1.20.0** on branch `wiki-autocomplete` (T01 and T02 in parallel sessions, T03 by a builder, merged and checked); PR #125, CI green; installed on the Forma 2026-11-02, device pass fine (`[[` picks and a heading pick from a 500 KB note; keystroke p50 125 ms, inside the day's 84–141 ms spread). Merge to do. Sprint `.ai/sprints/S23-wiki-autocomplete.md`, tasks `.ai/tasks/S23-tasks.md`. Branch `wiki-autocomplete`.
-- [?] S23 Core: link query at the caret, note and heading suggestions, name-only note list
+Status: Done 2026-11-02, **1.20.0**, merged to `main` as 1fa7d77 (PR #125) (T01 and T02 in parallel sessions, T03 by a builder, merged and checked); PR #125, CI green; installed on the Forma 2026-11-02, device pass fine (`[[` picks and a heading pick from a 500 KB note; keystroke p50 125 ms, inside the day's 84–141 ms spread). Sprint `.ai/sprints/S23-wiki-autocomplete.md`, tasks `.ai/tasks/S23-tasks.md`. Branch and worktrees removed; wiki synced. Open: the bar's chips are read from `.sigma-last-opened` and the Back history, so after a restart only the last note counts as recent.
+- [x] S23 Core: link query at the caret, note and heading suggestions, name-only note list
   `links::link_query`, `suggest_notes` (prefix then contains, case and accents ignored, recent first), `suggest_headings`; `Library::note_paths` without reading files. Task S23-T01.
-- [?] S23 Suggestion bar on the IME candidate strip
+- [x] S23 Suggestion bar on the IME candidate strip
   `Model.suggest`, `Hit::Suggest`; the Japanese and Chinese candidates win when both are up. Task S23-T02.
-- [?] S23 App wiring: shown right after `[[`, pick by tap or USB, one undo
+- [x] S23 App wiring: shown right after `[[`, pick by tap or USB, one undo
   Off in preview, rename, Find and the scratch pad; `Suggest0…` emulator controls; `app/tests/suggest.rs`. Task S23-T03.
-- [?] S23 Emulator script, user docs, timings on the Forma
+- [x] S23 Emulator script, user docs, timings on the Forma
   `tests/emu/v1.20.0-wiki-complete.script`; keystroke p50 near 116 ms with the bar up. Task S23-T04.
-- [?] S23 Changelog, version, PR, Forma pass
+- [x] S23 Changelog, version, PR, Forma pass
   Task S23-T05.
 
 ## Sprint 12 — Sprint 10 leftovers

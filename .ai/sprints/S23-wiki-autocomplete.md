@@ -1,6 +1,6 @@
 # S23 — Wiki-link autocomplete
 
-Board: Sprint 11. Planned 2026-11-02 with the user, after S22.0 (PR #111) passed on the Forma. Status: PLANNED, not started. Tasks: `.ai/tasks/S23-tasks.md`. Starts after Sprint 10 (S22.1 Search across all notes) is merged: branch `wiki-autocomplete` from that `main`. Line numbers below are from `main` at 8ed3209 plus the `fixes-s22` branch; re-check them when the sprint starts, since S22.1 touches `events.rs`, `editor.rs` and `script.rs`.
+Board: Sprint 11. Planned 2026-11-02 with the user, after S22.0 (PR #111) passed on the Forma. Status: DONE 2026-11-02, 1.20.0, merged in PR #125; Forma pass fine (keystroke p50 125 ms with the bar up). Tasks: `.ai/tasks/S23-tasks.md`. Starts after Sprint 10 (S22.1 Search across all notes) is merged: branch `wiki-autocomplete` from that `main`. Line numbers below are from `main` at 8ed3209 plus the `fixes-s22` branch; re-check them when the sprint starts, since S22.1 touches `events.rs`, `editor.rs` and `script.rs`.
 
 **Version is open.** Ask the user when the sprint starts (S22.0 is 1.18.1; S22.1 has no number yet).
 
