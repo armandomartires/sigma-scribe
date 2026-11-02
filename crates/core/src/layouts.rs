@@ -997,6 +997,20 @@ impl KeyLayout {
         }
     }
 
+    /// [`KeyLayout::shortcut_char`] for a character of this layout (the
+    /// on-screen board's keys carry characters, not codes): Ctrl+я on the
+    /// Russian board is Ctrl+Z. A character on no key of the layout is
+    /// lowercased as it is.
+    #[must_use]
+    pub fn shortcut_for_char(self, c: char) -> char {
+        (0..CODES.len())
+            .find(|&i| self.chars(i).0 == Some(c))
+            .or_else(|| (0..CODES.len()).find(|&i| self.chars(i).1 == Some(c)))
+            .and_then(|i| self.shortcut_char(CODES[i]))
+            .unwrap_or(c)
+            .to_ascii_lowercase()
+    }
+
     /// Vietnamese typing: `Some(true)` for VNI, `Some(false)` for Telex.
     #[must_use]
     pub fn viet(self) -> Option<bool> {

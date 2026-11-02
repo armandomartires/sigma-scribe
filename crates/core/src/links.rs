@@ -31,11 +31,22 @@ fn keys(p: &NotePath) -> [String; 2] {
     [stem(p.as_str()), stem(p.name())]
 }
 
+/// The note part of a target: `note#heading` is `note`. Empty for a bare
+/// `#heading`, which names the note it is written in.
+#[must_use]
+pub fn note_part(target: &str) -> &str {
+    target.split_once('#').map_or(target, |(n, _)| n).trim()
+}
+
 /// The note a target names. A full path wins over a bare name; among
-/// equal names the first in library order wins.
+/// equal names the first in library order wins. A `#heading` part is
+/// ignored; a bare `#heading` names no other note (`None`).
 #[must_use]
 pub fn resolve<'a>(target: &str, notes: &'a [NotePath]) -> Option<&'a NotePath> {
-    let t = target.trim().to_lowercase();
+    let t = note_part(target).to_lowercase();
+    if t.is_empty() {
+        return None;
+    }
     let t = t
         .strip_suffix(".md")
         .or_else(|| t.strip_suffix(".txt"))
@@ -137,10 +148,11 @@ pub fn rewrite(text: &str, before: &[NotePath], moved: &[(NotePath, NotePath)]) 
 
 /// Where tapping a link to a missing note creates it: in the named folder
 /// if the target has a path and that folder exists, else beside the note
-/// that links to it. The name is cleaned like any new note.
+/// that links to it. The name is cleaned like any new note; a `#heading`
+/// part is not part of it.
 #[must_use]
 pub fn new_note_place(lib: &Library, from: &NotePath, target: &str) -> (NotePath, String) {
-    let t = target.trim();
+    let t = note_part(target);
     let (dir, name) = t.rsplit_once('/').unwrap_or(("", t));
     let folder = NotePath::parse(dir)
         .ok()
@@ -200,8 +212,12 @@ impl Graph {
                             .filter(|&j| j != i);
                         Link { target, to }
                     })
-                    // A note linking to itself is not an edge.
-                    .filter(|l| l.to.is_some() || resolve(&l.target, &notes).is_none())
+                    // A note linking to itself is not an edge, nor is a
+                    // bare `#heading` (a link within the note).
+                    .filter(|l| {
+                        !note_part(&l.target).is_empty()
+                            && (l.to.is_some() || resolve(&l.target, &notes).is_none())
+                    })
                     .collect()
             })
             .collect();
@@ -260,6 +276,34 @@ mod tests {
         assert_eq!(resolve("drafts/chapter-01.md", &notes), Some(&notes[1]));
         assert_eq!(resolve("notes", &notes), Some(&notes[2]));
         assert_eq!(resolve("missing", &notes), None);
+    }
+
+    #[test]
+    fn resolve_ignores_heading_part() {
+        let notes = vec![p("field-notes.md"), p("drafts/chapter-01.md")];
+        assert_eq!(resolve("chapter-01#Intro", &notes), Some(&notes[1]));
+        assert_eq!(resolve("drafts/chapter-01#Intro", &notes), Some(&notes[1]));
+        assert_eq!(resolve("chapter-01.md#Intro", &notes), Some(&notes[1]));
+        assert_eq!(resolve(" field-notes #a#b ", &notes), Some(&notes[0]));
+        assert_eq!(
+            resolve("#Intro", &notes),
+            None,
+            "bare heading: no other note"
+        );
+        assert_eq!(note_part("#Intro"), "");
+        // A link within the note is neither an edge nor a broken link.
+        let g = Graph::from_texts(
+            notes.clone(),
+            &["[[#x]] [[chapter-01#y]]".to_owned(), String::new()],
+        );
+        assert_eq!(
+            g.out[0],
+            vec![Link {
+                target: "chapter-01#y".to_owned(),
+                to: Some(1)
+            }]
+        );
+        assert_eq!(g.backlinks(&notes[1]), vec![notes[0].clone()]);
     }
 
     #[test]
@@ -326,6 +370,11 @@ mod tests {
         let root = p("field-notes.md");
         assert_eq!(new_note_place(&lib, &root, "drafts/x").0, p("drafts"));
         assert_eq!(new_note_place(&lib, &root, "nope/x").0, NotePath::root());
+        assert_eq!(
+            new_note_place(&lib, &root, "drafts/new#Intro"),
+            (p("drafts"), "new.md".to_owned())
+        );
+        assert_eq!(new_note_place(&lib, &from, "new#h").1, "new.md");
         let _ = std::fs::remove_dir_all(dir);
     }
 }
