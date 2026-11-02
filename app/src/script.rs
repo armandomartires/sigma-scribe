@@ -275,6 +275,7 @@ impl App {
     pub fn handle_centre(&self, i: usize) -> Option<(i32, i32)> {
         let l = self.screen.layout(self.keys_visible(), &self.keyboard);
         let model = Model {
+            suggest: None,
             file_name: self.current.name(),
             buffer: &self.buffer,
             keyboard: &self.keyboard,
@@ -307,6 +308,7 @@ impl App {
     pub fn bar_buttons(&self) -> Vec<(&'static str, (i32, i32))> {
         let l = self.screen.layout(self.keys_visible(), &self.keyboard);
         let model = Model {
+            suggest: None,
             file_name: self.current.name(),
             buffer: &self.buffer,
             keyboard: &self.keyboard,

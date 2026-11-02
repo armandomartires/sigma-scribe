@@ -395,6 +395,7 @@ impl App {
                     Some((RenameTarget::Current | RenameTarget::WifiPassword(_), _))
                 );
                 let model = Model {
+                    suggest: None,
                     file_name: self.current.name(),
                     buffer: &self.buffer,
                     keyboard: &self.keyboard,
@@ -498,7 +499,8 @@ impl App {
                         self.finish_rename(false);
                         Some(Refresh::Partial)
                     }
-                    Hit::Nothing => None,
+                    // Suggestions are wired by the app in S23-T03.
+                    Hit::Suggest(_) | Hit::Nothing => None,
                 }
             }
         }
