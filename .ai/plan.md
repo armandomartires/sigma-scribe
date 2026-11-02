@@ -221,7 +221,7 @@ User decisions (2026-10-21 21:24): v1.0.1 = pointer trails + reverse scroll + "U
 | — | Σscribe files kept out of the Kobo library (ExcludeSyncFolders) | **v1.11.1** | BUILT (emulator/CI only, not installed, not tagged) |
 | S22.0 | Three fixes from the 2026-11-02 review: `[[note#heading]]` resolves, Ctrl on non-Latin boards, Back after rename/move/delete | **1.18.1** | ✅ FORMA PASS 2026-11-02 (user: Ru Ctrl+C, `[[note#h]]` tap, rename-then-Back fine), PR #111 open, merge to do; the seven new tests fail on `main` and pass on the branch; bare `[[#heading]]` = the current note (user); `.ai/sprints/S22-fixes-and-search.md`, board Sprint 10 |
 | S22.1 | Search across all notes: Find bar scope + paged results, background worker, open at line | **tbd** | 📝 PLANNED 2026-11-02 — decisions S22-D1…D6 in the sprint file |
-| S23 | Wiki-link autocomplete: notes after `[[`, headings after `#`, on the IME candidate strip | **tbd** | 📝 PLANNED 2026-11-02 — `.ai/sprints/S23-wiki-autocomplete.md`, board Sprint 11; after S22.1; decisions S23-D1…D6 |
+| S23 | Wiki-link autocomplete: notes after `[[`, headings after `#`, on the IME candidate strip | **1.20.0** | BUILT 2026-11-02 (emulator/CI), branch `wiki-autocomplete`, PR open; Forma pass and device timing to do |
 | S15.4 | Gestures: scratch-out, caret tap, line join (flick left), flick right = space | **v1.5.4** | ✅ DONE 2026-10-27 (not tagged) |
 | S15 | Handwriting input (Latin), v1.5.3 word-mode spike, v1.5.4 gestures | **v1.5** 📝 | PLANNED — §12 |
 | S16 | Farsi + Arabic (RTL) | **v1.6** 📝 | SUPERSEDED — built as S18.0 (v1.8.0) |
