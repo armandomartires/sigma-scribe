@@ -41,9 +41,11 @@ title bar button ── menu (render: wifi_menu.rs) ── App (app/src/wifi.rs)
     supplicant holds off after failed handshakes (`[TEMP-DISABLED]`) ends the
     wait at once as a wrong password.
   - A saved network joins with `SELECT_NETWORK` alone and keeps the key it has;
-    typing a password for a saved one replaces it.
+    a password typed for a saved one goes into a new entry and the old
+    entries are removed only after the new one has joined (a failure removes
+    the new one and leaves the saved key as it was).
   - Forgetting: `REMOVE_NETWORK` for every network of that name, `SAVE_CONFIG`.
-  - A failure removes the network it added, enables the others again and sends
+  - A failure removes the network it added (a re-key's new entry too), enables the others again and sends
     `RECONNECT`; nothing is saved.
 - **Saved networks are the stock reader's own**: the supplicant is started
   with `/etc/wpa_supplicant/wpa_supplicant.conf`, the file Nickel uses, so

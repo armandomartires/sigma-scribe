@@ -490,6 +490,10 @@ impl App {
                         self.finish_rename(true);
                         Some(Refresh::Partial)
                     }
+                    Hit::RenameBlur => {
+                        self.blur_rename();
+                        Some(Refresh::Partial)
+                    }
                     Hit::RenameCancel => {
                         self.finish_rename(false);
                         Some(Refresh::Partial)

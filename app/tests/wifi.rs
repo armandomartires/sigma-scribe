@@ -300,6 +300,23 @@ fn return_joins_and_escape_or_cancel_do_not() {
 }
 
 #[test]
+fn a_tap_outside_the_password_field_drops_it_where_a_rename_would_confirm() {
+    let mut r = Rig::new("blur", Some(FakeWifi::demo_online()));
+    r.tap_on("Wi-Fi");
+    r.tap_on("Net:Office-5G");
+    r.type_text("correct horse");
+    assert!(r.app.is_renaming());
+    // Outside the title bar, its buttons and the keys: the page.
+    r.send(Event::Tap { x: 720, y: 500 });
+    assert!(!r.app.is_renaming() && r.app.screen.wifi_menu);
+    assert_eq!(
+        r.ssid().as_deref(),
+        Some("Home"),
+        "the half-typed key was not submitted"
+    );
+}
+
+#[test]
 fn a_wrong_or_short_password_fails_and_leaves_the_current_network() {
     let mut r = Rig::new("wrong", Some(FakeWifi::demo_online()));
     r.tap_on("Wi-Fi");

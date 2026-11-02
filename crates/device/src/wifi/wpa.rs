@@ -441,10 +441,13 @@ impl Supplicant {
     }
 
     /// Joins `ssid`. `key` is `None` for an open network or a saved one;
-    /// otherwise it is stored for the network (a saved network's key is
-    /// replaced). Waits for the handshake and for an address, and saves the
-    /// config once the handshake is done: a network that does not work is
-    /// never kept.
+    /// otherwise it is stored for the network. A key typed for a saved
+    /// network goes into a new entry, and the old entries are removed only
+    /// once the handshake is done: a re-key that fails leaves the saved key
+    /// as it was (the supplicant never gives a key back, so it cannot be
+    /// restored afterwards). Waits for the handshake and for an address, and
+    /// saves the config once the handshake is done: a network that does not
+    /// work is never kept.
     ///
     /// # Errors
     /// See [`JoinError`].
@@ -462,17 +465,20 @@ impl Supplicant {
             return Err(JoinError::BadKey);
         }
         let c = self.open()?;
-        let existing = parse_list(&c.request("LIST_NETWORKS")?)
+        let existing: Vec<Saved> = parse_list(&c.request("LIST_NETWORKS")?)
             .into_iter()
-            .find(|n| n.ssid == ssid);
-        let added = existing.is_none();
-        let id = match &existing {
-            Some(n) => n.id,
-            None => c
-                .request("ADD_NETWORK")?
-                .trim()
-                .parse::<u32>()
-                .map_err(|_| JoinError::Failed("ADD_NETWORK failed".into()))?,
+            .filter(|n| n.ssid == ssid)
+            .collect();
+        let (id, added, replaced) = match rekey_plan(&existing, key.is_some()) {
+            KeyPlan::Reuse(id) => (id, false, Vec::new()),
+            KeyPlan::Add { replaces } => {
+                let id = c
+                    .request("ADD_NETWORK")?
+                    .trim()
+                    .parse::<u32>()
+                    .map_err(|_| JoinError::Failed("ADD_NETWORK failed".into()))?;
+                (id, true, replaces)
+            }
         };
         let step = |r: io::Result<String>| -> Result<(), JoinError> {
             r.and_then(|s| ok(&s)).map_err(JoinError::from)
@@ -507,7 +513,10 @@ impl Supplicant {
         match &outcome {
             Ok(()) | Err(JoinError::NoAddress) => {
                 // The handshake worked: the other networks may be tried
-                // again, and this one is kept.
+                // again, and this one is kept; a key it replaces goes.
+                for old in &replaced {
+                    let _ = c.request(&format!("REMOVE_NETWORK {old}"));
+                }
                 let _ = c.request("ENABLE_NETWORK all");
                 let kept = c.request("SAVE_CONFIG").and_then(|r| ok(&r));
                 outcome.and(kept.map_err(JoinError::from))
@@ -515,6 +524,9 @@ impl Supplicant {
             Err(_) => {
                 if added {
                     let _ = c.request(&format!("REMOVE_NETWORK {id}"));
+                }
+                if !replaced.is_empty() {
+                    log_line("re-key failed, the saved key is kept");
                 }
                 let _ = c.request("ENABLE_NETWORK all");
                 let _ = c.request("RECONNECT");
@@ -561,6 +573,32 @@ impl Supplicant {
             std::thread::sleep(t.poll);
         }
     }
+}
+
+/// What `join` does about the supplicant's entries for a name.
+#[derive(Debug, PartialEq, Eq)]
+enum KeyPlan {
+    /// Select the saved entry as it is.
+    Reuse(u32),
+    /// Add a new entry; `replaces` are the saved ones for the name, removed
+    /// only once the new one has joined.
+    Add { replaces: Vec<u32> },
+}
+
+/// The supplicant cannot hand a saved key back, so a key typed for a saved
+/// network is tried in a new entry and the old one stays until it works.
+fn rekey_plan(existing: &[Saved], has_key: bool) -> KeyPlan {
+    match existing.first() {
+        Some(n) if !has_key => KeyPlan::Reuse(n.id),
+        _ => KeyPlan::Add {
+            replaces: existing.iter().map(|n| n.id).collect(),
+        },
+    }
+}
+
+/// A line of the Wi-Fi log (`wifi: …`, INFO); never a key or an address.
+fn log_line(text: &str) {
+    sigma_core::info!("wifi", "{text}");
 }
 
 /// The scan's networks, strongest first, with a saved network marked as
@@ -999,8 +1037,62 @@ mod tests {
         s.join("Home", Security::Wpa, Some("hunter2hunter2"), &mut net)
             .unwrap();
         let sent = f.sent();
-        assert!(!sent.iter().any(|c| c.starts_with("ADD_NETWORK")));
-        assert!(sent.contains(&"SET_NETWORK 0 psk \"hunter2hunter2\"".to_owned()));
+        assert!(sent.contains(&"SET_NETWORK 11 psk \"hunter2hunter2\"".to_owned()));
+        let pos = |p: &str| sent.iter().position(|c| c == p).unwrap();
+        assert!(pos("SELECT_NETWORK 11") < pos("REMOVE_NETWORK 0"));
+        assert!(pos("REMOVE_NETWORK 0") < pos("SAVE_CONFIG"));
+        let homes: Vec<u32> = s
+            .saved()
+            .unwrap()
+            .iter()
+            .filter(|n| n.ssid == "Home")
+            .map(|n| n.id)
+            .collect();
+        assert_eq!(homes, [11], "only the new entry is left");
+    }
+
+    #[test]
+    fn a_failed_rekey_leaves_the_saved_key_untouched() {
+        let f = Fake::start("rekeyfail", behaviour());
+        let s = Supplicant::new(&f.dir, "wlan0").with_timing(fast());
+        let mut net = TestNet::new(true);
+        let e = s
+            .join("Home", Security::Wpa, Some("not-the-key"), &mut net)
+            .unwrap_err();
+        assert_eq!(e, JoinError::WrongKey);
+        let sent = f.sent();
+        assert!(!sent.contains(&"REMOVE_NETWORK 0".to_owned()));
+        assert!(!sent.iter().any(|c| c.starts_with("SET_NETWORK 0")));
+        assert!(!sent.contains(&"SAVE_CONFIG".to_owned()));
+        assert!(sent.contains(&"REMOVE_NETWORK 11".to_owned()));
+        assert!(sent.contains(&"RECONNECT".to_owned()));
+        let homes: Vec<u32> = s
+            .saved()
+            .unwrap()
+            .iter()
+            .filter(|n| n.ssid == "Home")
+            .map(|n| n.id)
+            .collect();
+        assert_eq!(homes, [0], "the saved entry is still the only one");
+    }
+
+    #[test]
+    fn the_plan_reuses_a_saved_entry_unless_a_key_is_typed() {
+        let saved = |id| Saved {
+            id,
+            ssid: "Home".into(),
+            current: false,
+            temp_disabled: false,
+        };
+        assert_eq!(rekey_plan(&[saved(3)], false), KeyPlan::Reuse(3));
+        assert_eq!(
+            rekey_plan(&[saved(3), saved(4)], true),
+            KeyPlan::Add {
+                replaces: vec![3, 4]
+            }
+        );
+        assert_eq!(rekey_plan(&[], true), KeyPlan::Add { replaces: vec![] });
+        assert_eq!(rekey_plan(&[], false), KeyPlan::Add { replaces: vec![] });
     }
 
     #[test]

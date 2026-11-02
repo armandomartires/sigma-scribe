@@ -233,6 +233,13 @@ impl App {
         self.rename = Some((target, Buffer::new(name)));
     }
 
+    /// A tap outside the field. Brief: blur confirms a rename; a Wi-Fi
+    /// password is dropped instead, so a half-typed key is never submitted.
+    pub(crate) fn blur_rename(&mut self) {
+        let ok = !matches!(&self.rename, Some((RenameTarget::WifiPassword(_), _)));
+        self.finish_rename(ok);
+    }
+
     pub(crate) fn finish_rename(&mut self, ok: bool) {
         let Some((target, field)) = self.rename.take() else {
             return;
@@ -559,6 +566,7 @@ impl App {
             FilesHit::Key(k) => return self.type_into_field(k),
             FilesHit::RenameOk => self.finish_rename(true),
             FilesHit::RenameCancel => self.finish_rename(false),
+            FilesHit::RenameBlur => self.blur_rename(),
             FilesHit::Nothing => {}
         }
         Some(Refresh::Partial)
