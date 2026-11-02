@@ -184,6 +184,34 @@ None
 {n} of {m}
 = {n} di {m}
 
+# Search across all notes (v1.19)
+This note
+= Questa nota
+
+All notes
+= Tutte
+
+{n} matches in {m} notes
+= {n} risultati in {m} note
+
+1 match in 1 note
+= 1 risultato in 1 nota
+
+1 match in {n} notes
+= 1 risultato in {n} note
+
+{n} matches in 1 note
+= {n} risultati in 1 nota
+
+first {n} shown
+= primi {n} mostrati
+
+Type to search {n} notes
+= Scrivi per cercare in {n} note
+
+Searching…
+= Ricerca…
+
 – of {n}
 = – di {n}
 

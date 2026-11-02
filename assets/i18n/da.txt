@@ -184,6 +184,34 @@ None
 {n} of {m}
 = {n} af {m}
 
+# Search across all notes (v1.19)
+This note
+= Denne note
+
+All notes
+= Alle
+
+{n} matches in {m} notes
+= {n} fund i {m} noter
+
+1 match in 1 note
+= 1 fund i 1 note
+
+1 match in {n} notes
+= 1 fund i {n} noter
+
+{n} matches in 1 note
+= {n} fund i 1 note
+
+first {n} shown
+= første {n} vist
+
+Type to search {n} notes
+= Skriv for at søge i {n} noter
+
+Searching…
+= Søger…
+
 – of {n}
 = – af {n}
 
