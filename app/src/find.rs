@@ -5,7 +5,7 @@ use sigma_core::buffer::TabKind;
 use sigma_core::keyboard::{Dir, Key};
 use sigma_core::{Buffer, KeyAction};
 use sigma_device::{HwKey, Refresh};
-use sigma_render::{FindField, FindHit};
+use sigma_render::{FindField, FindHit, Scope};
 
 impl App {
     pub(crate) fn find_typing(&self) -> bool {
@@ -128,7 +128,7 @@ impl App {
 
     pub(crate) fn find_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
         let l = self.page_layout();
-        match self.screen.find_hit(&l, x, y) {
+        match self.screen.find_hit(&l, Scope::Note, x, y) {
             FindHit::Field(fld) => {
                 self.scratch_focus = false;
                 let f = self.find.as_mut()?;
@@ -156,7 +156,7 @@ impl App {
                 self.select_match(sigma_core::find::at_or_after(&self.find_matches(), from));
                 Some(Refresh::Partial)
             }
-            FindHit::Bar | FindHit::Outside => None,
+            FindHit::Scope(_) | FindHit::Bar | FindHit::Outside => None,
         }
     }
 

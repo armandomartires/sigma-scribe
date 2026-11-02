@@ -153,7 +153,7 @@ Status: Planned 2026-11-02, not started; plan checked against the code the same 
   Task S22-T04.
 - [ ] S22.1 Core search over the library on a background worker
   `search_notes` with a cap, `.trash/` and `.ink/` skipped; a `Searcher` like the to-do `Indexer`. Task S22-T10.
-- [ ] S22.1 Find bar scope: This note | All notes
+- [>] S22.1 Find bar scope: This note | All notes
   Replace disabled in All notes (S22-D3). Task S22-T11.
 - [ ] S22.1 Results list in place of the page, paged like the Graph list
   Row = path · line, matched line with the hit bold; tap opens the note at that line and Back returns to the list. Tasks S22-T12, S22-T13.

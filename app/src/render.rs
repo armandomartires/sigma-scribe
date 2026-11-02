@@ -4,7 +4,7 @@ use crate::{App, RenameTarget};
 use sigma_core::settings::Rotation;
 use sigma_device::{Device, Refresh};
 use sigma_render::editor::Model;
-use sigma_render::{Canvas, FindModel, PreviewModel, Rect};
+use sigma_render::{Canvas, FindModel, PreviewModel, Rect, Scope};
 
 /// Grows a region to at least 16×16 (refresh rule), inside `b`.
 fn min16(r: Rect, b: Rect) -> Rect {
@@ -164,6 +164,7 @@ impl App {
                         focus: f.focus,
                         case: f.case,
                         label: &label,
+                        scope: Scope::Note,
                         theme: self.theme(),
                     },
                 );
