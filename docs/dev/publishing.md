@@ -17,7 +17,7 @@ The Cobalt Store no longer applies (Plan B, 2026-10-20). Proposed distribution:
 
 ## Project page
 - `site/index.html` is one static page (inline CSS, no JavaScript) published at https://armandomartires.github.io/sigma-scribe/ by `.github/workflows/pages.yml` on every push to `main` that touches `site/`, `docs/screenshots/` or the workflow (or by hand: *Run workflow*).
-- The screenshots are not in `site/`. The workflow copies them into `_site/screenshots/` from `docs/screenshots/readme/` without the `readme-` prefix, and fails if any `screenshots/...` image the page uses is missing. To show a newer set, regenerate `docs/screenshots/readme/` (`tests/emu/readme.script`) under the names the page uses (write, preview, drawer, graph, settings, handwriting, arabic, japanese, night, landscape).
+- The screenshots are not in `site/`. The workflow copies them into `_site/screenshots/` from `docs/screenshots/readme/` without the `readme-` prefix, and fails if any `screenshots/...` image the page uses is missing. To show a newer set, regenerate `docs/screenshots/readme/` (`tests/emu/readme.script`) under the names the page uses (write, preview, drawer, graph, settings, links, search, journal, handwriting, arabic, japanese, night, landscape).
 - One-time setup: Settings → Pages → Source: GitHub Actions. Local preview: `site/README.md`.
 - Keep the tested-model line on the page in step with `docs/user/install.md`.
 

@@ -4,7 +4,7 @@ For people who use Σscribe on a Kobo. Developer documentation is in [../dev/REA
 
 | Page | What it covers |
 |---|---|
-| [getting-started.md](getting-started.md) | A tour: opening the app, the title-bar buttons, files, preview, settings, quitting |
+| [getting-started.md](getting-started.md) | A tour: opening the app, the title-bar buttons, files, links and link autocomplete, preview, settings, quitting |
 | [journal.md](journal.md) | The journal: the Calendar pane, a note for each day, template, folder layout, UTC offset |
 | [search.md](search.md) | Find in a note, or search all notes: the results list, the 500-match cap, opening a result |
 | [handwriting.md](handwriting.md) | The Write panel: modes, the key block, the guide line, word mode, training, gestures |

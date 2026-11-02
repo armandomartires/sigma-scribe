@@ -4,7 +4,7 @@ A distraction-free Markdown notebook for the **Kobo Forma** — native Rust, dra
 
 Licence: **AGPL-3.0-only** (`LICENSE`) · Author: **SIGMArecon** · Statically links FBInk (GPL-3.0-or-later) · Fonts: Literata, Atkinson Hyperlegible and Noto (SIL OFL 1.1) · Icons: [Lucide](https://lucide.dev) (ISC) — see `packaging/kobo/.adds/sigma-scribe/THIRD-PARTY.txt`.
 
-Status: **1.15.0**; the changes since are listed under Unreleased in `CHANGELOG.md`, which also says for each version whether it was tested on the Forma. Tested model/firmware: Kobo Forma, 4.38.23697.
+Status: **1.20.0** (installed and checked on the Forma). `CHANGELOG.md` lists the changes by version and says for each whether it was tested on the Forma. Tested model/firmware: Kobo Forma, 4.38.23697.
 
 | Write | Preview | Drawer | Graph | Settings |
 |---|---|---|---|---|
@@ -14,9 +14,9 @@ Status: **1.15.0**; the changes since are listed under Unreleased in `CHANGELOG.
 |---|---|---|---|---|
 | ![](docs/screenshots/readme/readme-handwriting.png) | ![](docs/screenshots/readme/readme-sync.png) | ![](docs/screenshots/readme/readme-wifi.png) | ![](docs/screenshots/readme/readme-light.png) | ![](docs/screenshots/readme/readme-night.png) |
 
-| Landscape | Arabic | Japanese |
-|---|---|---|
-| ![](docs/screenshots/readme/readme-landscape.png) | ![](docs/screenshots/readme/readme-arabic.png) | ![](docs/screenshots/readme/readme-japanese.png) |
+| Link autocomplete | Search all notes | Journal | Landscape | Arabic | Japanese |
+|---|---|---|---|---|---|
+| ![](docs/screenshots/readme/readme-links.png) | ![](docs/screenshots/readme/readme-search.png) | ![](docs/screenshots/readme/readme-journal.png) | ![](docs/screenshots/readme/readme-landscape.png) | ![](docs/screenshots/readme/readme-arabic.png) | ![](docs/screenshots/readme/readme-japanese.png) |
 
 Screenshots from the desktop emulator (`tests/emu/readme.script`); e-ink-look copies in [`docs/screenshots/readme/eink/`](docs/screenshots/readme/eink/), older versions in [`docs/screenshots/`](docs/screenshots/README.md).
 
@@ -25,13 +25,16 @@ Screenshots from the desktop emulator (`tests/emu/readme.script`); e-ink-look co
 **Writing**
 - Editor with an on-screen keyboard: Compact or Full, a size slider, in landscape Split, Full or Centre. A Kobo-style keyboard can be used instead.
 - Touch selection with handles, cut / copy / paste, undo and redo, insert or overwrite typing, autosave.
-- Find & Replace. Line mode (a set number of words per line), size, leading, margin, tabs.
+- Find & Replace in the note, or **search all notes** from the same bar: a list of matches, a tap opens the note at that line ([`docs/user/search.md`](docs/user/search.md)).
+- Line mode (a set number of words per line), size, leading, margin, tabs.
 
 **Notes**
 - A library of notes and folders: new, rename, move, delete (to a Trash in Files, where you can restore a note or empty it). Notes are plain Markdown in `sigma-scribe/notes` on the Kobo drive; nothing else is needed to read them.
 - Markdown preview with pages, turned with the page buttons.
-- Wiki links `[[note]]` with backlinks; renaming or moving a note updates the links to it.
-- A side drawer, opened from one **drawer menu** button in the title bar (tick Contents, To-dos or Scratch; drag the grip to set the width, double tap it to tuck the drawer away): the note's **Contents**, **To-dos** across all notes (tick them off from the drawer), and a **Scratch** pad.
+- Wiki links `[[note]]` and `[[note#heading]]` with backlinks; renaming or moving a note updates the links to it.
+- **Link autocomplete**: right after `[[` a bar of note names shows above the keyboard, the notes opened last first, narrowed by each letter; after `#` it lists that note's headings. A tap (or Enter on a USB keyboard) completes the link.
+- A side drawer, opened from one **drawer menu** button in the title bar (tick Contents, To-dos, Scratch or Calendar; drag the grip to set the width, double tap it to tuck the drawer away): the note's **Contents**, **To-dos** across all notes (tick them off from the drawer), a **Scratch** pad and the **Calendar**.
+- A **journal**: one note a day under `journal/`, opened or made from the Calendar pane, with a dot on the days that have one ([`docs/user/journal.md`](docs/user/journal.md)).
 - The **Graph**: a map of notes and their links, or a list, with its own settings.
 
 **Handwriting** (Write panel; see [`docs/user/handwriting.md`](docs/user/handwriting.md))
@@ -77,6 +80,6 @@ Screenshots from the desktop emulator (`tests/emu/readme.script`); e-ink-look co
 See [`docs/user/install.md`](docs/user/install.md). In short: install NickelMenu, unpack `sigma-scribe-<ver>-kobo.tar.gz` onto the Kobo drive's root, eject, then *Σscribe* is in the NickelMenu. Notes live in `sigma-scribe/notes` on the drive. An update keeps your notes, settings and plugin choices. Uninstall = delete `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`.
 
 ## Docs
-For readers of the app: [`docs/user/`](docs/user/README.md) (getting started, handwriting, install, USB keyboard, Wi-Fi, sync, logging, Japanese and Chinese input, font packs, plugins), the [wiki](https://github.com/armandomartires/sigma-scribe/wiki) and the [project page](https://armandomartires.github.io/sigma-scribe/). `CHANGELOG.md` lists the changes by version.
+For readers of the app: [`docs/user/`](docs/user/README.md) (getting started, journal, search, handwriting, install, USB keyboard, Wi-Fi, sync, logging, Japanese and Chinese input, font packs, plugins), the [wiki](https://github.com/armandomartires/sigma-scribe/wiki) and the [project page](https://armandomartires.github.io/sigma-scribe/). `CHANGELOG.md` lists the changes by version.
 
 Building and contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/dev/`](docs/dev/README.md).

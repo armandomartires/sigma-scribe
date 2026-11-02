@@ -68,6 +68,45 @@ shot readme-landscape
 tap-on Options
 tap-on Orientation/Portrait
 tap-on Close
+# Link autocomplete: notes opened from Files are the recent ones, and
+# the bar right after [[ offers them first.
+open-fixture tests/emu/fixtures/lamps.md
+tap-on Files
+tap-on New note
+clear-field
+type ideas
+tap-on OK
+tap-on Files
+tap-on lamps.md
+tap-on Files
+tap-on ideas.md
+hw Light at dusk, see [[
+shot readme-links
+type la
+tap-on Suggest0
+expect [[lamps]]
+# Search across all notes.
+tap-on Find
+tap-on All notes
+type lamp
+shot readme-search
+esc
+esc
+# The journal: the Calendar pane and today's note.
+today 2026-11-02
+pane Calendar
+tap-on Day:2026-11-02
+tap-on Day:2026-11-05
+tap-on Day:2026-11-02
+expect-open journal/2026-11-02.md
+hw Walked to the bridge; notes in [[lamps]].
+shot readme-journal
+pane Calendar
+# A fresh start empties Back, which open-fixture's Esc would follow.
+restart
+light 4
+warmth 4
+wifi-demo
 # Handwriting: printed letters in the free area, read as words, in a
 # near-empty note; the keys are in one block on the left.
 open-fixture tests/emu/fixtures/readme-writing.md
