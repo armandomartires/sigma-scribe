@@ -139,3 +139,29 @@ Built into the app, not a plugin (decided 2026-11-02). Plan: `~/.claude/plans/le
 - [x] Emulator script, user docs, changelog
 - [x] Date line on top of the calendar: day, month and year pickers
   Asked after the first try on the Forma (2026-11-02). Tapping a field picks a year, month or day in place of the grid.
+
+## Sprint 10 — Three fixes and Search across all notes
+Goal: Fix the three defects the 2026-11-02 review found, then search the whole library from the Find bar
+Status: Planned 2026-11-02, not started; plan checked against the code the same day. Version numbers open (ask the user). Sprint `.ai/sprints/S22-fixes-and-search.md`, tasks `.ai/tasks/S22-tasks.md`, handover `.ai/handover-s22-2026-11-02.md`. Branches `fixes-s22` then `search-all-notes`.
+- [ ] S22.0 `[[note#heading]]` links open the note instead of creating `note#heading.md`
+  `links.rs:37` `resolve`, `links.rs:142` `new_note_place` and the preview's `known` set (`app/src/preview.rs:33`) strip `#…` like `rewrite` already does; tests for `resolve` and a preview tap. Task S22-T01.
+- [ ] S22.0 Ctrl shortcuts work on the non-Latin on-screen boards
+  `keyboard.rs:726` goes through `KeyLayout::shortcut_char` like the USB path; tests on Ru (Ctrl+с copies, Ctrl+я undoes), Ar, Ko. Task S22-T02.
+- [ ] S22.0 Back after a rename, move or delete never reopens a phantom note
+  History remapped on rename and move (`files.rs:423-461`), pruned on delete; `go_back` skips missing notes; the Journal reorganise code in `settings.rs:229` shares the helper. Tests in `app/tests/history.rs`. Task S22-T03.
+- [ ] S22.0 Changelog, checks, PR, Forma pass
+  Task S22-T04.
+- [ ] S22.1 Core search over the library on a background worker
+  `search_notes` with a cap, `.trash/` and `.ink/` skipped; a `Searcher` like the to-do `Indexer`. Task S22-T10.
+- [ ] S22.1 Find bar scope: This note | All notes
+  Replace disabled in All notes (S22-D3). Task S22-T11.
+- [ ] S22.1 Results list in place of the page, paged like the Graph list
+  Row = path · line, matched line with the hit bold; tap opens the note at that line and Back returns to the list. Tasks S22-T12, S22-T13.
+- [ ] S22.1 Strings in the nine catalogs, emulator script, screenshots
+  `tests/emu/<version>-search.script`, `docs/screenshots/<version>/`. Tasks S22-T13, S22-T14.
+- [ ] S22.1 Measured on the Forma on the test-notes pack
+  Under 2 s for a three-letter query, UI responsive; table in `docs/dev/perf.md`. Task S22-T15.
+- [ ] S22.1 User docs, wiki, changelog, version, PR, Forma pass
+  `docs/user/search.md`, Find row in `getting-started.md`, `scripts/wiki-sync.sh`. Task S22-T16.
+- Follow-ups from the same review, not in this sprint
+  Plugin frame sizes unclamped before rasterising and a 20e9 fuel budget on the UI thread; Wi-Fi re-key not restored on failure; `rewrite` vs parser code-span tracking; case-only rename on ext4; Wi-Fi password blur-confirms. Details at the end of the sprint file.
