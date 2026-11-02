@@ -2,6 +2,10 @@
 
 All notable changes to Σscribe. Versions are tagged after they pass on the Kobo Forma.
 
+## Unreleased
+- **Fix: a plugin cannot ask for a huge shape or glyph.** The host now clamps what a plugin's draw list asks for before painting: text size to 1 to 400 px (a non-finite size counts as 400), rectangle width and height, stroke thickness and line width to the screen's longest side, and positions to two screens around the origin, so a broken plugin can no longer make the painter allocate a multi-GB glyph or loop over billions of rows. Test: `crates/render/src/plugin_screen.rs` (`oversized_frames_are_clamped_before_painting`). (Sprint 12.1)
+- **Fix: a runaway plugin traps in seconds, not minutes.** The fuel per plugin call (`Limits::default().fuel`) goes from 20 000 million to 250 million. Plugins run on the UI thread, so the old budget froze the screen for minutes. Measured: wasmi runs 87 to 165 million fuel/s on a desktop; the bundled Graph plugin's busiest call uses 109 million. A runaway call now traps after about 1.5 to 3 s on a desktop and, scaled by 8 to 10 (not measured on the Forma), 12 to 28 s there; 1 to 2 s needs the Graph plugin to split its layout into smaller steps. Numbers in `docs/dev/plugin-api.md`; `fuel_rate` (ignored) in `crates/plugin-host/src/tests.rs` re-measures. (Sprint 12.2)
+
 ## 1.19.1 — 2026-11-02 (built, not yet installed on the Forma, not tagged)
 - **A log line per search.** With Logging on, each answered search writes one `search:` line: query length, notes read, hits and notes with hits, whether capped, how many skipped, and the time in ms; never the query itself. It is the number `docs/dev/perf.md` records from the Forma (sprint S22.1). `SearchResult` carries `scanned` and `elapsed_ms`. Test in `crates/core/src/search.rs`.
 

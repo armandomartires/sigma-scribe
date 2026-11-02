@@ -58,7 +58,10 @@ pub trait Env {
 /// fails its call with [`Error::Trap`] or [`Error::Bounds`].
 #[derive(Clone, Copy, Debug)]
 pub struct Limits {
-    /// Fuel per call (about one unit per executed instruction).
+    /// Fuel per call (about one unit per executed instruction). The default
+    /// is 250 million: the bundled Graph plugin's busiest layout step uses
+    /// 109 million, and a runaway plugin traps after about 1.5 to 3 s on a
+    /// desktop (about 15 to 30 s on the Forma, see `docs/dev/plugin-api.md`).
     pub fuel: u64,
     /// Linear memory ceiling in bytes.
     pub memory: usize,
@@ -69,7 +72,7 @@ pub struct Limits {
 impl Default for Limits {
     fn default() -> Self {
         Self {
-            fuel: 20_000_000_000,
+            fuel: 250_000_000,
             memory: 64 << 20,
             message: 16 << 20,
         }
