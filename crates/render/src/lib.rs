@@ -26,6 +26,7 @@ pub mod preview;
 pub mod qr;
 pub mod radio;
 pub mod scrollbar;
+pub mod search;
 pub(crate) mod shape;
 pub mod slider;
 pub mod switch;
@@ -45,4 +46,7 @@ pub use graphmap::{MapView, ZOOMS};
 pub use help::{HelpHit, HelpModel, HelpPage};
 pub use options::{OptionsHit, OptionsModel, SettingsPage};
 pub use preview::Doc;
+pub use search::{
+    SearchLayout, SearchListHit, SearchListModel, SearchRow, SearchState, TrimmedLine,
+};
 pub use theme::Theme;
