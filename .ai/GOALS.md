@@ -165,3 +165,17 @@ Status: Planned 2026-11-02, not started; plan checked against the code the same 
   `docs/user/search.md`, Find row in `getting-started.md`, `scripts/wiki-sync.sh`. Task S22-T16.
 - Follow-ups from the same review, not in this sprint
   Plugin frame sizes unclamped before rasterising and a 20e9 fuel budget on the UI thread; Wi-Fi re-key not restored on failure; `rewrite` vs parser code-span tracking; case-only rename on ext4; Wi-Fi password blur-confirms. Details at the end of the sprint file.
+
+## Sprint 11 — Wiki-link autocomplete
+Goal: Typing `[[` suggests notes, and after `#` that note's headings; a tap completes the link
+Status: Planned 2026-11-02 with the user, not started; comes after Sprint 10 (S22.1 Search) is merged. Version open (ask the user). Sprint `.ai/sprints/S23-wiki-autocomplete.md`, tasks `.ai/tasks/S23-tasks.md`. Branch `wiki-autocomplete`.
+- [ ] S23 Core: link query at the caret, note and heading suggestions, name-only note list
+  `links::link_query`, `suggest_notes` (prefix then contains, case and accents ignored, recent first), `suggest_headings`; `Library::note_paths` without reading files. Task S23-T01.
+- [ ] S23 Suggestion bar on the IME candidate strip
+  `Model.suggest`, `Hit::Suggest`; the Japanese and Chinese candidates win when both are up. Task S23-T02.
+- [ ] S23 App wiring: shown right after `[[`, pick by tap or USB, one undo
+  Off in preview, rename, Find and the scratch pad; `Suggest0…` emulator controls; `app/tests/suggest.rs`. Task S23-T03.
+- [ ] S23 Emulator script, user docs, timings on the Forma
+  `tests/emu/<version>-wiki-complete.script`; keystroke p50 near 116 ms with the bar up. Task S23-T04.
+- [ ] S23 Changelog, version, PR, Forma pass
+  Task S23-T05.
