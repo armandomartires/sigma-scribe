@@ -7,6 +7,7 @@ use sigma_core::gesture::Recognizer;
 use sigma_core::graphmap::MapLayout;
 use sigma_core::library::SCRATCH;
 use sigma_core::outline::{Filter, Indexer, TodoItem};
+use sigma_core::search::Searcher;
 use sigma_core::settings::Rotation;
 use sigma_core::{Autosave, Buffer, FsNoteStore, Keyboard, Library, NotePath, NoteStore, Settings};
 use sigma_device::Refresh;
@@ -51,7 +52,7 @@ use editor::Drag;
 
 pub use bootstrap::{log_dir, notes_dir, NOTE, SEED, SEED_FILES};
 pub use files::FilesState;
-pub use find::FindState;
+pub use find::{FindState, SearchSnapshot, SEARCH_CAP};
 pub use graph::{GraphState, MAP_SEED};
 pub use handwriting::{all_samples, learned_path, samples_path, Hwr, LEARN_PER_CHAR};
 pub use help::HelpState;
@@ -240,6 +241,8 @@ pub struct App {
     indexer: Indexer,
     /// To-dos of every note on disk (from the background indexer).
     disk_todos: Vec<TodoItem>,
+    /// Search across all notes, on its worker thread (S22.1).
+    searcher: Searcher,
     /// Find bar (v0.6).
     pub find: Option<FindState>,
     /// Graph sheet (v0.6).
@@ -398,6 +401,7 @@ impl App {
             scratch_focus: false,
             indexer: Indexer::new(),
             disk_todos: Vec::new(),
+            searcher: Searcher::new(),
             find: None,
             graph: None,
             help: None,

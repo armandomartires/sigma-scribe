@@ -357,7 +357,7 @@ checksum = "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87"
 
 [[package]]
 name = "hwr-train"
-version = "1.15.0"
+version = "1.19.0"
 dependencies = [
  "sigma-hwr",
  "sigma-render",
@@ -799,14 +799,14 @@ checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
 
 [[package]]
 name = "sigma-core"
-version = "1.15.0"
+version = "1.19.0"
 dependencies = [
  "unicode-segmentation",
 ]
 
 [[package]]
 name = "sigma-device"
-version = "1.15.0"
+version = "1.19.0"
 dependencies = [
  "cc",
  "png",
@@ -816,15 +816,15 @@ dependencies = [
 
 [[package]]
 name = "sigma-hwr"
-version = "1.15.0"
+version = "1.19.0"
 
 [[package]]
 name = "sigma-plugin-api"
-version = "1.15.0"
+version = "1.19.0"
 
 [[package]]
 name = "sigma-plugin-host"
-version = "1.15.0"
+version = "1.19.0"
 dependencies = [
  "sigma-core",
  "sigma-plugin-api",
@@ -834,7 +834,7 @@ dependencies = [
 
 [[package]]
 name = "sigma-render"
-version = "1.15.0"
+version = "1.19.0"
 dependencies = [
  "harfrust",
  "qrcodegen",
@@ -851,7 +851,7 @@ dependencies = [
 
 [[package]]
 name = "sigma-scribe"
-version = "1.15.0"
+version = "1.19.0"
 dependencies = [
  "minifb",
  "rqrr",
