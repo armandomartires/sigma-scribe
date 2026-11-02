@@ -39,7 +39,7 @@ pub use canvas::{Canvas, Rect};
 pub use drawer::{DrawerHit, DrawerModel, Pane};
 pub use editor::{BarAction, EditorScreen, Hit, KbButton, PreviewModel, SelGeom, SelUi};
 pub use files::{FilesHit, FilesModel, Row};
-pub use findbar::{FindField, FindHit, FindModel};
+pub use findbar::{FindField, FindHit, FindModel, Scope};
 pub use fonts::{Face, Fonts};
 pub use graph::{GraphHit, GraphModel, GraphRow};
 pub use graphmap::{MapView, ZOOMS};
