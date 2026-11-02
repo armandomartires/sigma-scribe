@@ -6,7 +6,7 @@
 //! a `# comment` or `- [ ]` inside ``` is not a heading or a to-do.
 
 use crate::library::{Library, NotePath, SCRATCH};
-use crate::markdown::item_of;
+use crate::markdown::{fence_closes, fence_open, item_of};
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
@@ -86,16 +86,19 @@ impl Filter {
     }
 }
 
-/// Lines outside fenced code blocks, with their numbers.
+/// Lines outside fenced code blocks, with their numbers; the fences are
+/// the parser's (`markdown::fence_open` / `fence_closes`).
 fn prose_lines(text: &str) -> impl Iterator<Item = (usize, &str)> {
-    let mut fence = false;
+    let mut fence: Option<&'static str> = None;
     text.split('\n').enumerate().filter(move |(_, l)| {
-        let t = l.trim_start();
-        if t.starts_with("```") || t.starts_with("~~~") {
-            fence = !fence;
+        if let Some(f) = fence {
+            if fence_closes(l, f) {
+                fence = None;
+            }
             return false;
         }
-        !fence
+        fence = fence_open(l);
+        fence.is_none()
     })
 }
 
@@ -312,6 +315,21 @@ mod tests {
                 (7, false, "numbered"),
             ]
         );
+    }
+
+    #[test]
+    fn fences_are_the_parsers() {
+        // Another marker inside a fence does not close it.
+        let t = "```\n~~~\n- [ ] in code\n```\n- [ ] real";
+        assert_eq!(todos(t).iter().map(|t| t.line).collect::<Vec<_>>(), [4]);
+        // Never closed: the rest is code.
+        let t = "- [ ] a\n```\n- [ ] b\n# not a heading";
+        assert_eq!(todos(t).len(), 1);
+        assert!(headings(t).is_empty());
+        // Four columns of indent: not a fence.
+        let t = "    ```\n- [ ] a\n# H";
+        assert_eq!(todos(t).len(), 1);
+        assert_eq!(headings(t).len(), 1);
     }
 
     #[test]
