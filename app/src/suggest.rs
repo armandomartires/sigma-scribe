@@ -56,6 +56,11 @@ fn fence_open(line: &str) -> Option<&'static str> {
     }
 }
 
+/// `s` without its extension.
+fn stem(s: &str) -> &str {
+    s.rsplit_once('.').map_or(s, |(a, _)| a)
+}
+
 /// Whether the line starting at byte `line_start` is inside a fenced code
 /// block opened above it.
 fn in_fence(text: &str, line_start: usize) -> bool {
@@ -105,8 +110,9 @@ impl App {
             return None;
         }
         self.suggest_seen = Some(key);
-        let old = self.suggest.take();
-        let cache = old.as_ref().map(|o| (o.notes.clone(), o.head.clone()));
+        let mut old = self.suggest.take();
+        // The cache moves to the new bar; only the old chips are compared.
+        let cache = old.as_mut().map(|o| (o.notes.take(), o.head.take()));
         let new = self.compute_suggest(cache);
         let r = match (&old, &new) {
             (None, None) => None,
@@ -168,7 +174,15 @@ impl App {
                 .filter(|p| *p != self.current)
                 .collect();
             recent.dedup();
-            (start, suggest_notes(q, paths, &recent, CAP))
+            // The open note is not offered: its own headings are `[[#`. Its
+            // chip is its name, or its path when another note shares the
+            // name (and then no other chip is that name).
+            let path = self.current.as_str();
+            let own = [stem(path), stem(self.current.name())];
+            let mut chips = suggest_notes(q, paths, &recent, CAP + 1);
+            chips.retain(|c| !own.contains(&c.insert.as_str()));
+            chips.truncate(CAP);
+            (start, chips)
         };
         if chips.is_empty() {
             return None;

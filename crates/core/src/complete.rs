@@ -52,6 +52,9 @@ pub fn link_query(before_caret: &str) -> Option<(usize, &str)> {
 
 /// `c` lowercased, without an accent.
 fn fold_char(c: char) -> char {
+    if c.is_ascii() {
+        return c.to_ascii_lowercase();
+    }
     let c = crate::find::fold(c);
     if let Some((_, base)) = crate::layouts::decompose(c) {
         return base;
@@ -309,5 +312,45 @@ mod tests {
         assert_eq!(labels(&suggest_headings(text, "meth", 10)), ["Méthodes"]);
         assert_eq!(labels(&suggest_headings(text, "", 1)), ["Intro"]);
         assert_eq!(suggest_headings(text, "not", 10), Vec::new());
+    }
+
+    /// Times the name-only walk and one suggestion call on 2000 notes in 40
+    /// folders, as on a large library (`docs/dev/perf.md`):
+    /// `cargo test -p sigma-core --release -- --ignored --nocapture suggest_timing`.
+    #[test]
+    #[ignore = "measurement"]
+    fn suggest_timing() {
+        use crate::library::Library;
+        use std::time::Instant;
+        let d = std::env::temp_dir().join(format!("sigma-suggest-timing-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        for f in 0..40 {
+            let dir = d.join(format!("folder-{f:02}"));
+            std::fs::create_dir_all(&dir).unwrap();
+            for n in 0..50 {
+                let body = format!("# Note {n}\n\n{}", "Some words here. ".repeat(200));
+                std::fs::write(dir.join(format!("chapter-{f:02}-{n:02}.md")), body).unwrap();
+            }
+        }
+        let lib = Library::new(&d);
+        let t = Instant::now();
+        let all = lib.all_notes().unwrap();
+        let t_all = t.elapsed();
+        let t = Instant::now();
+        let notes = lib.note_paths().unwrap();
+        let t_paths = t.elapsed();
+        assert_eq!(notes.len(), 2000);
+        assert_eq!(all.len(), 2000);
+        let t = Instant::now();
+        let mut n = 0;
+        for q in ["", "c", "ch", "cha", "chap", "chapter-1", "07"] {
+            n += suggest_notes(q, &notes, &notes[..5], 12).len();
+        }
+        let t_suggest = t.elapsed() / 7;
+        assert!(n > 0);
+        println!(
+            "suggest_timing: 2000 notes: all_notes {t_all:?}, note_paths {t_paths:?}, suggest_notes {t_suggest:?} per call"
+        );
+        let _ = std::fs::remove_dir_all(&d);
     }
 }

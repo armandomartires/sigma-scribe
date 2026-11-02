@@ -303,6 +303,10 @@ fn an_empty_query_lists_recent_notes_first() {
     let l = r.labels();
     assert_eq!(&l[..2], ["chapter-02", "work"], "{l:?}");
     assert!(l.contains(&"chapter-01".to_owned()));
+    // The open note is never offered.
+    assert!(!l.contains(&"zeta".to_owned()), "{l:?}");
+    r.type_str("ze");
+    assert!(!r.labels().contains(&"zeta".to_owned()));
 }
 
 #[test]
