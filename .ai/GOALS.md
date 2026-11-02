@@ -180,20 +180,20 @@ Status: Planned 2026-11-02 with the user, not started; Sprint 10 (S22.1 Search, 
 
 ## Sprint 12 — Sprint 10 leftovers
 Goal: Close the review findings and the two search polish items that Sprint 10 set aside
-Status: Not started; listed 2026-11-02 from the Sprint 10 status line and the end of `.ai/sprints/S22-fixes-and-search.md` ("Follow-ups found by the same review"). Not scheduled; order and version open (ask the user).
-- [>] Plugin host clamps frame sizes before rasterising
+Status: Done 2026-11-02. Eight stories built in five Sonnet worktree sessions the same day, one PR each, all merged to `main`: plugin clamp and fuel (#123), Wi-Fi re-key and password blur (#121), code spans (#124), case-only rename (#120), search polish (#122). Listed from the Sprint 10 status line and the end of `.ai/sprints/S22-fixes-and-search.md`. Open: 12.2 cuts the fuel default from 20e9 to 250M, which traps in 1.5 to 3 s on a desktop and about 12 to 28 s on the Forma by scaling (not measured there); a 1 to 2 s trap needs the Graph plugin to split its layout into steps of about 15M fuel (plugins repository), after which the default can drop to about 25M. Not yet installed on the Forma; version open.
+- [x] Plugin host clamps frame sizes before rasterising
   `Op::Text.size` and shape sizes reach the rasteriser unclamped (`crates/render/src/plugin_screen.rs:118` → `fonts.rs:285`; `graphmap.rs:443` loops over `r.h`); a broken plugin can ask for a multi-GB glyph on a 512 MB device. Clamp in the host before painting; test an oversized frame.
-- [>] Plugin fuel budget cut from 20e9 to seconds
+- [x] Plugin fuel budget cut from 20e9 to seconds
   Default 20 000 000 000 (`crates/plugin-host/src/lib.rs:72`) on the UI thread: a runaway plugin freezes e-ink for minutes before the trap. Measure wasmi on the Forma and cut the default.
 - [x] Wi-Fi: a failed re-key restores the saved key
   A new key typed for a saved network is set before the handshake and not restored on failure (`crates/device/src/wifi/wpa.rs:481-521`); reachability from the UI not shown.
 - [x] Wi-Fi password field: a tap outside does not submit the half-typed key
   "Blur confirms" (`editor.rs:1222`) is right for rename, questionable for a password.
-- [>] `rewrite` and `prose_lines` track code spans like the parser
+- [x] `rewrite` and `prose_lines` track code spans like the parser
   `links.rs:61-80` and `outline::prose_lines` differ from `markdown.rs:109-132`, `:317-327`: a stray backtick can leave one link stale after a rename.
 - [x] Case-only rename never overwrites on a case-sensitive filesystem
   `library.rs:487-495`; not reachable on the Kobo's vfat, matters for Sync and the desktop.
-- [>] Search polish: greyed Replace field says "Replace: This note only" in All notes
+- [x] Search polish: greyed Replace field says "Replace: This note only" in All notes
   Today it does nothing when tapped.
-- [>] Search polish: the `search:` log line drops "of N notes" when capped
+- [x] Search polish: the `search:` log line drops "of N notes" when capped
   N is only scanned + 1 once the 500-hit cap stops the scan.
