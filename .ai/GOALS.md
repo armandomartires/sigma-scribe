@@ -177,3 +177,23 @@ Status: Planned 2026-11-02 with the user, not started; Sprint 10 (S22.1 Search, 
   `tests/emu/<version>-wiki-complete.script`; keystroke p50 near 116 ms with the bar up. Task S23-T04.
 - [ ] S23 Changelog, version, PR, Forma pass
   Task S23-T05.
+
+## Sprint 12 — Sprint 10 leftovers
+Goal: Close the review findings and the two search polish items that Sprint 10 set aside
+Status: Not started; listed 2026-11-02 from the Sprint 10 status line and the end of `.ai/sprints/S22-fixes-and-search.md` ("Follow-ups found by the same review"). Not scheduled; order and version open (ask the user).
+- [ ] Plugin host clamps frame sizes before rasterising
+  `Op::Text.size` and shape sizes reach the rasteriser unclamped (`crates/render/src/plugin_screen.rs:118` → `fonts.rs:285`; `graphmap.rs:443` loops over `r.h`); a broken plugin can ask for a multi-GB glyph on a 512 MB device. Clamp in the host before painting; test an oversized frame.
+- [ ] Plugin fuel budget cut from 20e9 to seconds
+  Default 20 000 000 000 (`crates/plugin-host/src/lib.rs:72`) on the UI thread: a runaway plugin freezes e-ink for minutes before the trap. Measure wasmi on the Forma and cut the default.
+- [ ] Wi-Fi: a failed re-key restores the saved key
+  A new key typed for a saved network is set before the handshake and not restored on failure (`crates/device/src/wifi/wpa.rs:481-521`); reachability from the UI not shown.
+- [ ] Wi-Fi password field: a tap outside does not submit the half-typed key
+  "Blur confirms" (`editor.rs:1222`) is right for rename, questionable for a password.
+- [ ] `rewrite` and `prose_lines` track code spans like the parser
+  `links.rs:61-80` and `outline::prose_lines` differ from `markdown.rs:109-132`, `:317-327`: a stray backtick can leave one link stale after a rename.
+- [ ] Case-only rename never overwrites on a case-sensitive filesystem
+  `library.rs:487-495`; not reachable on the Kobo's vfat, matters for Sync and the desktop.
+- [ ] Search polish: greyed Replace field says "Replace: This note only" in All notes
+  Today it does nothing when tapped.
+- [ ] Search polish: the `search:` log line drops "of N notes" when capped
+  N is only scanned + 1 once the 500-hit cap stops the scan.
