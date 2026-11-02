@@ -155,13 +155,13 @@ Status: S22.0 built 2026-11-02 on `fixes-s22` (version 1.18.1, agreed with the u
   `search_notes` with a cap, `.trash/` and `.ink/` skipped; a `Searcher` like the to-do `Indexer`. Task S22-T10.
 - [x] S22.1 Find bar scope: This note | All notes
   Replace disabled in All notes (S22-D3). Task S22-T11.
-- [>] S22.1 Results list in place of the page, paged like the Graph list
+- [x] S22.1 Results list in place of the page, paged like the Graph list
   Row = path · line, matched line with the hit bold; tap opens the note at that line and Back returns to the list. Tasks S22-T12, S22-T13.
-- [>] S22.1 Strings in the nine catalogs, emulator script, screenshots
+- [x] S22.1 Strings in the nine catalogs, emulator script, screenshots
   `tests/emu/<version>-search.script`, `docs/screenshots/<version>/`. Tasks S22-T13, S22-T14.
-- [ ] S22.1 Measured on the Forma on the test-notes pack
+- [x] S22.1 Measured on the Forma on the test-notes pack
   Under 2 s for a three-letter query, UI responsive; table in `docs/dev/perf.md`. Task S22-T15.
-- [ ] S22.1 User docs, wiki, changelog, version, PR, Forma pass
+- [>] S22.1 User docs, wiki, changelog, version, PR, Forma pass
   `docs/user/search.md`, Find row in `getting-started.md`, `scripts/wiki-sync.sh`. Task S22-T16.
 - Follow-ups from the same review, not in this sprint
   Plugin frame sizes unclamped before rasterising and a 20e9 fuel budget on the UI thread; Wi-Fi re-key not restored on failure; `rewrite` vs parser code-span tracking; case-only rename on ext4; Wi-Fi password blur-confirms. Details at the end of the sprint file.
