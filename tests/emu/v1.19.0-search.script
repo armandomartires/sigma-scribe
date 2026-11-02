@@ -1,0 +1,85 @@
+# v1.19.0 (S22.1) Search across all notes: the Find bar's All notes scope,
+# the results list in place of the page, a row opens the note at its line,
+# Back returns to the list (Forma 1440x1920).
+open-fixture tests/emu/fixtures/lamps.md
+open-fixture tests/emu/fixtures/markdown-tour.md
+tap-on Files
+tap-on New note
+clear-field
+type dusk
+tap-on OK
+type Notes from the bridge at dusk, more lamps and a lamp by the gate.
+tap-on Find
+expect-mode find
+expect-find Find
+shot v1.19-search-this-note
+# All notes: an empty query invites typing.
+tap-on All notes
+expect-mode find
+shot v1.19-search-empty
+type lamp
+shot v1.19-search-list
+# A row opens its note in write mode at that line; the bar closes.
+tap-on Result:0
+expect-mode write
+expect-open dusk.md
+shot v1.19-search-opened
+# Back brings the list back with the same query and page.
+tap-on Back
+expect-mode find
+expect-open dusk.md
+shot v1.19-search-back
+# The page buttons and the ‹ › arrows page the list.
+page
+shot v1.19-search-page-2
+tap-on SearchNext
+tap-on SearchPrev
+page back
+# Aa narrows the search; a longer query too.
+tap-on Aa
+shot v1.19-search-case
+tap-on Aa
+type s on
+shot v1.19-search-narrowed
+# Enter opens the first result; Back again.
+usb-key Enter
+expect-mode write
+expect-open lamps.md
+tap-on Back
+expect-mode find
+# This note again: the page returns, counted as before (dusk.md has no
+# "lamps on").
+tap-on This note
+expect-mode find
+expect-find None
+tap-on All notes
+# Esc closes the bar and the list.
+esc
+expect-mode write
+# Night, landscape.
+tap-on Options
+tap-on Dark mode/On
+tap-on Close
+tap-on Find
+tap-on All notes
+type lamp
+shot v1.19-search-night
+tap-on FindClose
+tap-on Options
+tap-on Dark mode/Off
+tap-on Orientation/Landscape
+tap-on Close
+expect-screen 1920x1440
+tap-on Find
+tap-on All notes
+type lamp
+# Landscape leaves no room for rows under the bar with the keyboard up:
+# Keys hides it and the list fills the page.
+tap-on Keys
+shot v1.19-search-landscape
+tap-on Keys
+tap-on FindClose
+tap-on Options
+tap-on Orientation/Portrait
+tap-on Close
+expect-status saved

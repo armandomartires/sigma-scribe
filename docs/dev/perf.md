@@ -44,3 +44,19 @@ Not linear on the device: the first preview of the session (100 KB) cost more pe
 Each preview entry logs `preview layout of <note> (<bytes> bytes): <n> ms` at Debug level. Run the desktop table again with:
 
     cargo test --release -p sigma-scribe --test preview_perf -- --ignored --nocapture
+
+# Search across all notes — S22.1 (1.19.1, 2026-11-02)
+
+Gate (`.ai/sprints/S22-fixes-and-search.md`): a three-letter query over the test-notes pack answers in under 2 s on the Forma, and typing stays responsive while it runs. The search runs on a background thread (`sigma_core::search::Searcher`); the Find bar sends a request on every keystroke and the newest one wins.
+
+On the Forma (2026-11-02, build 1.19.1 at `9f5b0d3`, Settings → Logging at Debug, 303 notes in the library including the S10.1 test-notes pack, cap 500 matches). Each answered search logs `search: <n> chars, <a> of <b> notes read, <h> hits in <m> notes[ (capped)]: <t> ms`; the query itself is never logged.
+
+| query | notes read | hits | time |
+|---|---|---|---|
+| 1 letter | 2–3 (capped at 500 hits) | 500 | 7–43 ms |
+| 2 letters | 303 (all) | 1–3 | 40–43 ms |
+| **3 letters** | **303 (all)** | **2** | **37 ms** |
+| 4 letters | 303 (all) | 1 | 40–43 ms |
+| 5 letters | 303 (all) | 1 | 49–80 ms |
+
+A whole-library read is about 40 ms, around 0.13 ms per note, so the result is on screen before the next keystroke; the 80 ms is the first search of the session (cold file cache). A one-letter query stops after two or three notes because it fills the cap. Keystroke-to-refresh while searching, from the session's `perf:` line: 19 keystrokes, p50 84 ms, p95 155 ms, max 176 ms (the list redraw is included). The gate is met by a factor of about 50; a stored index (decision S22-D4) is not needed at this library size. The numbers that would change it: a library ten times larger, or notes much larger than the pack's.

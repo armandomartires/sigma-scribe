@@ -30,7 +30,12 @@ impl App {
 
     pub(crate) fn preview_doc(&self) -> sigma_render::preview::Doc {
         let names = self.note_names();
-        let known = |n: &str| names.contains(&n.trim().to_lowercase());
+        // `note#heading` is known when the note is; a bare `#heading` is
+        // this note.
+        let known = |n: &str| {
+            let n = sigma_core::links::note_part(n);
+            n.is_empty() || names.contains(&n.to_lowercase())
+        };
         let back: Vec<(String, String)> = self
             .link_graph()
             .backlinks(&self.current)

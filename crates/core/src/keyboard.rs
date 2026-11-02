@@ -725,7 +725,8 @@ impl Keyboard {
             }
             Key::Char(c) if ctrl => {
                 self.composer.forget();
-                self.shortcut(c.to_ascii_lowercase(), buffer)
+                // The key's letter on the US board, as on a USB keyboard.
+                self.shortcut(self.lang.shortcut_for_char(c), buffer)
             }
             Key::Char(c) => {
                 let ch = self.char_for(c);
@@ -1055,6 +1056,50 @@ mod tests {
         k.press(Key::Ctrl, &mut b, t);
         assert_eq!(k.press(Key::Char('q'), &mut b, t), KeyAction::Ignored);
         assert_eq!(b.text(), "hello worldworld");
+    }
+
+    /// Ctrl on the keys at A, C, X, V and Z of `lang`'s Full board.
+    fn ctrl_on_board(lang: KeyLayout, [a, c, x, v, z]: [char; 5], text: &str) {
+        let (mut k, mut b) = full();
+        k.lang = lang;
+        let t = TabKind::default();
+        assert!(k.rows().iter().flatten().any(|&key| key == Key::Char(c)));
+        let ctrl = |k: &mut Keyboard, b: &mut Buffer, ch: char| {
+            k.press(Key::Ctrl, b, t);
+            k.press(Key::Char(ch), b, t)
+        };
+        b.insert(text);
+        ctrl(&mut k, &mut b, a);
+        assert_eq!(b.selected_text(), Some(text), "{lang:?} Ctrl+A");
+        ctrl(&mut k, &mut b, c);
+        assert_eq!(k.clipboard, text, "{lang:?} Ctrl+C");
+        assert_eq!(ctrl(&mut k, &mut b, x), KeyAction::Edited);
+        assert_eq!(b.text(), "", "{lang:?} Ctrl+X");
+        ctrl(&mut k, &mut b, v);
+        ctrl(&mut k, &mut b, v);
+        assert_eq!(b.text(), format!("{text}{text}"), "{lang:?} Ctrl+V");
+        ctrl(&mut k, &mut b, z);
+        assert_eq!(b.text(), text, "{lang:?} Ctrl+Z");
+    }
+
+    #[test]
+    fn ctrl_shortcuts_on_non_latin_boards() {
+        ctrl_on_board(KeyLayout::Ru, ['ф', 'с', 'ч', 'м', 'я'], "привет");
+        ctrl_on_board(KeyLayout::Ar, ['ش', 'ؤ', 'ء', 'ر', 'ئ'], "مرحبا");
+        ctrl_on_board(KeyLayout::Ko, ['ㅁ', 'ㅊ', 'ㅌ', 'ㅍ', 'ㅋ'], "한글");
+        // Korean: Ctrl bypasses the composer, nothing half-typed stays.
+        let (mut k, mut b) = full();
+        k.lang = KeyLayout::Ko;
+        let t = TabKind::default();
+        k.press(Key::Char('ㅎ'), &mut b, t);
+        k.press(Key::Char('ㅏ'), &mut b, t);
+        k.press(Key::Ctrl, &mut b, t);
+        k.press(Key::Char('ㅁ'), &mut b, t);
+        assert_eq!(b.selected_text(), Some("하"));
+        // A character on no key keeps today's lowercasing.
+        assert_eq!(KeyLayout::Ru.shortcut_for_char('Q'), 'q');
+        assert_eq!(KeyLayout::Us.shortcut_for_char('z'), 'z');
+        assert_eq!(KeyLayout::Ru.shortcut_for_char('Я'), 'z', "Shift layer too");
     }
 
     #[test]

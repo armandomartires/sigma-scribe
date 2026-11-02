@@ -254,17 +254,7 @@ impl App {
         match self.library.rename(&path, field.text()) {
             Ok(new) => {
                 sigma_core::info!("files", "rename {} -> {}", path.as_str(), new.as_str());
-                if self.current == path {
-                    self.current = new;
-                } else if self.current.within(&path) && !path.is_root() {
-                    if let Ok(p) = NotePath::parse(&format!(
-                        "{}{}",
-                        new.as_str(),
-                        &self.current.as_str()[path.as_str().len()..]
-                    )) {
-                        self.current = p;
-                    }
-                }
+                self.remap_history(&path, &new);
                 let _ = self.library.set_last_opened(&self.current);
                 self.reload_ink_links();
                 self.refresh_files();
@@ -434,17 +424,7 @@ impl App {
                                 target.as_str(),
                                 new.as_str()
                             );
-                            if self.current == target {
-                                self.current = new;
-                            } else if self.current.within(&target) {
-                                if let Ok(p) = NotePath::parse(&format!(
-                                    "{}{}",
-                                    new.as_str(),
-                                    &self.current.as_str()[target.as_str().len()..]
-                                )) {
-                                    self.current = p;
-                                }
-                            }
+                            self.remap_history(&target, &new);
                             let _ = lib.set_last_opened(&self.current);
                             self.reload_ink_links();
                             self.refresh_files();
@@ -531,6 +511,7 @@ impl App {
                                     self.open(&n);
                                 }
                             }
+                            self.prune_history();
                         }
                         Err(e) => {
                             sigma_core::warn!("files", "delete {}: {e}", p.as_str());

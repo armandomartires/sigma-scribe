@@ -184,6 +184,34 @@ None
 {n} of {m}
 = {n} de {m}
 
+# Search across all notes (v1.19)
+This note
+= Aquesta nota
+
+All notes
+= Totes
+
+{n} matches in {m} notes
+= {n} resultats en {m} notes
+
+1 match in 1 note
+= 1 resultat en 1 nota
+
+1 match in {n} notes
+= 1 resultat en {n} notes
+
+{n} matches in 1 note
+= {n} resultats en 1 nota
+
+first {n} shown
+= primers {n} mostrats
+
+Type to search {n} notes
+= Escriu per cercar en {n} notes
+
+Searching…
+= Cercant…
+
 – of {n}
 = – de {n}
 

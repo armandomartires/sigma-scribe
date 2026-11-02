@@ -222,22 +222,9 @@ impl App {
         let report = sigma_core::journal::reorganise(&self.library, layout);
         for (from, to) in &report.moved {
             sigma_core::info!("journal", "move {} -> {}", from.as_str(), to.as_str());
-            if self.current == *from {
-                self.current = to.clone();
-            }
-            // Back must find the note where it went, not where it was.
-            for h in &mut self.history {
-                if h.note == *from {
-                    h.note = to.clone();
-                }
-            }
+            self.remap_history(from, to);
         }
-        // A history entry whose file is gone (moved nowhere, or deleted)
-        // would reopen as an empty note and a keystroke would recreate it.
-        let lib = &self.library;
-        let cur = &self.current;
-        self.history
-            .retain(|h| h.note == *cur || lib.exists(&h.note));
+        self.prune_history();
         for (from, to) in &report.skipped {
             sigma_core::warn!(
                 "journal",

@@ -202,7 +202,25 @@ impl App {
             s if s.starts_with("Net:") || s.starts_with("Forget:") => self.wifi_control(s),
             "Graph" if self.screen.graph_on => Some(centre(l.graph_button)),
             "FindField" | "ReplaceField" | "FindClose" | "Prev" | "Next" | "Replace" | "All"
-            | "Aa" => self.screen.find_control(&l, label),
+            | "Aa" | "This note" | "All notes" => self.screen.find_control(&l, label),
+            // S22.1: `Result:N` is row N of the results list (0-based, on
+            // the shown page); `SearchPrev` / `SearchNext` its page arrows.
+            "SearchPrev" | "SearchNext" => {
+                let sl = self.search_layout_now()?;
+                Some(centre(if label == "SearchPrev" {
+                    sl.prev
+                } else {
+                    sl.next
+                }))
+            }
+            s if s.starts_with("Result:") => {
+                let i: usize = s["Result:".len()..].parse().ok()?;
+                let sl = self.search_layout_now()?;
+                sl.rows
+                    .iter()
+                    .find(|(k, _)| *k == i)
+                    .map(|(_, r)| centre(*r))
+            }
             s if s.starts_with("Heading:")
                 || s.starts_with("Todo:")
                 || s.starts_with("TodoBox:")
@@ -501,9 +519,18 @@ impl App {
                 ("Replace", f.replace_one),
                 ("All", f.all),
                 ("Aa", f.case),
+                ("This note", f.scope_note),
+                ("All notes", f.scope_all),
             ] {
                 add(n, r);
             }
+        }
+        if let Some(sl) = self.search_layout_now() {
+            for (i, r) in &sl.rows {
+                add(&format!("search row {i}"), *r);
+            }
+            add("SearchPrev", sl.prev);
+            add("SearchNext", sl.next);
         }
         if self.drawer_visible() {
             let (hs, todos) = (self.headings(), self.todo_list());
