@@ -7,6 +7,7 @@
 #![warn(missing_docs)]
 
 pub mod buffer;
+pub mod complete;
 pub mod date;
 pub mod find;
 pub mod gesture;

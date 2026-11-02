@@ -325,6 +325,12 @@ impl Library {
     /// # Errors
     /// The folder cannot be read.
     pub fn list(&self, folder: &NotePath) -> io::Result<Vec<Entry>> {
+        self.scan(folder, true)
+    }
+
+    /// [`Library::list`], reading each note for its word count only when
+    /// `words` is set (otherwise `words` is 0).
+    fn scan(&self, folder: &NotePath, words: bool) -> io::Result<Vec<Entry>> {
         let mut out = Vec::new();
         let dir = self.fs_path(folder);
         if !dir.exists() {
@@ -347,9 +353,13 @@ impl Library {
                     words: 0,
                 });
             } else if ft.is_file() && is_note_name(&name) {
-                let words = fs::read_to_string(e.path())
-                    .map(|t| crate::text::word_count(&t))
-                    .unwrap_or(0);
+                let words = if words {
+                    fs::read_to_string(e.path())
+                        .map(|t| crate::text::word_count(&t))
+                        .unwrap_or(0)
+                } else {
+                    0
+                };
                 out.push(Entry {
                     path,
                     kind: Kind::Note,
@@ -374,7 +384,7 @@ impl Library {
         while i < out.len() {
             let here = out[i].clone();
             let mut subs: Vec<NotePath> = self
-                .list(&here)?
+                .scan(&here, false)?
                 .into_iter()
                 .filter(|e| e.kind == Kind::Folder)
                 .map(|e| e.path)
@@ -397,6 +407,25 @@ impl Library {
         for f in self.folders()? {
             out.extend(
                 self.list(&f)?
+                    .into_iter()
+                    .filter(|e| e.kind == Kind::Note)
+                    .map(|e| e.path),
+            );
+        }
+        Ok(out)
+    }
+
+    /// The same notes as [`Library::all_notes`], in the same order, without
+    /// reading any of them: for wiki-link suggestions (S23-D5), where
+    /// reading every note per keystroke is too slow on the Forma.
+    ///
+    /// # Errors
+    /// A folder cannot be read.
+    pub fn note_paths(&self) -> io::Result<Vec<NotePath>> {
+        let mut out = Vec::new();
+        for f in self.folders()? {
+            out.extend(
+                self.scan(&f, false)?
                     .into_iter()
                     .filter(|e| e.kind == Kind::Note)
                     .map(|e| e.path),
@@ -911,6 +940,42 @@ mod tests {
             .into_iter()
             .map(|e| e.path.name().to_owned())
             .collect()
+    }
+
+    #[test]
+    fn note_paths_match_all_notes_without_reading() {
+        let l = lib("note-paths");
+        let root = NotePath::root();
+        for (p, t) in [
+            ("b.md", "one two"),
+            ("A.txt", "x"),
+            ("sub/c.md", "y"),
+            ("sub/deep/d.md", ""),
+            (".trash/gone.md", "z"),
+            (".ink/a/page.md", "z"),
+            (".hidden.md", "z"),
+            ("sub/.h/e.md", "z"),
+            ("notes.json", "{}"),
+        ] {
+            let f = l.root().join(p);
+            fs::create_dir_all(f.parent().unwrap()).unwrap();
+            fs::write(f, t).unwrap();
+        }
+        fs::write(l.fs_path(&root).join(SCRATCH), "scratch").unwrap();
+        let all = l.all_notes().unwrap();
+        assert_eq!(l.note_paths().unwrap(), all);
+        let names: Vec<&str> = all.iter().map(NotePath::as_str).collect();
+        assert_eq!(names, ["A.txt", "b.md", "sub/c.md", "sub/deep/d.md"]);
+        // Words are still counted by `list`.
+        assert_eq!(
+            l.list(&root)
+                .unwrap()
+                .iter()
+                .find(|e| e.path.as_str() == "b.md")
+                .unwrap()
+                .words,
+            2
+        );
     }
 
     #[test]
