@@ -149,7 +149,7 @@ Status: S22.0 built 2026-11-02 on `fixes-s22` (version 1.18.1, agreed with the u
   `keyboard.rs:726` goes through `KeyLayout::shortcut_char` like the USB path; tests on Ru (Ctrl+с copies, Ctrl+я undoes), Ar, Ko. Task S22-T02.
 - [?] S22.0 Back after a rename, move or delete never reopens a phantom note
   History remapped on rename and move (`files.rs:423-461`), pruned on delete; `go_back` skips missing notes; the Journal reorganise code in `settings.rs:229` shares the helper. Tests in `app/tests/history.rs`. Task S22-T03.
-- [>] S22.0 Changelog, checks, PR, Forma pass
+- [?] S22.0 Changelog, checks, PR, Forma pass
   Task S22-T04.
 - [ ] S22.1 Core search over the library on a background worker
   `search_notes` with a cap, `.trash/` and `.ink/` skipped; a `Searcher` like the to-do `Indexer`. Task S22-T10.
