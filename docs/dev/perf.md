@@ -49,7 +49,7 @@ Each preview entry logs `preview layout of <note> (<bytes> bytes): <n> ms` at De
 
 Gate (`.ai/sprints/S22-fixes-and-search.md`): a three-letter query over the test-notes pack answers in under 2 s on the Forma, and typing stays responsive while it runs. The search runs on a background thread (`sigma_core::search::Searcher`); the Find bar sends a request on every keystroke and the newest one wins.
 
-On the Forma (2026-11-02, build 1.19.1 at `9f5b0d3`, Settings → Logging at Debug, 303 notes in the library including the S10.1 test-notes pack, cap 500 matches). Each answered search logs `search: <n> chars, <a> of <b> notes read, <h> hits in <m> notes[ (capped)]: <t> ms`; the query itself is never logged.
+On the Forma (2026-11-02, build 1.19.1 at `9f5b0d3`, Settings → Logging at Debug, 303 notes in the library including the S10.1 test-notes pack, cap 500 matches). Each answered search logs `search: <n> chars, <a> of <a> notes read, <h> hits in <m> notes: <t> ms`, or, when the 500-hit cap stopped the scan early, `search: <n> chars, <a> notes read, <h> hits in <m> notes (capped): <t> ms` (no "of": the notes left are not counted); the query itself is never logged.
 
 | query | notes read | hits | time |
 |---|---|---|---|

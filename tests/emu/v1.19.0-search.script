@@ -17,6 +17,7 @@ shot v1.19-search-this-note
 tap-on All notes
 expect-mode find
 shot v1.19-search-empty
+shot v1.19-search-replace-off
 type lamp
 shot v1.19-search-list
 # A row opens its note in write mode at that line; the bar closes.
