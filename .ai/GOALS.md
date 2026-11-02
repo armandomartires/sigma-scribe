@@ -137,5 +137,5 @@ Built into the app, not a plugin (decided 2026-11-02). Plan: `~/.claude/plans/le
 - [x] Calendar pane in the drawer
   Today highlighted, days with entries marked, Today button, previous and next entry.
 - [x] Emulator script, user docs, changelog
-- [?] Date line on top of the calendar: day, month and year pickers
+- [x] Date line on top of the calendar: day, month and year pickers
   Asked after the first try on the Forma (2026-11-02). Tapping a field picks a year, month or day in place of the grid.
