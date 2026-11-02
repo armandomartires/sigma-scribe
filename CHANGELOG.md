@@ -2,6 +2,9 @@
 
 All notable changes to Σscribe. Versions are tagged after they pass on the Kobo Forma.
 
+## Unreleased
+- **Fix: renaming a note and the to-do list now read code like the preview does.** A stray backtick, a span written with two backticks, or a fence never closed could leave one `[[link]]` stale after a rename or count a to-do inside code. Link rewriting, the outline and the preview now share one definition of inline code and fenced blocks.
+
 ## 1.19.1 — 2026-11-02 (built, not yet installed on the Forma, not tagged)
 - **A log line per search.** With Logging on, each answered search writes one `search:` line: query length, notes read, hits and notes with hits, whether capped, how many skipped, and the time in ms; never the query itself. It is the number `docs/dev/perf.md` records from the Forma (sprint S22.1). `SearchResult` carries `scanned` and `elapsed_ms`. Test in `crates/core/src/search.rs`.
 

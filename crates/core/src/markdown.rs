@@ -106,12 +106,12 @@ pub fn parse(src: &str) -> Vec<Block> {
         let line = raw.trim_end();
         let trimmed = line.trim_start();
         let indent = indent_of(line);
-        if let Some(fence) = fence_of(trimmed).filter(|_| indent < 4) {
+        if let Some(fence) = fence_open(line) {
             flush(&mut open, &mut out);
             let start = i;
             let mut runs = Vec::new();
             i += 1;
-            while i < lines.len() && !lines[i].trim_start().starts_with(fence) {
+            while i < lines.len() && !fence_closes(lines[i], fence) {
                 runs.push(Run {
                     text: lines[i].trim_end().replace('\t', "    "),
                     style: Style {
@@ -193,6 +193,30 @@ fn indent_of(line: &str) -> usize {
         .take_while(|c| c.is_whitespace())
         .map(|c| if c == '\t' { 4 } else { 1 })
         .sum()
+}
+
+/// The fence a code block opens with on `line`, if it opens one (up to
+/// three columns of indent). Shared by the parser, the outline and link
+/// rewriting, so all three agree on what is inside a fenced block.
+pub(crate) fn fence_open(line: &str) -> Option<&'static str> {
+    let line = line.trim_end();
+    fence_of(line.trim_start()).filter(|_| indent_of(line) < 4)
+}
+
+/// Whether `line` closes a block opened with `fence`. A block never
+/// closed runs to the end of the text.
+pub(crate) fn fence_closes(line: &str, fence: &str) -> bool {
+    line.trim_start().starts_with(fence)
+}
+
+/// An inline code span at the start of `rest` (which begins with a
+/// backtick): `(ticks, inner_len)`, the span being `ticks` backticks, the
+/// `inner_len` bytes of code, and `ticks` more. `None` when the opening
+/// run has no matching run after it: the backticks are then literal text.
+pub(crate) fn code_span(rest: &str) -> Option<(usize, usize)> {
+    let ticks = rest.bytes().take_while(|&x| x == b'`').count();
+    let end = rest[ticks..].find(&rest[..ticks])?;
+    (ticks > 0).then_some((ticks, end))
 }
 
 fn fence_of(t: &str) -> Option<&'static str> {
@@ -315,9 +339,7 @@ fn inline_into(src: &str, base: Style, target: Option<&str>, out: &mut Vec<Run>)
             }
         }
         if c == '`' && !st.code {
-            let ticks = rest.bytes().take_while(|&x| x == b'`').count();
-            let fence = &rest[..ticks];
-            if let Some(end) = rest[ticks..].find(fence) {
+            if let Some((ticks, end)) = code_span(rest) {
                 emit(&mut lit, out, st);
                 let code = rest[ticks..ticks + end].trim();
                 push(out, code, Style { code: true, ..st }, target);

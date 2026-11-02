@@ -7,6 +7,7 @@
 //! file is never a node.
 
 use crate::library::{clean_note_name, Library, NotePath};
+use crate::markdown::{code_span, fence_closes, fence_open};
 
 /// Link targets in `text`, in order, without repeats (case-insensitive).
 #[must_use]
@@ -68,28 +69,34 @@ pub fn rewrite(text: &str, before: &[NotePath], moved: &[(NotePath, NotePath)]) 
     let stem = |s: &str| s.rsplit_once('.').map_or(s, |(a, _)| a).to_owned();
     let mut out = String::with_capacity(text.len());
     let mut changed = false;
-    let mut fence = false;
+    let mut fence: Option<&'static str> = None;
     for line in text.split_inclusive('\n') {
-        let t = line.trim_start();
-        if t.starts_with("```") || t.starts_with("~~~") {
-            fence = !fence;
+        if let Some(f) = fence {
+            if fence_closes(line, f) {
+                fence = None;
+            }
             out.push_str(line);
             continue;
         }
-        if fence {
+        if let Some(f) = fence_open(line) {
+            fence = Some(f);
             out.push_str(line);
             continue;
         }
         let mut rest = line;
-        let mut code = false;
         while !rest.is_empty() {
             if rest.starts_with('`') {
-                code = !code;
-                out.push('`');
-                rest = &rest[1..];
+                // A span closes on its own line here; the parser also
+                // lets one run on into the next line of a paragraph.
+                let n = code_span(rest).map_or_else(
+                    || rest.bytes().take_while(|&b| b == b'`').count(),
+                    |(t, e)| 2 * t + e,
+                );
+                out.push_str(&rest[..n]);
+                rest = &rest[n..];
                 continue;
             }
-            if !code && rest.starts_with("[[") {
+            if rest.starts_with("[[") {
                 if let Some(end) = rest[2..].find("]]") {
                     let inner = &rest[2..2 + end];
                     let (target, alias) = match inner.split_once('|') {
@@ -323,6 +330,29 @@ mod tests {
         assert_eq!(g.edges(), 3);
         assert_eq!(g.out[0].len(), 3, "self link dropped, missing kept");
         assert_eq!(g.out[0][2].to, None);
+    }
+
+    #[test]
+    fn rewrite_tracks_code_like_the_parser() {
+        let before = vec![p("old.md")];
+        let moved = vec![(p("old.md"), p("new.md"))];
+        let r = |t: &str| rewrite(t, &before, &moved).unwrap_or_else(|| t.to_owned());
+        // An unmatched backtick is literal: the link after it is a link.
+        assert_eq!(r("it`s [[old]]"), "it`s [[new]]");
+        // A double-backtick span holding a single backtick is one span.
+        assert_eq!(r("``a`b`` [[old]]"), "``a`b`` [[new]]");
+        assert_eq!(r("``a`[[old]]`b`` [[old]]"), "``a`[[old]]`b`` [[new]]");
+        // A link right after a closing backtick is a link.
+        assert_eq!(r("`x`[[old]] `[[old]]`"), "`x`[[new]] `[[old]]`");
+        // A fence never closed runs to the end; its links stay.
+        assert_eq!(r("[[old]]\n```\n[[old]]\n"), "[[new]]\n```\n[[old]]\n");
+        // Another marker, or a shorter run, does not close a fence.
+        assert_eq!(
+            r("```\n~~~\n[[old]]\n```\n[[old]]"),
+            "```\n~~~\n[[old]]\n```\n[[new]]"
+        );
+        // Four columns of indent: not a fence.
+        assert_eq!(r("    ```\n[[old]]"), "    ```\n[[new]]");
     }
 
     #[test]
