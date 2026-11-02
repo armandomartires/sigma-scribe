@@ -597,6 +597,7 @@ mod tests {
                 theme: Theme::DAY,
                 sel_ui: None,
                 rename: None,
+                suggest: None,
             };
             let c = (
                 l.wifi_button.x + l.wifi_button.w / 2,

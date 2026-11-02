@@ -225,6 +225,7 @@ impl App {
 
     pub(crate) fn editor_hit(&self, x: i32, y: i32) -> Hit {
         let model = Model {
+            suggest: None,
             file_name: self.current.name(),
             buffer: &self.buffer,
             keyboard: &self.keyboard,
