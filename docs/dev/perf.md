@@ -79,4 +79,4 @@ The first version folded every name through the accent table on each keystroke: 
 
 Emulator, test-notes pack (16 notes), 300 keystrokes, release build: p50 19.7 ms without the bar, 20.2 ms with `[[` typed first (`perf-type`). The typed letters stop matching any note after a few keys, so most of those keystrokes ran the lookup and found nothing; the bar was up for the first few only.
 
-On the Forma: not yet measured. To be filled in from the `perf:` line after the device pass, with the bar up.
+On the Forma (2026-11-02, build 1.20.0 at `f945a7f`, Logging at Debug): one session of 94 s, 58 keystrokes, typing and picking with the bar up, including a heading pick from `perf-500k.md` (500 KB, 1621 headings, all named "Section", shown as one chip). `perf:` keystroke-to-refresh p50 125.2 ms, p95 144.7 ms, max 214.4 ms. The five 1.19.1 sessions earlier the same day, without the bar, ranged p50 83.5 to 140.5 ms (116 ms the reference), so 125 ms is inside the day's spread. No error or warning from the bar in the log.
