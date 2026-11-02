@@ -371,22 +371,9 @@ impl App {
         };
         // One line per answered search: the number `docs/dev/perf.md` wants
         // from the Forma (query length, not the query: notes are private).
-        sigma_core::info!(
-            "search",
-            "{} chars, {} of {} notes read, {} hits in {} notes{}{}: {} ms",
-            f.query.text().chars().count(),
-            r.scanned,
-            r.scanned + usize::from(r.capped),
-            r.hits.len(),
-            r.notes_with_hits,
-            if r.capped { " (capped)" } else { "" },
-            if r.skipped > 0 {
-                format!(", {} skipped", r.skipped)
-            } else {
-                String::new()
-            },
-            r.elapsed_ms
-        );
+        // One line per answered search: the number `docs/dev/perf.md` wants
+        // from the Forma (query length, not the query: notes are private).
+        sigma_core::info!("search", "{}", search_log_line(f.query.text(), &r));
         f.rows = search_rows(&r, f.query.text(), f.case);
         if f.first >= f.rows.len() {
             f.first = 0;
@@ -618,4 +605,51 @@ pub struct SearchSnapshot {
     pub query: String,
     pub case: bool,
     pub first: usize,
+}
+
+/// The text of the `search:` log line for an answered search.
+fn search_log_line(query: &str, r: &SearchResult) -> String {
+    // A capped scan stopped early, so the notes left are unknown.
+    let read = if r.capped {
+        format!("{} notes read", r.scanned)
+    } else {
+        format!("{0} of {0} notes read", r.scanned)
+    };
+    format!(
+        "{} chars, {}, {} hits in {} notes{}{}: {} ms",
+        query.chars().count(),
+        read,
+        r.hits.len(),
+        r.notes_with_hits,
+        if r.capped { " (capped)" } else { "" },
+        if r.skipped > 0 {
+            format!(", {} skipped", r.skipped)
+        } else {
+            String::new()
+        },
+        r.elapsed_ms
+    )
+}
+
+#[cfg(test)]
+mod log_line_tests {
+    use super::*;
+
+    #[test]
+    fn capped_line_does_not_claim_a_total_of_notes() {
+        let mut r = SearchResult {
+            scanned: 3,
+            elapsed_ms: 7,
+            ..SearchResult::default()
+        };
+        assert_eq!(
+            search_log_line("lamp", &r),
+            "4 chars, 3 of 3 notes read, 0 hits in 0 notes: 7 ms"
+        );
+        r.capped = true;
+        assert_eq!(
+            search_log_line("lamp", &r),
+            "4 chars, 3 notes read, 0 hits in 0 notes (capped): 7 ms"
+        );
+    }
 }

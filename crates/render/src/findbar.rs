@@ -109,6 +109,8 @@ pub enum FindHit {
 }
 
 const TOOLS: [&str; 5] = ["Prev", "Next", "Replace", "All", "Aa"];
+/// Shown in the greyed Replace field in All notes.
+const REPLACE_OFF: &str = "Replace: This note only";
 const SCOPES: [(&str, Scope); 2] = [("This note", Scope::Note), ("All notes", Scope::All)];
 
 impl EditorScreen {
@@ -280,8 +282,12 @@ impl EditorScreen {
                 shown.remove(0);
             }
             if buf.text().is_empty() {
-                self.fonts
-                    .draw(c, Face::Atkinson, ui, x0, by, &tr(ph), t.mute);
+                // Greyed in All notes: say why instead of "Replace".
+                let mut ph = if off { tr(REPLACE_OFF) } else { tr(ph) }.into_owned();
+                while ph.chars().count() > 1 && self.fonts.width(Face::Atkinson, ui, &ph) > max {
+                    ph.pop();
+                }
+                self.fonts.draw(c, Face::Atkinson, ui, x0, by, &ph, t.mute);
             } else {
                 let ink = if off { t.mute } else { t.ink };
                 self.fonts.draw(c, Face::Atkinson, ui, x0, by, &shown, ink);
@@ -434,6 +440,41 @@ mod tests {
                     assert_eq!(fl.scope_all.x, fl.scope_note.x + fl.scope_note.w, "{tag}");
                     // The tool row still fits beside the left padding.
                     assert!(fl.prev.x > fl.count.x, "{tag}: {fl:?}");
+                }
+            }
+        }
+        set_lang(Lang::En);
+    }
+
+    /// The greyed Replace field says why in every language, and the label
+    /// fits inside the field at every scale and orientation.
+    #[test]
+    fn replace_label_fits_in_all_notes() {
+        for lang in [
+            Lang::En,
+            Lang::Fr,
+            Lang::Pt,
+            Lang::De,
+            Lang::Es,
+            Lang::It,
+            Lang::Nl,
+            Lang::Ca,
+            Lang::Da,
+            Lang::Sv,
+        ] {
+            set_lang(lang);
+            let label = tr(REPLACE_OFF);
+            assert!(
+                lang == Lang::En || label != REPLACE_OFF,
+                "{lang:?} untranslated"
+            );
+            for (w, h) in [(1440u32, 1920u32), (1920, 1440)] {
+                for ui in sigma_core::settings::UI_SCALES {
+                    let (e, l) = open(w, h, ui);
+                    let fl = e.find_layout(&l);
+                    let room = (fl.replace.w - e.scale().px(20.0)) as f32;
+                    let width = e.fonts.width(Face::Atkinson, e.ui_px(), &label);
+                    assert!(width <= room, "{lang:?} {w}x{h} {ui}%: {width} > {room}");
                 }
             }
         }
