@@ -2,6 +2,9 @@
 
 All notable changes to Σscribe. Versions are tagged after they pass on the Kobo Forma.
 
+## Unreleased
+- **Fix: a case-only rename never overwrites another note.** On a case-sensitive filesystem (desktop, synced folders) renaming `A.md` to `a` when a different `a.md` already existed replaced it. The rename now goes through a temporary name only when no other entry has that name ignoring case; otherwise the name is taken like any other and gets a numeric suffix. Tests: `crates/core/src/library.rs`. (sprint 12.6)
+
 ## 1.19.1 — 2026-11-02 (built, not yet installed on the Forma, not tagged)
 - **A log line per search.** With Logging on, each answered search writes one `search:` line: query length, notes read, hits and notes with hits, whether capped, how many skipped, and the time in ms; never the query itself. It is the number `docs/dev/perf.md` records from the Forma (sprint S22.1). `SearchResult` carries `scanned` and `elapsed_ms`. Test in `crates/core/src/search.rs`.
 

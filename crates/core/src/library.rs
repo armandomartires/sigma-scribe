@@ -483,13 +483,30 @@ impl Library {
         if name == p.name() {
             return Ok(p.clone());
         }
-        // Case-only rename on vfat: go through a temp name.
-        let target = if name.eq_ignore_ascii_case(p.name()) {
+        // A case-only rename is the same file only if no other entry in the
+        // folder has that name ignoring case: on vfat there is just the
+        // source, on a case-sensitive filesystem `a.md` beside `A.md` is a
+        // different note and clashes like any other taken name.
+        let case_only = name.eq_ignore_ascii_case(p.name()) && {
+            let clash = fs::read_dir(self.fs_path(&p.parent()))
+                .ok()
+                .is_some_and(|rd| {
+                    rd.flatten().any(|e| {
+                        e.file_name()
+                            .to_str()
+                            .is_some_and(|x| x != p.name() && x.eq_ignore_ascii_case(&name))
+                    })
+                });
+            !clash
+        };
+        let target = if case_only {
             p.parent().join(&name)
         } else {
             self.unique(&p.parent(), &name)
         };
-        if name.eq_ignore_ascii_case(p.name()) {
+        if case_only {
+            // vfat cannot rename onto a name that differs only in case: go
+            // through a temp name.
             let tmp = self.unique(&p.parent(), &format!(".rename-{name}"));
             fs::rename(&src, self.fs_path(&tmp))?;
             fs::rename(self.fs_path(&tmp), self.fs_path(&target))?;
@@ -894,6 +911,39 @@ mod tests {
             .into_iter()
             .map(|e| e.path.name().to_owned())
             .collect()
+    }
+
+    #[test]
+    fn case_only_rename_renames_the_one_file() {
+        let l = lib("case-only");
+        let root = NotePath::root();
+        let a = l.create_note(&root, "Notes").unwrap();
+        fs::write(l.fs_path(&a), "body").unwrap();
+        let b = l.rename(&a, "notes").unwrap();
+        assert_eq!(b.as_str(), "notes.md");
+        assert_eq!(names(&l, &root), ["notes.md"]);
+        assert_eq!(fs::read_to_string(l.fs_path(&b)).unwrap(), "body");
+    }
+
+    #[test]
+    fn case_only_rename_never_overwrites_a_different_file() {
+        let l = lib("case-clash");
+        let root = NotePath::root();
+        fs::write(l.fs_path(&root.join("A.md")), "upper").unwrap();
+        fs::write(l.fs_path(&root.join("a.md")), "lower").unwrap();
+        if names(&l, &root).len() < 2 {
+            return; // case-insensitive filesystem: the two cannot coexist
+        }
+        let a = root.join("A.md");
+        let moved = l.rename(&a, "a").unwrap();
+        assert_ne!(moved.as_str(), "a.md");
+        assert_ne!(moved.as_str(), "A.md");
+        assert_eq!(fs::read_to_string(l.fs_path(&moved)).unwrap(), "upper");
+        assert_eq!(
+            fs::read_to_string(l.fs_path(&root.join("a.md"))).unwrap(),
+            "lower"
+        );
+        assert!(!l.fs_path(&a).exists());
     }
 
     #[test]
