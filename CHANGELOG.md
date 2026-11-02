@@ -2,6 +2,10 @@
 
 All notable changes to Σscribe. Versions are tagged after they pass on the Kobo Forma.
 
+## Unreleased
+- **Greyed Replace field says why.** In All notes the Replace field reads "Replace: This note only" (greyed, as before) instead of "Replace"; in the nine languages. Test: `crates/render/src/findbar.rs` (fits at 100–200 %, both orientations); `tests/emu/v1.19.0-search.script` shows it.
+- **Fix: the `search:` log line when the 500-hit cap stopped the scan.** It said "a of b notes read" with b only the notes scanned plus one; a capped line now reads "a notes read … (capped)". The uncapped line is unchanged. `docs/dev/perf.md`. Test: `app/src/find.rs`.
+
 ## 1.19.1 — 2026-11-02 (built, not yet installed on the Forma, not tagged)
 - **A log line per search.** With Logging on, each answered search writes one `search:` line: query length, notes read, hits and notes with hits, whether capped, how many skipped, and the time in ms; never the query itself. It is the number `docs/dev/perf.md` records from the Forma (sprint S22.1). `SearchResult` carries `scanned` and `elapsed_ms`. Test in `crates/core/src/search.rs`.
 

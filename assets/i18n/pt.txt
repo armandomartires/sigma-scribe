@@ -1354,3 +1354,7 @@ Previous
 
 Clock not set
 = Relógio por acertar
+
+# Replace field greyed in All notes (S12.7)
+Replace: This note only
+= Substituir: só nesta nota

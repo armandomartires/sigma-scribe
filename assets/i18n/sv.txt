@@ -1353,3 +1353,7 @@ Previous
 
 Clock not set
 = Klockan är inte ställd
+
+# Replace field greyed in All notes (S12.7)
+Replace: This note only
+= Ersätt: endast denna anteckning

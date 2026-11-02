@@ -1353,3 +1353,7 @@ Previous
 
 Clock not set
 = Orologio non impostato
+
+# Replace field greyed in All notes (S12.7)
+Replace: This note only
+= Sostituisci: solo questa nota

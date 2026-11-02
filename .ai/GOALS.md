@@ -193,7 +193,7 @@ Status: Not started; listed 2026-11-02 from the Sprint 10 status line and the en
   `links.rs:61-80` and `outline::prose_lines` differ from `markdown.rs:109-132`, `:317-327`: a stray backtick can leave one link stale after a rename.
 - [ ] Case-only rename never overwrites on a case-sensitive filesystem
   `library.rs:487-495`; not reachable on the Kobo's vfat, matters for Sync and the desktop.
-- [ ] Search polish: greyed Replace field says "Replace: This note only" in All notes
+- [>] Search polish: greyed Replace field says "Replace: This note only" in All notes
   Today it does nothing when tapped.
-- [ ] Search polish: the `search:` log line drops "of N notes" when capped
+- [>] Search polish: the `search:` log line drops "of N notes" when capped
   N is only scanned + 1 once the 500-hit cap stops the scan.

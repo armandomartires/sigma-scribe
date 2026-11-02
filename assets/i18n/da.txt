@@ -1353,3 +1353,7 @@ Previous
 
 Clock not set
 = Uret er ikke stillet
+
+# Replace field greyed in All notes (S12.7)
+Replace: This note only
+= Erstat: kun denne note
