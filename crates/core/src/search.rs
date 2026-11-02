@@ -44,6 +44,10 @@ pub struct SearchResult {
     pub capped: bool,
     /// Notes that could not be read (missing or not UTF-8) and were skipped.
     pub skipped: usize,
+    /// Notes read before the search ended (all of them, unless capped).
+    pub scanned: usize,
+    /// Wall time of the search, for the log and `docs/dev/perf.md`.
+    pub elapsed_ms: u64,
 }
 
 /// Searches `query` in `notes` under `root`, in the order given (normally
@@ -78,11 +82,14 @@ fn search_unless(
     if query.is_empty() || cap == 0 {
         return Some(out);
     }
+    let started = std::time::Instant::now();
     let lib = Library::new(root);
     for note in notes {
         if abandon() {
             return None;
         }
+        out.scanned += 1;
+        out.elapsed_ms = elapsed_ms(started);
         let Ok(text) = std::fs::read_to_string(lib.fs_path(note)) else {
             out.skipped += 1;
             continue;
@@ -104,7 +111,12 @@ fn search_unless(
             break;
         }
     }
+    out.elapsed_ms = elapsed_ms(started);
     Some(out)
+}
+
+fn elapsed_ms(since: std::time::Instant) -> u64 {
+    u64::try_from(since.elapsed().as_millis()).unwrap_or(u64::MAX)
 }
 
 /// Turns ascending byte ranges of `text` into hits with their line.
@@ -319,6 +331,21 @@ mod tests {
         assert!(!r.capped);
         assert_eq!(r.skipped, 0);
         assert!(search_notes(&root, &notes, "", false, 100).hits.is_empty());
+    }
+
+    #[test]
+    fn scanned_counts_notes_read_and_stops_at_the_cap() {
+        let (root, notes) = three("scan");
+        let r = search_notes(&root, &notes, "zzzz-no-such-word", true, 100);
+        assert_eq!(r.scanned, notes.len(), "a miss reads every note");
+        assert_eq!(r.hits.len(), 0);
+        // Cap 1: the first note with a hit ends the search before the rest.
+        let r = search_notes(&root, &notes, "a", false, 1);
+        assert!(r.capped);
+        assert!(r.scanned >= 1 && r.scanned < notes.len(), "{}", r.scanned);
+        // An empty query reads nothing and reports no time.
+        let r = search_notes(&root, &notes, "", false, 100);
+        assert_eq!((r.scanned, r.elapsed_ms), (0, 0));
     }
 
     #[test]
