@@ -36,7 +36,8 @@ Design, internals, strings and the first-run checklist for the Forma are in [../
   the on-screen keyboard (or a USB keyboard). It shows stars; the **eye** at
   the field's right end shows what was typed. While it is empty the field says
   "Password: <network>". **OK** (or Return) joins, **Cancel** (or Escape)
-  does not. Either way the menu comes back. From preview, the field leaves
+  does not, and neither does a tap outside the field: it drops what was
+  typed, unlike a note rename, where such a tap confirms. Either way the menu comes back. From preview, the field leaves
   preview, as Find does. A password of the wrong length (WPA: 8 to 63
   characters, or 64 hex digits) is refused before anything is sent.
 - A wrong password is not kept: the network the app added is removed again,
