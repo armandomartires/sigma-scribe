@@ -134,7 +134,7 @@ impl App {
             };
             let renaming_current = matches!(&self.rename, Some((RenameTarget::Current, _)));
             let model = Model {
-                suggest: None,
+                suggest: self.suggest.as_ref().map(|s| (&s.labels[..], s.sel)),
                 file_name: self.current.name(),
                 buffer: &self.buffer,
                 keyboard: &self.keyboard,

@@ -219,6 +219,7 @@ impl App {
             return None;
         }
         let mut r = None;
+        let mut library_changed = false;
         let page = sigma_render::SettingsPage::Category(sigma_render::options::SYNC_CATEGORY);
         let visible = self.options && self.settings_page == page;
         if let Some(s) = &self.sync {
@@ -226,6 +227,7 @@ impl App {
             let g = s.generation();
             if g != self.sync_gen {
                 self.sync_gen = g;
+                library_changed = true;
                 let new = s.view();
                 if new.status() != self.sync_view.status()
                     && !matches!(
@@ -243,6 +245,9 @@ impl App {
                     r = Some(Refresh::Partial);
                 }
             }
+        }
+        if library_changed {
+            self.drop_suggest_cache();
         }
         if t >= self.watch_at {
             self.watch_at = t + WATCH_MS;
