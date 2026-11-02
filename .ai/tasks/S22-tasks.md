@@ -79,4 +79,17 @@ Order: T01 → T02 → T03 → T04 (one PR), then T10 → T16 (one PR). T01–T0
 
 Total: S22.0 ≈ 1.6 d, S22.1 ≈ 4.3 d, plus two Forma passes.
 
+## Parallel plan for S22.1 (2026-11-02)
+S22.0 is in PR #111 (version 1.18.1, chosen there). S22.1 is 1.19.0 unless the user says otherwise: `tests/emu/v1.19.0-search.script`, `docs/screenshots/v1.19/`.
+
+Wave 1, five sessions at once, each in its own worktree from `main`, disjoint files, each ending in its own PR against `main`:
+- **core** T10 — `crates/core/src/search.rs` (new) + `Searcher` worker, `lib.rs` module line. No render or app changes.
+- **findbar** T11 — `crates/render/src/findbar.rs` only. Placement decided there by mocking at 200 % portrait Fr: (a) the segmented control in the count rect's place with the count moved to the right end of the query field, else (b) a third row.
+- **results** T12 — `crates/render/src/search.rs` (new) + `lib.rs` module line. Takes a plain row model (`path: String, line: usize, text: String, hit: (usize, usize)`), no dependency on T10's types.
+- **strings** T14 — the nine `assets/i18n/*.txt` only, with the planned English keys.
+- **docs** T16 (text part) — `docs/user/search.md`, the Find row in `getting-started.md`, `docs/user/README.md` index. No screenshots yet.
+
+Wave 2, one session after PR #111 and the five wave-1 PRs are merged: T13 app wiring (`app/src/{find,events,render,nav}.rs`, Back-to-results stores the search state in `HistEntry`), emulator script, `touch_targets`, app tests.
+Wave 3: T15 on the Forma, T16 screenshots and wiki sync, changelog, version, board.
+
 Reviewed against the code 2026-11-02 (read-only): the three diagnoses hold; the task details above were corrected after that review (Ru letters, last-note delete removed, move branch location, nine catalogs, no whole-word option, poll site, `follow_caret`, `touch_targets`, `docs/dev/perf.md`).
