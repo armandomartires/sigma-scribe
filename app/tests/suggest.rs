@@ -77,16 +77,14 @@ fn typing_after_open_brackets_shows_matching_notes() {
     assert!(r.app.control_centre("Suggest0").is_some());
     assert!(r.app.control_centre("Suggest1").is_some());
     assert!(r.app.control_centre(&format!("Suggest{n}")).is_none());
-    // The chips are as tall as the IME strip's (S23-T02 geometry: a text
-    // line plus 4 px, under the 50 px minimum target; a renderer matter,
-    // reported) and wide enough to tap.
+    // Every chip is at least the minimum target on both sides.
     let min = r.app.min_target();
     let mut shown = 0;
     for (name, rect) in r.app.touch_targets() {
         if name.starts_with("Suggest") {
             shown += 1;
             assert!(
-                rect.w >= min && rect.h >= 40,
+                rect.w >= min && rect.h >= min,
                 "{name} {}x{}",
                 rect.w,
                 rect.h

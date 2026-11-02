@@ -9,7 +9,7 @@ use crate::App;
 use sigma_core::complete::{link_query, suggest_headings, suggest_notes, Suggestion};
 use sigma_core::{links, NotePath, NoteStore};
 use sigma_device::{HwKey, Refresh};
-use sigma_render::{Hit, Rect};
+use sigma_render::Rect;
 
 /// Chips offered at most; the bar scrolls to the chosen one.
 const CAP: usize = 12;
@@ -251,49 +251,12 @@ impl App {
             )
     }
 
-    /// The chips' rectangles as drawn, found by asking the renderer what
-    /// each point of the bar hits (the strip's geometry is the renderer's).
+    /// The chips' rectangles as drawn (the strip's geometry is the
+    /// renderer's).
     pub(crate) fn suggest_rects(&self) -> Vec<(usize, Rect)> {
         if self.suggest.is_none() {
             return Vec::new();
         }
-        let page = self.page_rect();
-        let at = |x: i32, y: i32| match self.editor_hit(x, y) {
-            Hit::Suggest(i) => Some(i),
-            _ => None,
-        };
-        let bottom = page.y + page.h;
-        let x0 = page.x + 40;
-        let span = self.screen.line_px() * 3;
-        let Some(y) = (1..span)
-            .step_by(2)
-            .map(|d| bottom - d)
-            .find(|&y| at(x0, y) == Some(0))
-        else {
-            return Vec::new();
-        };
-        let (mut top, mut low) = (y, y);
-        while at(x0, top - 1) == Some(0) {
-            top -= 1;
-        }
-        while at(x0, low + 1) == Some(0) {
-            low += 1;
-        }
-        let yc = (top + low) / 2;
-        let mut out: Vec<(usize, Rect)> = Vec::new();
-        let mut run: Option<(usize, i32)> = None;
-        let end = page.x + page.w;
-        let mut x = page.x;
-        while x <= end {
-            let h = if x < end { at(x, yc) } else { None };
-            if run.map(|r| r.0) != h {
-                if let Some((i, x1)) = run {
-                    out.push((i, Rect::new(x1, top, x - x1, low - top + 1)));
-                }
-                run = h.map(|i| (i, x));
-            }
-            x += 2;
-        }
-        out
+        self.screen.cand_rects(&self.editor_model())
     }
 }

@@ -944,7 +944,7 @@ impl EditorScreen {
         let m = self.page_s.px(self.margin_px);
         let v = self.page_s.px(16.0);
         let bar = if self.cand_reserve {
-            self.line_h() + self.px(20.0)
+            self.cand_bar_h()
         } else {
             0
         };
@@ -1017,8 +1017,32 @@ impl EditorScreen {
     /// The strip of Japanese conversion candidates or suggestions, along
     /// the bottom of the page (v1.10, S23).
     fn cand_bar(&self, page: Rect) -> Rect {
-        let h = self.line_h() + self.px(20.0);
+        let h = self.cand_bar_h();
         Rect::new(page.x, page.y + page.h - h, page.w, h)
+    }
+
+    /// The candidate bar's height: a text line plus padding, and never so
+    /// low that a chip is under the 44 px minimum target at the page's
+    /// scale (S23).
+    fn cand_bar_h(&self) -> i32 {
+        let gap = self.px(8.0);
+        (self.line_h() + self.px(20.0))
+            .max(self.page_s.px(crate::slider::MIN_TARGET as f32) + 2 * gap)
+    }
+
+    /// The chips on the candidate bar as drawn for `model` (the IME's
+    /// candidates or the suggestions), each with its index; empty when the
+    /// bar is not up. For the emulator's targets and checks.
+    #[must_use]
+    pub fn cand_rects(&self, model: &Model<'_>) -> Vec<(usize, Rect)> {
+        let Some((cands, sel, _)) = model.chips() else {
+            return Vec::new();
+        };
+        let l = self.layout(model.keys_on, model.keyboard);
+        self.cand_chips(self.cand_bar(l.page), cands, sel)
+            .into_iter()
+            .map(|(r, i)| (i, r))
+            .collect()
     }
 
     /// The candidate chips that fit the bar, the chosen one in view.
@@ -2943,9 +2967,15 @@ mod tests {
                     // Chips sit in the bar, large enough, the chosen one shown.
                     let got = e.cand_chips(bar, &names, sel);
                     assert!(got.iter().any(|&(_, i)| i == sel), "{at}");
+                    let pub_rects: Vec<(Rect, usize)> =
+                        e.cand_rects(&m).into_iter().map(|(i, r)| (r, i)).collect();
+                    assert_eq!(pub_rects, got, "{at}: cand_rects as drawn");
+                    let min = e.page_scale().px(crate::slider::MIN_TARGET as f32);
                     for (r, i) in &got {
-                        // As tall as a text line (the IME strip as it is).
+                        // At least a text line, and never under the minimum
+                        // target.
                         assert!(r.h >= e.line_h(), "{at}: chip {i} {r:?}");
+                        assert!(r.h >= min, "{at}: chip {i} {r:?} under {min}");
                         assert!(
                             r.x >= bar.x && r.x + r.w <= bar.x + bar.w,
                             "{at}: chip {i} {r:?}"

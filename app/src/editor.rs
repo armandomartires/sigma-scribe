@@ -224,7 +224,12 @@ impl App {
     }
 
     pub(crate) fn editor_hit(&self, x: i32, y: i32) -> Hit {
-        let model = Model {
+        self.screen.hit(&self.editor_model(), x, y)
+    }
+
+    /// The editor's model for hit tests and geometry (no rename field).
+    pub(crate) fn editor_model(&self) -> Model<'_> {
+        Model {
             suggest: self.suggest_chips(),
             file_name: self.current.name(),
             buffer: &self.buffer,
@@ -234,8 +239,7 @@ impl App {
             theme: self.theme(),
             sel_ui: self.sel_ui,
             rename: None,
-        };
-        self.screen.hit(&model, x, y)
+        }
     }
 
     pub(crate) fn bar_action(&mut self, a: BarAction) -> Option<Refresh> {
