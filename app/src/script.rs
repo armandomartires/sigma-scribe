@@ -40,6 +40,17 @@ impl App {
     /// `Move`, `Delete`, `More:<row name>`, or a row name.
     #[must_use]
     pub fn control_centre(&self, label: &str) -> Option<(i32, i32)> {
+        // A wiki-link suggestion chip: `Suggest0`, `Suggest1`, ... (S23).
+        if let Some(i) = label
+            .strip_prefix("Suggest")
+            .and_then(|n| n.parse::<usize>().ok())
+        {
+            return self
+                .suggest_rects()
+                .into_iter()
+                .find(|(k, _)| *k == i)
+                .map(|(_, r)| centre(r));
+        }
         if self.ink.is_some() {
             use sigma_render::ink::InkButton;
             let l = self.panel_layout()?;
@@ -275,7 +286,7 @@ impl App {
     pub fn handle_centre(&self, i: usize) -> Option<(i32, i32)> {
         let l = self.screen.layout(self.keys_visible(), &self.keyboard);
         let model = Model {
-            suggest: None,
+            suggest: self.suggest_chips(),
             file_name: self.current.name(),
             buffer: &self.buffer,
             keyboard: &self.keyboard,
@@ -308,7 +319,7 @@ impl App {
     pub fn bar_buttons(&self) -> Vec<(&'static str, (i32, i32))> {
         let l = self.screen.layout(self.keys_visible(), &self.keyboard);
         let model = Model {
-            suggest: None,
+            suggest: self.suggest_chips(),
             file_name: self.current.name(),
             buffer: &self.buffer,
             keyboard: &self.keyboard,
@@ -509,6 +520,9 @@ impl App {
         }
         for (r, b) in &l.kb_buttons {
             add(self.screen.kb_button_label(*b), *r);
+        }
+        for (i, r) in self.suggest_rects() {
+            add(&format!("Suggest{i}"), r);
         }
         if self.find.is_some() {
             let f = self.screen.find_layout(&l);

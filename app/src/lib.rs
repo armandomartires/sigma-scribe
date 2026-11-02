@@ -42,6 +42,7 @@ mod rotation;
 mod script;
 mod settings;
 mod splash;
+mod suggest;
 mod sync;
 mod wifi;
 
@@ -66,6 +67,7 @@ pub use pointer::{
 pub use preview::PreviewState;
 pub use rotation::{TILT_STABLE_MS, TILT_TYPING_PAUSE_MS};
 pub use splash::Splash;
+pub use suggest::SuggestState;
 pub use sync::{sync_config, syncthing_binary, syncthing_home};
 
 fn merge(a: Option<Refresh>, b: Option<Refresh>) -> Option<Refresh> {
@@ -280,6 +282,10 @@ pub struct App {
     pub hwr: Hwr,
     /// Back stack (v1.0.2), this session only, newest last.
     pub history: Vec<HistEntry>,
+    /// The wiki-link suggestion bar, while it is up (S23).
+    pub suggest: Option<SuggestState>,
+    /// The note, buffer revision and caret the bar was last worked out for.
+    suggest_seen: Option<(NotePath, u64, usize)>,
     pub perf: Perf,
     pub running: bool,
 }
@@ -421,6 +427,8 @@ impl App {
             ink: None,
             hwr: Hwr::default(),
             history: Vec::new(),
+            suggest: None,
+            suggest_seen: None,
             perf: Perf::default(),
             running: true,
         };

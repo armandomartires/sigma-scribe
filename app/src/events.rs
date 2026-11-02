@@ -6,8 +6,15 @@ use sigma_render::editor::Model;
 use sigma_render::Hit;
 
 impl App {
-    /// Applies one event; returns the refresh it needs (or `None`).
+    /// Applies one event; returns the refresh it needs (or `None`). The
+    /// wiki-link suggestion bar is brought in step with the text and caret
+    /// afterwards (S23), whatever moved them.
     pub fn handle(&mut self, e: Event) -> Option<Refresh> {
+        let r = self.handle_event(e);
+        merge(r, self.refresh_suggest())
+    }
+
+    fn handle_event(&mut self, e: Event) -> Option<Refresh> {
         self.sync_pane_plugins();
         self.sync_drawer_open();
         match e {
@@ -308,6 +315,7 @@ impl App {
                 self.screen.page_turn(&mut self.buffer, page, forward);
                 Some(Refresh::Partial)
             }
+            Event::Key(k) if self.suggest_takes(k) => self.suggest_key(k),
             Event::Key(k) if self.find_typing() => self.find_hw(k),
             Event::Key(k) if self.scratch_focused() => self.scratch_hw(k),
             Event::Tap { x, y } if self.in_find_bar(x, y) => self.find_tap(x, y),
@@ -395,7 +403,7 @@ impl App {
                     Some((RenameTarget::Current | RenameTarget::WifiPassword(_), _))
                 );
                 let model = Model {
-                    suggest: None,
+                    suggest: self.suggest_chips(),
                     file_name: self.current.name(),
                     buffer: &self.buffer,
                     keyboard: &self.keyboard,
@@ -499,8 +507,8 @@ impl App {
                         self.finish_rename(false);
                         Some(Refresh::Partial)
                     }
-                    // Suggestions are wired by the app in S23-T03.
-                    Hit::Suggest(_) | Hit::Nothing => None,
+                    Hit::Suggest(i) => self.pick_suggest(i),
+                    Hit::Nothing => None,
                 }
             }
         }
