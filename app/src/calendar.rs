@@ -6,7 +6,7 @@ use crate::App;
 use sigma_core::date::{self, Date};
 use sigma_core::journal;
 use sigma_device::Refresh;
-use sigma_render::calendar::{long_date, CalendarModel};
+use sigma_render::calendar::{long_date, year_page, CalField, CalPicker, CalendarModel};
 
 /// The month shown when nothing says which: no open entry and no clock.
 const FALLBACK_MONTH: Date = Date {
@@ -56,6 +56,7 @@ impl App {
             marked: &self.journal_marks,
             open,
             week_start: self.settings.week_start,
+            picker: self.calendar_picker,
         }
     }
 
@@ -99,11 +100,63 @@ impl App {
             return Some(Refresh::Partial);
         };
         self.calendar_month = Some(t.first_of_month());
+        self.calendar_picker = None;
         self.calendar_open(t)
     }
 
-    /// The previous or next month button.
+    /// A tap on a field of the date line: opens its picker, closes it when
+    /// it is the open one, switches from another picker.
+    pub fn calendar_field(&mut self, f: CalField) -> Option<Refresh> {
+        let shown = self.calendar_model().month;
+        self.calendar_picker = match (self.calendar_picker, f) {
+            (Some(p), f) if p.field() == f => None,
+            (_, CalField::Day) => Some(CalPicker::Day),
+            (_, CalField::Month) => Some(CalPicker::Month),
+            (_, CalField::Year) => Some(CalPicker::Year {
+                first_year: year_page(shown.y),
+            }),
+        };
+        Some(Refresh::Partial)
+    }
+
+    /// A tap on a cell of the open picker: a year or a month sets the shown
+    /// month, a day opens or creates its note. Either closes the picker.
+    pub fn calendar_pick(&mut self, v: u16) -> Option<Refresh> {
+        let shown = self.calendar_model().month;
+        let picker = self.calendar_picker.take()?;
+        match picker {
+            CalPicker::Year { .. } => {
+                self.calendar_month = Date::new(i32::from(v), shown.m, 1);
+                Some(Refresh::Partial)
+            }
+            CalPicker::Month => {
+                self.calendar_month = u8::try_from(v).ok().and_then(|m| Date::new(shown.y, m, 1));
+                Some(Refresh::Partial)
+            }
+            CalPicker::Day => {
+                let day = u8::try_from(v)
+                    .ok()
+                    .and_then(|d| Date::new(shown.y, shown.m, d));
+                match day {
+                    Some(d) => self.calendar_open(d),
+                    None => Some(Refresh::Partial),
+                }
+            }
+        }
+    }
+
+    /// The previous or next month button; with the year picker open it
+    /// pages the twelve years instead.
     pub fn calendar_step_month(&mut self, next: bool) -> Option<Refresh> {
+        if let Some(CalPicker::Year { first_year }) = self.calendar_picker {
+            let first_year = if next {
+                first_year + 12
+            } else {
+                (first_year - 12).max(1)
+            };
+            self.calendar_picker = Some(CalPicker::Year { first_year });
+            return Some(Refresh::Partial);
+        }
         let shown = self.calendar_model().month;
         self.calendar_month = Some(if next {
             shown.next_month()

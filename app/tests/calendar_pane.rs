@@ -218,3 +218,100 @@ fn the_layout_and_week_start_settings_apply_to_the_calendar() {
     assert_eq!(r.app.current, path("journal/2026-11-02.md"));
     assert_eq!(r.app.open_entry_date(), Date::new(2026, 11, 2));
 }
+
+#[test]
+fn the_date_line_fields_open_close_and_switch_their_pickers() {
+    use sigma_render::calendar::CalPicker;
+    let mut r = Rig::new("fields");
+    assert!(
+        r.app.control_centre("CalPickDay").is_some(),
+        "the line shows"
+    );
+    assert!(r.app.calendar_picker.is_none());
+    r.tap_on("CalPickYear");
+    assert!(matches!(
+        r.app.calendar_picker,
+        Some(CalPicker::Year { first_year: 2016 })
+    ));
+    assert!(
+        r.app.control_centre("Day:2026-11-15").is_none(),
+        "the grid gives way"
+    );
+    assert!(r.app.control_centre("Pick:2026").is_some());
+    // The same field again closes it.
+    r.tap_on("CalPickYear");
+    assert!(r.app.calendar_picker.is_none());
+    assert!(r.app.control_centre("Day:2026-11-15").is_some());
+    // Another field switches picker.
+    r.tap_on("CalPickMonth");
+    assert_eq!(r.app.calendar_picker, Some(CalPicker::Month));
+    r.tap_on("CalPickDay");
+    assert_eq!(r.app.calendar_picker, Some(CalPicker::Day));
+    assert!(r.app.control_centre("Pick:30").is_some());
+    assert!(r.app.control_centre("Pick:31").is_none(), "November has 30");
+    // Today closes the picker and opens today's note.
+    r.tap_on("CalToday");
+    assert!(r.app.calendar_picker.is_none());
+    assert_eq!(r.app.current, path("journal/2026-11-02.md"));
+    // Closing the drawer or switching the pane off forgets it.
+    r.tap_on("CalPickMonth");
+    r.app.close_drawer();
+    assert!(r.app.calendar_picker.is_none());
+}
+
+#[test]
+fn picking_a_year_or_a_month_changes_the_shown_month_and_closes_the_picker() {
+    let mut r = Rig::new("pickym");
+    r.tap_on("CalPickYear");
+    r.tap_on("Pick:2024");
+    assert!(r.app.calendar_picker.is_none());
+    assert_eq!(r.app.calendar_month, Date::new(2024, 11, 1), "month kept");
+    assert!(r.app.control_centre("Day:2024-11-15").is_some());
+    assert!(!r.dir.join("journal").exists(), "nothing is created");
+    r.tap_on("CalPickMonth");
+    r.tap_on("Pick:2");
+    assert!(r.app.calendar_picker.is_none());
+    assert_eq!(r.app.calendar_month, Date::new(2024, 2, 1), "year kept");
+    assert!(
+        r.app.control_centre("Day:2024-02-29").is_some(),
+        "leap year"
+    );
+    // The year picker pages by twelve with the arrows.
+    r.tap_on("CalPickYear");
+    assert!(r.app.control_centre("Pick:2016").is_some());
+    r.tap_on("CalNextMonth");
+    assert!(r.app.control_centre("Pick:2028").is_some());
+    assert!(r.app.control_centre("Pick:2024").is_none());
+    assert_eq!(
+        r.app.calendar_month,
+        Date::new(2024, 2, 1),
+        "month unchanged"
+    );
+    r.tap_on("CalPrevMonth");
+    r.tap_on("CalPrevMonth");
+    assert!(r.app.control_centre("Pick:2015").is_some());
+    r.tap_on("Pick:2015");
+    assert_eq!(r.app.calendar_month, Date::new(2015, 2, 1));
+}
+
+#[test]
+fn picking_a_day_opens_or_creates_that_note_and_closes_the_picker() {
+    let mut r = Rig::new("pickday");
+    r.tap_on("CalPickDay");
+    r.tap_on("Pick:17");
+    assert!(r.app.calendar_picker.is_none());
+    assert_eq!(r.app.current, path("journal/2026-11-17.md"));
+    assert_eq!(
+        r.read("journal/2026-11-17.md"),
+        "# Tuesday, 17 November 2026\n\n"
+    );
+    assert!(r.app.drawer_visible());
+    // The line now shows the open entry's day; picking another month and a
+    // day goes to that month.
+    r.tap_on("CalPickMonth");
+    r.tap_on("Pick:12");
+    r.tap_on("CalPickDay");
+    r.tap_on("Pick:24");
+    assert_eq!(r.app.current, path("journal/2026-12-24.md"));
+    assert!(r.app.calendar_picker.is_none());
+}

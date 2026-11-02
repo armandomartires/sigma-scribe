@@ -220,6 +220,9 @@ pub struct App {
     /// The month the Calendar shows (its first day); `None` follows the open
     /// journal note, else today.
     pub calendar_month: Option<sigma_core::date::Date>,
+    /// The date line's picker open in the Calendar pane, if any. Reset when
+    /// the drawer closes or the pane is switched off.
+    pub calendar_picker: Option<sigma_render::calendar::CalPicker>,
     /// The journal's entries as found on disk, for the Calendar: refreshed
     /// when the pane opens, a day is opened, the layout is reorganised, a
     /// note opens and the Files sheet closes (never every frame).
@@ -385,6 +388,7 @@ impl App {
             drawer_stash: None,
             drawer: [false; 4],
             calendar_month: None,
+            calendar_picker: None,
             journal_entries: std::collections::BTreeMap::new(),
             journal_marks: std::collections::BTreeSet::new(),
             files_was_open: false,

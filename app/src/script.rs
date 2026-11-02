@@ -211,6 +211,7 @@ impl App {
                 || s == "DrawerTab"
                 || s == "ScratchPane"
                 || s.starts_with("Day:")
+                || s.starts_with("Pick:")
                 || s.starts_with("Cal") =>
             {
                 self.drawer_control(s)
@@ -310,7 +311,9 @@ impl App {
     /// grip), `DrawerTab` (the closed drawer's tab, v1.16), `ScratchPane`
     /// (end of the scratch text), and the Calendar's `Day:yyyy-mm-dd`,
     /// `CalPrevMonth`, `CalNextMonth`, `CalToday`, `CalPrevEntry` and
-    /// `CalNextEntry`.
+    /// `CalNextEntry`, the date line's `CalPickDay`, `CalPickMonth` and
+    /// `CalPickYear`, and `Pick:<n>` (the open picker's cell with that day
+    /// number, month 1 to 12 or year).
     fn drawer_control(&self, name: &str) -> Option<(i32, i32)> {
         if name == "DrawerTab" && self.drawer_tab_shown() {
             let z = self
@@ -345,10 +348,19 @@ impl App {
             if let Some(day) = day {
                 return cl.cells.iter().find(|c| c.1 == day).map(|c| centre(c.0));
             }
+            if let Some(v) = name
+                .strip_prefix("Pick:")
+                .and_then(|v| v.parse::<u16>().ok())
+            {
+                return cl.picks.iter().find(|p| p.1 == v).map(|p| centre(p.0));
+            }
             match name {
                 "CalPrevMonth" => return Some(centre(cl.prev)),
                 "CalNextMonth" => return Some(centre(cl.next)),
                 "CalToday" => return Some(centre(cl.today)),
+                "CalPickDay" => return Some(centre(cl.fields[0])),
+                "CalPickMonth" => return Some(centre(cl.fields[1])),
+                "CalPickYear" => return Some(centre(cl.fields[2])),
                 "CalPrevEntry" => return cl.entries.map(|e| centre(e.0)),
                 "CalNextEntry" => return cl.entries.map(|e| centre(e.1)),
                 _ => {}

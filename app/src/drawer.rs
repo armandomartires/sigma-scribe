@@ -309,6 +309,7 @@ impl App {
         }
         self.drawer_stash = Some((self.drawer, self.scratch_focus));
         self.drawer = [false; 4];
+        self.calendar_picker = None;
         self.scratch_focus = false;
         self.save_scratch();
         self.screen.drawer_menu = false;
@@ -395,6 +396,9 @@ impl App {
         if p == Pane::Scratch {
             self.scratch_focus = self.drawer[2];
             self.save_scratch();
+        }
+        if p == Pane::Calendar {
+            self.calendar_picker = None;
         }
         if p == Pane::Calendar && self.drawer[3] {
             // Opens on the open entry's month, else today's.
@@ -541,6 +545,8 @@ impl App {
             DrawerHit::TodoOpen(i) => self.drawer_todo_open(i),
             DrawerHit::Plugin(p) => self.pane_plugin_tap(p, x, y),
             DrawerHit::CalDay(d) => self.calendar_open(d),
+            DrawerHit::CalField(f) => self.calendar_field(f),
+            DrawerHit::CalPick(v) => self.calendar_pick(v),
             DrawerHit::CalToday => self.calendar_today(),
             DrawerHit::CalPrevMonth => self.calendar_step_month(false),
             DrawerHit::CalNextMonth => self.calendar_step_month(true),

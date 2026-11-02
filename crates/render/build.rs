@@ -53,6 +53,8 @@ const ICONS: &[&str] = &[
     "sun-dim",
     // The journal calendar pane.
     "calendar",
+    // The calendar's date line fields.
+    "chevron-down",
 ];
 
 /// A touch target is 44 brief units; the glyph is half of it.

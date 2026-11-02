@@ -134,6 +134,8 @@ Built into the app, not a plugin (decided 2026-11-02). Plan: `~/.claude/plans/le
   `crates/core/src/journal.rs`; entry from `journal/.template.md` or a date heading; `Library::move_many` relinks once.
 - [x] Journal options: layout, UTC offset, week start
   Changing the layout moves existing entries; collisions are skipped and reported.
-- [?] Calendar pane in the drawer
+- [x] Calendar pane in the drawer
   Today highlighted, days with entries marked, Today button, previous and next entry.
-- [?] Emulator script, user docs, changelog
+- [x] Emulator script, user docs, changelog
+- [?] Date line on top of the calendar: day, month and year pickers
+  Asked after the first try on the Forma (2026-11-02). Tapping a field picks a year, month or day in place of the grid.

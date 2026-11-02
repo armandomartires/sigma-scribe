@@ -172,6 +172,11 @@ pub enum DrawerHit {
     Plugin(Pane),
     /// A day of the Calendar.
     CalDay(Date),
+    /// A field of the Calendar's date line: opens (or closes) its picker.
+    CalField(crate::calendar::CalField),
+    /// A cell of the Calendar's open picker: the day, the month (1 to 12)
+    /// or the year.
+    CalPick(u16),
     /// The Calendar's previous-month button.
     CalPrevMonth,
     /// The Calendar's next-month button.
@@ -558,7 +563,7 @@ impl EditorScreen {
                     continue;
                 }
             } else {
-                // The Calendar's header is its month row.
+                // The Calendar's header is its date line.
                 if *pane != Pane::Calendar {
                     self.fonts.draw(
                         c,
@@ -852,6 +857,7 @@ mod tests {
                             marked: &marked,
                             open: Date::new(2026, 11, 2),
                             week_start: WeekStart::Monday,
+                            picker: None,
                         }),
                         theme: Theme::DAY,
                     };

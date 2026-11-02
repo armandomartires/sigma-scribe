@@ -84,6 +84,8 @@ pub enum Icon {
     Sun,
     /// The front-light button while the light is off.
     SunDim,
+    /// A field that opens a picker (the calendar's date line).
+    ChevronDown,
 }
 
 impl Icon {
@@ -128,6 +130,7 @@ impl Icon {
             Self::Refresh => "refresh-cw",
             Self::Sun => "sun",
             Self::SunDim => "sun-dim",
+            Self::ChevronDown => "chevron-down",
         }
     }
 }
@@ -246,6 +249,7 @@ mod tests {
             Icon::Refresh,
             Icon::Sun,
             Icon::SunDim,
+            Icon::ChevronDown,
         ] {
             for &s in SIZES {
                 let m = ICONS
