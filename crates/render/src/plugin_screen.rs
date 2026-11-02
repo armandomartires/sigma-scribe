@@ -24,6 +24,28 @@ fn tone(t: Theme, c: Tone) -> u8 {
     }
 }
 
+/// Largest font size (px) a plugin may ask for; a glyph this big already
+/// fills the screen, and the rasteriser's bitmap grows with its square.
+const MAX_TEXT_SIZE: f32 = 400.0;
+
+/// A plugin rectangle limited to the canvas's longest side in width and
+/// height and to a few canvases around the origin, so a broken plugin
+/// cannot make the painter loop over billions of rows or overflow.
+fn clamp_rect(c: &Canvas, r: sigma_plugin_api::Rect) -> Rect {
+    let m = c.bounds().w.max(c.bounds().h);
+    Rect::new(
+        r.x.clamp(-2 * m, 2 * m),
+        r.y.clamp(-2 * m, 2 * m),
+        r.w.clamp(0, m),
+        r.h.clamp(0, m),
+    )
+}
+
+/// A line or stroke thickness limited to the canvas's longest side.
+fn clamp_thick(c: &Canvas, t: i32) -> i32 {
+    t.clamp(0, c.bounds().w.max(c.bounds().h))
+}
+
 /// The host's face for a plugin face.
 #[must_use]
 pub fn face(f: sigma_plugin_api::Face) -> Face {
@@ -31,10 +53,6 @@ pub fn face(f: sigma_plugin_api::Face) -> Face {
         sigma_plugin_api::Face::Regular => Face::Atkinson,
         sigma_plugin_api::Face::Bold => Face::AtkinsonBold,
     }
-}
-
-fn rect(r: sigma_plugin_api::Rect) -> Rect {
-    Rect::new(r.x, r.y, r.w, r.h)
 }
 
 impl EditorScreen {
@@ -103,10 +121,22 @@ impl EditorScreen {
     fn paint_ops(&self, c: &mut Canvas, ops: &[Op], t: Theme) {
         for op in ops {
             match op {
-                Op::Fill { r, c: tn } => c.fill(rect(*r), tone(t, *tn)),
-                Op::Stroke { r, t: th, c: tn } => c.stroke(rect(*r), *th, tone(t, *tn)),
-                Op::Pill { r, c: tn } => fill_round(c, rect(*r), r.h / 2, tone(t, *tn)),
-                Op::Line { a, b, w, c: tn } => thick_line(c, *a, *b, *w, tone(t, *tn)),
+                Op::Fill { r, c: tn } => {
+                    let r = clamp_rect(c, *r);
+                    c.fill(r, tone(t, *tn));
+                }
+                Op::Stroke { r, t: th, c: tn } => {
+                    let (r, th) = (clamp_rect(c, *r), clamp_thick(c, *th));
+                    c.stroke(r, th, tone(t, *tn));
+                }
+                Op::Pill { r, c: tn } => {
+                    let r = clamp_rect(c, *r);
+                    fill_round(c, r, r.h / 2, tone(t, *tn));
+                }
+                Op::Line { a, b, w, c: tn } => {
+                    let w = clamp_thick(c, *w);
+                    thick_line(c, *a, *b, w, tone(t, *tn));
+                }
                 Op::Text {
                     face: f,
                     size,
@@ -115,7 +145,12 @@ impl EditorScreen {
                     s,
                     c: tn,
                 } => {
-                    self.fonts.draw(c, face(*f), *size, *x, *y, s, tone(t, *tn));
+                    let size = if size.is_finite() {
+                        size.clamp(1.0, MAX_TEXT_SIZE)
+                    } else {
+                        MAX_TEXT_SIZE
+                    };
+                    self.fonts.draw(c, face(*f), size, *x, *y, s, tone(t, *tn));
                 }
             }
         }
@@ -129,8 +164,9 @@ impl EditorScreen {
             return;
         }
         let (dx, dy) = (area.x, area.y);
-        let shift =
-            |r: sigma_plugin_api::Rect| sigma_plugin_api::Rect::new(r.x - dx, r.y - dy, r.w, r.h);
+        let shift = |r: sigma_plugin_api::Rect| {
+            sigma_plugin_api::Rect::new(r.x.saturating_sub(dx), r.y.saturating_sub(dy), r.w, r.h)
+        };
         let ops: Vec<Op> = frame
             .ops
             .iter()
@@ -149,8 +185,8 @@ impl EditorScreen {
                     c: *c,
                 },
                 Op::Line { a, b, w, c } => Op::Line {
-                    a: (a.0 - dx, a.1 - dy),
-                    b: (b.0 - dx, b.1 - dy),
+                    a: (a.0.saturating_sub(dx), a.1.saturating_sub(dy)),
+                    b: (b.0.saturating_sub(dx), b.1.saturating_sub(dy)),
                     w: *w,
                     c: *c,
                 },
@@ -279,5 +315,56 @@ mod tests {
         let close = e.layout(false, &k).close_button;
         assert!(e.plugin_close_hit(&k, close.x + 2, close.y + 2));
         assert!(!e.plugin_close_hit(&k, 700, top + 400));
+    }
+
+    #[test]
+    fn oversized_frames_are_clamped_before_painting() {
+        let e = EditorScreen::new(1440, 1920);
+        let k = Keyboard::default();
+        let huge = i32::MAX;
+        let frame = Frame {
+            ops: vec![
+                Op::Fill {
+                    r: R::new(-huge, -huge, huge, huge),
+                    c: Tone::Ink,
+                },
+                Op::Stroke {
+                    r: R::new(0, 0, huge, huge),
+                    t: huge,
+                    c: Tone::Ink,
+                },
+                Op::Pill {
+                    r: R::new(10, 10, huge, huge),
+                    c: Tone::Mute,
+                },
+                Op::Line {
+                    a: (0, 0),
+                    b: (100, 100),
+                    w: huge,
+                    c: Tone::Ink,
+                },
+                Op::Text {
+                    face: sigma_plugin_api::Face::Regular,
+                    size: 1.0e9,
+                    x: 0.0,
+                    y: 500.0,
+                    s: "W".into(),
+                    c: Tone::Ink,
+                },
+                Op::Text {
+                    face: sigma_plugin_api::Face::Regular,
+                    size: f32::NAN,
+                    x: 0.0,
+                    y: 500.0,
+                    s: "W".into(),
+                    c: Tone::Ink,
+                },
+            ],
+            ..Frame::default()
+        };
+        let mut c = Canvas::new(1440, 1920, 0);
+        let start = std::time::Instant::now();
+        e.draw_plugin_screen(&mut c, &frame, "Graph", Theme::DAY, &k);
+        assert!(start.elapsed().as_secs() < 10, "painting stayed cheap");
     }
 }

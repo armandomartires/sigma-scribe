@@ -31,6 +31,23 @@ network. Every call gets a fuel budget and the memory has a ceiling; after any
 failure the plugin is dropped and the built-in Graph serves the rest of the
 session.
 
+### Fuel budget
+
+Plugins run on the UI thread, so the fuel per call (`Limits::fuel`, default
+250 million) is what bounds a freeze. wasmi charges about one unit per
+executed instruction. Measured on a desktop in release mode
+(`cargo test -p sigma-plugin-host --release -- --ignored --nocapture
+fuel_rate`): 87 million units/s for a bare branch loop, 165 million for a
+load/store/arithmetic loop. The Forma (Cortex-A9, 1 GHz) is taken as 8 to 10
+times slower (`docs/dev/perf.md`), so about 9 to 20 million units/s there;
+this is a scaling, not a device measurement. The busiest call of the bundled
+Graph plugin (a layout step on up to 1000 notes) uses 109 million units, so
+the default leaves about 2.3 times that. A runaway plugin therefore traps
+after about 1.5 to 3 s on a desktop and 12 to 28 s on the Forma. Getting that
+down to 1 to 2 s needs the Graph plugin to split its layout into steps of at
+most about 15 million units each, which is a change in the plugins
+repository.
+
 ## Pane plugins
 
 The side drawer (a panel beside the page, about 48% wide) holds up to three

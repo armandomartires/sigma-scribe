@@ -351,3 +351,37 @@ fn an_environment_without_logging_ignores_lines_and_reports_no_floor() {
     assert_eq!(p.call_raw(b"lignored").unwrap(), b"");
     assert_eq!(p.call_raw(b"f").unwrap(), 100i32.to_le_bytes());
 }
+
+/// Fuel-to-time measurement behind `Limits::default().fuel`; run with
+/// `cargo test -p sigma-plugin-host --release -- --ignored --nocapture fuel_rate`.
+#[test]
+#[ignore = "measurement"]
+fn fuel_rate() {
+    let loops = [
+        ("br only", "(loop $l (br $l))"),
+        (
+            "load/store/arith",
+            "(local $i i32)
+             (loop $l
+               (i32.store (i32.and (local.get $i) (i32.const 65532))
+                 (i32.add (i32.load (i32.and (local.get $i) (i32.const 65532))) (i32.const 3)))
+               (local.set $i (i32.add (local.get $i) (i32.const 1)))
+               (br $l))",
+        ),
+    ];
+    for (name, body) in loops {
+        let wat = module(&format!(
+            r#"(func (export "sigma_call") (param i32 i32) (result i64)
+                 {body} (i64.const 0))"#
+        ));
+        let limits = Limits {
+            fuel: 1_000_000_000,
+            ..Limits::default()
+        };
+        let mut p = plugin_with(&wat, &dir("rate"), limits).unwrap();
+        let t = std::time::Instant::now();
+        assert!(p.call_raw(b"").is_err());
+        let s = t.elapsed().as_secs_f64();
+        println!("{name}: {:.1} Mfuel/s", 1000.0 / s);
+    }
+}
