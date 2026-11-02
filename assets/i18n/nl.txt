@@ -184,6 +184,34 @@ None
 {n} of {m}
 = {n} van {m}
 
+# Search across all notes (v1.19)
+This note
+= Deze notitie
+
+All notes
+= Alle
+
+{n} matches in {m} notes
+= {n} treffers in {m} notities
+
+1 match in 1 note
+= 1 treffer in 1 notitie
+
+1 match in {n} notes
+= 1 treffer in {n} notities
+
+{n} matches in 1 note
+= {n} treffers in 1 notitie
+
+first {n} shown
+= eerste {n} getoond
+
+Type to search {n} notes
+= Typ om {n} notities te doorzoeken
+
+Searching…
+= Zoeken…
+
 – of {n}
 = – van {n}
 

@@ -184,6 +184,34 @@ None
 {n} of {m}
 = {n} av {m}
 
+# Search across all notes (v1.19)
+This note
+= Denna anteckning
+
+All notes
+= Alla
+
+{n} matches in {m} notes
+= {n} träffar i {m} anteckningar
+
+1 match in 1 note
+= 1 träff i 1 anteckning
+
+1 match in {n} notes
+= 1 träff i {n} anteckningar
+
+{n} matches in 1 note
+= {n} träffar i 1 anteckning
+
+first {n} shown
+= första {n} visas
+
+Type to search {n} notes
+= Skriv för att söka i {n} anteckningar
+
+Searching…
+= Söker…
+
 – of {n}
 = – av {n}
 
