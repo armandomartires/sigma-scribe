@@ -96,6 +96,8 @@ pub enum FilesHit {
     RenameOk,
     /// Drop the name being typed.
     RenameCancel,
+    /// A tap outside the field, its keys and its buttons (blur).
+    RenameBlur,
     /// Nothing that responds to a tap.
     Nothing,
 }
@@ -241,7 +243,7 @@ impl EditorScreen {
             return if l.base.title.contains(x, y) {
                 FilesHit::Nothing
             } else {
-                FilesHit::RenameOk
+                FilesHit::RenameBlur
             };
         }
         if l.close.inset(-self.files_px(4.0)).contains(x, y) {

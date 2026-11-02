@@ -2,6 +2,10 @@
 
 All notable changes to Σscribe. Versions are tagged after they pass on the Kobo Forma.
 
+## Unreleased
+- **A failed re-key keeps the saved key.** A password typed for a network that already has one is tried in a new entry in wpa_supplicant (which never hands a key back); the old entry is removed only once the new one has joined, so a wrong key leaves the saved one as it was, and the log says `wifi: re-key failed, the saved key is kept`. Tests in `crates/device/src/wifi/wpa.rs` (sprint 12.3).
+- **The Wi-Fi password field no longer submits on a tap outside it.** A tap outside the field, its keys and its buttons now cancels the password (the typed text is dropped and the Wi-Fi menu comes back); renaming a note or folder still confirms on such a tap. `Hit::RenameBlur` and `FilesHit::RenameBlur` tell blur from OK. Tests in `app/tests/wifi.rs` and `app/tests/emulator.rs` (sprint 12.4).
+
 ## 1.19.1 — 2026-11-02 (built, not yet installed on the Forma, not tagged)
 - **A log line per search.** With Logging on, each answered search writes one `search:` line: query length, notes read, hits and notes with hits, whether capped, how many skipped, and the time in ms; never the query itself. It is the number `docs/dev/perf.md` records from the Forma (sprint S22.1). `SearchResult` carries `scanned` and `elapsed_ms`. Test in `crates/core/src/search.rs`.
 
