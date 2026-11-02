@@ -158,6 +158,24 @@ fn rename_from_title_bar_keeps_edits_and_cancel_changes_nothing() {
 }
 
 #[test]
+fn a_tap_outside_the_rename_field_confirms_it() {
+    let dir = fresh("rename-blur");
+    let mut app = App::new(1440, 1920, &dir);
+    app.set_builtin_panes(true);
+    app.handle(Event::Key(HwKey::Char('Z')));
+    tap_on(&mut app, "Title");
+    for _ in 0..20 {
+        app.handle(Event::Key(HwKey::Backspace));
+    }
+    for c in "blurred".chars() {
+        app.handle(Event::Key(HwKey::Char(c)));
+    }
+    app.handle(Event::Tap { x: 720, y: 500 });
+    assert!(!app.is_renaming());
+    assert_eq!(app.current.as_str(), "blurred.md", "blur confirms a rename");
+}
+
+#[test]
 fn keyboard_defaults_to_full_and_compact_choice_is_remembered() {
     use sigma_core::keyboard::Layout;
     let dir = fresh("layout");

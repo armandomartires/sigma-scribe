@@ -123,6 +123,8 @@ pub enum Hit {
     RenameOk,
     /// Cancel of the rename field.
     RenameCancel,
+    /// A tap outside the rename field, its keys and its buttons (blur).
+    RenameBlur,
     /// Nothing that reacts to a tap.
     Nothing,
 }
@@ -1223,7 +1225,7 @@ impl EditorScreen {
             return if l.title.contains(x, y) {
                 Hit::Nothing
             } else {
-                Hit::RenameOk
+                Hit::RenameBlur
             };
         }
         if self.back_on && l.back_button.inset(-self.px(4.0)).contains(x, y) {
