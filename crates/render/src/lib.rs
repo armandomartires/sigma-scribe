@@ -4,6 +4,7 @@
 
 #![warn(missing_docs)]
 
+pub mod calendar;
 pub mod canvas;
 pub mod drawer;
 pub mod drawer_menu;
@@ -32,6 +33,7 @@ pub mod theme;
 pub mod typeface;
 pub mod wifi_menu;
 
+pub use calendar::CalendarModel;
 pub use canvas::{Canvas, Rect};
 pub use drawer::{DrawerHit, DrawerModel, Pane};
 pub use editor::{BarAction, EditorScreen, Hit, KbButton, PreviewModel, SelGeom, SelUi};

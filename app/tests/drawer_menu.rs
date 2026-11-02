@@ -66,15 +66,19 @@ fn rows_show_and_hide_panes_and_the_menu_stays_open() {
     r.tap_on("Contents");
     r.tap_on("To-dos");
     assert!(r.app.screen.drawer_menu, "still open after two rows");
-    assert_eq!(r.app.drawer, [true, true, false]);
+    assert_eq!(r.app.drawer, [true, true, false, false]);
     assert!(r.app.drawer_visible());
     r.tap_on("Contents");
-    assert_eq!(r.app.drawer, [false, true, false], "a second tap hides it");
+    assert_eq!(
+        r.app.drawer,
+        [false, true, false, false],
+        "a second tap hides it"
+    );
     r.tap_on("Panels");
     assert!(!r.app.screen.drawer_menu, "the button closes it");
     assert_eq!(
         r.app.drawer,
-        [false, true, false],
+        [false, true, false, false],
         "closing changes no pane"
     );
 }
@@ -164,15 +168,19 @@ fn in_preview_a_row_lays_the_page_out_beside_the_drawer() {
 }
 
 #[test]
-fn the_menu_lists_only_panes_on_offer_and_goes_with_the_last_one() {
+fn without_the_other_panes_the_calendar_keeps_the_button_and_is_the_only_menu_row() {
     let mut r = Rig::new("offer");
     r.tap_on("Panels");
     r.app.set_builtin_panes(false);
+    // The Calendar is built in: the button and menu stay, with that row only.
     assert!(
-        r.app.control_centre("Panels").is_none(),
-        "no pane plugin on: no drawer button"
+        r.app.control_centre("Panels").is_some(),
+        "the Calendar remains"
     );
-    assert!(!r.app.screen.drawer_menu, "and no menu");
+    assert!(r.app.control_centre("Calendar").is_some(), "Calendar row");
+    for gone in ["Contents", "To-dos", "Scratch"] {
+        assert!(r.app.control_centre(gone).is_none(), "{gone} row is gone");
+    }
 }
 
 #[test]

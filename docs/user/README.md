@@ -5,6 +5,7 @@ For people who use Σscribe on a Kobo. Developer documentation is in [../dev/REA
 | Page | What it covers |
 |---|---|
 | [getting-started.md](getting-started.md) | A tour: opening the app, the title-bar buttons, files, preview, settings, quitting |
+| [journal.md](journal.md) | The journal: the Calendar pane, a note for each day, template, folder layout, UTC offset |
 | [handwriting.md](handwriting.md) | The Write panel: modes, the key block, the guide line, word mode, training, gestures |
 | [install.md](install.md) | Install, update, uninstall, getting notes off |
 | [usb-keyboard.md](usb-keyboard.md) | USB keyboard and mouse: hardware, use, export |

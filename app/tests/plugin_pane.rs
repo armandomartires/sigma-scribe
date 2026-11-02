@@ -121,9 +121,10 @@ fn with_the_pane_plugins_installed_each_pane_has_its_row_and_is_drawn_by_its_plu
 }
 
 #[test]
-fn without_the_plugins_the_pane_icons_are_gone_and_the_rest_close_up() {
+fn without_the_plugins_only_the_panels_button_is_left_and_the_rest_close_up() {
     let mut r = Rig::new("none", false, None);
-    assert!(r.app.control_centre("Panels").is_none(), "no drawer button");
+    // The built-in Calendar keeps the drawer button; no plugin pane row shows.
+    assert!(r.app.control_centre("Panels").is_some(), "Calendar stays");
     for (_, icon) in PANES {
         assert!(r.app.control_centre(icon).is_none(), "{icon}");
         assert!(r.app.touch_targets().iter().all(|(n, _)| n != icon));

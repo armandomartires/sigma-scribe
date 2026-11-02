@@ -1194,3 +1194,134 @@ Joined, but the network gave no address
 
 Wi-Fi did not answer
 = El Wi-Fi no responde
+
+# Journal (v1.5x)
+Journal
+= Diario
+
+Folder layout
+= Estructura de carpetas
+
+Week starts on
+= La semana empieza el
+
+UTC offset
+= Desfase UTC
+
+How journal notes are filed; changing it moves them
+= Cómo se archivan las notas del diario; cambiarlo las mueve
+
+The first day of a week in the journal calendar
+= Primer día de la semana en el calendario del diario
+
+Hours from UTC; decides which day is today
+= Horas respecto a UTC; decide qué día es hoy
+
+One folder
+= Una carpeta
+
+Year and month
+= Año y mes
+
+Year and week
+= Año y semana
+
+Monday
+= Lunes
+
+Sunday
+= Domingo
+
+Journal: {n} moved
+= Diario: {n} movidas
+
+{n} skipped
+= {n} omitidas
+
+{n} failed
+= {n} fallidas
+
+# Journal calendar
+January
+= enero
+
+February
+= febrero
+
+March
+= marzo
+
+April
+= abril
+
+May
+= mayo
+
+June
+= junio
+
+July
+= julio
+
+August
+= agosto
+
+September
+= septiembre
+
+October
+= octubre
+
+November
+= noviembre
+
+December
+= diciembre
+
+Tuesday
+= Martes
+
+Wednesday
+= Miércoles
+
+Thursday
+= Jueves
+
+Friday
+= Viernes
+
+Saturday
+= Sábado
+
+Mo
+= Lu
+
+Tu
+= Ma
+
+We
+= Mi
+
+Th
+= Ju
+
+Fr
+= Vi
+
+Sa
+= Sá
+
+Su
+= Do
+
+Calendar
+= Calendario
+
+Today
+= Hoy
+
+Previous
+= Anterior
+
+Clock not set
+= Reloj sin ajustar

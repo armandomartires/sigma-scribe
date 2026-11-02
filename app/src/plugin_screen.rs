@@ -204,7 +204,7 @@ impl App {
                     }
                     // A plugin that failed earlier gets another chance.
                     self.plugin_failed = false;
-                    self.pane_failed = [false; 3];
+                    self.pane_failed = [false; 4];
                 }
                 Err(e) => sigma_core::error!("plugin", "{id}: {e}"),
             }

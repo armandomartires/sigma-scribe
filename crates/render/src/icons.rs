@@ -22,6 +22,8 @@ pub enum Icon {
     Todos,
     /// The Contents pane toggle.
     Contents,
+    /// The Calendar pane toggle.
+    Calendar,
     /// The Graph sheet button.
     Graph,
     /// The Help sheet button.
@@ -95,6 +97,7 @@ impl Icon {
             Self::Scratch => "sticky-note",
             Self::Todos => "list-todo",
             Self::Contents => "table-of-contents",
+            Self::Calendar => "calendar",
             Self::Graph => "share-2",
             Self::Help => "circle-help",
             Self::Back => "arrow-left",
@@ -212,6 +215,7 @@ mod tests {
             Icon::Scratch,
             Icon::Todos,
             Icon::Contents,
+            Icon::Calendar,
             Icon::Graph,
             Icon::Help,
             Icon::Back,

@@ -1194,3 +1194,134 @@ Joined, but the network gave no address
 
 Wi-Fi did not answer
 = Wi-Fi svarar inte
+
+# Journal (v1.5x)
+Journal
+= Dagbok
+
+Folder layout
+= Mappindelning
+
+Week starts on
+= Veckan börjar på
+
+UTC offset
+= UTC-förskjutning
+
+How journal notes are filed; changing it moves them
+= Hur dagboksanteckningar sparas; en ändring flyttar dem
+
+The first day of a week in the journal calendar
+= Veckans första dag i dagbokskalendern
+
+Hours from UTC; decides which day is today
+= Timmar från UTC; avgör vilken dag det är idag
+
+One folder
+= En mapp
+
+Year and month
+= År och månad
+
+Year and week
+= År och vecka
+
+Monday
+= Måndag
+
+Sunday
+= Söndag
+
+Journal: {n} moved
+= Dagbok: {n} flyttade
+
+{n} skipped
+= {n} hoppades över
+
+{n} failed
+= {n} misslyckades
+
+# Journal calendar
+January
+= januari
+
+February
+= februari
+
+March
+= mars
+
+April
+= april
+
+May
+= maj
+
+June
+= juni
+
+July
+= juli
+
+August
+= augusti
+
+September
+= september
+
+October
+= oktober
+
+November
+= november
+
+December
+= december
+
+Tuesday
+= Tisdag
+
+Wednesday
+= Onsdag
+
+Thursday
+= Torsdag
+
+Friday
+= Fredag
+
+Saturday
+= Lördag
+
+Mo
+= Må
+
+Tu
+= Ti
+
+We
+= On
+
+Th
+= To
+
+Fr
+= Fr
+
+Sa
+= Lö
+
+Su
+= Sö
+
+Calendar
+= Kalender
+
+Today
+= Idag
+
+Previous
+= Föregående
+
+Clock not set
+= Klockan är inte ställd

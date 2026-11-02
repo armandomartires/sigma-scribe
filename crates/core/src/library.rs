@@ -270,6 +270,19 @@ fn prune(bin: &Path) {
     }
 }
 
+/// What [`Library::move_many`] did.
+#[derive(Debug, Default)]
+pub struct Moved {
+    /// Notes moved: `(from, to)`.
+    pub done: Vec<(NotePath, NotePath)>,
+    /// Moves that did not happen, with why.
+    pub failed: Vec<(NotePath, NotePath, io::Error)>,
+    /// Moves in `done` whose ink folder could not follow the note.
+    pub ink_errors: Vec<(NotePath, NotePath, io::Error)>,
+    /// The `[[wiki]]` links could not all be rewritten.
+    pub relink_error: Option<io::Error>,
+}
+
 /// The note library: a root folder on disk and the operations on the notes
 /// and folders under it.
 #[derive(Clone, Debug)]
@@ -519,6 +532,49 @@ impl Library {
         Ok(target)
     }
 
+    /// Moves several notes at once, each to a full target path (its folder
+    /// is created if missing). Ink goes along as in [`Library::move_to`], but
+    /// `[[wiki]]` links are rewritten once at the end, for all the moves that
+    /// happened. A move that fails (a missing source, the scratch file or a
+    /// folder, a taken target, a filesystem error) is reported in
+    /// [`Moved::failed`] and the rest carry on; nothing is overwritten.
+    #[must_use]
+    pub fn move_many(&self, moves: &[(NotePath, NotePath)]) -> Moved {
+        let before = self.all_notes().unwrap_or_default();
+        let mut out = Moved::default();
+        for (from, to) in moves {
+            match self.move_one(from, to) {
+                Ok(carry) => {
+                    out.done.push((from.clone(), to.clone()));
+                    if let Some(e) = carry {
+                        out.ink_errors.push((from.clone(), to.clone(), e));
+                    }
+                }
+                Err(e) => out.failed.push((from.clone(), to.clone(), e)),
+            }
+        }
+        out.relink_error = self.relink_pairs(&before, &out.done).err();
+        out
+    }
+
+    /// `Ok(None)`: moved. `Ok(Some(e))`: the note moved but its ink could not
+    /// follow. `Err(e)`: nothing moved.
+    fn move_one(&self, from: &NotePath, to: &NotePath) -> io::Result<Option<io::Error>> {
+        self.guard(from)?;
+        if self.fs_path(from).is_dir() || to.is_root() || to.as_str() == SCRATCH {
+            return Err(invalid(format!("cannot move {from} to {to}")));
+        }
+        if self.exists(to) {
+            return Err(io::Error::new(
+                io::ErrorKind::AlreadyExists,
+                format!("{to} exists"),
+            ));
+        }
+        fs::create_dir_all(self.fs_path(&to.parent()))?;
+        fs::rename(self.fs_path(from), self.fs_path(to))?;
+        Ok(crate::ink::carry(&self.fs_path(from), &self.fs_path(to)).err())
+    }
+
     /// Deletes a note or a folder with everything in it. Refuses to delete
     /// the last real note.
     ///
@@ -743,6 +799,11 @@ impl Library {
                     .map(|m| (n.clone(), m))
             })
             .collect();
+        self.relink_pairs(before, &moved)
+    }
+
+    /// Rewrites `[[wiki]]` links for every `(old, new)` note pair at once.
+    fn relink_pairs(&self, before: &[NotePath], moved: &[(NotePath, NotePath)]) -> io::Result<()> {
         if moved.is_empty() {
             return Ok(());
         }
@@ -755,7 +816,7 @@ impl Library {
             let Ok(text) = fs::read_to_string(&path) else {
                 continue;
             };
-            if let Some(fixed) = crate::links::rewrite(&text, before, &moved) {
+            if let Some(fixed) = crate::links::rewrite(&text, before, moved) {
                 crate::store::write_atomic(&path, &fixed)?;
             }
         }
@@ -1334,5 +1395,86 @@ mod tests {
             names(&l, &NotePath::root()),
             ["drafts", "field-notes.md", "scratch.txt"]
         );
+    }
+
+    fn put(l: &Library, p: &str, text: &str) {
+        let path = l.root().join(p);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, text).unwrap();
+    }
+
+    fn np(s: &str) -> NotePath {
+        NotePath::parse(s).unwrap()
+    }
+
+    #[test]
+    fn move_many_relinks_everything_once() {
+        let l = lib("many");
+        put(&l, "a.md", "x");
+        put(&l, "b.md", "x");
+        put(&l, "f/c.md", "x");
+        put(&l, "hub.md", "[[a]] [[b]] [[f/c]] [[f/c.md#top|see]]\n");
+        let m = l.move_many(&[
+            (np("a.md"), np("n/a.md")),
+            (np("b.md"), np("m/k/b2.md")),
+            (np("f/c.md"), np("c.md")),
+        ]);
+        assert_eq!(m.done.len(), 3);
+        assert!(m.failed.is_empty() && m.ink_errors.is_empty() && m.relink_error.is_none());
+        assert!(l.root().join("n/a.md").exists());
+        assert!(l.root().join("m/k/b2.md").exists());
+        assert!(l.root().join("c.md").exists());
+        // Bare names follow a rename; a link containing a slash is rewritten
+        // to the full new path, which for a note at the root is just its name.
+        assert_eq!(
+            fs::read_to_string(l.root().join("hub.md")).unwrap(),
+            "[[a]] [[b2]] [[c]] [[c.md#top|see]]\n"
+        );
+    }
+
+    #[test]
+    fn move_many_carries_ink_and_relinks_the_scratch_pad() {
+        let l = lib("many-ink");
+        put(&l, "a.md", "![ink](.ink/a/ink-001.svg)\n");
+        put(&l, ".ink/a/ink-001.svg", "<svg/>");
+        put(&l, "f/c.md", "x");
+        put(&l, SCRATCH, "todo [[f/c]]\n");
+        let m = l.move_many(&[(np("a.md"), np("n/a.md")), (np("f/c.md"), np("g/c.md"))]);
+        assert_eq!(m.done.len(), 2);
+        assert!(m.failed.is_empty() && m.ink_errors.is_empty());
+        assert!(l.root().join("n/.ink/a/ink-001.svg").exists());
+        assert!(!l.root().join(".ink").exists());
+        assert_eq!(
+            fs::read_to_string(l.root().join(SCRATCH)).unwrap(),
+            "todo [[g/c]]\n"
+        );
+    }
+
+    #[test]
+    fn move_many_refuses_folders_scratch_and_taken_targets() {
+        let l = lib("many-refuse");
+        put(&l, "a.md", "mine");
+        put(&l, "taken.md", "theirs");
+        put(&l, "d/x.md", "x");
+        put(&l, SCRATCH, "s");
+        put(&l, "ok.md", "ok");
+        let m = l.move_many(&[
+            (np("d"), np("e")),
+            (np(SCRATCH), np("s.md")),
+            (np("ok.md"), np(SCRATCH)),
+            (np("a.md"), np("taken.md")),
+            (np("ok.md"), np("moved.md")),
+        ]);
+        // The failures do not stop the last move.
+        assert_eq!(m.done, vec![(np("ok.md"), np("moved.md"))]);
+        assert_eq!(m.failed.len(), 4);
+        assert_eq!(m.failed[3].2.kind(), io::ErrorKind::AlreadyExists);
+        assert_eq!(
+            fs::read_to_string(l.root().join("taken.md")).unwrap(),
+            "theirs"
+        );
+        assert_eq!(fs::read_to_string(l.root().join("a.md")).unwrap(), "mine");
+        assert!(l.root().join("d/x.md").exists());
+        assert_eq!(fs::read_to_string(l.root().join(SCRATCH)).unwrap(), "s");
     }
 }

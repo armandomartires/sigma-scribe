@@ -51,6 +51,8 @@ const ICONS: &[&str] = &[
     // The front-light button: on, and dim while the light is off.
     "sun",
     "sun-dim",
+    // The journal calendar pane.
+    "calendar",
 ];
 
 /// A touch target is 44 brief units; the glyph is half of it.

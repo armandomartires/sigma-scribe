@@ -1194,3 +1194,134 @@ Joined, but the network gave no address
 
 Wi-Fi did not answer
 = Wi-Fi svarer ikke
+
+# Journal (v1.5x)
+Journal
+= Dagbog
+
+Folder layout
+= Mappeopdeling
+
+Week starts on
+= Ugen starter på
+
+UTC offset
+= UTC-forskydning
+
+How journal notes are filed; changing it moves them
+= Hvordan dagbogsnoter arkiveres; en ændring flytter dem
+
+The first day of a week in the journal calendar
+= Ugens første dag i dagbogskalenderen
+
+Hours from UTC; decides which day is today
+= Timer fra UTC; afgør hvilken dag det er i dag
+
+One folder
+= Én mappe
+
+Year and month
+= År og måned
+
+Year and week
+= År og uge
+
+Monday
+= Mandag
+
+Sunday
+= Søndag
+
+Journal: {n} moved
+= Dagbog: {n} flyttet
+
+{n} skipped
+= {n} sprunget over
+
+{n} failed
+= {n} mislykkedes
+
+# Journal calendar
+January
+= januar
+
+February
+= februar
+
+March
+= marts
+
+April
+= april
+
+May
+= maj
+
+June
+= juni
+
+July
+= juli
+
+August
+= august
+
+September
+= september
+
+October
+= oktober
+
+November
+= november
+
+December
+= december
+
+Tuesday
+= Tirsdag
+
+Wednesday
+= Onsdag
+
+Thursday
+= Torsdag
+
+Friday
+= Fredag
+
+Saturday
+= Lørdag
+
+Mo
+= Ma
+
+Tu
+= Ti
+
+We
+= On
+
+Th
+= To
+
+Fr
+= Fr
+
+Sa
+= Lø
+
+Su
+= Sø
+
+Calendar
+= Kalender
+
+Today
+= I dag
+
+Previous
+= Forrige
+
+Clock not set
+= Uret er ikke stillet

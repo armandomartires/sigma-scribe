@@ -1,15 +1,17 @@
 //! The side drawer (brief §5): one panel on the left or right of the page,
 //! about 48% wide and at most 320 brief px. It covers the page, does not
-//! push it, and does not animate. Up to three panes, top to bottom:
-//! Contents, To-dos, Scratch; open panes share the height equally with a
+//! push it, and does not animate. Up to four panes, top to bottom:
+//! Contents, To-dos, Scratch, Calendar; open panes share the height equally with a
 //! 1 px ink rule between them.
 
+use crate::calendar::{CalendarLayout, CalendarModel};
 use crate::canvas::{Canvas, Rect};
 use crate::editor::{EditorScreen, Layout};
 use crate::fonts::{Face, Measure};
 use crate::graphmap::fill_round;
 use crate::i18n::tr;
 use crate::theme::Theme;
+use sigma_core::date::Date;
 use sigma_core::outline::{Filter, Heading, TodoItem};
 use sigma_core::settings::Side;
 use sigma_core::wrap::{caret_cell, offset_at, wrap, VisualLine};
@@ -49,6 +51,8 @@ pub enum Pane {
     Todos,
     /// The scratch buffer: a side note kept off the page.
     Scratch,
+    /// The journal calendar (built in; a plugin cannot draw it).
+    Calendar,
 }
 
 impl Pane {
@@ -59,6 +63,7 @@ impl Pane {
             Self::Contents => "Contents",
             Self::Todos => "To-dos",
             Self::Scratch => "Scratch",
+            Self::Calendar => "Calendar",
         }
     }
 }
@@ -80,11 +85,14 @@ pub struct DrawerModel<'a> {
     pub todos: Option<(&'a [TodoItem], Filter)>,
     /// The scratch buffer and whether it has the keyboard.
     pub scratch: Option<(&'a Buffer, bool)>,
-    /// Panes drawn by a plugin, indexed Contents, To-dos, Scratch: the
+    /// Panes drawn by a plugin, indexed Contents, To-dos, Scratch (the
+    /// Calendar, last, is never a plugin's and is always `None`): the
     /// plugin's latest frame takes over the pane (header included) and the
     /// host keeps the drawer's background, edge and rules. A Scratch frame
     /// places the text field the host still draws and edits.
-    pub plugin: [Option<&'a Frame>; 3],
+    pub plugin: [Option<&'a Frame>; 4],
+    /// The journal calendar; `Some` opens the Calendar pane.
+    pub calendar: Option<CalendarModel<'a>>,
     /// Colours to draw with.
     pub theme: Theme,
 }
@@ -97,6 +105,7 @@ impl Pane {
             Self::Contents => 0,
             Self::Todos => 1,
             Self::Scratch => 2,
+            Self::Calendar => 3,
         }
     }
 }
@@ -114,6 +123,9 @@ impl DrawerModel<'_> {
         }
         if self.scratch.is_some() {
             v.push(Pane::Scratch);
+        }
+        if self.calendar.is_some() {
+            v.push(Pane::Calendar);
         }
         v
     }
@@ -138,6 +150,8 @@ pub struct DrawerLayout {
     pub scratch: Option<Rect>,
     /// Panes a plugin draws, with their whole rectangle (header included).
     pub plugin: Vec<(Pane, Rect)>,
+    /// The Calendar pane's parts.
+    pub calendar: Option<CalendarLayout>,
 }
 
 /// What a tap in the drawer landed on.
@@ -156,6 +170,18 @@ pub enum DrawerHit {
     /// A tap inside a pane a plugin draws (not in its Scratch field): the
     /// plugin decides what it means.
     Plugin(Pane),
+    /// A day of the Calendar.
+    CalDay(Date),
+    /// The Calendar's previous-month button.
+    CalPrevMonth,
+    /// The Calendar's next-month button.
+    CalNextMonth,
+    /// The Calendar's Today button.
+    CalToday,
+    /// The Calendar's previous-entry button.
+    CalPrevEntry,
+    /// The Calendar's next-entry button.
+    CalNextEntry,
     /// Inside the drawer but on nothing (swallowed, not the page's).
     Inside,
     /// Outside the drawer, or no pane is open.
@@ -163,7 +189,7 @@ pub enum DrawerHit {
 }
 
 impl EditorScreen {
-    fn d(&self, v: f32) -> i32 {
+    pub(crate) fn d(&self, v: f32) -> i32 {
         self.scale().px(v)
     }
 
@@ -308,10 +334,10 @@ impl EditorScreen {
         &self,
         base: &Layout,
         side: Side,
-        open: [bool; 3],
+        open: [bool; 4],
     ) -> Vec<(Pane, Rect)> {
         let rect = self.drawer_rect(base, side);
-        let panes: Vec<Pane> = [Pane::Contents, Pane::Todos, Pane::Scratch]
+        let panes: Vec<Pane> = [Pane::Contents, Pane::Todos, Pane::Scratch, Pane::Calendar]
             .into_iter()
             .filter(|p| open[p.index()])
             .collect();
@@ -405,6 +431,12 @@ impl EditorScreen {
                     l.hidden[1] = shown.len().saturating_sub(fit);
                 }
                 Pane::Scratch => l.scratch = Some(body),
+                Pane::Calendar => {
+                    if let Some(cm) = &m.calendar {
+                        let slice = Rect::new(rect.x, y0, rect.w, y1 - y0);
+                        l.calendar = Some(self.calendar_layout(slice, cm));
+                    }
+                }
             }
         }
         l
@@ -461,6 +493,13 @@ impl EditorScreen {
                 });
                 return DrawerHit::Scratch(at);
             }
+        }
+        if let Some(h) = l
+            .calendar
+            .as_ref()
+            .and_then(|cl| self.calendar_hit(cl, x, y))
+        {
+            return h;
         }
         if let Some((p, _)) = l.plugin.iter().find(|(_, r)| r.contains(x, y)) {
             return DrawerHit::Plugin(*p);
@@ -519,15 +558,18 @@ impl EditorScreen {
                     continue;
                 }
             } else {
-                self.fonts.draw(
-                    c,
-                    Face::AtkinsonBold,
-                    ui,
-                    (r.x + self.d(12.0)) as f32,
-                    base_of(*header, Face::AtkinsonBold, ui),
-                    &tr(pane.title()),
-                    t.ink,
-                );
+                // The Calendar's header is its month row.
+                if *pane != Pane::Calendar {
+                    self.fonts.draw(
+                        c,
+                        Face::AtkinsonBold,
+                        ui,
+                        (r.x + self.d(12.0)) as f32,
+                        base_of(*header, Face::AtkinsonBold, ui),
+                        &tr(pane.title()),
+                        t.ink,
+                    );
+                }
                 c.fill(
                     Rect::new(
                         r.x + self.d(12.0),
@@ -648,6 +690,11 @@ impl EditorScreen {
                         self.more_line(c, *body, l.hidden[1], t);
                     }
                 }
+                Pane::Calendar => {
+                    if let (Some(cl), Some(cm)) = (&l.calendar, &m.calendar) {
+                        self.draw_calendar(c, cl, cm, t);
+                    }
+                }
                 Pane::Scratch => {
                     let Some((b, focused)) = m.scratch else {
                         continue;
@@ -719,6 +766,7 @@ impl EditorScreen {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sigma_core::date::WeekStart;
     use sigma_core::outline::{headings, Todo};
     use sigma_core::{Keyboard, NotePath};
 
@@ -788,14 +836,23 @@ mod tests {
             let hs = headings("# A\n## B\n### C");
             let it = items();
             let b = Buffer::new("note");
-            for mask in 1..8u8 {
+            let marked: std::collections::BTreeSet<Date> =
+                [Date::new(2026, 11, 2).unwrap()].into_iter().collect();
+            for mask in 1..16u8 {
                 for side in [Side::Left, Side::Right] {
                     let m = DrawerModel {
-                        plugin: [None; 3],
+                        plugin: [None; 4],
                         side,
                         contents: (mask & 1 != 0).then_some(hs.as_slice()),
                         todos: (mask & 2 != 0).then_some((it.as_slice(), Filter::All)),
                         scratch: (mask & 4 != 0).then_some((&b, true)),
+                        calendar: (mask & 8 != 0).then_some(CalendarModel {
+                            month: Date::new(2026, 11, 1).unwrap(),
+                            today: Date::new(2026, 11, 2),
+                            marked: &marked,
+                            open: Date::new(2026, 11, 2),
+                            week_start: WeekStart::Monday,
+                        }),
                         theme: Theme::DAY,
                     };
                     let l = e.drawer_layout(&base, &m);
@@ -849,7 +906,8 @@ mod tests {
         let base = e.layout(true, &Keyboard::default());
         let it = items();
         let m = |f| DrawerModel {
-            plugin: [None; 3],
+            plugin: [None; 4],
+            calendar: None,
             side: Side::Right,
             contents: None,
             todos: Some((it.as_slice(), f)),
@@ -873,7 +931,8 @@ mod tests {
         let base = e.layout(true, &Keyboard::default());
         let b = Buffer::new("one\ntwo");
         let m = DrawerModel {
-            plugin: [None; 3],
+            plugin: [None; 4],
+            calendar: None,
             side: Side::Left,
             contents: None,
             todos: None,

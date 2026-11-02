@@ -1,0 +1,55 @@
+# v1.17: the Calendar pane in the side drawer. A tap on a day opens that
+# day's note under journal/, creating it with a dated heading; Today and
+# Previous / Next step between notes; Settings -> Journal -> Folder layout
+# refiles the notes.
+# Run with an empty notes folder: `SIGMA_NOTES=$(mktemp -d) scripts/sim.sh
+# --headless tests/emu/v1.17-journal.script docs/screenshots/v1.17`.
+today 2026-11-02
+open-fixture tests/emu/fixtures/markdown-tour.md
+tap-on Panels
+tap-on Calendar
+shot v1.17-journal-menu
+tap-on Panels
+shot v1.17-journal-calendar
+# A day with no note yet: tapping it creates the note and opens it.
+tap-on Day:2026-11-02
+expect-file journal/2026-11-02.md
+expect-file-contains journal/2026-11-02.md|# Monday, 2 November 2026
+expect-open journal/2026-11-02.md
+shot v1.17-journal-today
+# Notes on other days, then walk between them.
+tap-on Day:2026-11-05
+expect-file journal/2026-11-05.md
+expect-file-contains journal/2026-11-05.md|# Thursday, 5 November 2026
+tap-on Day:2026-11-12
+expect-file-contains journal/2026-11-12.md|# Thursday, 12 November 2026
+shot v1.17-journal-entries
+tap-on CalPrevEntry
+expect-open journal/2026-11-05.md
+tap-on CalPrevEntry
+expect-open journal/2026-11-02.md
+tap-on CalNextEntry
+expect-open journal/2026-11-05.md
+# Another month, and back to today.
+tap-on CalPrevMonth
+shot v1.17-journal-october
+tap-on CalNextMonth
+tap-on CalNextMonth
+tap-on CalToday
+expect-open journal/2026-11-02.md
+# Tapping a day that has a note opens it without touching it.
+tap-on Day:2026-11-05
+expect-open journal/2026-11-05.md
+expect-file-contains journal/2026-11-05.md|# Thursday, 5 November 2026
+# Settings -> Journal: the notes follow the layout.
+tap-on Options
+tap-on Folder layout/Year and week
+expect-file journal/2026/W45/2026-11-02.md
+expect-file journal/2026/W45/2026-11-05.md
+expect-no-file journal/2026-11-02.md
+shot v1.17-journal-layout-week
+tap-on Folder layout/One folder
+expect-file journal/2026-11-02.md
+expect-no-file journal/2026/W45/2026-11-02.md
+tap-on Close
+shot v1.17-journal-back

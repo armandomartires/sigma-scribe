@@ -171,7 +171,7 @@ impl App {
                 sigma_core::info!("plugin", "{id}: installed {v}");
                 self.repo_note(format!("{} {v} installed", entry.manifest.name));
                 self.plugin_failed = false;
-                self.pane_failed = [false; 3];
+                self.pane_failed = [false; 4];
             }
             Err(e) => {
                 sigma_core::warn!("plugin", "{id}: install failed: {e}");
