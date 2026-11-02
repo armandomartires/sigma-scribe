@@ -45,10 +45,40 @@ impl App {
         }
     }
 
+    /// After `from` was renamed or moved to `to`: the open note and every
+    /// Back entry at or under `from` follow it, so Back finds the note
+    /// where it went, not where it was.
+    pub(crate) fn remap_history(&mut self, from: &NotePath, to: &NotePath) {
+        if let Some(p) = moved_path(&self.current, from, to) {
+            self.current = p;
+        }
+        for h in &mut self.history {
+            if let Some(p) = moved_path(&h.note, from, to) {
+                h.note = p;
+            }
+        }
+    }
+
+    /// Drops Back entries whose note is gone (deleted, or moved where
+    /// [`App::remap_history`] did not follow). Reopened, such an entry
+    /// would be an empty note and a keystroke would recreate the file.
+    pub(crate) fn prune_history(&mut self) {
+        let lib = &self.library;
+        let cur = &self.current;
+        self.history
+            .retain(|h| h.note == *cur || lib.exists(&h.note));
+    }
+
     /// Back (v1.0.2): the previous note, mode and position. Sheets and the
-    /// find bar close. `None` when the history is empty.
+    /// find bar close. Entries whose note no longer exists are skipped.
+    /// `None` when no entry is left.
     pub fn go_back(&mut self) -> Option<Refresh> {
-        let e = self.history.pop()?;
+        let e = loop {
+            let e = self.history.pop()?;
+            if e.note == self.current || self.library.exists(&e.note) {
+                break e;
+            }
+        };
         self.files = None;
         self.close_graph();
         self.help = None;
@@ -72,10 +102,19 @@ impl App {
     }
 
     /// A tapped `[[wiki]]` link: an existing note opens in preview; a
-    /// missing one is created (empty) and opens in write mode.
+    /// missing one is created (empty) and opens in write mode. A
+    /// `#heading` part is ignored: the note opens at its top (S22-D5); a
+    /// bare `[[#heading]]` is this note, shown from its top.
     pub fn follow_link(&mut self, target: &str) -> Option<Refresh> {
         let notes = self.library.all_notes().unwrap_or_default();
         self.push_history();
+        if links::note_part(target).is_empty() {
+            self.exit_preview();
+            self.buffer.set_caret(0);
+            self.screen.scroll = 0;
+            self.enter_preview();
+            return Some(Refresh::Full);
+        }
         if let Some(p) = links::resolve(target, &notes).cloned() {
             self.exit_preview();
             self.open(&p);
@@ -87,6 +126,24 @@ impl App {
         self.exit_preview();
         self.open(&p);
         Some(Refresh::Full)
+    }
+}
+
+/// Where `p` is after `from` became `to`: `to` itself, or the same place
+/// under it when `p` is inside the folder `from`; `None` when `p` did not
+/// move.
+fn moved_path(p: &NotePath, from: &NotePath, to: &NotePath) -> Option<NotePath> {
+    if p == from {
+        Some(to.clone())
+    } else if p.within(from) && !from.is_root() {
+        NotePath::parse(&format!(
+            "{}{}",
+            to.as_str(),
+            &p.as_str()[from.as_str().len()..]
+        ))
+        .ok()
+    } else {
+        None
     }
 }
 
