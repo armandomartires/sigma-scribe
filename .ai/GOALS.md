@@ -142,12 +142,12 @@ Built into the app, not a plugin (decided 2026-11-02). Plan: `~/.claude/plans/le
 
 ## Sprint 10 — Three fixes and Search across all notes
 Goal: Fix the three defects the 2026-11-02 review found, then search the whole library from the Find bar
-Status: S22.0 built 2026-11-02 on `fixes-s22` (version 1.18.1, agreed with the user; a bare `[[#heading]]` is the current note), PR open, Forma pass to do; S22.1 not started (version open). Sprint `.ai/sprints/S22-fixes-and-search.md`, tasks `.ai/tasks/S22-tasks.md`, handover `.ai/handover-s22-2026-11-02.md`. Branches `fixes-s22` then `search-all-notes`.
-- [?] S22.0 `[[note#heading]]` links open the note instead of creating `note#heading.md`
+Status: S22.0 built 2026-11-02 on `fixes-s22` (version 1.18.1, agreed with the user; a bare `[[#heading]]` is the current note), PR #111 open; Forma pass 2026-11-02: the user tried Ru Ctrl+C, a `[[note#h]]` tap and rename-then-Back, all fine; merge to do; S22.1 not started (version open). Sprint `.ai/sprints/S22-fixes-and-search.md`, tasks `.ai/tasks/S22-tasks.md`, handover `.ai/handover-s22-2026-11-02.md`. Branches `fixes-s22` then `search-all-notes`.
+- [x] S22.0 `[[note#heading]]` links open the note instead of creating `note#heading.md`
   `links.rs:37` `resolve`, `links.rs:142` `new_note_place` and the preview's `known` set (`app/src/preview.rs:33`) strip `#…` like `rewrite` already does; tests for `resolve` and a preview tap. Task S22-T01.
-- [?] S22.0 Ctrl shortcuts work on the non-Latin on-screen boards
+- [x] S22.0 Ctrl shortcuts work on the non-Latin on-screen boards
   `keyboard.rs:726` goes through `KeyLayout::shortcut_char` like the USB path; tests on Ru (Ctrl+с copies, Ctrl+я undoes), Ar, Ko. Task S22-T02.
-- [?] S22.0 Back after a rename, move or delete never reopens a phantom note
+- [x] S22.0 Back after a rename, move or delete never reopens a phantom note
   History remapped on rename and move (`files.rs:423-461`), pruned on delete; `go_back` skips missing notes; the Journal reorganise code in `settings.rs:229` shares the helper. Tests in `app/tests/history.rs`. Task S22-T03.
 - [?] S22.0 Changelog, checks, PR, Forma pass
   Task S22-T04.
