@@ -125,7 +125,7 @@ These describe how the code is already written. Keep new code consistent.
 **Logging.**
 - Use the `sigma_core` macros (`debug!`, `info!`, `warning!`, `error!`,
   `critical!`) with a target such as `"app"` or `"usb"`. See
-  `docs/user/logging.md` (and `docs/dev/plugin-api.md` for plugin authors).
+  `docs/user/12-troubleshooting/the-log-file.md` (and `docs/dev/plugin-api.md` for plugin authors).
 - Do not log note text or what the reader types.
 - `println!` and `eprintln!` belong only in tools, build scripts and
   `sigma-emu`.

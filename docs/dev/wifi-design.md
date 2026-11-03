@@ -1,6 +1,6 @@
 # Wi-Fi design (the title-bar button)
 
-How the button is used is in [../user/wifi.md](../user/wifi.md).
+How the button is used is in [../user/10-wifi-and-sync/join-a-network.md](../user/10-wifi-and-sync/join-a-network.md).
 
 Status: written and tested on the desktop against a fake `wpa_supplicant`
 and a pretend radio. **Not yet tried on a Forma.** §6 lists what the first
@@ -178,5 +178,5 @@ supplicant's `STATUS` (the app falls back to `ifconfig`), BusyBox's `killall
 
 - **Pretend radio.** The button shows only when the app has a radio: the Kobo build always does, the desktop window gets a pretend one, the emulator only after `wifi-demo`.
 - **Syncthing follows the radio** is logged as `wifi: off: Syncthing stopped` and `wifi: on: Syncthing started`.
-- **Log lines** (INFO): `radio on|off` and `interface …, module …` at start, `on`, `off`, `joining <name>`, `joined <name>`, `not connected`, `scan: <n> networks`, `off: Syncthing stopped`, `on: Syncthing started`, and the `wifi:` lines of `wifi.sh` (the driver and supplicant steps). A failure is a WARNING (`wifi: failed: …`). Network names are logged; never a password, a passphrase or an IP address. The log file itself is described in [../user/logging.md](../user/logging.md).
+- **Log lines** (INFO): `radio on|off` and `interface …, module …` at start, `on`, `off`, `joining <name>`, `joined <name>`, `not connected`, `scan: <n> networks`, `off: Syncthing stopped`, `on: Syncthing started`, and the `wifi:` lines of `wifi.sh` (the driver and supplicant steps). A failure is a WARNING (`wifi: failed: …`). Network names are logged; never a password, a passphrase or an IP address. The log file itself is described in [../user/12-troubleshooting/the-log-file.md](../user/12-troubleshooting/the-log-file.md).
 - **Log folder on a desktop.** `SIGMA_LOG_DIR` overrides the log folder, and `target/emu-log` is the desktop and emulator default.

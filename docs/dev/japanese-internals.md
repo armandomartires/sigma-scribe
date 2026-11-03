@@ -1,6 +1,6 @@
 # Japanese input internals (v1.10)
 
-How to type is in [../user/japanese.md](../user/japanese.md).
+How to type is in [../user/08-keyboards-and-languages/japanese.md](../user/08-keyboards-and-languages/japanese.md).
 
 ## How conversion works
 `crates/core/src/ja.rs`. The reading is cut into words by dynamic programming: each dictionary word costs a little less the longer it is, a kana no word covers costs more, particles never convert on their own, and endings such as ます ました ている stay kana. Verbs and adjectives match a stem plus the first kana of the ending, like SKK's okurigana entries. The candidate list is the best cut, the readings that are a single word, the hiragana, then the katakana.

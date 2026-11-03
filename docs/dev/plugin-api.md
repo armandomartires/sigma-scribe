@@ -1,6 +1,6 @@
 # Plugin API and host (plugin authors, developers)
 
-Switching plugins on and off, their settings and installing from the repository are in [../user/plugins.md](../user/plugins.md).
+Switching plugins on and off, their settings and installing from the repository are in [../user/11-plugins/index.md](../user/11-plugins/index.md).
 
 ## Kinds
 
@@ -26,7 +26,7 @@ examples: run `cargo doc -p sigma-plugin-api --open`.
 
 The module runs in wasmi (`crates/plugin-host`) with only seven imports:
 `text_width`, `ascent`, `tr`, `cache_get`, `cache_put`, `log` and `log_level`
-(see [logging.md](../user/logging.md)). No filesystem or
+(see [the-log-file.md](../user/12-troubleshooting/the-log-file.md)). No filesystem or
 network. Every call gets a fuel budget and the memory has a ceiling; after any
 failure the plugin is dropped and the built-in Graph serves the rest of the
 session.
@@ -167,7 +167,7 @@ The Graph plugin logs its layout cache (hit, miss, damaged entry), the layout
 build with its iterations and warm start, each step, and what it was opened
 with.
 
-The log levels and the file are described in [../user/logging.md](../user/logging.md).
+The log levels and the file are described in [../user/12-troubleshooting/the-log-file.md](../user/12-troubleshooting/the-log-file.md).
 
 ### Log folder and launcher lines
 
@@ -177,7 +177,7 @@ listed in [wifi-design.md](wifi-design.md#8-notes-moved-from-the-user-page).
 
 ## Plugin repository, packages and installation
 
-Moved from the user page ([../user/plugins.md](../user/plugins.md)); the user-level behaviour is described there.
+Moved from the user page ([../user/11-plugins/index.md](../user/11-plugins/index.md)); the user-level behaviour is described there.
 
 ### State and format
 

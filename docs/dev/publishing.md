@@ -19,7 +19,7 @@ The Cobalt Store no longer applies (Plan B, 2026-10-20). Proposed distribution:
 - `site/index.html` is one static page (inline CSS; no JavaScript is needed to read it, and a small inline script adds the carousel controls) published at https://armandomartires.github.io/sigma-scribe/ by `.github/workflows/pages.yml` on every push to `main` that touches `site/`, `docs/screenshots/` or the workflow (or by hand: *Run workflow*).
 - The screenshots are not in `site/`. The workflow copies them into `_site/screenshots/` from `docs/screenshots/readme/` without the `readme-` prefix, and fails if any `screenshots/...` image the page uses is missing. To show a newer set, regenerate `docs/screenshots/readme/` (`tests/emu/readme.script`) under the names the page uses (write, preview, drawer, graph, settings, links, search, journal, handwriting, arabic, japanese, night, landscape).
 - One-time setup: Settings → Pages → Source: GitHub Actions. Local preview: `site/README.md`.
-- Keep the tested-model line on the page in step with `docs/user/install.md`.
+- Keep the tested-model line on the page in step with `docs/user/01-set-up/install.md`.
 
 ## Wiki
 - The user guide wiki (https://github.com/armandomartires/sigma-scribe/wiki) is generated from `docs/user/`; never edit it on GitHub. After a change to `docs/user/`:
@@ -28,7 +28,7 @@ The Cobalt Store no longer applies (Plan B, 2026-10-20). Proposed distribution:
   scripts/wiki-sync.sh /tmp/wiki          # add --force to overwrite unmarked pages
   cd /tmp/wiki && git add -A && git commit -m "Sync from docs/user" && git push
   ```
-- The script writes one page per `docs/user/*.md` (`README.md` becomes `Home`; other names come from the first heading), rewrites links between those pages to wiki links, links to other repository files to `github.com/.../blob/main/...` and images to `raw.githubusercontent.com/...`, and writes `_Sidebar.md` and `_Footer.md`. Pages it wrote start with a marker comment; ones whose source is gone are removed, other wiki pages are left alone. If a page it would write already exists without the marker on its first line (a hand-written wiki page), it stops before writing anything and exits non-zero; `--force` overwrites such pages. It prints what changed and warns about links whose target is missing. It does not commit or push.
+- The script writes one page per article and per section `index.md` under `docs/user/NN-section/` (front block stripped; `README.md` becomes `Home`, with a link to the help centre; other names come from the article's title), groups `_Sidebar.md` by section, rewrites links between those pages to wiki links, links to other repository files to `github.com/.../blob/main/...` and images to `raw.githubusercontent.com/...`, and writes `_Sidebar.md` and `_Footer.md`. Pages it wrote start with a marker comment; ones whose source is gone are removed, other wiki pages are left alone. If a page it would write already exists without the marker on its first line (a hand-written wiki page), it stops before writing anything and exits non-zero; `--force` overwrites such pages. It prints what changed and warns about links whose target is missing. It does not commit or push.
 
 ## Still open
 - Display name (“Σscribe”) and release cadence; whether to also offer a one-file `KoboRoot.tgz` that unpacks into `/mnt/onboard/.adds` (works, but `.adds` copy is simpler and safer).

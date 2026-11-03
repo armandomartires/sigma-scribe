@@ -1,5 +1,6 @@
-# Publishes the project page (site/) on GitHub Pages. The screenshots are not
-# stored in site/: they are copied in at build time from docs/screenshots/.
+# Publishes the project page (site/) on GitHub Pages, with the help centre
+# built from docs/user/ under /help/. The screenshots are not stored in site/:
+# they are copied in at build time from docs/screenshots/.
 name: pages
 on:
   push:
@@ -7,6 +8,8 @@ on:
     paths:
       - "site/**"
       - "docs/screenshots/**"
+      - "docs/user/**"
+      - "scripts/help-build.py"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 permissions:
@@ -24,6 +27,8 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history: the help pages show each file's last-changed date
       - name: Assemble _site
         run: |
           set -eu
@@ -42,6 +47,11 @@ jobs:
             fi
           done
           [ "$missing" -eq 0 ]
+      - name: Build the help centre into _site/help
+        run: |
+          set -eu
+          pip install markdown==3.7
+          python3 scripts/help-build.py docs/user _site/help
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
