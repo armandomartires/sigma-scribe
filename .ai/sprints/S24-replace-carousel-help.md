@@ -1,6 +1,6 @@
 # S24 — Replace in all notes, screenshot carousel, help centre
 
-Board: Sprint 13. Planned 2026-11-03 from `main` 7a7cd4f (1.20.0). Status: PLANNED, not started. Open decisions are marked **(ask)**; nothing is built until the user has answered them.
+Board: Sprint 13. Planned 2026-11-03 from `main` 7a7cd4f (1.20.0). Status: PLANNED, not started. All open decisions answered by the user on 2026-11-03 (S24-D4 to S24-D9 below).
 
 Three parts, independent of each other, three branches, three PRs. They touch disjoint files, so they can be built in parallel worktree sessions:
 
@@ -12,7 +12,7 @@ Three parts, independent of each other, three branches, three PRs. They touch di
 
 Order constraint: S24.1's user-doc change (`docs/user/search.md`) and S24.3's restructure of `docs/user/` collide. Merge S24.3 first and let S24.1 rebase, or S24.1 first and S24.3 moves the updated page. Either works; pick whichever is ready first.
 
-"The gitlab page" is read as the project page on GitHub Pages (`site/index.html`, published by `.github/workflows/pages.yml`); the repository has no GitLab remote. **(ask)** if a page on the self-hosted GitLab is meant instead.
+"The gitlab page" is read as the project page on GitHub Pages (`site/index.html`, published by `.github/workflows/pages.yml`); the repository has no GitLab remote. Confirmed (S24-D4).
 
 ---
 
@@ -26,7 +26,7 @@ Order constraint: S24.1's user-doc change (`docs/user/search.md`) and S24.3's re
 ### Behaviour
 1. In All notes the Replace field is enabled. Typing a replacement changes nothing on disk.
 2. **Replace all** in All notes opens a **review sheet** in place of the results list: "Replace “lamp” with “lantern”: 52 matches in 3 notes", then one row per note with its match count and a checkbox (all ticked), and under each note its matched lines with the change shown (old struck, new bold), paged like the results list. Buttons: **Replace in N notes** and **Cancel**.
-3. **Replace one** (the single-match button) in All notes replaces the match of the selected result row only, in that note, and moves to the next row. **(ask)** keep it, or offer only the reviewed Replace all.
+3. **Replace one** (the single-match button) stays greyed in All notes: across notes, the only way to replace is the reviewed Replace all (S24-D5).
 4. The apply step rescans **without the 500 cap** (the review counts must be the real ones; if the uncapped count differs from the reviewed one because a note changed meanwhile, the sheet is refreshed instead of applying).
 5. Applying runs on a worker, not the UI thread, one note at a time; the status line counts "Replacing… 2 of 3 notes". Each note is written temp-file-then-rename so a power cut leaves either the old or the new file.
 6. The open note is not written behind the editor's back: its replacement goes through `buffer.replace_text` as one undo step, like the This-note Replace all, and is then saved.
@@ -34,7 +34,7 @@ Order constraint: S24.1's user-doc change (`docs/user/search.md`) and S24.3's re
 8. Results, Graph, backlinks and the to-do index refresh after apply (the same invalidation a rename does).
 
 ### Edge cases to settle in the design
-- **Links**: a match inside `[[…]]` changes a link target. Default: such matches are shown in the review with a "link" marker and are unticked by default; ticking them renames nothing, it only edits the text. **(ask)** alternative: skip link targets entirely.
+- **Links**: a match inside `[[…]]` changes a link target. Default: such matches are shown in the review with a "link" marker and are unticked by default; ticking them renames nothing, it only edits the text (S24-D6).
 - **Ink**: `.ink/` sidecars are not searched or touched; an ink image line (`![](.ink/…/ink-NNN.svg)`) must not match inside its path. Search already skips `.ink/`, but the image line itself is in the note text: exclude Markdown image/link URLs from matches in All-notes replace.
 - **Code spans and fences**: replaced like any text (it is a text replace, not a Markdown one); say so in the docs.
 - **Journal template** `journal/.template.md` and other hidden files: not searched today, not replaced.
@@ -54,6 +54,15 @@ Order constraint: S24.1's user-doc change (`docs/user/search.md`) and S24.3's re
 - S24-D1: replace across notes only through a review sheet; no one-tap blind replace (supersedes S22-D3).
 - S24-D2: undo is a file snapshot in `.trash/`, not an in-memory undo, so it survives a restart and a crash, and empties with the trash.
 - S24-D3: the plan is recomputed uncapped at apply time; the 500 cap is a display limit only.
+- S24-D5 (user, 2026-11-03): no single Replace in All notes; the review sheet is the only path.
+- S24-D6 (user, 2026-11-03): matches inside `[[…]]` are shown in the review marked "link" and unticked by default.
+
+## Decisions answered 2026-11-03
+- S24-D4: the "page" is the GitHub Pages project page, `site/index.html`.
+- S24-D5, S24-D6: see S24.1 above.
+- S24-D7: carousel = CSS scroll-snap plus a small inline script; works without JS; `site/README.md`'s "no JavaScript" line changes.
+- S24-D8: the 12 help sections as listed.
+- S24-D9: the wiki stays in sync with the nested layout; its Home links to the help centre.
 
 ---
 
@@ -70,8 +79,8 @@ Order constraint: S24.1's user-doc change (`docs/user/search.md`) and S24.3's re
 - Accessibility: `role="region"` + `aria-roledescription="carousel"`, each slide `role="group"` `aria-label="3 of 13: Search all notes"`, buttons with labels, focus stays on the button.
 - Light and dark as the page already themes (`--rule` etc.).
 
-### Implementation choice **(ask)**
-- **A (recommended): CSS scroll-snap track + ~40 lines of inline JS.** Without JS the track is a horizontally scrolling, swipeable strip with snap points: still a carousel, nothing lost. JS only adds the buttons, the counter, the thumbnail highlight and arrow keys. Changes the "no JavaScript" line in `site/README.md` to "no JavaScript needed; a small inline script adds the carousel controls".
+### Implementation choice: A (S24-D7)
+- **A (chosen): CSS scroll-snap track + ~40 lines of inline JS.** Without JS the track is a horizontally scrolling, swipeable strip with snap points: still a carousel, nothing lost. JS only adds the buttons, the counter, the thumbnail highlight and arrow keys. Changes the "no JavaScript" line in `site/README.md` to "no JavaScript needed; a small inline script adds the carousel controls".
 - B: pure CSS (radio inputs / `:target`). Keeps "no JavaScript" literally, but `:target` jumps the page scroll and radio hacks are awkward for screen readers.
 
 ### Work
@@ -89,7 +98,7 @@ help.boox.com/653d4 (User Guide, E Ink Tablets): header with logo and search; a 
 ### Today
 `docs/user/` has 13 pages (595 lines), flat, indexed by `docs/user/README.md`; `scripts/wiki-sync.sh` turns them into the GitHub wiki. Pages are feature-sized, not task-sized (`getting-started.md` covers title bar, files, links, preview, settings and quitting in one page).
 
-### Proposed sections and articles (first cut) **(ask: confirm or edit)**
+### Sections and articles (confirmed, S24-D8; articles may still be adjusted while splitting)
 1. **Set up Σscribe** — Install; Update; Uninstall; First start; Get your notes off the Kobo
 2. **Find your way around** — The title bar; The drawer and its panes; Files and folders; Settings overview; Quit and restart
 3. **Write and edit** — The editor and caret; Select, copy, paste; Undo; Preview; Line and Paper modes; Night and light
@@ -106,7 +115,7 @@ help.boox.com/653d4 (User Guide, E Ink Tablets): header with logo and search; a 
 ### Source layout
 - `docs/user/` stays the single source. New layout: `docs/user/<nn>-<section>/<article>.md`, each article with a short front block (`title`, `summary`, `order`) and one task per page; `docs/user/README.md` stays the index (sections and articles), so GitHub browsing still works.
 - Existing pages are split, not rewritten; screenshots from `docs/screenshots/` reused, new ones taken with the emulator where an article has none.
-- `scripts/wiki-sync.sh` learns the nested layout (one wiki page per article, the sidebar grouped by section). **(ask)** keep the wiki at all once the help centre exists, or point the wiki Home at it.
+- `scripts/wiki-sync.sh` learns the nested layout (one wiki page per article, the sidebar grouped by section). The wiki stays a full copy and its Home links to the help centre (S24-D9).
 
 ### Site
 - Built at Pages time into `_site/help/` by `scripts/help-build.py` (Python 3 stdlib plus the `markdown` package installed from pip in the workflow at a pinned version; it is not a Rust dependency, so `cargo deny` does not see it).

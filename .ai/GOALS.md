@@ -200,7 +200,7 @@ Status: Done 2026-11-02. Eight stories built in five Sonnet worktree sessions th
 
 ## Sprint 13 — Replace in all notes, screenshot carousel, help centre
 Goal: Replace across the library with a review and an undo; the project page's screenshots in a carousel; the user docs as a help centre structured like help.boox.com
-Status: Planned 2026-11-03, not started; open decisions marked (ask) in the sprint file. Three independent parts, three branches, three PRs. Sprint `.ai/sprints/S24-replace-carousel-help.md`.
+Status: Planned 2026-11-03, decisions answered the same day (S24-D4 to D9), not started. Three independent parts, three branches, three PRs. Sprint `.ai/sprints/S24-replace-carousel-help.md`.
 - [ ] S24.1 Replace in all notes: review sheet, snapshot undo, crash-safe writes
   Lifts S22-D3. Core plan/apply/undo, review sheet, app wiring, strings, emulator script, docs, 1.21.0, Forma pass. Tasks T01–T05.
 - [ ] S24.2 Project page screenshots as a carousel
