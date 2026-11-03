@@ -16,7 +16,7 @@ The Cobalt Store no longer applies (Plan B, 2026-10-20). Proposed distribution:
 - Our code: AGPL-3.0-only. FBInk (statically linked): GPL-3.0-or-later — compatible, combined work distributed under AGPL-3.0 with FBInk's notice. Fonts: SIL OFL 1.1 (texts shipped). NickelMenu is not bundled (users fetch it; MIT).
 
 ## Project page
-- `site/index.html` is one static page (inline CSS, no JavaScript) published at https://armandomartires.github.io/sigma-scribe/ by `.github/workflows/pages.yml` on every push to `main` that touches `site/`, `docs/screenshots/` or the workflow (or by hand: *Run workflow*).
+- `site/index.html` is one static page (inline CSS; no JavaScript is needed to read it, and a small inline script adds the carousel controls) published at https://armandomartires.github.io/sigma-scribe/ by `.github/workflows/pages.yml` on every push to `main` that touches `site/`, `docs/screenshots/` or the workflow (or by hand: *Run workflow*).
 - The screenshots are not in `site/`. The workflow copies them into `_site/screenshots/` from `docs/screenshots/readme/` without the `readme-` prefix, and fails if any `screenshots/...` image the page uses is missing. To show a newer set, regenerate `docs/screenshots/readme/` (`tests/emu/readme.script`) under the names the page uses (write, preview, drawer, graph, settings, links, search, journal, handwriting, arabic, japanese, night, landscape).
 - One-time setup: Settings → Pages → Source: GitHub Actions. Local preview: `site/README.md`.
 - Keep the tested-model line on the page in step with `docs/user/install.md`.
