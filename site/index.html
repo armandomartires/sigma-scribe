@@ -58,13 +58,23 @@ a:focus-visible, .btn:focus-visible { outline: 3px solid var(--fg); outline-offs
 .btn.alt { background: transparent; color: var(--fg); }
 .note { background: var(--panel); border-left: 3px solid var(--fg); padding: .8rem 1rem; font-size: .95rem; color: var(--muted); }
 .note strong { color: var(--fg); }
-.gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem 1rem; margin: 0; padding: 0; list-style: none; }
-.gallery li { margin: 0; }
-.gallery figure { margin: 0; }
-.gallery img { width: 100%; height: auto; display: block; border: 1px solid var(--rule); background: #fff; }
-.gallery figcaption { font: .85rem/1.3 var(--sans); color: var(--muted); margin-top: .4rem; }
-@media (min-width: 40rem) { .gallery { grid-template-columns: repeat(3, 1fr); } }
-@media (min-width: 56rem) { .gallery { grid-template-columns: repeat(5, 1fr); } .wrap.wide { max-width: 64rem; } }
+.carousel { margin: 1.5rem 0 0; }
+.track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scroll-behavior: smooth; scrollbar-width: thin; }
+.track:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
+.slide { flex: 0 0 100%; scroll-snap-align: start; scroll-snap-stop: always; margin: 0; }
+.frame { height: min(80vh, calc(min(100vw - 32px, 44rem) * 4 / 3)); background: var(--panel); border: 1px solid var(--rule); }
+.frame img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.slide figcaption { font: .95rem/1.3 var(--sans); color: var(--muted); margin-top: .5rem; text-align: center; }
+.cbar { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: .75rem; font: 600 .95rem/1 var(--sans); }
+.cbar button { font: inherit; padding: .55rem 1rem; border: 2px solid var(--fg); background: transparent; color: var(--fg); cursor: pointer; }
+.cbar button[aria-disabled="true"] { opacity: .4; cursor: default; }
+.cbar button:focus-visible, .thumbs button:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
+.cbar .count { min-width: 4.5rem; text-align: center; font-variant-numeric: tabular-nums; }
+.thumbs { position: relative; display: flex; gap: .5rem; overflow-x: auto; padding: .75rem 3px 3px; margin-top: .25rem; scrollbar-width: thin; }
+.thumbs button { flex: 0 0 auto; padding: 0; border: 0; background: none; cursor: pointer; opacity: .7; outline: 1px solid var(--rule); outline-offset: 0; }
+.thumbs button[aria-current="true"] { opacity: 1; outline: 3px solid var(--fg); }
+.thumbs img { display: block; width: 3.2rem; height: 3.2rem; object-fit: cover; object-position: top; background: #fff; }
+@media (prefers-reduced-motion: reduce) { .track { scroll-behavior: auto; } }
 .cols { display: grid; gap: 0 2.5rem; }
 @media (min-width: 40rem) { .cols { grid-template-columns: 1fr 1fr; } }
 ol.steps { counter-reset: s; list-style: none; padding: 0; }
@@ -99,24 +109,26 @@ footer a { color: var(--muted); }
 <main id="main">
 
 <section aria-labelledby="shots">
-  <div class="wrap wide">
+  <div class="wrap">
     <h2 id="shots">Screenshots</h2>
     <p>Captured from the desktop emulator, which draws the same screen the Kobo does.</p>
-    <ul class="gallery">
-      <li><figure><img src="screenshots/write.png" width="1440" height="1920" loading="lazy" alt="The editor in Paper mode: a Markdown note above the on-screen keyboard"><figcaption>Write</figcaption></figure></li>
-      <li><figure><img src="screenshots/preview.png" width="1440" height="1920" loading="lazy" alt="The Markdown preview of a note, laid out in pages"><figcaption>Preview</figcaption></figure></li>
-      <li><figure><img src="screenshots/drawer.png" width="1440" height="1920" loading="lazy" alt="The drawer menu open over a note, with Contents and To-dos ticked and Scratch not, above the drawer panes listing the note’s Contents and the To-dos from all notes"><figcaption>Drawer</figcaption></figure></li>
-      <li><figure><img src="screenshots/graph.png" width="1440" height="1920" loading="lazy" alt="The Graph in Map view: circles for notes joined by lines for their wiki links, the open note, markdown-tour, filled and named, with Map and List and zoom buttons above and “4 notes · 4 links” below"><figcaption>Graph</figcaption></figure></li>
-      <li><figure><img src="screenshots/settings.png" width="1440" height="1920" loading="lazy" alt="The Settings list: Writing, Display, Keyboard &amp; input, Language, USB &amp; devices, Experimental features, Plugins, Logging, Sync and Help &amp; about, each with its current value"><figcaption>Settings</figcaption></figure></li>
-      <li><figure><img src="screenshots/links.png" width="1440" height="1920" loading="lazy" alt="A note ending in “see [[”, with a bar of note names above the keyboard: lamps, field-notes, markdown-tour, scratch, chapter-01, the note opened last first and chosen"><figcaption>Link autocomplete</figcaption></figure></li>
-      <li><figure><img src="screenshots/search.png" width="1440" height="1920" loading="lazy" alt="The Find bar set to All notes with “lamp” typed, above a list of matches from several notes, each with the note’s name, the line number and the line, and “52 matches in 3 notes · page 1 of 13” below"><figcaption>Search all notes</figcaption></figure></li>
-      <li><figure><img src="screenshots/journal.png" width="1440" height="1920" loading="lazy" alt="Today’s journal note, 2026-11-02.md, beside the Calendar pane: a date line, Today and month arrows, and November 2026 with the 2nd filled and a dot under the 5th"><figcaption>Journal</figcaption></figure></li>
-      <li><figure><img src="screenshots/handwriting.png" width="1440" height="1920" loading="lazy" alt="Handwriting input: a block of keys for panel, editing, punctuation and moving beside a wide writing area, with a candidate bar of alternative readings of the word just written along its top"><figcaption>Handwriting</figcaption></figure></li>
-      <li><figure><img src="screenshots/arabic.png" width="1440" height="1920" loading="lazy" alt="A line of Arabic written right to left, above the Arabic on-screen keyboard"><figcaption>Arabic</figcaption></figure></li>
-      <li><figure><img src="screenshots/japanese.png" width="1440" height="1920" loading="lazy" alt="A line of Japanese with a bar of kanji conversion candidates, above the keyboard"><figcaption>Japanese</figcaption></figure></li>
-      <li><figure><img src="screenshots/night.png" width="1440" height="1920" loading="lazy" alt="The editor in Night mode: light text on a dark page"><figcaption>Night</figcaption></figure></li>
-      <li><figure><img src="screenshots/landscape.png" width="1920" height="1440" loading="lazy" alt="The editor in landscape orientation with the keyboard in Centre layout"><figcaption>Landscape</figcaption></figure></li>
-    </ul>
+    <div class="carousel" role="region" aria-roledescription="carousel" aria-label="Screenshots">
+      <div class="track" tabindex="0">
+        <figure class="slide" role="group" aria-roledescription="slide" aria-label="1 of 13: Write"><div class="frame"><img src="screenshots/write.png" width="1440" height="1920" alt="The editor in Paper mode: a Markdown note above the on-screen keyboard"></div><figcaption>Write</figcaption></figure>
+        <figure class="slide" role="group" aria-roledescription="slide" aria-label="2 of 13: Preview"><div class="frame"><img src="screenshots/preview.png" width="1440" height="1920" loading="lazy" alt="The Markdown preview of a note, laid out in pages"></div><figcaption>Preview</figcaption></figure>
+        <figure class="slide" role="group" aria-roledescription="slide" aria-label="3 of 13: Drawer"><div class="frame"><img src="screenshots/drawer.png" width="1440" height="1920" loading="lazy" alt="The drawer menu open over a note, with Contents and To-dos ticked and Scratch not, above the drawer panes listing the note’s Contents and the To-dos from all notes"></div><figcaption>Drawer</figcaption></figure>
+        <figure class="slide" role="group" aria-roledescription="slide" aria-label="4 of 13: Graph"><div class="frame"><img src="screenshots/graph.png" width="1440" height="1920" loading="lazy" alt="The Graph in Map view: circles for notes joined by lines for their wiki links, the open note, markdown-tour, filled and named, with Map and List and zoom buttons above and “4 notes · 4 links” below"></div><figcaption>Graph</figcaption></figure>
+        <figure class="slide" role="group" aria-roledescription="slide" aria-label="5 of 13: Settings"><div class="frame"><img src="screenshots/settings.png" width="1440" height="1920" loading="lazy" alt="The Settings list: Writing, Display, Keyboard &amp; input, Language, USB &amp; devices, Experimental features, Plugins, Logging, Sync and Help &amp; about, each with its current value"></div><figcaption>Settings</figcaption></figure>
+        <figure class="slide" role="group" aria-roledescription="slide" aria-label="6 of 13: Link autocomplete"><div class="frame"><img src="screenshots/links.png" width="1440" height="1920" loading="lazy" alt="A note ending in “see [[”, with a bar of note names above the keyboard: lamps, field-notes, markdown-tour, scratch, chapter-01, the note opened last first and chosen"></div><figcaption>Link autocomplete</figcaption></figure>
+        <figure class="slide" role="group" aria-roledescription="slide" aria-label="7 of 13: Search all notes"><div class="frame"><img src="screenshots/search.png" width="1440" height="1920" loading="lazy" alt="The Find bar set to All notes with “lamp” typed, above a list of matches from several notes, each with the note’s name, the line number and the line, and “52 matches in 3 notes · page 1 of 13” below"></div><figcaption>Search all notes</figcaption></figure>
+        <figure class="slide" role="group" aria-roledescription="slide" aria-label="8 of 13: Journal"><div class="frame"><img src="screenshots/journal.png" width="1440" height="1920" loading="lazy" alt="Today’s journal note, 2026-11-02.md, beside the Calendar pane: a date line, Today and month arrows, and November 2026 with the 2nd filled and a dot under the 5th"></div><figcaption>Journal</figcaption></figure>
+        <figure class="slide" role="group" aria-roledescription="slide" aria-label="9 of 13: Handwriting"><div class="frame"><img src="screenshots/handwriting.png" width="1440" height="1920" loading="lazy" alt="Handwriting input: a block of keys for panel, editing, punctuation and moving beside a wide writing area, with a candidate bar of alternative readings of the word just written along its top"></div><figcaption>Handwriting</figcaption></figure>
+        <figure class="slide" role="group" aria-roledescription="slide" aria-label="10 of 13: Arabic"><div class="frame"><img src="screenshots/arabic.png" width="1440" height="1920" loading="lazy" alt="A line of Arabic written right to left, above the Arabic on-screen keyboard"></div><figcaption>Arabic</figcaption></figure>
+        <figure class="slide" role="group" aria-roledescription="slide" aria-label="11 of 13: Japanese"><div class="frame"><img src="screenshots/japanese.png" width="1440" height="1920" loading="lazy" alt="A line of Japanese with a bar of kanji conversion candidates, above the keyboard"></div><figcaption>Japanese</figcaption></figure>
+        <figure class="slide" role="group" aria-roledescription="slide" aria-label="12 of 13: Night"><div class="frame"><img src="screenshots/night.png" width="1440" height="1920" loading="lazy" alt="The editor in Night mode: light text on a dark page"></div><figcaption>Night</figcaption></figure>
+        <figure class="slide" role="group" aria-roledescription="slide" aria-label="13 of 13: Landscape"><div class="frame"><img src="screenshots/landscape.png" width="1920" height="1440" loading="lazy" alt="The editor in landscape orientation with the keyboard in Centre layout"></div><figcaption>Landscape</figcaption></figure>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -208,5 +220,89 @@ footer a { color: var(--muted); }
     <p><strong>Credits:</strong> drawn with <a href="https://github.com/NiLuJe/FBInk">FBInk</a> (GPL-3.0-or-later, statically linked) and launched from <a href="https://github.com/pgaskin/NickelMenu">NickelMenu</a>. Fonts: Literata, Atkinson Hyperlegible and Noto (SIL OFL 1.1). Icons: <a href="https://lucide.dev">Lucide</a> (ISC). Sync by <a href="https://syncthing.net">Syncthing</a>. Full notices in <a href="https://github.com/armandomartires/sigma-scribe/blob/main/packaging/kobo/.adds/sigma-scribe/THIRD-PARTY.txt">THIRD-PARTY.txt</a>.</p>
   </div>
 </footer>
+<script>
+(function () {
+  var car = document.querySelector(".carousel");
+  var track = car && car.querySelector(".track");
+  if (!track) return;
+  var slides = track.querySelectorAll(".slide");
+  var n = slides.length, cur = 0, raf = 0, target = null, settle = 0;
+  if (!n) return;
+  var bar = document.createElement("div");
+  bar.className = "cbar";
+  bar.innerHTML = '<button type="button" aria-label="Previous screenshot">\u2039 Prev</button>' +
+    '<span class="count" aria-live="polite"></span>' +
+    '<button type="button" aria-label="Next screenshot">Next \u203a</button>';
+  var prev = bar.firstChild, count = bar.children[1], next = bar.lastChild;
+  if (!prev || !count || !next) return;
+  var thumbs = document.createElement("div");
+  thumbs.className = "thumbs";
+  var tb = [];
+  slides.forEach(function (s, i) {
+    var b = document.createElement("button"), im = document.createElement("img");
+    var cap = s.querySelector("figcaption"), src = s.querySelector("img");
+    b.type = "button";
+    b.setAttribute("aria-label", "Show screenshot " + (i + 1) + " of " + n + (cap ? ": " + cap.textContent : ""));
+    if (src) im.src = src.getAttribute("src");
+    im.alt = ""; im.loading = "lazy"; im.width = 48; im.height = 48;
+    b.appendChild(im);
+    b.addEventListener("click", function () { go(i); });
+    thumbs.appendChild(b); tb.push(b);
+  });
+  car.appendChild(bar); car.appendChild(thumbs);
+  function show(i) {
+    cur = i;
+    count.textContent = (i + 1) + " / " + n;
+    prev.setAttribute("aria-disabled", i === 0 ? "true" : "false");
+    next.setAttribute("aria-disabled", i === n - 1 ? "true" : "false");
+    tb.forEach(function (b, k) { if (k === i) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current"); });
+    var t = tb[i].getBoundingClientRect(), h = thumbs.getBoundingClientRect();
+    thumbs.scrollLeft += (t.left - h.left) - (thumbs.clientWidth - t.width) / 2;
+  }
+  // Jump without animation: CSS scroll-behavior:smooth would animate even a
+  // plain scrollLeft write, so switch it off for the write.
+  function jump(left) {
+    var old = track.style.scrollBehavior;
+    track.style.scrollBehavior = "auto";
+    track.scrollLeft = left;
+    track.style.scrollBehavior = old;
+  }
+  function done() { target = null; clearTimeout(settle); }
+  function go(i) {
+    i = Math.max(0, Math.min(n - 1, i));
+    var calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var left = i * track.clientWidth;
+    show(i);
+    if (calm) { done(); jump(left); return; }
+    target = i;
+    clearTimeout(settle);
+    // Fallback for browsers without scrollend (or a stalled animation): snap to the target.
+    settle = setTimeout(function () { if (target !== null) jump(target * track.clientWidth); done(); }, "onscrollend" in window ? 1500 : 700);
+    track.scrollTo({ left: left, behavior: "smooth" });
+  }
+  function step(d) { go((target !== null ? target : cur) + d); }
+  function sync() {
+    raf = 0;
+    if (target !== null) {
+      if (Math.abs(track.scrollLeft - target * track.clientWidth) < 2) done();
+      return;
+    }
+    var i = Math.round(track.scrollLeft / track.clientWidth);
+    if (i !== cur && i >= 0 && i < n) show(i);
+  }
+  track.addEventListener("scroll", function () { if (!raf) raf = requestAnimationFrame(sync); }, { passive: true });
+  track.addEventListener("scrollend", function () { done(); sync(); });
+  window.addEventListener("resize", function () { done(); jump(cur * track.clientWidth); });
+  prev.addEventListener("click", function () { step(-1); });
+  next.addEventListener("click", function () { step(1); });
+  car.addEventListener("keydown", function (e) {
+    var k = e.key, i = k === "ArrowLeft" ? -1 : k === "ArrowRight" ? 1 : 0;
+    if (!i && k !== "Home" && k !== "End") return;
+    e.preventDefault();
+    if (i) step(i); else go(k === "Home" ? 0 : n - 1);
+  });
+  show(0);
+})();
+</script>
 </body>
 </html>
