@@ -488,8 +488,8 @@ The Forma does not power its USB port. Plug the keyboard into a powered USB hub,
 Connecting
 = Tilslutning
 
-Turn on Options → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
-= Slå først Indstillinger → USB-tastatur og mus til: porten skifter til værtstilstand, så en computer ikke ser Kobo'en, før du slår det fra eller lukker appen. Sæt derefter tastaturet i; statuslinjen viser USB inden for et sekund (ingen USB, så længe der ikke er fundet et). Skærmtastaturet virker stadig, og det er sikkert at tage stikket ud.
+Turn on Settings → USB & devices → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
+= Slå først Indstillinger → USB og enheder → USB-tastatur og mus til: porten skifter til værtstilstand, så en computer ikke ser Kobo'en, før du slår det fra eller lukker appen. Sæt derefter tastaturet i; statuslinjen viser USB inden for et sekund (ingen USB, så længe der ikke er fundet et). Skærmtastaturet virker stadig, og det er sikkert at tage stikket ud.
 
 Shortcuts
 = Genveje
@@ -1354,6 +1354,54 @@ Previous
 Clock not set
 = Uret er ikke stillet
 
-# Replace field greyed in All notes (S12.7)
-Replace: This note only
-= Erstat: kun denne note
+# Replace in all notes (S24.1)
+Replace “{q}” with “{w}”
+= Erstat »{q}« med »{w}«
+
+Delete “{q}”
+= Slet »{q}«
+
+link
+= link
+
+Replace in {n} notes
+= Erstat i {n} noter
+
+Replace in {n} note
+= Erstat i {n} note
+
+Replacing… {n} of {m} notes
+= Erstatter… {n} af {m} noter
+
+Replaced {n} in {m} notes
+= {n} erstattet i {m} noter
+
+Replaced {n} in {m} note
+= {n} erstattet i {m} note
+
+{n} changed since the review
+= {n} ændret siden gennemsynet
+
+{n} could not be written
+= {n} kunne ikke skrives
+
+Restored {n} notes
+= {n} noter gendannet
+
+Restored {n} note
+= {n} note gendannet
+
+{n} left alone
+= {n} lod vi være
+
+Nothing was replaced
+= Intet blev erstattet
+
+Could not undo the replace
+= Erstatningen kunne ikke fortrydes
+
+Undo last replace
+= Fortryd sidste erstatning
+
+No matches
+= Ingen fund

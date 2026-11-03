@@ -488,8 +488,8 @@ The Forma does not power its USB port. Plug the keyboard into a powered USB hub,
 Connecting
 = Ligação
 
-Turn on Options → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
-= Ative primeiro Opções → Teclado e rato USB: a porta passa para modo anfitrião, por isso um computador não vê o Kobo até o desativar ou sair da app. Depois ligue o teclado; a barra de estado mostra USB num segundo (sem USB enquanto nenhum for encontrado). O teclado no ecrã continua a funcionar, e desligar é seguro.
+Turn on Settings → USB & devices → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
+= Ative primeiro Definições → USB e dispositivos → Teclado e rato USB: a porta passa para modo anfitrião, por isso um computador não vê o Kobo até o desativar ou sair da app. Depois ligue o teclado; a barra de estado mostra USB num segundo (sem USB enquanto nenhum for encontrado). O teclado no ecrã continua a funcionar, e desligar é seguro.
 
 Shortcuts
 = Atalhos
@@ -1355,6 +1355,54 @@ Previous
 Clock not set
 = Relógio por acertar
 
-# Replace field greyed in All notes (S12.7)
-Replace: This note only
-= Substituir: só nesta nota
+# Replace in all notes (S24.1)
+Replace “{q}” with “{w}”
+= Substituir «{q}» por «{w}»
+
+Delete “{q}”
+= Apagar «{q}»
+
+link
+= ligação
+
+Replace in {n} notes
+= Substituir em {n} notas
+
+Replace in {n} note
+= Substituir em {n} nota
+
+Replacing… {n} of {m} notes
+= A substituir… {n} de {m} notas
+
+Replaced {n} in {m} notes
+= Substituições: {n} em {m} notas
+
+Replaced {n} in {m} note
+= Substituições: {n} em {m} nota
+
+{n} changed since the review
+= Alteradas desde a revisão: {n}
+
+{n} could not be written
+= Não foi possível escrever: {n}
+
+Restored {n} notes
+= Notas restauradas: {n}
+
+Restored {n} note
+= Nota restaurada: {n}
+
+{n} left alone
+= Deixadas como estão: {n}
+
+Nothing was replaced
+= Nada foi substituído
+
+Could not undo the replace
+= Não foi possível desfazer a substituição
+
+Undo last replace
+= Desfazer a última substituição
+
+No matches
+= Sem resultados

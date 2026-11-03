@@ -82,6 +82,18 @@ impl App {
         let page = self.screen.layout(self.keys_visible(), &self.keyboard).page;
         match e {
             Event::Tilt { .. } => None,
+            // While Replace in all notes plans, applies or undoes on its
+            // worker, nothing answers: the notes it is working on must not
+            // move under it (S24.1).
+            Event::Tap { .. }
+            | Event::Key(_)
+            | Event::Chord { .. }
+            | Event::PageTurn { .. }
+            | Event::Wheel { .. }
+                if self.replace_busy() =>
+            {
+                None
+            }
             // The open light menu takes every tap and touch; a slider moves
             // while the finger is on it.
             Event::Tap { x, y } if self.screen.light_menu && self.drawer_allowed() => {
@@ -176,6 +188,10 @@ impl App {
                 }
                 // The radio's news (v1.18).
                 if let Some(r) = self.wifi_tick() {
+                    return Some(r);
+                }
+                // A finished plan, apply or undo of Replace in all notes (S24.1).
+                if let Some(r) = self.replace_poll() {
                     return Some(r);
                 }
                 // A finished search across all notes (S22.1).
@@ -309,6 +325,14 @@ impl App {
                 Some(Refresh::Full)
             }
             Event::Key(_) if self.files.is_some() => None,
+            // The review sheet of Replace in all notes (S24.1): pages turn,
+            // Esc cancels, other keys do nothing (it has no keyboard).
+            Event::PageTurn { forward } if self.review_shown() => self.review_page(forward),
+            Event::Key(HwKey::Escape) if self.review_shown() => self.review_cancel(),
+            Event::Key(_) if self.review_shown() => None,
+            Event::Tap { x, y } if self.review_shown() && page.contains(x, y) => {
+                self.review_tap(x, y)
+            }
             // The results list pages like the Graph list (S22.1).
             Event::PageTurn { forward } if self.search_list_shown() => self.search_page(forward),
             Event::PageTurn { forward } => {

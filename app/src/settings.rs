@@ -429,7 +429,7 @@ impl App {
         }
     }
 
-    /// Puts the USB port in host mode while Options → USB keyboard is On,
+    /// Puts the USB port in host mode while Settings → USB & devices → USB keyboard & mouse is On,
     /// and back when it is turned off (v0.8). A failure is logged and
     /// retried only when the setting changes again.
     pub fn sync_usb_host(&mut self, dev: &mut dyn Device) {

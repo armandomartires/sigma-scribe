@@ -109,9 +109,9 @@ pub struct TrimmedLine {
     pub after: String,
 }
 
-const ELLIPSIS: char = '\u{2026}';
+pub(crate) const ELLIPSIS: char = '\u{2026}';
 /// The small face (path line) relative to `ui_px`.
-const SMALL: f32 = 0.85;
+pub(crate) const SMALL: f32 = 0.85;
 
 impl EditorScreen {
     /// Height of one results row: two lines of text with padding, never
@@ -312,7 +312,7 @@ impl EditorScreen {
 
     /// `s` with characters dropped from its end until it is at most `max`
     /// pixels wide.
-    fn cut_end(&self, s: &str, face: Face, size: f32, max: f32) -> String {
+    pub(crate) fn cut_end(&self, s: &str, face: Face, size: f32, max: f32) -> String {
         let mut out = s.to_owned();
         while !out.is_empty() && self.fonts.width(face, size, &out) > max {
             out.pop();
@@ -322,7 +322,7 @@ impl EditorScreen {
 
     /// `s` with characters dropped from its start until it is at most
     /// `max` pixels wide.
-    fn cut_start(&self, s: &str, face: Face, size: f32, max: f32) -> String {
+    pub(crate) fn cut_start(&self, s: &str, face: Face, size: f32, max: f32) -> String {
         let mut out = s;
         while !out.is_empty() && self.fonts.width(face, size, out) > max {
             let n = out.chars().next().map_or(0, char::len_utf8);

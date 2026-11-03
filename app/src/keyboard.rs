@@ -136,6 +136,8 @@ impl App {
                 && self.graph.is_none()
                 && self.plugin_screen.is_none()
                 && self.help.is_none()
+                // The review sheet of Replace in all notes has no keyboard.
+                && !self.find.as_ref().is_some_and(|f| f.review.is_some())
                 && self.keys_on)
     }
 

@@ -92,7 +92,7 @@ impl App {
             }
         }
         self.pointer_fast = false;
-        self.screen.back_on = !self.history.is_empty();
+        self.screen.back_on = !self.history.is_empty() || self.review_shown();
         self.sync_drawer_open();
         let mut c = std::mem::replace(&mut self.canvas, Canvas::new(1, 1, 0));
         if self.options {
@@ -171,9 +171,26 @@ impl App {
                 );
                 // All notes: the results list in place of the page (S22.1).
                 if f.scope == Scope::All {
-                    let m = self.search_model(f);
-                    let sl = self.screen.search_layout(l.page, &m);
-                    self.screen.draw_search(&mut c, &sl, &m);
+                    if let Some(r) = &f.review {
+                        // Replace in all notes: the review sheet instead (S24.1).
+                        let m = self.review_model(r);
+                        let rl = self.screen.review_layout(l.page, &m);
+                        self.screen.draw_review(&mut c, &rl, &m);
+                    } else {
+                        let m = self.search_model(f);
+                        let sl = self.screen.search_layout(self.search_area(l.page), &m);
+                        self.screen.draw_search(&mut c, &sl, &m);
+                        if let Some((text, button)) = self.notice_view() {
+                            let nl = self.screen.notice_layout(l.page, &text, button.as_deref());
+                            self.screen.draw_notice(
+                                &mut c,
+                                &nl,
+                                &text,
+                                button.as_deref(),
+                                self.theme(),
+                            );
+                        }
+                    }
                 }
             }
             if self.drawer_visible() {

@@ -6,9 +6,10 @@
 //! The scope has its own row (S22-T11): in the count rect's place the two
 //! segments do not fit at 175–200 % portrait in French and Portuguese
 //! (626 px needed against 387 px free at 200 % portrait in French).
-//! In `Scope::All` the Replace field and the Replace and All keys are
-//! greyed and do not hit (S22-D3), and the count rect shows nothing: the
-//! results list carries the count.
+//! In `Scope::All` the single Replace key is greyed and does not hit
+//! (S24-D5: across notes the only way to replace is the reviewed All), the
+//! Replace field and the All key work (S24.1), and the count rect shows
+//! nothing: the results list carries the count.
 
 use crate::canvas::{Canvas, Rect};
 use crate::editor::{EditorScreen, Layout};
@@ -109,8 +110,6 @@ pub enum FindHit {
 }
 
 const TOOLS: [&str; 5] = ["Prev", "Next", "Replace", "All", "Aa"];
-/// Shown in the greyed Replace field in All notes.
-const REPLACE_OFF: &str = "Replace: This note only";
 const SCOPES: [(&str, Scope); 2] = [("This note", Scope::Note), ("All notes", Scope::All)];
 
 impl EditorScreen {
@@ -181,9 +180,8 @@ impl EditorScreen {
     }
 
     /// What the point (x, y) hits on the Find bar in `scope`. Each control
-    /// takes a few pixels of slop around it. In [`Scope::All`] the Replace
-    /// field and the Replace and All keys are greyed and hit nothing
-    /// ([`FindHit::Bar`]).
+    /// takes a few pixels of slop around it. In [`Scope::All`] the single
+    /// Replace key is greyed and hits nothing ([`FindHit::Bar`], S24-D5).
     #[must_use]
     pub fn find_hit(&self, base: &Layout, scope: Scope, x: i32, y: i32) -> FindHit {
         if !base.find_bar.contains(x, y) {
@@ -213,13 +211,11 @@ impl EditorScreen {
         hit
     }
 
-    /// Whether a hit is one of the Replace controls, off in [`Scope::All`]
-    /// (S22-D3).
+    /// Whether a hit is the single-match Replace key, off in
+    /// [`Scope::All`] (S24-D5): across notes the reviewed All is the only
+    /// way to replace.
     fn replaces(h: FindHit) -> bool {
-        matches!(
-            h,
-            FindHit::Field(FindField::Replace) | FindHit::Replace | FindHit::All
-        )
+        matches!(h, FindHit::Replace)
     }
 
     /// Centre of a Find-bar control by name (emulator scripts): `FindField`,
@@ -268,10 +264,8 @@ impl EditorScreen {
             (l.find, m.query, FindField::Find, "Find"),
             (l.replace, m.replace, FindField::Replace, "Replace"),
         ] {
-            // The Replace field is greyed in All notes: paper fill, mute text.
-            let off = all && field == FindField::Replace;
-            let focused = m.focus == Some(field) && !off;
-            c.fill(r, if off { t.paper } else { t.wash });
+            let focused = m.focus == Some(field);
+            c.fill(r, t.wash);
             c.stroke(r, 1, if focused { t.ink } else { t.rule });
             let x0 = (r.x + s.px(10.0)) as f32;
             let by = base_y(r, Face::Atkinson);
@@ -282,15 +276,14 @@ impl EditorScreen {
                 shown.remove(0);
             }
             if buf.text().is_empty() {
-                // Greyed in All notes: say why instead of "Replace".
-                let mut ph = if off { tr(REPLACE_OFF) } else { tr(ph) }.into_owned();
+                let mut ph = tr(ph).into_owned();
                 while ph.chars().count() > 1 && self.fonts.width(Face::Atkinson, ui, &ph) > max {
                     ph.pop();
                 }
                 self.fonts.draw(c, Face::Atkinson, ui, x0, by, &ph, t.mute);
             } else {
-                let ink = if off { t.mute } else { t.ink };
-                self.fonts.draw(c, Face::Atkinson, ui, x0, by, &shown, ink);
+                self.fonts
+                    .draw(c, Face::Atkinson, ui, x0, by, &shown, t.ink);
             }
             if focused {
                 let cut = shown
@@ -330,7 +323,7 @@ impl EditorScreen {
             (l.case, TOOLS[4]),
         ] {
             let active = label == "Aa" && m.case;
-            let off = all && (label == "Replace" || label == "All");
+            let off = all && label == "Replace";
             self.draw_key(c, r, &tr(label), active, off, t);
         }
     }
@@ -355,6 +348,113 @@ impl EditorScreen {
             label,
             ink,
         );
+    }
+}
+
+/// Where the notice band of the results list (S24.1) put its parts.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct NoticeLayout {
+    /// The whole band, at the top of the results list's area.
+    pub band: Rect,
+    /// Room for the text (empty when the band has only a button).
+    pub text: Rect,
+    /// The button (empty when the band has none).
+    pub button: Rect,
+}
+
+impl EditorScreen {
+    /// Height of the notice band: one 44 px key with a little air.
+    #[must_use]
+    pub fn notice_h(&self) -> i32 {
+        let s = self.scale();
+        s.px(44.0) + 2 * s.px(6.0)
+    }
+
+    /// Lays the notice band out at the top of `area`. With a `button` it
+    /// sits at the right, or at the left when there is no `text`; the text
+    /// takes the rest.
+    #[must_use]
+    pub fn notice_layout(&self, area: Rect, text: &str, button: Option<&str>) -> NoticeLayout {
+        let s = self.scale();
+        let ui = self.ui_px();
+        let (side, btn, gap) = (s.px(20.0), s.px(44.0), s.px(8.0));
+        let band = Rect::new(area.x, area.y, area.w, self.notice_h().min(area.h.max(0)));
+        let by = band.y + (band.h - btn) / 2;
+        let mut out = NoticeLayout {
+            band,
+            ..NoticeLayout::default()
+        };
+        let mut left = band.x + side;
+        let mut right = band.x + band.w - s.px(12.0);
+        if let Some(label) = button {
+            let w = (self.fonts.width(Face::AtkinsonBold, ui, label).ceil() as i32
+                + 2 * s.px(14.0))
+            .max(s.px(60.0))
+            .min((right - left).max(1));
+            if text.is_empty() {
+                out.button = Rect::new(left, by, w, btn);
+                left += w + gap;
+            } else {
+                out.button = Rect::new(right - w, by, w, btn);
+                right -= w + gap;
+            }
+        }
+        if !text.is_empty() {
+            out.text = Rect::new(left, band.y, (right - left).max(0), band.h);
+        }
+        out
+    }
+
+    /// Whether (`x`, `y`) is on the notice band's button.
+    #[must_use]
+    pub fn notice_hit(&self, l: &NoticeLayout, x: i32, y: i32) -> bool {
+        l.button.w > 0 && l.button.inset(-self.scale().px(3.0)).contains(x, y)
+    }
+
+    /// Draws the notice band: `text` (cut with an ellipsis to fit) on a
+    /// wash band over the page, and the button inverted.
+    pub fn draw_notice(
+        &self,
+        c: &mut Canvas,
+        l: &NoticeLayout,
+        text: &str,
+        button: Option<&str>,
+        t: Theme,
+    ) {
+        if l.band.h <= 0 {
+            return;
+        }
+        let ui = self.ui_px();
+        c.fill(l.band, t.wash);
+        c.fill(
+            Rect::new(l.band.x, l.band.y + l.band.h - 1, l.band.w, 1),
+            t.rule,
+        );
+        if l.text.w > 0 {
+            let mut shown = text.to_owned();
+            let room = l.text.w as f32;
+            if self.fonts.width(Face::Atkinson, ui, &shown) > room {
+                let ell =
+                    self.fonts
+                        .width(Face::Atkinson, ui, &crate::search::ELLIPSIS.to_string());
+                shown = self.cut_end(&shown, Face::Atkinson, ui, room - ell);
+                shown.push(crate::search::ELLIPSIS);
+            }
+            self.fonts.draw(
+                c,
+                Face::Atkinson,
+                ui,
+                l.text.x as f32,
+                l.text.y as f32
+                    + l.text.h as f32 / 2.0
+                    + self.fonts.ascent(Face::Atkinson, ui) / 2.6,
+                &shown,
+                t.ink,
+            );
+        }
+        if let (Some(label), true) = (button, l.button.w > 0) {
+            self.draw_key(c, l.button, label, true, false, t);
+        }
     }
 }
 
@@ -446,58 +546,64 @@ mod tests {
         set_lang(Lang::En);
     }
 
-    /// The greyed Replace field says why in every language, and the label
-    /// fits inside the field at every scale and orientation.
+    /// S24-D5: in All notes the single Replace key hits nothing; the Replace
+    /// field, the All key and everything else still hit.
     #[test]
-    fn replace_label_fits_in_all_notes() {
-        for lang in [
-            Lang::En,
-            Lang::Fr,
-            Lang::Pt,
-            Lang::De,
-            Lang::Es,
-            Lang::It,
-            Lang::Nl,
-            Lang::Ca,
-            Lang::Da,
-            Lang::Sv,
-        ] {
-            set_lang(lang);
-            let label = tr(REPLACE_OFF);
-            assert!(
-                lang == Lang::En || label != REPLACE_OFF,
-                "{lang:?} untranslated"
-            );
-            for (w, h) in [(1440u32, 1920u32), (1920, 1440)] {
-                for ui in sigma_core::settings::UI_SCALES {
-                    let (e, l) = open(w, h, ui);
-                    let fl = e.find_layout(&l);
-                    let room = (fl.replace.w - e.scale().px(20.0)) as f32;
-                    let width = e.fonts.width(Face::Atkinson, e.ui_px(), &label);
-                    assert!(width <= room, "{lang:?} {w}x{h} {ui}%: {width} > {room}");
-                }
-            }
-        }
-        set_lang(Lang::En);
-    }
-
-    /// S22-D3: in All notes the Replace field and the Replace and All keys
-    /// hit nothing; everything else still hits.
-    #[test]
-    fn replace_does_not_hit_in_all_notes() {
+    fn single_replace_does_not_hit_in_all_notes() {
         for (w, h) in [(1440u32, 1920u32), (1920, 1440)] {
             let (e, l) = open(w, h, 200);
             for (name, hit) in CONTROLS {
                 let (x, y) = e.find_control(&l, name).unwrap();
-                let want = if matches!(name, "ReplaceField" | "Replace" | "All") {
-                    FindHit::Bar
-                } else {
-                    hit
-                };
+                let want = if name == "Replace" { FindHit::Bar } else { hit };
                 assert_eq!(e.find_hit(&l, Scope::All, x, y), want, "{name}");
                 assert_eq!(e.find_hit(&l, Scope::Note, x, y), hit, "{name}");
             }
         }
+    }
+
+    /// The notice band keeps its button a real target and inside the band at
+    /// every scale, orientation and in the longest languages; its text
+    /// never reaches the button.
+    #[test]
+    fn notice_band_fits_and_its_button_hits() {
+        for lang in [Lang::En, Lang::Fr, Lang::Pt, Lang::PseudoLong] {
+            set_lang(lang);
+            for (w, h) in [(1440u32, 1920u32), (1920, 1440)] {
+                for ui in sigma_core::settings::UI_SCALES {
+                    let (e, l) = open(w, h, ui);
+                    let area = l.page;
+                    let min = e.scale().px(44.0);
+                    let tag = format!("{lang:?} {w}x{h} {ui}%");
+                    for (text, button) in [
+                        (tr("Replaced 52 in 3 notes"), Some(tr("Undo"))),
+                        (tr("Replaced 52 in 3 notes"), None),
+                        (
+                            std::borrow::Cow::Borrowed(""),
+                            Some(tr("Undo last replace")),
+                        ),
+                    ] {
+                        let nl = e.notice_layout(area, &text, button.as_deref());
+                        assert_eq!(nl.band.h, e.notice_h(), "{tag}");
+                        assert!(nl.band.x >= area.x && nl.band.x + nl.band.w <= area.x + area.w);
+                        if button.is_some() {
+                            let b = nl.button;
+                            assert!(b.w >= min && b.h >= min, "{tag}: {b:?}");
+                            assert!(b.x >= nl.band.x && b.x + b.w <= nl.band.x + nl.band.w);
+                            assert!(b.y >= nl.band.y && b.y + b.h <= nl.band.y + nl.band.h);
+                            assert!(e.notice_hit(&nl, b.x + b.w / 2, b.y + b.h / 2), "{tag}");
+                            assert!(!e.notice_hit(&nl, nl.band.x, nl.band.y), "{tag}");
+                            if nl.text.w > 0 {
+                                let t = nl.text;
+                                assert!(t.x + t.w <= b.x || b.x + b.w <= t.x, "{tag}");
+                            }
+                        } else {
+                            assert_eq!(nl.button.w, 0, "{tag}");
+                        }
+                    }
+                }
+            }
+        }
+        set_lang(Lang::En);
     }
 
     /// Three rows in both scopes: greyed controls keep their place, so the

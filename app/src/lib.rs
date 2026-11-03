@@ -38,6 +38,7 @@ mod plugin_screen;
 mod pointer;
 mod preview;
 mod render;
+mod replace;
 mod rotation;
 mod script;
 mod settings;
@@ -65,6 +66,7 @@ pub use pointer::{
     MouseDown, PointerState, DOUBLE_CLICK_MS, DOUBLE_CLICK_PX, POINTER_HIDE_MS, POINTER_THROTTLE_MS,
 };
 pub use preview::PreviewState;
+pub use replace::{Notice, Replacer, ReviewState};
 pub use rotation::{TILT_STABLE_MS, TILT_TYPING_PAUSE_MS};
 pub use splash::Splash;
 pub use suggest::SuggestState;
@@ -245,6 +247,8 @@ pub struct App {
     disk_todos: Vec<TodoItem>,
     /// Search across all notes, on its worker thread (S22.1).
     searcher: Searcher,
+    /// Replace in all notes: plan, apply and undo on a worker (S24.1).
+    replacer: Replacer,
     /// Find bar (v0.6).
     pub find: Option<FindState>,
     /// Graph sheet (v0.6).
@@ -408,6 +412,7 @@ impl App {
             indexer: Indexer::new(),
             disk_todos: Vec::new(),
             searcher: Searcher::new(),
+            replacer: Replacer::new(),
             find: None,
             graph: None,
             help: None,

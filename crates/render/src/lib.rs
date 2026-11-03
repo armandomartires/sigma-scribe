@@ -25,6 +25,7 @@ pub mod pointer;
 pub mod preview;
 pub mod qr;
 pub mod radio;
+pub mod review;
 pub mod scrollbar;
 pub mod search;
 pub(crate) mod shape;
@@ -46,6 +47,10 @@ pub use graphmap::{MapView, ZOOMS};
 pub use help::{HelpHit, HelpModel, HelpPage};
 pub use options::{OptionsHit, OptionsModel, SettingsPage};
 pub use preview::Doc;
+pub use review::{
+    review_line_matches, review_rows, review_spans, ReviewHit, ReviewLayout, ReviewModel,
+    ReviewRow, ReviewRowBox, ReviewSpan, SpanStyle,
+};
 pub use search::{
     SearchLayout, SearchListHit, SearchListModel, SearchRow, SearchState, TrimmedLine,
 };

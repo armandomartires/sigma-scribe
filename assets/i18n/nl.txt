@@ -488,8 +488,8 @@ The Forma does not power its USB port. Plug the keyboard into a powered USB hub,
 Connecting
 = Aansluiten
 
-Turn on Options → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
-= Zet eerst Opties → USB-toetsenbord en muis aan: de poort gaat dan in hostmodus, dus een computer ziet de Kobo pas weer als je het uitzet of de app sluit. Sluit daarna het toetsenbord aan; de statusbalk toont USB binnen een seconde (geen USB zolang er geen gevonden is). Het schermtoetsenbord blijft werken en loskoppelen is veilig.
+Turn on Settings → USB & devices → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
+= Zet eerst Instellingen → USB en apparaten → USB-toetsenbord en muis aan: de poort gaat dan in hostmodus, dus een computer ziet de Kobo pas weer als je het uitzet of de app sluit. Sluit daarna het toetsenbord aan; de statusbalk toont USB binnen een seconde (geen USB zolang er geen gevonden is). Het schermtoetsenbord blijft werken en loskoppelen is veilig.
 
 Shortcuts
 = Sneltoetsen
@@ -1354,6 +1354,54 @@ Previous
 Clock not set
 = Klok niet ingesteld
 
-# Replace field greyed in All notes (S12.7)
-Replace: This note only
-= Vervangen: alleen deze notitie
+# Replace in all notes (S24.1)
+Replace “{q}” with “{w}”
+= Vervang “{q}” door “{w}”
+
+Delete “{q}”
+= Wis “{q}”
+
+link
+= link
+
+Replace in {n} notes
+= Vervang in {n} notities
+
+Replace in {n} note
+= Vervang in {n} notitie
+
+Replacing… {n} of {m} notes
+= Vervangen… {n} van {m} notities
+
+Replaced {n} in {m} notes
+= {n} vervangen in {m} notities
+
+Replaced {n} in {m} note
+= {n} vervangen in {m} notitie
+
+{n} changed since the review
+= Gewijzigd sinds de controle: {n}
+
+{n} could not be written
+= Niet te schrijven: {n}
+
+Restored {n} notes
+= {n} notities hersteld
+
+Restored {n} note
+= {n} notitie hersteld
+
+{n} left alone
+= {n} ongemoeid gelaten
+
+Nothing was replaced
+= Er is niets vervangen
+
+Could not undo the replace
+= Vervanging kon niet ongedaan worden gemaakt
+
+Undo last replace
+= Laatste vervanging ongedaan maken
+
+No matches
+= Geen treffers

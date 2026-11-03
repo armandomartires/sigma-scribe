@@ -488,8 +488,8 @@ The Forma does not power its USB port. Plug the keyboard into a powered USB hub,
 Connecting
 = Verbinden
 
-Turn on Options → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
-= Schalte zuerst Optionen → USB-Tastatur & Maus ein: Der Anschluss wechselt in den Host-Modus, daher sieht ein Computer den Kobo erst, wenn du es ausschaltest oder die App verlässt. Stecke dann die Tastatur ein; die Statusleiste zeigt innerhalb einer Sekunde USB (kein USB, solange keine gefunden wird). Die Bildschirmtastatur funktioniert weiter, und Abziehen ist sicher.
+Turn on Settings → USB & devices → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
+= Schalte zuerst Einstellungen → USB & Geräte → USB-Tastatur & Maus ein: Der Anschluss wechselt in den Host-Modus, daher sieht ein Computer den Kobo erst, wenn du es ausschaltest oder die App verlässt. Stecke dann die Tastatur ein; die Statusleiste zeigt innerhalb einer Sekunde USB (kein USB, solange keine gefunden wird). Die Bildschirmtastatur funktioniert weiter, und Abziehen ist sicher.
 
 Shortcuts
 = Tastenkürzel
@@ -1354,6 +1354,54 @@ Previous
 Clock not set
 = Uhr nicht gestellt
 
-# Replace field greyed in All notes (S12.7)
-Replace: This note only
-= Ersetzen: nur diese Notiz
+# Replace in all notes (S24.1)
+Replace “{q}” with “{w}”
+= »{q}« durch »{w}« ersetzen
+
+Delete “{q}”
+= »{q}« löschen
+
+link
+= Link
+
+Replace in {n} notes
+= In {n} Notizen ersetzen
+
+Replace in {n} note
+= In {n} Notiz ersetzen
+
+Replacing… {n} of {m} notes
+= Ersetze… {n} von {m} Notizen
+
+Replaced {n} in {m} notes
+= {n} ersetzt in {m} Notizen
+
+Replaced {n} in {m} note
+= {n} ersetzt in {m} Notiz
+
+{n} changed since the review
+= {n} seit der Prüfung geändert
+
+{n} could not be written
+= {n} nicht geschrieben
+
+Restored {n} notes
+= {n} Notizen wiederhergestellt
+
+Restored {n} note
+= {n} Notiz wiederhergestellt
+
+{n} left alone
+= {n} unverändert gelassen
+
+Nothing was replaced
+= Nichts wurde ersetzt
+
+Could not undo the replace
+= Ersetzen konnte nicht rückgängig gemacht werden
+
+Undo last replace
+= Letztes Ersetzen rückgängig
+
+No matches
+= Keine Treffer

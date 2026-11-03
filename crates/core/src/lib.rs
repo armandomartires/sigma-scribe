@@ -27,6 +27,7 @@ pub mod markdown;
 pub mod outline;
 pub mod pluginpkg;
 pub mod plugins;
+pub mod replace;
 pub mod search;
 pub mod settings;
 pub mod store;

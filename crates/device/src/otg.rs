@@ -1,7 +1,7 @@
 //! USB OTG role switch (v0.8). The Forma's Chipidea controller boots in
 //! *gadget* mode (USB storage for Nickel); a keyboard needs *host* mode,
 //! switched through debugfs (`ci_hdrc.0/role`, as KOReader's
-//! ExternalKeyboard plugin does). Only done while Options → USB keyboard is
+//! ExternalKeyboard plugin does). Only done while Settings → USB & devices → USB keyboard & mouse is
 //! On, and switched back to gadget when that is turned off or the app
 //! leaves. A reboot always returns the port to gadget mode.
 //!
