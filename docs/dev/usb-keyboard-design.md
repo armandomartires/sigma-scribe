@@ -1,6 +1,6 @@
 # USB keyboard (v0.8) — design and hardware notes
 
-How to use it is in [../user/usb-keyboard.md](../user/usb-keyboard.md).
+How to use it is in [../user/09-usb-keyboard-and-mouse/connect.md](../user/09-usb-keyboard-and-mouse/connect.md).
 
 ## How it works
 1. Options → USB keyboard On → `Device::usb_host(true)`: on the Kobo, `OtgSwitch` writes `host` to `/sys/kernel/debug/ci_hdrc.0/role` if it reads `gadget` (debugfs mounted first if missing). Off / exit → `gadget`, only if the app made the switch (`crates/device/src/otg.rs`).
@@ -15,7 +15,7 @@ Moved from the user page. **Known to work on this Forma (user report, corrected 
 Product brief for export: no cloud account required (Syncthing or similar was "later, optional"; it now exists, see [sync-design.md](sync-design.md)).
 
 ## Unverified on the device
-That this app reaches host mode the way KOReader did (host mode itself is known to work with a wired keyboard, see [Hardware](../user/usb-keyboard.md#hardware) and the trial status below; the method matches KOReader's, see below); enumeration delay; Nickel also reading the keyboard (no EVIOCGRAB); Apple-mode keyboards (`hid ignore_special_drivers`). Each failure degrades to "no keyboard" with a log line.
+That this app reaches host mode the way KOReader did (host mode itself is known to work with a wired keyboard, see [Hardware](../user/09-usb-keyboard-and-mouse/connect.md#hardware) and the trial status below; the method matches KOReader's, see below); enumeration delay; Nickel also reading the keyboard (no EVIOCGRAB); Apple-mode keyboards (`hid ignore_special_drivers`). Each failure degrades to "no keyboard" with a log line.
 
 ## Mouse and touchpad (v0.8.1)
 

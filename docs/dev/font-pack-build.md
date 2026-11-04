@@ -1,6 +1,6 @@
 # Font packs: lookup and building
 
-What a font pack is and where to put it on the Kobo is in [../user/font-packs.md](../user/font-packs.md). This page holds what was moved from that page.
+What a font pack is and where to put it on the Kobo is in [../user/08-keyboards-and-languages/font-packs.md](../user/08-keyboards-and-languages/font-packs.md). This page holds what was moved from that page.
 
 Literata and Atkinson cover Latin, Greek, Cyrillic and Vietnamese. Other scripts come from an optional font pack, a single TrueType/OpenType file the app loads at start and uses for any character the bundled faces lack (plan §12.6; script font packs, v1.7.1).
 

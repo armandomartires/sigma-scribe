@@ -25,7 +25,7 @@ Screenshots from the desktop emulator (`tests/emu/readme.script`); e-ink-look co
 **Writing**
 - Editor with an on-screen keyboard: Compact or Full, a size slider, in landscape Split, Full or Centre. A Kobo-style keyboard can be used instead.
 - Touch selection with handles, cut / copy / paste, undo and redo, insert or overwrite typing, autosave.
-- Find & Replace in the note, or **search all notes** from the same bar: a list of matches, a tap opens the note at that line ([`docs/user/search.md`](docs/user/search.md)).
+- Find & Replace in the note, or **search all notes** from the same bar: a list of matches, a tap opens the note at that line ([`docs/user/05-find-search-replace/search-all-notes.md`](docs/user/05-find-search-replace/search-all-notes.md)).
 - Line mode (a set number of words per line), size, leading, margin, tabs.
 
 **Notes**
@@ -34,10 +34,10 @@ Screenshots from the desktop emulator (`tests/emu/readme.script`); e-ink-look co
 - Wiki links `[[note]]` and `[[note#heading]]` with backlinks; renaming or moving a note updates the links to it.
 - **Link autocomplete**: right after `[[` a bar of note names shows above the keyboard, the notes opened last first, narrowed by each letter; after `#` it lists that note's headings. A tap (or Enter on a USB keyboard) completes the link.
 - A side drawer, opened from one **drawer menu** button in the title bar (tick Contents, To-dos, Scratch or Calendar; drag the grip to set the width, double tap it to tuck the drawer away): the note's **Contents**, **To-dos** across all notes (tick them off from the drawer), a **Scratch** pad and the **Calendar**.
-- A **journal**: one note a day under `journal/`, opened or made from the Calendar pane, with a dot on the days that have one ([`docs/user/journal.md`](docs/user/journal.md)).
+- A **journal**: one note a day under `journal/`, opened or made from the Calendar pane, with a dot on the days that have one ([`docs/user/06-journal/index.md`](docs/user/06-journal/index.md)).
 - The **Graph**: a map of notes and their links, or a list, with its own settings.
 
-**Handwriting** (Write panel; see [`docs/user/handwriting.md`](docs/user/handwriting.md))
+**Handwriting** (Write panel; see [`docs/user/07-handwriting/index.md`](docs/user/07-handwriting/index.md))
 - The keys sit in one block, grouped by use (panel, editing, typing, moving), on a third of the width; the rest is the writing area. **⇄** moves the block to the other side and **Line** shows or hides a dotted guide line.
 - Write anywhere in the writing area. The ink is split into letters and read; spaces come from the gaps. A candidate bar offers other readings, and keys type punctuation, digits and spaces.
 - **Word mode** and **Fast ink** (experimental; Settings → Experimental features) reads whole words against a word list and the words in your notes.
@@ -56,7 +56,7 @@ Screenshots from the desktop emulator (`tests/emu/readme.script`); e-ink-look co
   - **Indic and Thai:** Hindi, Marathi, Nepali, Bengali, Tamil, Thai, with conjuncts and clusters.
   - **East Asian:** Korean, Japanese (romaji to kana, kanji conversion with the SKK dictionary), Chinese Simplified and Traditional (pinyin).
 - Korean, Japanese, Chinese, Arabic, Persian, Urdu, Hebrew, Hindi, Marathi, Nepali, Bengali, Tamil and Thai are experimental: they appear in the layout list only with Settings → Experimental features on.
-- Korean, Japanese and Chinese characters need a font pack (`fonts/cjk.ttf`; see [`docs/user/font-packs.md`](docs/user/font-packs.md)). The dictionaries are included.
+- Korean, Japanese and Chinese characters need a font pack (`fonts/cjk.ttf`; see [`docs/user/08-keyboards-and-languages/font-packs.md`](docs/user/08-keyboards-and-languages/font-packs.md)). The dictionaries are included.
 
 **Device**
 - Paper or Night, Literata or Atkinson Hyperlegible, keyboard tone.
@@ -71,15 +71,15 @@ Screenshots from the desktop emulator (`tests/emu/readme.script`); e-ink-look co
 - An optional log file (Settings → Logging) for the app and its plugins.
 
 **Wi-Fi**
-- A Wi-Fi button in the title bar (left of Settings) turns the radio on and off, shows the network and its address, lists the networks around (signal, lock), joins one (the password typed on the on-screen keyboard) and forgets a saved one. With Settings → Sync on, Wi-Fi off stops Syncthing. See `docs/user/wifi.md`.
+- A Wi-Fi button in the title bar (left of Settings) turns the radio on and off, shows the network and its address, lists the networks around (signal, lock), joins one (the password typed on the on-screen keyboard) and forgets a saved one. With Settings → Sync on, Wi-Fi off stops Syncthing. See `docs/user/10-wifi-and-sync/join-a-network.md`.
 
 **Sync**
-- Settings → Sync runs Syncthing on the reader while Σscribe is open, to keep the notes folder in step with your computers; no account and no server of ours. Pair by entering the reader's device ID on the computer, or by scanning its QR code with the Syncthing app on a phone, then tap Accept on the reader. Off by default; see `docs/user/sync.md`.
+- Settings → Sync runs Syncthing on the reader while Σscribe is open, to keep the notes folder in step with your computers; no account and no server of ours. Pair by entering the reader's device ID on the computer, or by scanning its QR code with the Syncthing app on a phone, then tap Accept on the reader. Off by default; see `docs/user/10-wifi-and-sync/sync-with-syncthing.md`.
 
 ## Install, update, uninstall
-See [`docs/user/install.md`](docs/user/install.md). In short: install NickelMenu, unpack `sigma-scribe-<ver>-kobo.tar.gz` onto the Kobo drive's root, eject, then *Σscribe* is in the NickelMenu. Notes live in `sigma-scribe/notes` on the drive. An update keeps your notes, settings and plugin choices. Uninstall = delete `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`.
+See [`docs/user/01-set-up/install.md`](docs/user/01-set-up/install.md). In short: install NickelMenu, unpack `sigma-scribe-<ver>-kobo.tar.gz` onto the Kobo drive's root, eject, then *Σscribe* is in the NickelMenu. Notes live in `sigma-scribe/notes` on the drive. An update keeps your notes, settings and plugin choices. Uninstall = delete `.adds/sigma-scribe` and `.adds/nm/sigma-scribe`.
 
 ## Docs
-For readers of the app: [`docs/user/`](docs/user/README.md) (getting started, journal, search, handwriting, install, USB keyboard, Wi-Fi, sync, logging, Japanese and Chinese input, font packs, plugins), the [wiki](https://github.com/armandomartires/sigma-scribe/wiki) and the [project page](https://armandomartires.github.io/sigma-scribe/). `CHANGELOG.md` lists the changes by version.
+For readers of the app: the [help centre](https://armandomartires.github.io/sigma-scribe/help/) and [`docs/user/`](docs/user/README.md) (getting started, journal, search, handwriting, install, USB keyboard, Wi-Fi, sync, logging, Japanese and Chinese input, font packs, plugins), the [wiki](https://github.com/armandomartires/sigma-scribe/wiki) and the [project page](https://armandomartires.github.io/sigma-scribe/). `CHANGELOG.md` lists the changes by version.
 
 Building and contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/dev/`](docs/dev/README.md).

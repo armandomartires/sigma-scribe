@@ -1,6 +1,6 @@
 # Sync design (Syncthing on the Kobo)
 
-For how to use sync, see [../user/sync.md](../user/sync.md).
+For how to use sync, see [../user/10-wifi-and-sync/sync-with-syncthing.md](../user/10-wifi-and-sync/sync-with-syncthing.md).
 
 This page is the design (decided 2026-10-28: Syncthing runs *on* the Kobo,
 not as a one-way export) and the notes for trying it on the Forma. Status:
@@ -255,7 +255,7 @@ At every start:
 
 ## 7. Pairing without typing 56 characters on the Kobo
 
-The steps (add the Kobo on the computer, Accept, scan the QR code, first sync) are in [../user/sync.md](../user/sync.md#pairing-without-typing-56-characters-on-the-kobo). The design of the QR code:
+The steps (add the Kobo on the computer, Accept, scan the QR code, first sync) are in [../user/10-wifi-and-sync/sync-with-syncthing.md](../user/10-wifi-and-sync/sync-with-syncthing.md#pairing-without-typing-56-characters-on-the-kobo). The design of the QR code:
 
 The code is black on white with a 4-module quiet zone whatever
 the Night setting, whole pixels per module, up to 14 px: about 39 mm across at
@@ -269,7 +269,7 @@ checklist (§12).
 
 ## 8. Conflict files
 
-What the reader sees is in [../user/sync.md](../user/sync.md#conflict-files).
+What the reader sees is in [../user/10-wifi-and-sync/conflicts.md](../user/10-wifi-and-sync/conflicts.md#conflict-files).
 
 ## 9. When notes change underneath the app
 
@@ -308,7 +308,7 @@ lost at the next keystroke. With sync that is not acceptable, so:
 
 ## 10. Status the page shows
 
-The rows, in plain words, are in [../user/sync.md](../user/sync.md#status-the-page-shows). The full table with where each comes from (moved from the user page; the REST calls are in §4):
+The rows, in plain words, are in [../user/10-wifi-and-sync/sync-status.md](../user/10-wifi-and-sync/sync-status.md#status-the-page-shows). The full table with where each comes from (moved from the user page; the REST calls are in §4):
 
 | Row | Source |
 |---|---|

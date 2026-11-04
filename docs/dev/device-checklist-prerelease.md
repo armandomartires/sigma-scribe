@@ -120,7 +120,7 @@ Installed on the Forma: **local build of `v1.13.1-write-fixes` (PR 48), head `a3
 - [ ] Layout → Vietnamese (Telex): `vieetj` → việt, `nguwowif` → người on the Full board and a USB keyboard; `aaa` → aa; a tone key after a moved caret starts a new word.
 - [ ] Layout → Vietnamese (VNI): `Vie6t5` → Việt; digits still type digits after a space.
 - [ ] Vietnamese letters and tones crisp at 100–200 % (Literata, no box glyphs).
-- [ ] Korean needs the font pack first (docs/user/font-packs.md): `fonts/korean.ttf` in `.adds/sigma-scribe/`.
+- [ ] Korean needs the font pack first (docs/user/08-keyboards-and-languages/font-packs.md): `fonts/korean.ttf` in `.adds/sigma-scribe/`.
 - [ ] Layout → Korean: jamo make syllables as you type, Backspace takes back one jamo; Shift gives ㅃ ㅉ ㄸ ㄲ ㅆ ㅒ ㅖ; AltGr types Latin and Markdown marks.
 - [ ] Hangul legible at the body size; line wrap and the caret sit right on Hangul text; refresh while a syllable changes (no ghosting).
 - [ ] Without the pack, Hangul draws as boxes (known; the layout is not hidden yet).
