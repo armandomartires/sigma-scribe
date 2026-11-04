@@ -214,6 +214,27 @@ impl App {
             "Graph" if self.screen.graph_on => Some(centre(l.graph_button)),
             "FindField" | "ReplaceField" | "FindClose" | "Prev" | "Next" | "Replace" | "All"
             | "Aa" | "This note" | "All notes" => self.screen.find_control(&l, label),
+            // S24.1: the review sheet of Replace in all notes. `ReviewApply`,
+            // `ReviewCancel`, `ReviewPrev`, `ReviewNext`; `ReviewNote:<path>`
+            // is a note's row, `ReviewLine:<path>:<n>` its matched line n
+            // (as shown), both on the shown page. `ReplaceUndo` is the
+            // notice band's button.
+            "ReviewApply" | "ReviewCancel" | "ReviewPrev" | "ReviewNext" => {
+                let rl = self.review_layout_now()?;
+                Some(centre(match label {
+                    "ReviewApply" => rl.apply,
+                    "ReviewCancel" => rl.cancel,
+                    "ReviewPrev" => rl.prev,
+                    _ => rl.next,
+                }))
+            }
+            "ReplaceUndo" => {
+                let (nl, _, button) = self.notice_layout_now()?;
+                button.map(|_| centre(nl.button))
+            }
+            s if s.starts_with("ReviewNote:") || s.starts_with("ReviewLine:") => {
+                self.review_row_control(s)
+            }
             // S22.1: `Result:N` is row N of the results list (0-based, on
             // the shown page); `SearchPrev` / `SearchNext` its page arrows.
             "SearchPrev" | "SearchNext" => {
@@ -418,6 +439,33 @@ impl App {
             .map(|(b, tx, _)| centre(if boxed { *b } else { *tx }))
     }
 
+    /// Centre of a row of the review sheet by name (`ReviewNote:<path>`,
+    /// `ReviewLine:<path>:<n>`), when it is on the shown page.
+    fn review_row_control(&self, name: &str) -> Option<(i32, i32)> {
+        use sigma_render::ReviewRow;
+        let r = self.find.as_ref()?.review.as_ref()?;
+        let l = self.review_layout_now()?;
+        let (path, line) = match name.strip_prefix("ReviewNote:") {
+            Some(p) => (p, None),
+            None => {
+                let (p, n) = name.strip_prefix("ReviewLine:")?.rsplit_once(':')?;
+                (p, Some(n.parse::<usize>().ok()?))
+            }
+        };
+        l.rows
+            .iter()
+            .find(|b| match (b.row, line) {
+                (ReviewRow::Note(i), None) => {
+                    r.plan.notes.get(i).is_some_and(|n| n.path.as_str() == path)
+                }
+                (ReviewRow::Line(i, k), Some(n)) => r.plan.notes.get(i).is_some_and(|np| {
+                    np.path.as_str() == path && np.lines.get(k).is_some_and(|pl| pl.line == n)
+                }),
+                _ => false,
+            })
+            .map(|b| centre(b.rect))
+    }
+
     /// Every tappable control on the current screen, named.
     #[must_use]
     pub fn touch_targets(&self) -> Vec<(String, Rect)> {
@@ -541,12 +589,30 @@ impl App {
                 add(n, r);
             }
         }
-        if let Some(sl) = self.search_layout_now() {
+        if let Some(sl) = self.search_layout_now().filter(|_| !self.review_shown()) {
             for (i, r) in &sl.rows {
                 add(&format!("search row {i}"), *r);
             }
             add("SearchPrev", sl.prev);
             add("SearchNext", sl.next);
+        }
+        if let Some((nl, _, Some(_))) = self.notice_layout_now() {
+            add("ReplaceUndo", nl.button);
+        }
+        if let Some(rl) = self.review_layout_now() {
+            for (n, r) in [
+                ("ReviewApply", rl.apply),
+                ("ReviewCancel", rl.cancel),
+                ("ReviewPrev", rl.prev),
+                ("ReviewNext", rl.next),
+            ] {
+                if r.w > 0 {
+                    add(n, r);
+                }
+            }
+            for (i, b) in rl.rows.iter().enumerate() {
+                add(&format!("review row {i}"), b.rect);
+            }
         }
         if self.drawer_visible() {
             let (hs, todos) = (self.headings(), self.todo_list());

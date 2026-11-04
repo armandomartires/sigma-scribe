@@ -32,7 +32,7 @@ The **Aa** option is the same one Find uses: off ignores upper and lower case, o
 
 ### Replace
 
-Replace is off in All notes. Changing text in many notes at once cannot be undone across files, so Replace works in This note only.
+To change the matches in every note, use **All** with a replacement typed: see [Replace in all notes](replace-in-all-notes.md). The single **Replace** key stays grey in All notes.
 
 ## Opening a result
 
@@ -53,4 +53,3 @@ Search reads text. Ink you have written with the Write panel ([handwriting.md](.
 
 - No regular expressions and no fuzzy matching: the query is plain text.
 - No search inside the Trash.
-- No replace across notes.

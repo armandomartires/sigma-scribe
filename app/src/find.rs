@@ -1,8 +1,9 @@
 //! The Find and replace bar, and Search across all notes (S22.1).
 
-use crate::App;
+use crate::{App, Notice, ReviewState};
 use sigma_core::buffer::TabKind;
 use sigma_core::keyboard::{Dir, Key};
+use sigma_core::replace::Snapshot;
 use sigma_core::search::{SearchRequest, SearchResult};
 use sigma_core::{Buffer, KeyAction, NotePath};
 use sigma_device::{HwKey, Refresh};
@@ -82,7 +83,9 @@ impl App {
     pub fn find_label(&self) -> String {
         if let Some(f) = self.find.as_ref().filter(|f| f.scope == Scope::All) {
             let m = self.search_model(f);
-            let l = self.screen.search_layout(self.page_rect(), &m);
+            let l = self
+                .screen
+                .search_layout(self.search_area(self.page_rect()), &m);
             return EditorScreen::search_status(&m, l.visible);
         }
         let ms = self.find_matches();
@@ -145,8 +148,10 @@ impl App {
     }
 
     fn find_replace_all(&mut self) -> Option<Refresh> {
+        // Across notes the All key plans the replace and opens the review
+        // sheet (S24.1); nothing is written until Apply.
         if self.find_scope() == Scope::All {
-            return None;
+            return self.review_open();
         }
         let ms = self.find_matches();
         if ms.is_empty() {
@@ -171,7 +176,18 @@ impl App {
 
     pub(crate) fn find_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
         let l = self.page_layout();
-        match self.screen.find_hit(&l, self.find_scope(), x, y) {
+        let hit = self.screen.find_hit(&l, self.find_scope(), x, y);
+        // With the review sheet up the bar only closes (Cancel is on the
+        // sheet): its fields and keys would change nothing visible.
+        if self.review_shown() {
+            return if hit == FindHit::Close {
+                self.close_find();
+                Some(Refresh::Full)
+            } else {
+                None
+            };
+        }
+        match hit {
             FindHit::Field(fld) => {
                 self.scratch_focus = false;
                 let f = self.find.as_mut()?;
@@ -199,6 +215,7 @@ impl App {
                 if f.scope == Scope::All {
                     f.first = 0;
                     f.selected = None;
+                    f.notice = None;
                     self.search_request();
                 } else {
                     let from = self.buffer.selection().map_or(self.buffer.caret(), |s| s.0);
@@ -214,6 +231,11 @@ impl App {
     /// All starts the search of the current query; switching back shows
     /// the note again with its match selected. Session state (S22-D2).
     pub fn set_scope(&mut self, s: Scope) -> Option<Refresh> {
+        let snapshot = if s == Scope::All {
+            self.find_snapshot()
+        } else {
+            None
+        };
         let f = self.find.as_mut()?;
         if f.scope == s {
             return None;
@@ -222,6 +244,9 @@ impl App {
         f.first = 0;
         f.selected = None;
         f.focus = Some(FindField::Find);
+        f.review = None;
+        f.notice = None;
+        f.snapshot = snapshot;
         if s == Scope::All {
             f.results = None;
             f.rows.clear();
@@ -241,6 +266,7 @@ impl App {
             if let Some(f) = &mut self.find {
                 f.first = 0;
                 f.selected = None;
+                f.notice = None;
             }
             self.search_request();
             return;
@@ -278,8 +304,6 @@ impl App {
                 self.close_find();
                 return Some(Refresh::Full);
             }
-            // Replace is off in All notes (S22-D3): Tab stays in the query.
-            Key::Tab if all => return None,
             Key::Tab => {
                 let f = self.find.as_mut()?;
                 f.focus = Some(match f.focus {
@@ -347,7 +371,7 @@ impl App {
 impl App {
     /// Sends the current query to the search worker. The open note is
     /// saved first: the worker reads from disk.
-    fn search_request(&mut self) {
+    pub(crate) fn search_request(&mut self) {
         let Some(f) = self.find.as_ref().filter(|f| f.scope == Scope::All) else {
             return;
         };
@@ -431,11 +455,18 @@ impl App {
         }
         let f = self.find.as_ref()?;
         let m = self.search_model(f);
-        Some(self.screen.search_layout(self.page_rect(), &m))
+        Some(
+            self.screen
+                .search_layout(self.search_area(self.page_rect()), &m),
+        )
     }
 
     /// A tap on the results list: a row opens its note, ‹ › turn pages.
     pub(crate) fn search_tap(&mut self, x: i32, y: i32) -> Option<Refresh> {
+        // The notice band above the list: its button undoes the last replace.
+        if let Some(r) = self.notice_tap(x, y) {
+            return r;
+        }
         let l = self.search_layout_now()?;
         match self.screen.search_hit(&l, x, y) {
             SearchListHit::Row(i) => self.search_open(i),
@@ -534,6 +565,9 @@ impl App {
             first: s.first,
             selected: None,
             notes_total: self.library.all_notes().map_or(0, |n| n.len()),
+            review: None,
+            notice: None,
+            snapshot: self.find_snapshot(),
         };
         self.find = Some(f);
         self.screen.find_open = true;
@@ -596,6 +630,12 @@ pub struct FindState {
     pub selected: Option<usize>,
     /// How many notes there are to search (the idle status line).
     pub notes_total: usize,
+    /// The review sheet of Replace in all notes, while it is up (S24.1).
+    pub review: Option<ReviewState>,
+    /// What the notice band says after a replace or an undo.
+    pub notice: Option<Notice>,
+    /// The newest replace that can still be undone, if any.
+    pub snapshot: Option<Snapshot>,
 }
 
 /// The results list as Back remembers it (S22.1): the bar reopens in All

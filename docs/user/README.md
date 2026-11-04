@@ -50,8 +50,8 @@ Find text in the open note, search all your notes, and replace across them.
 
 - [Find in a note](05-find-search-replace/find-in-a-note.md): Find text in the note you have open, and step through the matches.
 - [Search all notes](05-find-search-replace/search-all-notes.md): Search every note at once and open a result.
-- [Replace in all notes](05-find-search-replace/replace-in-all-notes.md): Replace text across all your notes; coming in 1.21.
-- [Undo a replace](05-find-search-replace/undo-a-replace.md): Undo a replace across notes; coming in 1.21.
+- [Replace in all notes](05-find-search-replace/replace-in-all-notes.md): Replace a word or phrase in every note at once, after checking each change.
+- [Undo a replace](05-find-search-replace/undo-a-replace.md): Put your notes back as they were before a replace across notes.
 
 ## 6. [Journal](06-journal/index.md)
 

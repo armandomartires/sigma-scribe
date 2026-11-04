@@ -488,8 +488,8 @@ The Forma does not power its USB port. Plug the keyboard into a powered USB hub,
 Connecting
 = Ansluta
 
-Turn on Options → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
-= Slå först på Alternativ → USB-tangentbord och mus: porten växlar till värdläge, så en dator ser inte Koboen förrän du slår av det eller avslutar appen. Anslut sedan tangentbordet; statusfältet visar USB inom en sekund (ingen USB så länge inget hittats). Skärmtangentbordet fungerar fortfarande och det är säkert att koppla ur.
+Turn on Settings → USB & devices → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
+= Slå först på Inställningar → USB och enheter → USB-tangentbord och mus: porten växlar till värdläge, så en dator ser inte Koboen förrän du slår av det eller avslutar appen. Anslut sedan tangentbordet; statusfältet visar USB inom en sekund (ingen USB så länge inget hittats). Skärmtangentbordet fungerar fortfarande och det är säkert att koppla ur.
 
 Shortcuts
 = Kortkommandon
@@ -1354,6 +1354,54 @@ Previous
 Clock not set
 = Klockan är inte ställd
 
-# Replace field greyed in All notes (S12.7)
-Replace: This note only
-= Ersätt: endast denna anteckning
+# Replace in all notes (S24.1)
+Replace “{q}” with “{w}”
+= Ersätt ”{q}” med ”{w}”
+
+Delete “{q}”
+= Radera ”{q}”
+
+link
+= länk
+
+Replace in {n} notes
+= Ersätt i {n} anteckningar
+
+Replace in {n} note
+= Ersätt i {n} anteckning
+
+Replacing… {n} of {m} notes
+= Ersätter… {n} av {m} anteckningar
+
+Replaced {n} in {m} notes
+= {n} ersatta i {m} anteckningar
+
+Replaced {n} in {m} note
+= {n} ersatta i {m} anteckning
+
+{n} changed since the review
+= {n} ändrade sedan granskningen
+
+{n} could not be written
+= {n} kunde inte skrivas
+
+Restored {n} notes
+= {n} anteckningar återställda
+
+Restored {n} note
+= {n} anteckning återställd
+
+{n} left alone
+= {n} lämnades orörda
+
+Nothing was replaced
+= Inget ersattes
+
+Could not undo the replace
+= Ersättningen kunde inte ångras
+
+Undo last replace
+= Ångra senaste ersättningen
+
+No matches
+= Inga träffar

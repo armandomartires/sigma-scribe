@@ -418,6 +418,7 @@ impl App {
     /// Blocks until the background index is current (emulator, tests).
     /// Returns whether the to-do list changed.
     pub fn settle(&mut self) -> bool {
+        let replaced = self.settle_replace();
         let searched = self.settle_search();
         let indexed = match self.indexer.wait() {
             Some(items) => {
@@ -427,7 +428,7 @@ impl App {
             }
             None => false,
         };
-        searched | indexed
+        replaced | searched | indexed
     }
 
     /// Checks / unchecks a to-do: the open note and the scratch pad are

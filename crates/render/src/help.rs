@@ -64,7 +64,7 @@ pub const KEYBOARD_HELP: [(&str, &str, &str); 7] = [
     ),
     (
         "Connecting",
-        "Turn on Options \u{2192} USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.",
+        "Turn on Settings \u{2192} USB & devices \u{2192} USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.",
         "",
     ),
     (

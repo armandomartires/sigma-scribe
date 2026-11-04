@@ -488,8 +488,8 @@ The Forma does not power its USB port. Plug the keyboard into a powered USB hub,
 Connecting
 = Connexió
 
-Turn on Options → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
-= Activa primer Opcions → Teclat i ratolí USB: posa el port en mode amfitrió, de manera que un ordinador no veu el Kobo fins que el desactives o surts de l'app. Després connecta el teclat; la barra d'estat mostra USB en un segon (sense USB mentre no en troba cap). El teclat en pantalla continua funcionant i desconnectar és segur.
+Turn on Settings → USB & devices → USB keyboard & mouse first: it switches the port to host mode, so a computer cannot see the Kobo until you turn it off or leave the app. Then plug the keyboard in; the status bar shows USB within a second (no USB while none is found). The on-screen keyboard keeps working, and unplugging is safe.
+= Activa primer Configuració → USB i dispositius → Teclat i ratolí USB: posa el port en mode amfitrió, de manera que un ordinador no veu el Kobo fins que el desactives o surts de l'app. Després connecta el teclat; la barra d'estat mostra USB en un segon (sense USB mentre no en troba cap). El teclat en pantalla continua funcionant i desconnectar és segur.
 
 Shortcuts
 = Dreceres
@@ -1354,6 +1354,54 @@ Previous
 Clock not set
 = Rellotge sense ajustar
 
-# Replace field greyed in All notes (S12.7)
-Replace: This note only
-= Substitueix: només aquesta nota
+# Replace in all notes (S24.1)
+Replace “{q}” with “{w}”
+= Substitueix «{q}» per «{w}»
+
+Delete “{q}”
+= Suprimeix «{q}»
+
+link
+= enllaç
+
+Replace in {n} notes
+= Substitueix en {n} notes
+
+Replace in {n} note
+= Substitueix en {n} nota
+
+Replacing… {n} of {m} notes
+= Substituint… {n} de {m} notes
+
+Replaced {n} in {m} notes
+= Substitucions: {n} en {m} notes
+
+Replaced {n} in {m} note
+= Substitucions: {n} en {m} nota
+
+{n} changed since the review
+= Modificades des de la revisió: {n}
+
+{n} could not be written
+= No s'ha pogut escriure: {n}
+
+Restored {n} notes
+= Notes restaurades: {n}
+
+Restored {n} note
+= Nota restaurada: {n}
+
+{n} left alone
+= Deixades tal com són: {n}
+
+Nothing was replaced
+= No s'ha substituït res
+
+Could not undo the replace
+= No s'ha pogut desfer la substitució
+
+Undo last replace
+= Desfés l'última substitució
+
+No matches
+= Cap resultat

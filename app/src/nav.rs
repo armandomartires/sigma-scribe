@@ -72,9 +72,14 @@ impl App {
 
     /// Back (v1.0.2): the previous note, mode and position. Sheets and the
     /// find bar close; an entry taken from the search results list brings
-    /// the list back with its query and page (S22.1). Entries whose note
+    /// the list back with its query and page (S22.1); from the review sheet
+    /// of Replace in all notes it only closes the sheet (S24.1). Entries whose note
     /// no longer exists are skipped. `None` when no entry is left.
     pub fn go_back(&mut self) -> Option<Refresh> {
+        // From the review sheet, Back is Cancel: the results list returns.
+        if self.review_shown() {
+            return self.review_cancel();
+        }
         let e = loop {
             let e = self.history.pop()?;
             if e.note == self.current || self.library.exists(&e.note) {

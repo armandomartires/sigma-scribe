@@ -112,9 +112,15 @@ fn all_notes_lists_the_hits_and_a_row_opens_the_note_at_its_line() {
         "Zebrafox"
     );
     assert_eq!((f.rows[3].path.as_str(), f.rows[3].line), ("b.md", 4));
-    // Replace is inert in All notes.
+    // The single Replace key is inert in All notes (S24-D5); All opens the
+    // review sheet (S24.1), and Cancel brings the same list back.
     assert_eq!(r.tap_on("Replace"), None);
-    assert_eq!(r.tap_on("All"), None);
+    assert!(!r.app.review_shown());
+    r.tap_on("All");
+    assert!(r.app.review_shown(), "All opens the review sheet");
+    assert_eq!(r.tap_on("ReviewCancel"), Some(Refresh::Full));
+    assert!(!r.app.review_shown());
+    assert_eq!(r.rows(), 4);
     // The third row: b.md, caret on "Zebrafox", bar closed, Back armed.
     assert_eq!(r.tap_on("Result:2"), Some(Refresh::Full));
     assert_eq!(r.app.current.as_str(), "b.md");

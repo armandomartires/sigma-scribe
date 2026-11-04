@@ -1,0 +1,34 @@
+# v1.21.0 (S24.1) Replace in all notes: the Find bar's All notes scope, All
+# opens the review sheet, a note can be unticked, Apply writes the ticked
+# matches and the band offers Undo (Forma 1440x1920).
+open-fixture tests/emu/fixtures/lamps.md
+open-fixture tests/emu/fixtures/markdown-tour.md
+tap-on Files
+tap-on New note
+clear-field
+type dusk
+tap-on OK
+type Notes from the bridge at dusk, a lamp by the gate.
+tap-on Find
+tap-on All notes
+expect-mode find
+type lamp
+tap-on ReplaceField
+type lantern
+shot v1.21-replace-all-bar
+# All opens the review sheet: every note with a match, ticked, with its lines.
+tap-on All
+shot v1.21-replace-review
+# Untick one note: it stays as it is.
+tap-on ReviewNote:lamps.md
+shot v1.21-replace-review-unticked
+# Apply writes the other notes; the band says what was done and offers Undo.
+tap-on ReviewApply
+shot v1.21-replace-applied
+expect-file-contains lamps.md|lamp 1
+# Undo puts the notes back.
+tap-on ReplaceUndo
+shot v1.21-replace-undone
+expect-file-contains lamps.md|lamp 1
+tap-on FindClose
+expect-status saved
