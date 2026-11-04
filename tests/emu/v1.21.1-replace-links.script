@@ -1,0 +1,33 @@
+# v1.21.1 Replace in all notes, link matches: trip.md has only [[link]]
+# matches, so it starts "0 of 2" and the button is greyed; the sheet says why
+# in a status line under the header, the "link" tag sits next to the line
+# number, and a tap on the note row ticks the links (Forma 1440x1920).
+open-fixture tests/emu/fixtures/trip.md
+open-fixture tests/emu/fixtures/harbour-walk.md
+tap-on Files
+tap-on New note
+clear-field
+type scratch
+tap-on OK
+type Nothing to replace here.
+tap-on Find
+tap-on All notes
+expect-mode find
+type harbour
+tap-on ReplaceField
+type port
+tap-on All
+shot v1.21.1-replace-links-sheet
+# Untick the other note: nothing is ticked, the button is greyed and the
+# status line says why.
+tap-on ReviewNote:harbour-walk.md
+shot v1.21.1-replace-links-greyed
+# Tap the note row: the links of trip.md are ticked and the button lights up.
+tap-on ReviewNote:trip.md
+shot v1.21.1-replace-links-ticked
+tap-on ReviewApply
+expect-file-contains trip.md|[[port]]
+shot v1.21.1-replace-links-applied
+tap-on ReplaceUndo
+expect-file-contains trip.md|[[harbour]]
+tap-on FindClose

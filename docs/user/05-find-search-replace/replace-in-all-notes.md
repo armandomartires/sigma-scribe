@@ -19,7 +19,9 @@ The single **Replace** key stays grey in All notes. Across notes, every change g
 - The line on top says what will change and how much: "Replace “lamp” with “lantern”: 52 matches in 3 notes".
 - Each note has a row with a tick box and how many of its matches are ticked. Under it, each matching line shows the old text struck out and the new text in bold.
 - Tap a note row to tick or untick all its matches. Tap a line to tick or untick that line.
-- Matches inside a `[[link]]` are marked **link** and start unticked, so links are not changed by accident. Replacing one changes only the text of the link; no note is renamed.
+- Matches inside a `[[link]]` are marked **link**, next to the line number, and start unticked, so links are not changed by accident. Replacing one changes only the text of the link; no note is renamed.
+- While any link match is unticked, a line under the header says how many: "2 in [[links]], unticked: tap a line to include them". If every match is in a link, the button stays grey until you tick one.
+- A tap on a line, or on a note row, includes its link matches only when they are the only matches there. On a line or note that also has plain matches, the tick leaves its links alone; to change those, replace the plain ones first, or edit the link by hand.
 - Turn pages with the page buttons. The keyboard is hidden while the sheet is up.
 - **Replace in N notes** applies the ticked changes. **Cancel**, Esc or Back go back to the results as they were.
 

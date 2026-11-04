@@ -12,7 +12,10 @@
 //! a tick box, the line number and the line with every ticked match shown as
 //! the old text struck through followed by the new text in bold, an unticked
 //! match left as it is but underlined. A match inside a `[[link]]` carries a
-//! small "link" marker (S24-D6: unticked by default). At the bottom: the
+//! small "link" marker after the line number (S24-D6: unticked by default),
+//! and while any link match is unticked a status line under the header says
+//! how many there are and how to include them (dropped when the page is too
+//! short for it and a row). At the bottom: the
 //! buttons **Replace in N notes** (ink, greyed while nothing is ticked) and
 //! **Cancel**, "page i of n" and the page arrows. While the apply runs the
 //! footer is replaced by "Replacing… i of n notes" and a flat progress bar
@@ -83,6 +86,9 @@ pub struct ReviewLayout {
     pub area: Rect,
     /// The header line.
     pub header: Rect,
+    /// The status line under the header about unticked link matches (empty
+    /// when there are none or the page is too short).
+    pub hint: Rect,
     /// The rows of the shown page, top to bottom.
     pub rows: Vec<ReviewRowBox>,
     /// How many rows fit on one page (0 when the page is too short).
@@ -186,6 +192,43 @@ pub fn line_tick_targets(line: &PreviewLine) -> Vec<usize> {
     } else {
         plain
     }
+}
+
+/// The matches (indices into `NotePlan::matches`) that the tick box of a
+/// note row stands for: its matches outside a `[[wiki link]]`
+/// (`Selection::set_note`). A note whose matches are all inside links has no
+/// others, so the box is theirs.
+#[must_use]
+pub fn note_tick_targets(note: &NotePlan) -> Vec<usize> {
+    let plain: Vec<usize> = note
+        .matches
+        .iter()
+        .enumerate()
+        .filter(|(_, m)| !m.in_link)
+        .map(|(k, _)| k)
+        .collect();
+    if plain.is_empty() {
+        (0..note.matches.len()).collect()
+    } else {
+        plain
+    }
+}
+
+/// How many matches of `plan` are inside a wiki link and not ticked: what
+/// the status line under the header counts.
+#[must_use]
+pub fn review_unticked_links(plan: &Plan, selection: &Selection) -> usize {
+    plan.notes
+        .iter()
+        .enumerate()
+        .map(|(i, n)| {
+            n.matches
+                .iter()
+                .enumerate()
+                .filter(|(k, m)| m.in_link && !selection.is_ticked(i, *k))
+                .count()
+        })
+        .sum()
 }
 
 /// The indices (into `NotePlan::matches`) that a tap on the tick box of the
@@ -329,6 +372,29 @@ impl EditorScreen {
             .max(self.page_scale().px(44.0))
     }
 
+    /// Height of the status line under the header: one line of small text
+    /// with padding.
+    fn review_hint_h(&self) -> i32 {
+        let s = self.scale();
+        (self.ui_px() * SMALL * 1.35).ceil() as i32 + 2 * s.px(6.0)
+    }
+
+    /// The status line under the header, translated, when `n` link matches
+    /// are unticked ([`review_unticked_links`]); `None` for none.
+    #[must_use]
+    pub fn review_hint(n: usize) -> Option<String> {
+        match n {
+            0 => None,
+            1 => Some(tr("1 in a [[link]], unticked: tap its line to include it").into_owned()),
+            _ => Some(
+                tr(&format!(
+                    "{n} in [[links]], unticked: tap a line to include them"
+                ))
+                .into_owned(),
+            ),
+        }
+    }
+
     /// The label of the Apply button, translated: "Replace in N notes" with
     /// N the notes that have a ticked match.
     #[must_use]
@@ -405,7 +471,19 @@ impl EditorScreen {
         };
         let header = Rect::new(page.x, page.y, page.w, head_h);
         let foot = Rect::new(page.x, page.y + page.h - foot_h, page.w, foot_h);
-        let avail = page.h - head_h - foot_h;
+        // The status line about unticked link matches, only when a row still
+        // fits under it.
+        let hint_full = self.review_hint_h();
+        let hint_h = if head_h > 0
+            && review_unticked_links(m.plan, m.selection) > 0
+            && page.h - foot_h - head_h - hint_full >= row_h
+        {
+            hint_full
+        } else {
+            0
+        };
+        let hint = Rect::new(page.x, page.y + head_h, page.w, hint_h);
+        let avail = page.h - head_h - hint_h - foot_h;
         let visible = if avail >= row_h {
             (avail / row_h) as usize
         } else {
@@ -417,7 +495,7 @@ impl EditorScreen {
         let index = m.page.min(pages - 1);
         let sp = &spans[index];
         let mut rows = Vec::new();
-        let mut y = page.y + head_h;
+        let mut y = page.y + head_h + hint_h;
         let mut put = |row: ReviewRow, continued: bool| {
             let first = match row {
                 ReviewRow::Line(n, l) => m
@@ -450,6 +528,7 @@ impl EditorScreen {
         let mut l = ReviewLayout {
             area: page,
             header,
+            hint,
             rows,
             visible,
             row_h,
@@ -662,6 +741,31 @@ impl EditorScreen {
                 t.rule,
             );
         }
+        if l.hint.h > 0 {
+            if let Some(mut text) = Self::review_hint(review_unticked_links(m.plan, m.selection)) {
+                let room = (l.area.w - 2 * side) as f32;
+                let ell = self
+                    .fonts
+                    .width(Face::Atkinson, small, &ELLIPSIS.to_string());
+                if self.fonts.width(Face::Atkinson, small, &text) > room {
+                    text = self.cut_end(&text, Face::Atkinson, small, room - ell);
+                    text.push(ELLIPSIS);
+                }
+                self.fonts.draw(
+                    c,
+                    Face::Atkinson,
+                    small,
+                    (l.area.x + side) as f32,
+                    l.hint.y as f32 + l.hint.h as f32 / 2.0 + small * 0.35,
+                    &text,
+                    t.ink,
+                );
+            }
+            c.fill(
+                Rect::new(l.hint.x, l.hint.y + l.hint.h - 1, l.hint.w, 1),
+                t.rule,
+            );
+        }
         for b in &l.rows {
             match b.row {
                 ReviewRow::Note(i) => self.draw_note_row(c, b, i, m, small),
@@ -808,8 +912,32 @@ impl EditorScreen {
         c.fill(r, t.wash);
         let side = s.px(20.0);
         let on = m.selection.ticked_in(i);
+        // The box shows the matches it toggles ([`note_tick_targets`]).
+        let targets = note_tick_targets(np);
+        let n_on = targets
+            .iter()
+            .filter(|&&k| m.selection.is_ticked(i, k))
+            .count();
         let bx = self.tick_box(r, r.x + side);
-        draw_check(c, bx, on > 0, s.px(2.0).max(2), t);
+        let stroke = s.px(2.0).max(2);
+        draw_check(
+            c,
+            bx,
+            !targets.is_empty() && n_on == targets.len(),
+            stroke,
+            t,
+        );
+        if n_on > 0 && n_on < targets.len() {
+            c.fill(
+                Rect::new(
+                    bx.x + bx.w / 4,
+                    bx.y + (bx.h - stroke) / 2,
+                    bx.w / 2,
+                    stroke,
+                ),
+                t.ink,
+            );
+        }
         let count = tr(&format!("{} of {}", on, np.matches.len())).into_owned();
         let cw = self.fonts.width(Face::Atkinson, small, &count);
         let cx = (r.x + r.w - side) as f32 - cw;
@@ -908,15 +1036,15 @@ impl EditorScreen {
             &num,
             t.mute,
         );
-        // The "link" marker at the right edge.
-        let mut right = (r.x + r.w - side) as f32;
+        // The "link" marker right after the line number, next to the text.
+        let mut tx = nx + col + s.px(12.0) as f32;
         if line.ranges.iter().any(|g| g.in_link) {
             let word = tr("link").into_owned();
             let ww = self.fonts.width(Face::Atkinson, small, &word);
             let padx = s.px(6.0);
             let tag_h = (small * 1.5).ceil() as i32;
             let tag = Rect::new(
-                (right - ww) as i32 - padx,
+                tx as i32,
                 r.y + (r.h - tag_h) / 2,
                 ww.ceil() as i32 + 2 * padx,
                 tag_h,
@@ -931,9 +1059,9 @@ impl EditorScreen {
                 &word,
                 t.ink,
             );
-            right = tag.x as f32 - s.px(10.0) as f32;
+            tx = (tag.x + tag.w) as f32 + s.px(10.0) as f32;
         }
-        let tx = nx + col + s.px(12.0) as f32;
+        let right = (r.x + r.w - side) as f32;
         let max = right - tx;
         let spans = review_spans(line, &m.plan.with, |k| m.selection.is_ticked(i, k));
         let spans = self.review_trim(&spans, max);
@@ -1093,7 +1221,7 @@ mod tests {
                     "{tag}: no row fits, page {page:?}"
                 );
                 assert!(l.row_h >= 44 && l.row_h >= e.scale().px(44.0), "{tag}");
-                for r in [l.header, l.foot, l.cancel, l.apply, l.status] {
+                for r in [l.header, l.hint, l.foot, l.cancel, l.apply, l.status] {
                     assert!(inside(page, r), "{tag}: {r:?} outside {page:?}");
                 }
                 for r in [l.cancel, l.apply] {
@@ -1112,7 +1240,7 @@ mod tests {
                 );
                 assert!(l.apply.x + l.apply.w <= page.x + page.w, "{tag}");
                 assert!(l.rows.len() <= l.visible, "{tag}");
-                let mut y = l.header.y + l.header.h;
+                let mut y = l.header.y + l.header.h + l.hint.h;
                 for b in &l.rows {
                     assert!(inside(page, b.rect), "{tag}: row {:?} outside", b.rect);
                     assert_eq!(b.rect.y, y, "{tag}: rows are stacked");
@@ -1132,6 +1260,150 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn a_status_line_counts_unticked_link_matches_and_fits_every_scale() {
+        // Notes of two lines or more have one link match (the second line).
+        let p = plan(&[("a.md", 3), ("b.md", 2), ("c.md", 1)], "pin");
+        assert_eq!(p.link_matches(), 2);
+        let sel = Selection::defaults(&p);
+        assert_eq!(review_unticked_links(&p, &sel), 2);
+        assert_eq!(review_unticked_links(&p, &Selection::all(&p)), 0);
+        assert_eq!(
+            EditorScreen::review_hint(2).as_deref(),
+            Some("2 in [[links]], unticked: tap a line to include them")
+        );
+        assert_eq!(
+            EditorScreen::review_hint(1).as_deref(),
+            Some("1 in a [[link]], unticked: tap its line to include it")
+        );
+        assert_eq!(EditorScreen::review_hint(0), None);
+        let mut shown = 0;
+        for &scale in &UI_SCALES {
+            for (w, h) in [(1440u32, 1920u32), (1920, 1440)] {
+                let (e, page) = screen(w, h, scale);
+                let tag = format!("{scale}% {w}x{h}");
+                let l = e.review_layout(page, &model(&p, &sel, Theme::DAY));
+                let none = e.review_layout(page, &model(&p, &Selection::all(&p), Theme::DAY));
+                assert_eq!(none.hint.h, 0, "{tag}: nothing unticked, no status line");
+                if l.hint.h > 0 {
+                    shown += 1;
+                    assert!(inside(page, l.hint), "{tag}");
+                    assert_eq!(l.hint.y, l.header.y + l.header.h, "{tag}: under the header");
+                    assert!(l.visible >= 1, "{tag}: a row must still fit");
+                    assert_eq!(l.rows[0].rect.y, l.hint.y + l.hint.h, "{tag}");
+                    // It is drawn, inside the page, in the band.
+                    let m = model(&p, &sel, Theme::DAY);
+                    let mut c = Canvas::new(w, h, 128);
+                    e.draw_review(&mut c, &l, &m);
+                    let ink = (l.hint.x..l.hint.x + l.hint.w).any(|x| {
+                        (l.hint.y..l.hint.y + l.hint.h - 1).any(|y| px(&c, x, y) != t_paper())
+                    });
+                    assert!(ink, "{tag}: the status line is drawn");
+                    for (x, y) in [(page.x + 10, page.y - 1), (page.x + 10, page.y + page.h)] {
+                        assert_eq!(px(&c, x, y), 128, "{tag}: ink outside the page");
+                    }
+                } else {
+                    // Dropped only when no row would be left under it.
+                    assert!(l.header.h == 0 || l.visible <= 1 + none.visible, "{tag}");
+                }
+            }
+        }
+        assert!(shown >= 4, "the status line shows at most scales: {shown}");
+        // A page with room for the header and one row but not the status
+        // line keeps the row and drops the line.
+        let (e, page) = screen(1440, 1920, 100);
+        let row_h = e.review_row_h();
+        let foot = e.scale().px(44.0) + 2 * e.scale().px(6.0);
+        let tight = Rect::new(page.x, page.y, page.w, foot + 2 * row_h);
+        let l = e.review_layout(tight, &model(&p, &sel, Theme::DAY));
+        assert_eq!(l.hint.h, 0);
+        assert_eq!(l.visible, 1);
+    }
+
+    fn t_paper() -> u8 {
+        Theme::DAY.paper
+    }
+
+    #[test]
+    fn the_link_tag_sits_next_to_the_line_number_not_at_the_far_edge() {
+        let p = plan(&[("a.md", 2)], "pin");
+        let sel = Selection::defaults(&p);
+        let (e, page) = screen(1440, 1920, 100);
+        let m = model(&p, &sel, Theme::DAY);
+        let l = e.review_layout(page, &m);
+        let mut c = Canvas::new(1440, 1920, 128);
+        e.draw_review(&mut c, &l, &m);
+        // Rows: note, line 1 (plain), line 2 (the link one).
+        let line = l.rows[2].rect;
+        assert_eq!(l.rows[2].row, ReviewRow::Line(0, 1));
+        // The text of the line is short enough not to reach the right third,
+        // so ink there would be a tag at the far right.
+        let right = line.x + line.w * 2 / 3;
+        let far = (right..line.x + line.w - 1)
+            .any(|x| (line.y + 1..line.y + line.h - 1).any(|y| px(&c, x, y) == Theme::DAY.ink));
+        assert!(!far, "the tag is not at the far right");
+        // A box outlines the tag: a vertical ink run of tag height near the
+        // line number column, left of where a plain line's text starts.
+        let s = e.scale();
+        let col_end = line.x + s.px(20.0) + s.px(24.0) + s.px(24.0) + s.px(10.0);
+        let plain = l.rows[1].rect;
+        let first_ink = |r: Rect, from: i32| {
+            (from..r.x + r.w)
+                .find(|&x| (r.y + 1..r.y + r.h - 1).any(|y| px(&c, x, y) == Theme::DAY.ink))
+        };
+        // Past the number column the link line has ink straight away (the
+        // tag) and a plain line has a gap before its text.
+        let num_col = e.fonts.width(Face::Atkinson, e.ui_px() * SMALL, "8888") as i32;
+        let after_num = col_end + num_col;
+        let tag_ink = first_ink(line, after_num).unwrap();
+        let text_ink = first_ink(plain, after_num).unwrap();
+        assert!(
+            tag_ink <= text_ink,
+            "tag at {tag_ink} starts no later than a plain line's text at {text_ink}"
+        );
+    }
+
+    #[test]
+    fn a_link_only_note_row_box_shows_its_ticked_links() {
+        // One note, two matches, both in links.
+        let mut np = note("t.md", 2);
+        np.matches[0].in_link = true;
+        np.lines[0].ranges[0].in_link = true;
+        assert_eq!(note_tick_targets(&np), [0, 1]);
+        let mixed = note("m.md", 3);
+        assert_eq!(
+            note_tick_targets(&mixed),
+            [0, 2],
+            "the link match is left out"
+        );
+        let mut p = plan(&[], "pin");
+        p.notes.push(np);
+        let mut sel = Selection::defaults(&p);
+        assert_eq!(sel.ticked_in(0), 0);
+        let (e, page) = screen(1440, 1920, 100);
+        let render = |sel: &Selection| {
+            let m = model(&p, sel, Theme::DAY);
+            let l = e.review_layout(page, &m);
+            let mut c = Canvas::new(1440, 1920, 128);
+            e.draw_review(&mut c, &l, &m);
+            let r = l.rows[0].rect;
+            let bx = e.tick_box(r, r.x + e.scale().px(20.0));
+            (c, bx)
+        };
+        let ink_in = |c: &Canvas, b: Rect| {
+            (b.x..b.x + b.w)
+                .flat_map(|x| (b.y..b.y + b.h).map(move |y| (x, y)))
+                .filter(|&(x, y)| px(c, x, y) == Theme::DAY.ink)
+                .count()
+        };
+        let (c0, b0) = render(&sel);
+        let off = ink_in(&c0, b0);
+        sel.set_note(&p, 0, true);
+        let (c1, b1) = render(&sel);
+        assert!(ink_in(&c1, b1) > off, "the ticked box has a check mark");
+        assert_eq!(sel.ticked_in(0), 2);
     }
 
     #[test]
@@ -1539,11 +1811,29 @@ mod tests {
             ink_run(rows[1].rect, strike_y(rows[1])) < word_w / 2,
             "unticked line not struck"
         );
-        // The link marker: an outlined box at the right edge of line 1 only.
-        let right = rows[1].rect.x + rows[1].rect.w - e.scale().px(20.0);
+        // The link marker: an outlined box right after the line number of
+        // line 1 only; its top edge is a run of ink as wide as the word.
+        let sc = e.scale();
+        let small = ui * SMALL;
+        let col = e.fonts.width(Face::Atkinson, small, "8888");
+        let tx = (rows[1].rect.x + sc.px(20.0) + sc.px(24.0) + sc.px(24.0) + sc.px(10.0)) as f32
+            + col
+            + sc.px(12.0) as f32;
+        let word = e.fonts.width(Face::Atkinson, small, "link") as i32;
+        let tag_h = (small * 1.5).ceil() as i32;
         let probe = |b: &ReviewRowBox| {
-            (right - 4..right)
-                .any(|x| (b.rect.y..b.rect.y + b.rect.h).any(|y| px(&c, x, y) == Theme::DAY.ink))
+            let y = b.rect.y + (b.rect.h - tag_h) / 2;
+            let mut run = 0;
+            let mut best = 0;
+            for x in tx as i32..tx as i32 + word + 2 * sc.px(6.0) {
+                if px(&c, x, y) == Theme::DAY.ink {
+                    run += 1;
+                    best = best.max(run);
+                } else {
+                    run = 0;
+                }
+            }
+            best >= word
         };
         assert!(probe(rows[1]), "link marker drawn");
         assert!(!probe(rows[0]), "no link marker on a plain match");

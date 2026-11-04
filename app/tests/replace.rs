@@ -410,6 +410,43 @@ fn a_line_tick_leaves_wiki_link_matches_unticked() {
     assert_eq!(r.disk("e.md"), format!("lynx and [[{WORD}]] together\n"));
 }
 
+/// A note whose matches are all inside wiki links: its row ticks them (the
+/// only control for them besides a line tick), Apply changes the link text,
+/// and a second tap unticks them again. A note with both kinds keeps its
+/// links unticked.
+#[test]
+fn a_note_row_ticks_a_link_only_note() {
+    let mut r = Rig::new("linknote");
+    std::fs::write(
+        r.root.join("trip.md"),
+        format!("See [[{WORD}]] and [[old {WORD}]] for the map.\n"),
+    )
+    .unwrap();
+    r.search_with(WORD, "port");
+    r.tap_on("All");
+    let ticked = |r: &Rig| {
+        let rv = r.app.find.as_ref().unwrap().review.as_ref().unwrap();
+        let ti = rv
+            .plan
+            .notes
+            .iter()
+            .position(|n| n.path.as_str() == "trip.md")
+            .unwrap();
+        rv.selection.ticked_in(ti)
+    };
+    assert_eq!(ticked(&r), 0, "link matches start unticked");
+    r.tap_on("ReviewNote:trip.md");
+    assert_eq!(ticked(&r), 2, "the note row ticks its link matches");
+    r.tap_on("ReviewNote:trip.md");
+    assert_eq!(ticked(&r), 0, "and unticks them again");
+    r.tap_on("ReviewNote:trip.md");
+    r.tap_on("ReviewApply");
+    assert_eq!(
+        r.disk("trip.md"),
+        "See [[port]] and [[old port]] for the map.\n"
+    );
+}
+
 /// The band's Undo is for the snapshot of the replace it reports, never an
 /// older one: a replace that wrote nothing offers no Undo.
 #[test]

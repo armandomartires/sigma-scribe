@@ -17,7 +17,7 @@ use sigma_core::replace::{self, Applied, Outcome, Plan, Selection, Snapshot, Und
 use sigma_core::{Library, NotePath};
 use sigma_device::Refresh;
 use sigma_render::i18n::tr;
-use sigma_render::review::review_line_matches;
+use sigma_render::review::{note_tick_targets, review_line_matches};
 use sigma_render::{ReviewHit, ReviewLayout, ReviewModel, Scope};
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
@@ -392,7 +392,8 @@ impl App {
         match self.screen.review_hit(&l, x, y) {
             ReviewHit::NoteTick(i) => {
                 let r = self.find.as_mut()?.review.as_mut()?;
-                let on = r.selection.ticked_in(i) == 0;
+                let ids = note_tick_targets(r.plan.notes.get(i)?);
+                let on = !ids.iter().any(|&m| r.selection.is_ticked(i, m));
                 r.selection.set_note(&r.plan, i, on);
                 Some(Refresh::Partial)
             }
@@ -665,11 +666,12 @@ impl App {
         }
         sigma_core::info!(
             "replace",
-            "applied: {} matches in {} notes, {} changed, {} failed",
+            "applied: {} matches in {} notes, {} changed, {} failed: {} ms",
             matches,
             notes,
             changed,
-            a.failed()
+            a.failed(),
+            a.elapsed_ms
         );
         let notice = if a.error.is_some() {
             Notice::NotReplaced
@@ -712,7 +714,11 @@ impl App {
                 left += 1;
             }
         }
-        sigma_core::info!("replace", "undone: {notes} restored, {left} left alone");
+        sigma_core::info!(
+            "replace",
+            "undone: {notes} restored, {left} left alone: {} ms",
+            u.elapsed_ms
+        );
         let notice = if u.error.is_some() {
             Notice::NotRestored
         } else {

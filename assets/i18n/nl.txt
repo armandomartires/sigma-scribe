@@ -1364,6 +1364,12 @@ Delete “{q}”
 link
 = link
 
+{n} in [[links]], unticked: tap a line to include them
+= {n} in [[links]], niet aangevinkt: tik op een regel om ze mee te nemen
+
+{n} in a [[link]], unticked: tap its line to include it
+= {n} in een [[link]], niet aangevinkt: tik op de regel om hem mee te nemen
+
 Replace in {n} notes
 = Vervang in {n} notities
 

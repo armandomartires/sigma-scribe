@@ -1364,6 +1364,12 @@ Delete “{q}”
 link
 = Link
 
+{n} in [[links]], unticked: tap a line to include them
+= {n} in [[Links]], nicht angehakt: Zeile antippen, um sie einzuschließen
+
+{n} in a [[link]], unticked: tap its line to include it
+= {n} in einem [[Link]], nicht angehakt: Zeile antippen, um ihn einzuschließen
+
 Replace in {n} notes
 = In {n} Notizen ersetzen
 
