@@ -1364,6 +1364,12 @@ Delete “{q}”
 link
 = länk
 
+{n} in [[links]], unticked: tap a line to include them
+= {n} i [[länkar]], ej markerade: tryck på en rad för att ta med dem
+
+{n} in a [[link]], unticked: tap its line to include it
+= {n} i en [[länk]], ej markerad: tryck på dess rad för att ta med den
+
 Replace in {n} notes
 = Ersätt i {n} anteckningar
 

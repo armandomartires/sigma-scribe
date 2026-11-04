@@ -215,14 +215,17 @@ impl Selection {
 
     /// The note's checkbox: on ticks the default set of its matches (all but
     /// the wiki-link ones, which keep their state), off unticks them all.
+    /// A note whose matches are all inside wiki links has no default set, so
+    /// there the box is the only control for them and on ticks them.
     pub fn set_note(&mut self, plan: &Plan, note: usize, on: bool) {
         let (Some(np), Some(t)) = (plan.notes.get(note), self.ticked.get_mut(note)) else {
             return;
         };
+        let links_only = np.matches.iter().all(|m| m.in_link);
         for (m, tick) in np.matches.iter().zip(t.iter_mut()) {
             if !on {
                 *tick = false;
-            } else if !m.in_link {
+            } else if links_only || !m.in_link {
                 *tick = true;
             }
         }
@@ -474,6 +477,8 @@ pub struct Applied {
     pub open_text: Option<(NotePath, String)>,
     /// Set when the snapshot could not be made: then no note was touched.
     pub error: Option<String>,
+    /// Wall time of the apply, for the log.
+    pub elapsed_ms: u64,
 }
 
 impl Applied {
@@ -525,7 +530,10 @@ pub fn apply_with_progress(
     open_note: Option<(&NotePath, &str)>,
     mut progress: impl FnMut(usize, usize),
 ) -> Applied {
-    apply_at(plan, selection, open_note, &mut progress, &stamp_now())
+    let started = std::time::Instant::now();
+    let mut out = apply_at(plan, selection, open_note, &mut progress, &stamp_now());
+    out.elapsed_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+    out
 }
 
 fn apply_at(
@@ -767,6 +775,8 @@ pub struct Undone {
     pub open_text: Option<(NotePath, String)>,
     /// Set when the snapshot's manifest cannot be read: nothing was done.
     pub error: Option<String>,
+    /// Wall time of the undo, for the log.
+    pub elapsed_ms: u64,
 }
 
 /// [`undo_with_open`] when no note is open.
@@ -783,6 +793,17 @@ pub fn undo(library: &Library, snapshot: &Snapshot) -> Undone {
 /// the snapshot stay, as in any trash, until it is emptied.
 #[must_use]
 pub fn undo_with_open(
+    library: &Library,
+    snapshot: &Snapshot,
+    open_note: Option<(&NotePath, &str)>,
+) -> Undone {
+    let started = std::time::Instant::now();
+    let mut out = undo_inner(library, snapshot, open_note);
+    out.elapsed_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+    out
+}
+
+fn undo_inner(
     library: &Library,
     snapshot: &Snapshot,
     open_note: Option<(&NotePath, &str)>,
@@ -973,6 +994,57 @@ mod tests {
         assert_eq!(sel.notes(), 0);
         sel.set(9, 9, true); // ignored
         assert_eq!(sel.total(), 0);
+    }
+
+    #[test]
+    fn set_note_on_a_link_only_note_ticks_its_links() {
+        let l = lib(
+            "setnote-links",
+            &[
+                (
+                    "trip.md",
+                    "See [[harbour]] and [[old harbour]] for the map.",
+                ),
+                ("mix.md", "harbour and [[harbour]]"),
+            ],
+        );
+        let p = plan(&l, "harbour", false, "port", None);
+        let (trip, mix) = (
+            p.notes
+                .iter()
+                .position(|n| n.path == np("trip.md"))
+                .unwrap(),
+            p.notes.iter().position(|n| n.path == np("mix.md")).unwrap(),
+        );
+        let mut sel = Selection::defaults(&p);
+        assert_eq!(sel.ticked_in(trip), 0);
+        // A note with both kinds still ticks only the plain match.
+        sel.set_note(&p, mix, true);
+        assert!(sel.is_ticked(mix, 0) && !sel.is_ticked(mix, 1));
+        // A link-only note ticks its link matches, and off clears them.
+        sel.set_note(&p, trip, true);
+        assert_eq!(sel.ticked_in(trip), 2);
+        sel.set_note(&p, trip, false);
+        assert_eq!(sel.ticked_in(trip), 0);
+        sel.set_note(&p, trip, true);
+        let a = apply(&p, &sel, None);
+        assert!(a.matches >= 2);
+        assert_eq!(
+            read(&l, "trip.md"),
+            "See [[port]] and [[old port]] for the map."
+        );
+    }
+
+    #[test]
+    fn apply_and_undo_report_their_time() {
+        let l = lib("timing", &[("a.md", "lamp")]);
+        let p = plan(&l, "lamp", true, "x", None);
+        let a = apply(&p, &Selection::defaults(&p), None);
+        assert!(a.snapshot.is_some());
+        assert!(a.elapsed_ms < 60_000);
+        let u = undo(&l, a.snapshot.as_ref().unwrap());
+        assert_eq!(u.restored.len(), 1);
+        assert!(u.elapsed_ms < 60_000);
     }
 
     #[test]

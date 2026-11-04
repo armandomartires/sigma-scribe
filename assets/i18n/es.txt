@@ -1364,6 +1364,12 @@ Delete “{q}”
 link
 = enlace
 
+{n} in [[links]], unticked: tap a line to include them
+= {n} en [[enlaces]], sin marcar: toca una línea para incluirlos
+
+{n} in a [[link]], unticked: tap its line to include it
+= {n} en un [[enlace]], sin marcar: toca su línea para incluirlo
+
 Replace in {n} notes
 = Reemplazar en {n} notas
 
