@@ -200,10 +200,10 @@ Status: Done 2026-11-02. Eight stories built in five Sonnet worktree sessions th
 
 ## Sprint 13 — Replace in all notes, screenshot carousel, help centre
 Goal: Replace across the library with a review and an undo; the project page's screenshots in a carousel; the user docs as a help centre structured like help.boox.com
-Status: Planned 2026-11-03, decisions answered the same day (S24-D4 to D9), not started. Three independent parts, three branches, three PRs. Sprint `.ai/sprints/S24-replace-carousel-help.md`.
-- [ ] S24.1 Replace in all notes: review sheet, snapshot undo, crash-safe writes
+Status: Built 2026-11-03/04 by orchestrated workers in worktrees, three PRs merged: carousel (#126), help centre (#127), Replace in all notes 1.21.0 (#128). Decisions S24-D4 to D11 answered by the user. Replace: a risk review failed the first build on five defects (two edit-loss paths with Sync on), all fixed with a test each, second review passed; workspace tests, ARMv7 and MSRV green in CI; emulator script `tests/emu/v1.21.0-replace-all.script`. Help centre live at https://armandomartires.github.io/sigma-scribe/help/ (12 sections, 53 articles; ten drafted from the code and fact-checked). Open: 1.21.0 not yet installed on the Forma, no device pass, no timing on the 303-note pack; a narrow window between the last re-read and the rename (rated low); the wiki is not yet resynced from the new layout. Sprint `.ai/sprints/S24-replace-carousel-help.md`.
+- [>] S24.1 Replace in all notes: review sheet, snapshot undo, crash-safe writes
   Lifts S22-D3. Core plan/apply/undo, review sheet, app wiring, strings, emulator script, docs, 1.21.0, Forma pass. Tasks T01–T05.
-- [ ] S24.2 Project page screenshots as a carousel
+- [x] S24.2 Project page screenshots as a carousel
   `site/index.html`: scroll-snap track, counter, prev/next, thumbnails, no autoplay; works without JS. Tasks T10–T12.
-- [ ] S24.3 Help centre from `docs/user/`, sections and task articles like help.boox.com
+- [x] S24.3 Help centre from `docs/user/`, sections and task articles like help.boox.com
   Sections and articles agreed first; `docs/user/` split, `scripts/help-build.py`, `_site/help/` with search, sidebar, breadcrumbs; wiki sync updated. Tasks T20–T25.

@@ -1,6 +1,6 @@
 # S24 — Replace in all notes, screenshot carousel, help centre
 
-Board: Sprint 13. Planned 2026-11-03 from `main` 7a7cd4f (1.20.0). Status: PLANNED, not started. All open decisions answered by the user on 2026-11-03 (S24-D4 to S24-D9 below).
+Board: Sprint 13. Planned 2026-11-03 from `main` 7a7cd4f (1.20.0). Status: merged 2026-11-04 (#126, #127, #128); 1.21.0 device pass open. All open decisions answered by the user on 2026-11-03 (S24-D4 to S24-D9 below).
 
 Three parts, independent of each other, three branches, three PRs. They touch disjoint files, so they can be built in parallel worktree sessions:
 
@@ -30,7 +30,7 @@ Order constraint: S24.1's user-doc change (`docs/user/search.md`) and S24.3's re
 4. The apply step rescans **without the 500 cap** (the review counts must be the real ones; if the uncapped count differs from the reviewed one because a note changed meanwhile, the sheet is refreshed instead of applying).
 5. Applying runs on a worker, not the UI thread, one note at a time; the status line counts "Replacing… 2 of 3 notes". Each note is written temp-file-then-rename so a power cut leaves either the old or the new file.
 6. The open note is not written behind the editor's back: its replacement goes through `buffer.replace_text` as one undo step, like the This-note Replace all, and is then saved.
-7. **Undo**: before a note is rewritten its original goes to `.trash/replace-<yyyymmdd-hhmmss>/<note path>` with a small manifest (path, hash of the text written). After applying, a toast-style bar says "Replaced 52 in 3 notes · Undo". **Undo last replace** stays available from the Find bar menu (and the Trash screen lists the snapshot like any trashed set) until the next all-notes replace. Undo restores a note only if its current hash still matches what the replace wrote; notes edited since are listed and left alone.
+7. **Undo**: before a note is rewritten its original goes to `.trash/replace-<yyyymmdd-hhmmss>/<note path>` with a small manifest (path, hash of the text written). After applying, a toast-style bar says "Replaced 52 in 3 notes · Undo". **Undo last replace** stays available from the Find bar menu until the next all-notes replace; the Trash screen does not list snapshots (S24-D10), and emptying the trash removes them. Undo restores a note only if its current hash still matches what the replace wrote; notes edited since are listed and left alone.
 8. Results, Graph, backlinks and the to-do index refresh after apply (the same invalidation a rename does).
 
 ### Edge cases to settle in the design
@@ -63,6 +63,8 @@ Order constraint: S24.1's user-doc change (`docs/user/search.md`) and S24.3's re
 - S24-D7: carousel = CSS scroll-snap plus a small inline script; works without JS; `site/README.md`'s "no JavaScript" line changes.
 - S24-D8: the 12 help sections as listed.
 - S24-D9: the wiki stays in sync with the nested layout; its Home links to the help centre.
+- S24-D10: replace snapshots are undone from the Find bar only; the Trash screen is not changed to list `replace-*` folders.
+- S24-D11: the ten planned articles with no source text (select/copy/paste, undo, line and paper modes, night and light, backlinks, app language, right-to-left, USB shortcuts, common problems, report a bug) are drafted from the code and reviewed by the user in the PR.
 
 ---
 
