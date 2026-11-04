@@ -4,7 +4,7 @@ All notable changes to Σscribe. Versions are tagged after they pass on the Kobo
 
 ## Unreleased
 
-## 1.21.1 — 2026-11-04 (built, not yet installed on the Forma, not tagged)
+## 1.21.1 — 2026-11-04 (not installed on the Forma; tagged v1.21.1 and published on GitHub 2026-11-04 at the user's request, CI package hash matches the main build)
 - **Fix: a note whose matches are all inside `[[links]]` could not be ticked from its row.** In Replace in all notes, a note like "See [[harbour]] and [[old harbour]]" showed "0 of 2" and a greyed **Replace in 0 notes**; the note row did nothing and only a tap on the line ticked the links. The note row now ticks its link matches when they are the only matches in the note (a note with both kinds still ticks only the plain ones), and its box shows what the tap will do. `Selection::set_note`, `note_tick_targets` in `crates/render/src/review.rs`.
 - **The sheet says why a link is unticked.** While link matches are unticked a status line under the header reads "2 in [[links]], unticked: tap a line to include them" (singular "1 in a [[link]], unticked: tap its line to include it"), dropped when the page is too short for it and a row; it explains a greyed button when every match is a link. The small **link** tag moved from the far right of the line to just after the line number, next to the text. Both in the nine languages.
 - **Timing in the log.** `replace: applied: N matches in M notes, X changed, Y failed: Z ms` and `replace: undone: N restored, M left alone: Z ms`; `Applied` and `Undone` carry `elapsed_ms`.
