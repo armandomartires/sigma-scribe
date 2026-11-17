@@ -1,0 +1,209 @@
+# GitLab CI for Σscribe (plan item P1-03, decision D5).
+#
+# These jobs are the canonical gates. The GitHub Actions workflows in
+# .github/workflows/ are kept until P1-04, after this pipeline has been
+# green on main. Pages and tagged releases stay on GitHub for now.
+#
+# Images are pinned by Docker Hub *manifest* digest, recorded 2026-11-17
+# (Europe/Brussels). There is no rust-toolchain.toml yet (that is P1-05);
+# the main jobs use current stable 1.100.0, and the MSRV job uses 1.88.0
+# from workspace.package.rust-version. To bump stable, take the tag digest
+# from https://hub.docker.com/v2/repositories/library/rust/tags/1.XXX.0-bookworm
+# and update RUST_IMAGE. To bump the MSRV, change rust-version, MSRV_IMAGE,
+# and CONTRIBUTING.md together.
+#
+# Every cargo invocation that builds or checks uses --locked (Rec 6).
+
+variables:
+  RUST_IMAGE: rust:1.100.0-bookworm@sha256:ade39a710ef85f3506cffcfec3e8a24ba090badef1dff2fb798f71d878833fea
+  MSRV_IMAGE: rust:1.88.0-bookworm@sha256:af306cfa71d987911a781c37b59d7d67d934f49684058f96cf72079c3626bfe0
+  CARGO_HOME: $CI_PROJECT_DIR/.cargo-home
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  RUST_BACKTRACE: "1"
+  # musl.cc SHA-512 from https://musl.cc/SHA512SUMS (recorded 2026-11-17).
+  MUSL_CC_URL: https://musl.cc/armv7l-linux-musleabihf-cross.tgz
+  MUSL_CC_SHA512: 1bb399a61da425faac521df9b8d303e60ad101f6c7827469e0b4bc685ce1f3dedc606ac7b1e8e34d79f762a3bfe3e8ab479a97e97d9f36fbd9fc5dc9d7ed6fd1
+  FBINK_SHA: 886f25f13368859ad8a899b88d04c26e19cda32e
+  CARGO_DENY_VERSION: "0.21.0"
+  CARGO_DENY_SHA256: a2170b854ff697e79e39c4c538981c9c1bdd803addbae6719a4cb66b4585a903
+
+default:
+  image: $RUST_IMAGE
+  interruptible: true
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+stages:
+  - lint
+  - test
+  - build
+
+.cargo_cache:
+  cache:
+    key:
+      files:
+        - Cargo.lock
+      prefix: rust-1.100.0
+    paths:
+      - .cargo-home/registry/
+      - .cargo-home/git/
+      - target/
+
+fmt:
+  stage: lint
+  needs: []
+  script:
+    - rustup component add rustfmt
+    - cargo fmt --all -- --check
+
+# clippy, rustdoc, workspace tests, handwriting figures, and the 65
+# emulator scripts share one job so they reuse one compile, matching
+# the GitHub Actions `test` job (the GitLab runner is a single host).
+test:
+  stage: test
+  extends: .cargo_cache
+  timeout: 60 minutes
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends libxkbcommon-dev pkg-config ca-certificates curl
+    - rustup component add rustfmt clippy
+  script:
+    - cargo clippy --workspace --all-targets --locked -- -D warnings
+    - cargo doc --workspace --no-deps --locked
+    - cargo test --workspace --locked
+    - cargo test -q -p hwr-train --tests --locked -- --nocapture
+    - rm -rf target/ci-notes target/ci-shots
+    - |
+      for s in tests/emu/*.script; do
+        cargo run -q --release --locked --bin sigma-emu -- --script "$s" --shots target/ci-shots --notes "target/ci-notes/$(basename "$s")" || exit 1
+      done
+  variables:
+    RUSTDOCFLAGS: -D warnings
+
+msrv:
+  stage: test
+  image: $MSRV_IMAGE
+  timeout: 60 minutes
+  cache:
+    key:
+      files:
+        - Cargo.lock
+      prefix: rust-1.88.0
+    paths:
+      - .cargo-home/registry/
+      - .cargo-home/git/
+      - target/
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends libxkbcommon-dev pkg-config ca-certificates curl
+  script:
+    - rustc --version | grep -q '1\.88\.'
+    - cargo check --workspace --all-targets --locked
+
+.install_deny_script: &install_deny_script |
+  ver="$CARGO_DENY_VERSION"
+  archive="cargo-deny-${ver}-x86_64-unknown-linux-musl.tar.gz"
+  url="https://github.com/EmbarkStudios/cargo-deny/releases/download/${ver}/${archive}"
+  curl -fsSL --retry 3 -o "/tmp/${archive}" "$url"
+  echo "${CARGO_DENY_SHA256}  /tmp/${archive}" | sha256sum -c -
+  tar -xzf "/tmp/${archive}" -C /tmp
+  install -m 0755 "/tmp/cargo-deny-${ver}-x86_64-unknown-linux-musl/cargo-deny" /usr/local/bin/cargo-deny
+  cargo deny --version
+
+# A new RustSec advisory can appear without any change here, so this
+# job does not block the merge request. bans / licences / sources do.
+deny:advisories:
+  stage: lint
+  needs: []
+  allow_failure: true
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends ca-certificates curl
+    - *install_deny_script
+  script:
+    - cargo deny check advisories
+
+deny:bans:
+  stage: lint
+  needs: []
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends ca-certificates curl
+    - *install_deny_script
+  script:
+    - cargo deny check bans licenses sources
+
+# Static ARMv7 musl package, including Syncthing and the CA bundle.
+# Uses the pinned musl.cc gcc (checksummed) and the pinned FBInk commit,
+# then scripts/package-kobo.sh (which runs check-package.sh).
+package:kobo:
+  stage: build
+  timeout: 60 minutes
+  needs:
+    - job: test
+  cache:
+    key:
+      files:
+        - Cargo.lock
+      prefix: rust-1.100.0-kobo
+    paths:
+      - .cargo-home/registry/
+      - .cargo-home/git/
+      - target/
+      - .ci-tools/
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends build-essential git file curl ca-certificates make pkg-config
+    - rustup target add armv7-unknown-linux-musleabihf
+    - ./scripts/ci-setup-kobo-toolchain.sh
+  script:
+    - export FBINK_DIR="${HOME}/src/FBInk"
+    - ./scripts/package-kobo.sh
+    - file dist/sigma-scribe-*-kobo/.adds/sigma-scribe/sigma-scribe | grep -q 'ARM.*statically linked'
+  artifacts:
+    name: sigma-scribe-kobo-$CI_COMMIT_SHORT_SHA
+    paths:
+      - dist/sigma-scribe-*-kobo.tar.gz
+      - dist/sigma-scribe-*-kobo.sha256
+    expire_in: 2 weeks
+
+# Portable-crate checks (also the P2-04 acceptance, minus iOS).
+# iOS is a follow-up: the instance runner is Linux amd64 and has no SDK.
+check:wasm32:
+  stage: test
+  extends: .cargo_cache
+  timeout: 30 minutes
+  before_script:
+    - rustup target add wasm32-unknown-unknown
+  script:
+    - cargo check --locked --target wasm32-unknown-unknown
+        -p sigma-core -p sigma-render -p sigma-hwr
+        -p sigma-plugin-api -p sigma-plugin-host
+
+check:android:
+  stage: test
+  extends: .cargo_cache
+  timeout: 30 minutes
+  before_script:
+    - rustup target add aarch64-linux-android
+  script:
+    # aarch64 is not target_arch = "arm", so device's FBInk build.rs is skipped.
+    - cargo check --locked --target aarch64-linux-android
+        -p sigma-core -p sigma-render -p sigma-device
+
+check:windows:
+  stage: test
+  extends: .cargo_cache
+  timeout: 30 minutes
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends gcc-mingw-w64-x86-64
+    - rustup target add x86_64-pc-windows-gnu
+  script:
+    - cargo check --locked --target x86_64-pc-windows-gnu
+        -p sigma-core -p sigma-render -p sigma-hwr
+        -p sigma-plugin-api -p sigma-plugin-host
