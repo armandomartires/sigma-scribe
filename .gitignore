@@ -10,3 +10,7 @@ backups/
 .vscode/
 node_modules/
 dist/
+
+# GitLab CI cargo cache (CARGO_HOME) and Kobo toolchain cache
+.cargo-home/
+.ci-tools/
