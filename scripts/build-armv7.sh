@@ -11,5 +11,5 @@ else CC=arm-linux-gnueabihf-gcc; AR=arm-linux-gnueabihf-ar; fi
 export CC_armv7_unknown_linux_musleabihf="$CC" AR_armv7_unknown_linux_musleabihf="$AR"
 export FBINK_DIR="${FBINK_DIR:-$HOME/src/FBInk}"
 test -f "$FBINK_DIR/Release/libfbink.a" || { echo "missing $FBINK_DIR/Release/libfbink.a" >&2; exit 1; }
-cargo build --release --target armv7-unknown-linux-musleabihf -p sigma-scribe --bin sigma-scribe
+cargo build --release --locked --target armv7-unknown-linux-musleabihf -p sigma-scribe --bin sigma-scribe
 file target/armv7-unknown-linux-musleabihf/release/sigma-scribe

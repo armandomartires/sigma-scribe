@@ -22,16 +22,20 @@ Planning and working notes (plan, design brief, sprints, the sprint board `GOALS
 
 ## Toolchain and targets
 
-- Edition 2021. Day-to-day work and the main CI job use current stable
-  Rust.
+- Edition 2021. Day-to-day work and the main CI jobs use the stable
+  toolchain pinned in `rust-toolchain.toml` (currently 1.100.0). rustup
+  applies it automatically in this repository. The same version is set as
+  `RUST_IMAGE` / `RUSTUP_TOOLCHAIN` in `.gitlab-ci.yml`; change those
+  together, and take a new image digest from Docker Hub.
 - The minimum supported Rust version (MSRV) is `rust-version` in the root
   `Cargo.toml`, currently 1.88. It is set by the dependencies: `wasmparser`
   0.262, which `wasmi` 2 uses, needs 1.88.
-- The `msrv` job in CI checks the workspace with exactly that version. Do
-  not use language or library features newer than it.
-- To change the MSRV, change `rust-version` and the toolchain in the `msrv`
-  job together, and note it in `CHANGELOG.md`. A dependency update that
-  needs a newer Rust is an MSRV change.
+- The `msrv` job in CI checks the workspace with exactly that version
+  (`RUSTUP_TOOLCHAIN=1.88.0`, so `rust-toolchain.toml` does not apply
+  there). Do not use language or library features newer than it.
+- To change the MSRV, change `rust-version` and `MSRV_IMAGE` in
+  `.gitlab-ci.yml` together, and note it in `CHANGELOG.md`. A dependency
+  update that needs a newer Rust is an MSRV change.
 - Changing the MSRV, the edition or a dependency's major version is a
   deliberate decision: say so in the pull request and in `CHANGELOG.md`.
 - Two targets are supported:
@@ -40,7 +44,8 @@ Planning and working notes (plan, design brief, sprints, the sprint board `GOALS
   - **Kobo**: `armv7-unknown-linux-musleabihf`, a static binary linked
     with `rust-lld` against FBInk. Build it with `scripts/build-armv7.sh`.
     It needs the musl cross toolchain and a pinned FBInk build; see
-    `.github/workflows/ci.yml` and `.ai/s0-findings.md`.
+    `.gitlab-ci.yml` (canonical), `.github/workflows/ci.yml`, and
+    `.ai/s0-findings.md`.
 - Code for the Kobo only sits behind `#[cfg(target_arch = "arm")]`. The
   FBInk backend is never compiled on the desktop, so a desktop build passing
   is not evidence that the ARM build does. CI runs both.
@@ -52,10 +57,14 @@ CI runs all of these on every pull request. Run them locally first:
 
 ```sh
 cargo fmt --all -- --check
-cargo clippy --workspace --all-targets -- -D warnings
-RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
-cargo test --workspace
+cargo clippy --workspace --all-targets --locked -- -D warnings
+RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked
+cargo test --workspace --locked
 ```
+
+CI fails if a compile step drops `--locked`. When you intentionally
+update dependencies, run `cargo update` (or change `Cargo.toml`) and
+commit the new `Cargo.lock` with the change.
 
 `cargo test --workspace` includes the doctests. CI also runs, and you can run
 when relevant:

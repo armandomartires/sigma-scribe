@@ -1,0 +1,13 @@
+# Day-to-day and CI stable toolchain for Σscribe (P1-05).
+# Keep channel in sync with RUST_IMAGE and RUSTUP_TOOLCHAIN in .gitlab-ci.yml.
+# The MSRV is rust-version in Cargo.toml (1.88) and is checked in the msrv job;
+# that job sets RUSTUP_TOOLCHAIN=1.88.0 so this file does not apply there.
+[toolchain]
+channel = "1.100.0"
+components = ["rustfmt", "clippy"]
+targets = [
+    "armv7-unknown-linux-musleabihf",
+    "wasm32-unknown-unknown",
+    "aarch64-linux-android",
+    "x86_64-pc-windows-gnu",
+]

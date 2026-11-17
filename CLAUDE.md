@@ -24,7 +24,8 @@ cargo test --workspace
 - Kobo-only code is behind `cfg(target_arch = "arm")` and is not compiled on
   the desktop. A green desktop build says nothing about it; the ARMv7 job in
   CI is the check.
-- The MSRV is `rust-version` in `Cargo.toml` (1.88), checked by the `msrv`
+- Day-to-day Rust is pinned in `rust-toolchain.toml` (currently 1.100.0).
+  The MSRV is `rust-version` in `Cargo.toml` (1.88), checked by the `msrv`
   job in CI. Do not use newer language or library features, and do not
   change it, or update a dependency that needs a newer Rust, without asking.
 - After adding or updating a dependency, run `cargo deny check` (the `deny`
