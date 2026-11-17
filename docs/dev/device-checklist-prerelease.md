@@ -5,7 +5,7 @@
 Installed on the Forma: **local build of `v1.13.1-write-fixes` (PR 48), head `a3baa08`**, binary sha256 `298e92ae…d981` (2026-10-25; the 1.11.1 label is unchanged; dictionaries and notices from 99d6887; see the install plan run log). **Special-language sections (Cyrillic/Greek, Vietnamese, Korean, Arabic and Hebrew, Indic and Thai, Japanese, Chinese) wait for feedback from native users; they are not release gates** (user, 2026-10-25). Run order: `.ai/device-pass-run-order.md`.
 
 ## Logs to collect during the pass
-- [x] `/mnt/onboard/.adds/sigma-scribe/sigma-scribe.log` (perf lines: typing `perf:` p50/p95, `perf pointer:` p50/p95, count of `gl16-cleanup`). — 2026-10-24: pulled after the 1.11.1 pass (copy in `~/backups/kobo-forma-N7828B0052845/2026-10-24-device-pass-log/`).
+- [x] `/mnt/onboard/.adds/sigma-scribe/sigma-scribe.log` (perf lines: typing `perf:` p50/p95, `perf pointer:` p50/p95, count of `gl16-cleanup`). — 2026-10-24: pulled after the 1.11.1 pass (copy in `~/backups/kobo-forma-<FORMA-SERIAL>/2026-10-24-device-pass-log/`).
 - [ ] If the probe build is used: `gsensor-probe.log` (procedure in the install plan, "1.4.6-probe g-sensor log").
 
 ## Pointer and USB (v1.0.1–v1.0.4, v1.4.1; S10, S10.3, S10.4, S14.1)
