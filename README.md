@@ -83,3 +83,5 @@ See [`docs/user/01-set-up/install.md`](docs/user/01-set-up/install.md). In short
 For readers of the app: the [help centre](https://armandomartires.github.io/sigma-scribe/help/) and [`docs/user/`](docs/user/README.md) (getting started, journal, search, handwriting, install, USB keyboard, Wi-Fi, sync, logging, Japanese and Chinese input, font packs, plugins), the [wiki](https://github.com/armandomartires/sigma-scribe/wiki) and the [project page](https://armandomartires.github.io/sigma-scribe/). `CHANGELOG.md` lists the changes by version.
 
 Building and contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/dev/`](docs/dev/README.md).
+
+To report a vulnerability, see [`SECURITY.md`](SECURITY.md).
