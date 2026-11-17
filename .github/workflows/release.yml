@@ -16,7 +16,7 @@ permissions:
 jobs:
   package:
     runs-on: ubuntu-latest
-    container: ghcr.io/rust-cross/rust-musl-cross:armv7-musleabihf
+    container: ghcr.io/rust-cross/rust-musl-cross:armv7-musleabihf@sha256:dd494898259cf6981f9832bfd4437ddfc8393605164b3c242e4efe8a6bc30dfb
     outputs:
       version: ${{ steps.ver.outputs.version }}
     steps:
@@ -29,7 +29,7 @@ jobs:
             ln -sf "$(command -v "$f")" "$T/armv7l-linux-musleabihf-${f#armv7-unknown-linux-musleabihf-}"
           done
           rustup target add armv7-unknown-linux-musleabihf || true
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - id: ver
         run: echo "version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)" >> "$GITHUB_OUTPUT"
       - name: Tag matches Cargo version
@@ -39,7 +39,7 @@ jobs:
         run: |
           git config --global --add safe.directory '*'
           git clone --recursive https://github.com/NiLuJe/FBInk $HOME/src/FBInk
-          cd $HOME/src/FBInk && git checkout 886f25f1 && git submodule update --init --recursive
+          cd $HOME/src/FBInk && git checkout 886f25f13368859ad8a899b88d04c26e19cda32e && git submodule update --init --recursive
           PATH=$HOME/.local/toolchains/armv7l-linux-musleabihf-cross/bin:$PATH make staticlib MINIMAL=true IMAGE=true KOBO=true CROSS_TC=armv7l-linux-musleabihf
       - name: Package and check
         run: ./scripts/package-kobo.sh
@@ -48,7 +48,7 @@ jobs:
           V=${{ steps.ver.outputs.version }}
           sha256sum dist/sigma-scribe-$V-kobo.tar.gz > dist/sigma-scribe-$V-kobo.tar.gz.sha256
           cat dist/sigma-scribe-$V-kobo.tar.gz.sha256 dist/sigma-scribe-$V-kobo.sha256 | tee -a "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sigma-scribe-${{ steps.ver.outputs.version }}-kobo
           path: |
@@ -62,8 +62,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: sigma-scribe-${{ needs.package.outputs.version }}-kobo
           path: dist

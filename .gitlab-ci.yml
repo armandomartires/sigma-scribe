@@ -1,22 +1,29 @@
-# GitLab CI for Σscribe (plan item P1-03, decision D5).
+# GitLab CI for Σscribe (plan items P1-03 and P1-05, decision D5).
 #
 # These jobs are the canonical gates. The GitHub Actions workflows in
 # .github/workflows/ are kept until P1-04, after this pipeline has been
 # green on main. Pages and tagged releases stay on GitHub for now.
 #
 # Images are pinned by Docker Hub *manifest* digest, recorded 2026-11-17
-# (Europe/Brussels). There is no rust-toolchain.toml yet (that is P1-05);
-# the main jobs use current stable 1.100.0, and the MSRV job uses 1.88.0
-# from workspace.package.rust-version. To bump stable, take the tag digest
-# from https://hub.docker.com/v2/repositories/library/rust/tags/1.XXX.0-bookworm
-# and update RUST_IMAGE. To bump the MSRV, change rust-version, MSRV_IMAGE,
-# and CONTRIBUTING.md together.
+# (Europe/London). rust-toolchain.toml pins the same stable (1.100.0);
+# the MSRV job uses 1.88.0 from workspace.package.rust-version. To bump
+# stable, update rust-toolchain.toml, RUST_IMAGE (tag digest from
+# https://hub.docker.com/v2/repositories/library/rust/tags/1.XXX.0-bookworm),
+# RUSTUP_TOOLCHAIN, and the cache prefixes together. To bump the MSRV,
+# change rust-version, MSRV_IMAGE, and CONTRIBUTING.md together.
+# scripts/check-ci-pins.py fails the pipeline if those drift, or if a
+# cargo compile step drops --locked (Rec 6).
 #
-# Every cargo invocation that builds or checks uses --locked (Rec 6).
+# The renovate job is inert until RENOVATE_TOKEN is set and a weekly
+# pipeline schedule exists (see the P1-05 merge request). Do not put a
+# token in this file.
 
 variables:
   RUST_IMAGE: rust:1.100.0-bookworm@sha256:ade39a710ef85f3506cffcfec3e8a24ba090badef1dff2fb798f71d878833fea
   MSRV_IMAGE: rust:1.88.0-bookworm@sha256:af306cfa71d987911a781c37b59d7d67d934f49684058f96cf72079c3626bfe0
+  # Keep in sync with rust-toolchain.toml. Set so jobs do not install every
+  # cross target from that file; jobs that need a target still rustup target add it.
+  RUSTUP_TOOLCHAIN: "1.100.0"
   CARGO_HOME: $CI_PROJECT_DIR/.cargo-home
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: "0"
@@ -35,12 +42,25 @@ default:
 workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $RENOVATE_TOKEN
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 stages:
   - lint
   - test
   - build
+  - deps
+
+# Regular jobs do not run on the Renovate schedule. The renovate job
+# has its own rules and does not inherit these.
+.regular_rules:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 .cargo_cache:
   cache:
@@ -54,18 +74,33 @@ stages:
       - target/
 
 fmt:
+  extends: .regular_rules
   stage: lint
   needs: []
   script:
     - rustup component add rustfmt
     - cargo fmt --all -- --check
 
+# Fails if rust-toolchain.toml, RUST_IMAGE and RUSTUP_TOOLCHAIN drift,
+# or if a cargo compile step in CI drops --locked (P1-05).
+lint:pins:
+  extends: .regular_rules
+  stage: lint
+  needs: []
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends python3
+  script:
+    - python3 scripts/check-ci-pins.py
+
 # clippy, rustdoc, workspace tests, handwriting figures, and the 65
 # emulator scripts share one job so they reuse one compile, matching
 # the GitHub Actions `test` job (the GitLab runner is a single host).
 test:
   stage: test
-  extends: .cargo_cache
+  extends:
+    - .cargo_cache
+    - .regular_rules
   timeout: 60 minutes
   before_script:
     - apt-get update
@@ -85,8 +120,12 @@ test:
     RUSTDOCFLAGS: -D warnings
 
 msrv:
+  extends: .regular_rules
   stage: test
   image: $MSRV_IMAGE
+  # Override rust-toolchain.toml so this job stays on the MSRV.
+  variables:
+    RUSTUP_TOOLCHAIN: "1.88.0"
   timeout: 60 minutes
   cache:
     key:
@@ -117,6 +156,7 @@ msrv:
 # A new RustSec advisory can appear without any change here, so this
 # job does not block the merge request. bans / licences / sources do.
 deny:advisories:
+  extends: .regular_rules
   stage: lint
   needs: []
   allow_failure: true
@@ -128,6 +168,7 @@ deny:advisories:
     - cargo deny check advisories
 
 deny:bans:
+  extends: .regular_rules
   stage: lint
   needs: []
   before_script:
@@ -141,6 +182,7 @@ deny:bans:
 # Uses the pinned musl.cc gcc (checksummed) and the pinned FBInk commit,
 # then scripts/package-kobo.sh (which runs check-package.sh).
 package:kobo:
+  extends: .regular_rules
   stage: build
   timeout: 60 minutes
   needs:
@@ -175,7 +217,9 @@ package:kobo:
 # iOS is a follow-up: the instance runner is Linux amd64 and has no SDK.
 check:wasm32:
   stage: test
-  extends: .cargo_cache
+  extends:
+    - .cargo_cache
+    - .regular_rules
   timeout: 30 minutes
   before_script:
     - rustup target add wasm32-unknown-unknown
@@ -186,7 +230,9 @@ check:wasm32:
 
 check:android:
   stage: test
-  extends: .cargo_cache
+  extends:
+    - .cargo_cache
+    - .regular_rules
   timeout: 30 minutes
   before_script:
     - rustup target add aarch64-linux-android
@@ -197,7 +243,9 @@ check:android:
 
 check:windows:
   stage: test
-  extends: .cargo_cache
+  extends:
+    - .cargo_cache
+    - .regular_rules
   timeout: 30 minutes
   before_script:
     - apt-get update
@@ -207,3 +255,24 @@ check:windows:
     - cargo check --locked --target x86_64-pc-windows-gnu
         -p sigma-core -p sigma-render -p sigma-hwr
         -p sigma-plugin-api -p sigma-plugin-host
+
+# Inert until RENOVATE_TOKEN is set as a masked CI/CD variable and a
+# weekly pipeline schedule is created on the default branch. This job
+# is not created, scheduled, or given a token in this change (P1-05).
+renovate:
+  stage: deps
+  image: renovate/renovate:44.249.3@sha256:68d74af05716df73410c5bd2dd8b3e6cbb0ebd21db1055d6d222e98a21d2d77a
+  timeout: 30 minutes
+  resource_group: renovate
+  interruptible: false
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" && $RENOVATE_TOKEN
+  variables:
+    GIT_STRATEGY: none
+    RENOVATE_PLATFORM: gitlab
+    RENOVATE_ENDPOINT: $CI_API_V4_URL
+    RENOVATE_AUTODISCOVER: "false"
+    LOG_LEVEL: info
+    FORCE_COLOR: "3"
+  script:
+    - renovate "$CI_PROJECT_PATH"
