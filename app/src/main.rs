@@ -33,14 +33,7 @@ fn open() -> std::io::Result<Box<dyn Device>> {
 /// The radio: the Kobo's own, or on a desktop a pretend one so the Wi-Fi
 /// menu can be tried.
 fn wifi() -> sigma_device::wifi::Service {
-    #[cfg(feature = "kobo")]
-    {
-        sigma_device::wifi::Service::spawn(sigma_device::wifi::kobo::KoboWifi::from_env())
-    }
-    #[cfg(feature = "desktop")]
-    {
-        sigma_device::wifi::Service::inline(sigma_device::wifi::fake::FakeWifi::demo())
-    }
+    sigma_device::platform::current().wifi()
 }
 
 fn main() -> ExitCode {

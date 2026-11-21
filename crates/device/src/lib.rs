@@ -17,6 +17,8 @@ pub mod fbink;
 pub mod gsensor;
 pub mod light;
 pub mod otg;
+pub mod paths;
+pub mod platform;
 pub mod pointer;
 pub mod usbkbd;
 pub mod wifi;

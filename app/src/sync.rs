@@ -34,11 +34,7 @@ pub(crate) fn text_hash(s: &str) -> u64 {
 const WATCH_MS: u64 = 1000;
 
 fn adds_dir() -> PathBuf {
-    if cfg!(feature = "kobo") {
-        "/mnt/onboard/.adds/sigma-scribe".into()
-    } else {
-        "target/emu-sync".into()
-    }
+    sigma_device::paths::current().adds
 }
 
 /// The Syncthing executable: `SIGMA_SYNCTHING`, else the one in the Kobo
@@ -75,7 +71,7 @@ pub fn sync_config(notes: &Path, log_dir: &Path) -> Config {
     {
         c.port = p;
     }
-    c.kill_by_name = cfg!(feature = "kobo");
+    c.after_kill = sigma_device::platform::current().after_sync_kill();
     c.ca_file = ca_file_beside(&c.binary);
     c
 }

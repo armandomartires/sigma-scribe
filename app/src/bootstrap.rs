@@ -15,33 +15,19 @@ pub const SEED_FILES: [(&str, &str); 4] = [
     (SCRATCH, ""),
 ];
 
-/// Where notes live: `SIGMA_NOTES`, else `/mnt/onboard/sigma-scribe/notes`
-/// on the Kobo (visible over USB), else `./target/emu-notes` on a desktop.
+/// Where notes live: [`sigma_device::paths::current`] (so `SIGMA_NOTES`,
+/// else the Kobo onboard folder or `./target/emu-notes` on a desktop).
 #[must_use]
 pub fn notes_dir() -> PathBuf {
-    if let Ok(p) = std::env::var("SIGMA_NOTES") {
-        return p.into();
-    }
-    if cfg!(feature = "kobo") {
-        "/mnt/onboard/sigma-scribe/notes".into()
-    } else {
-        "target/emu-notes".into()
-    }
+    sigma_device::paths::current().notes
 }
 
-/// Where the log file goes (Settings → Logging): `SIGMA_LOG_DIR`, else
-/// `.adds/sigma-scribe/log` on the Kobo, else `./target/emu-log` on a
-/// desktop.
+/// Where the log file goes (Settings → Logging):
+/// [`sigma_device::paths::current`] (so `SIGMA_LOG_DIR`, else the Kobo
+/// log folder or `./target/emu-log` on a desktop).
 #[must_use]
 pub fn log_dir() -> PathBuf {
-    if let Ok(p) = std::env::var("SIGMA_LOG_DIR") {
-        return p.into();
-    }
-    if cfg!(feature = "kobo") {
-        "/mnt/onboard/.adds/sigma-scribe/log".into()
-    } else {
-        "target/emu-log".into()
-    }
+    sigma_device::paths::current().log
 }
 
 #[cfg(test)]
