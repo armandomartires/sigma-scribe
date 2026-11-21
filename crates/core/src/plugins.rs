@@ -515,17 +515,6 @@ impl State {
     }
 }
 
-/// Where plugins are installed: `SIGMA_PLUGINS`, else the folder beside the
-/// app on the Kobo. Each plugin is `<root>/<id>/`, and `<root>/plugins.state`
-/// records what is installed and enabled.
-#[must_use]
-pub fn plugins_root() -> std::path::PathBuf {
-    std::env::var_os("SIGMA_PLUGINS").map_or_else(
-        || std::path::PathBuf::from("/mnt/onboard/.adds/sigma-scribe/plugins"),
-        std::path::PathBuf::from,
-    )
-}
-
 /// The files named `rel` (a path inside a plugin, such as `fonts/cjk.ttf`)
 /// that enabled plugins under `root` provide, sorted by plugin id. Missing
 /// state or files give an empty list, so callers fall back to their old
@@ -705,12 +694,6 @@ pub fn list_in(root: &std::path::Path) -> Vec<Listed> {
     out
 }
 
-/// [`list_in`] for the installed plugins folder.
-#[must_use]
-pub fn list() -> Vec<Listed> {
-    list_in(&plugins_root())
-}
-
 /// Turns plugin `id` on or off in `plugins.state`, atomically. A plugin that
 /// is on disk but not yet in the file is added.
 ///
@@ -734,12 +717,6 @@ pub fn set_enabled_in(root: &std::path::Path, id: &str, enabled: bool) -> std::i
     }
     state.set_enabled(id, enabled);
     crate::store::write_atomic(&path, &state.serialize())
-}
-
-/// [`enabled_files_in`] for the installed plugins folder.
-#[must_use]
-pub fn enabled_files(rel: &str) -> Vec<std::path::PathBuf> {
-    enabled_files_in(&plugins_root(), rel)
 }
 
 /// What the repository offers for one plugin, given what is installed.

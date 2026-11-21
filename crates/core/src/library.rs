@@ -1,5 +1,5 @@
 //! The note library (brief §6 Files, §8 Data): plain `.md` / `.txt` files in
-//! nested folders under one root, e.g. `/mnt/onboard/sigma-scribe/notes`.
+//! nested folders under one root (the notes directory from [`crate::paths::Paths`]).
 //!
 //! Every path the app handles is a [`NotePath`]: relative, `/`-separated,
 //! no `..`, no absolute paths, no hidden components except the scratch file.

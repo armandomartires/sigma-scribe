@@ -312,8 +312,9 @@ impl App {
         let buffer = Buffer::new(body);
         let _ = library.set_last_opened(&current);
         let mut settings = load_settings(&root);
+        let search = sigma_device::paths::install_current();
         // v1.4: the interface follows the Kobo's language (read-only).
-        let locale = sigma_core::locale::read_locale(&sigma_core::locale::conf_path());
+        let locale = sigma_core::locale::read_locale(&search.paths.locale_conf);
         let system_lang = locale.map_or(sigma_render::i18n::Lang::En, |l| {
             sigma_render::i18n::Lang::from_locale(&l)
         });
@@ -354,7 +355,7 @@ impl App {
             repo_rows: Vec::new(),
             repo_note: String::new(),
             journal_note: String::new(),
-            plugins_root: sigma_core::plugins::plugins_root(),
+            plugins_root: search.plugins.clone(),
             plugin_failed: false,
             pane_slots: [None, None, None, None],
             pane_plugins: [None, None, None, None],
