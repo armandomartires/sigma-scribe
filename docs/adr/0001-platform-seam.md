@@ -1,8 +1,9 @@
 # ADR 0001 — Platform seam: Cargo features and Paths
 
-- **Status:** Accepted for the Cargo-feature half (P2-01, this change).
-  The `Paths` / `Platform` design is accepted in principle and lands in
-  follow-up MRs (P2-02, P2-03).
+- **Status:** Accepted. The Cargo-feature half landed in P2-01. The
+  `Paths` struct, device-layer constructors, and the `Platform` trait
+  land in P2-02. Moving Kobo path literals out of `core` and `render`
+  remains P2-03.
 - **Date:** 2026-11-21 (Europe/Brussels)
 - **Plan items:** [P2-01](https://gtlb.sigmareconpt.duckdns.org/sigmarecon/products/sigma-scribe/app/-/issues/10)
   (this MR), [P2-02](https://gtlb.sigmareconpt.duckdns.org/sigmarecon/products/sigma-scribe/app/-/issues/11),
@@ -208,6 +209,27 @@ This ADR does not introduce a new crate yet. P2-02 / P2-03 can add
 wifi/sync types into the editor core; the first cut should try to keep
 `Paths` in core and `Platform` next to the device layer, with only a
 narrow trait (or callbacks) crossing the boundary.
+
+## Implementation (P2-02)
+
+- `sigma_core::paths::Paths` is the concrete struct above.
+- `sigma_device::paths::{kobo, desktop, current}` apply the environment
+  overrides (`SIGMA_NOTES`, `SIGMA_LOG_DIR`, `SIGMA_KOBO_CONF`).
+- `sigma_device::platform::Platform` owns `paths()`, `wifi()`, and
+  `after_sync_kill()`. `Kobo` and `Desktop` implement it.
+  `platform::current()` follows the `kobo` Cargo feature.
+- The Syncthing supervisor no longer calls `killall`. It runs a
+  `Config::after_kill` function pointer supplied by the platform
+  (Kobo: `killall -q syncthing`; desktop: no-op). Starting the bundled
+  binary (`Command::new(&cfg.binary)`) stays in the supervisor: that is
+  a configured path, not a Kobo-specific process layout. Moving that
+  spawn behind the trait can wait if a later target cannot host a child
+  process at all.
+- The app shell (`notes_dir`, `log_dir`, Syncthing's install root, and
+  the Wi-Fi service in `main`) goes through `paths::current` /
+  `platform::current`. The six core/render files still have their own
+  defaults until P2-03.
+
 
 ## Consequences
 

@@ -45,10 +45,12 @@ pub struct Config {
     pub stop_wait: Duration,
     /// How long to wait before starting it again after it died.
     pub retry_wait: Duration,
-    /// After a kill, also `killall syncthing`: the real Syncthing starts a
-    /// child of its own, which a kill of the parent would leave behind. Only
-    /// for the Kobo; on a desktop it could end the reader's own Syncthing.
-    pub kill_by_name: bool,
+    /// After the child is killed, a platform hook to clean leftover
+    /// processes. The Kobo platform runs `killall -q syncthing` (the real
+    /// Syncthing starts a child of its own). The default is a no-op, so a
+    /// desktop build does not kill the reader's own Syncthing. The hook is
+    /// a function pointer because the supervisor is not generic (ADR 0001).
+    pub after_kill: fn(),
     /// Whether 127.0.0.1 can be bound; checked before every start. Tests
     /// replace it.
     pub loopback_probe: fn() -> bool,
@@ -79,7 +81,7 @@ impl Config {
             start_wait: Duration::from_secs(90),
             stop_wait: Duration::from_secs(8),
             retry_wait: Duration::from_secs(15),
-            kill_by_name: false,
+            after_kill: noop_after_kill,
             loopback_probe: loopback_up,
             ca_file: None,
         }
@@ -487,13 +489,10 @@ fn stop_child(cfg: &Config, client: &Client, child: &mut Child) {
 fn kill(cfg: &Config, child: &mut Child) {
     let _ = child.kill();
     let _ = child.wait();
-    if cfg.kill_by_name {
-        let _ = Command::new("killall")
-            .args(["-q", "syncthing"])
-            .stderr(Stdio::null())
-            .status();
-    }
+    (cfg.after_kill)();
 }
+
+fn noop_after_kill() {}
 
 /// The log line for a command (no names: they are the reader's).
 fn describe(c: &Cmd) -> &'static str {
