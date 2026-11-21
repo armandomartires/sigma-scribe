@@ -108,7 +108,12 @@ impl App {
 
     /// Where installed plugins live (tests point this at a temp folder).
     pub fn set_plugins_root(&mut self, root: impl Into<std::path::PathBuf>) {
-        self.plugins_root = root.into();
+        let root = root.into();
+        self.plugins_root = root.clone();
+        if let Some(mut search) = sigma_core::paths::SearchPaths::current() {
+            search.plugins = root;
+            search.install();
+        }
         self.plugin_failed = false;
         self.plugin_idle = None;
         self.sync_plugin_icons();

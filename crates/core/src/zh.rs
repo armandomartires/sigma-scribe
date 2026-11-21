@@ -112,16 +112,28 @@ fn dict(script: Script) -> &'static RwLock<Dict> {
     };
     cell.get_or_init(|| {
         let env = std::env::var("SIGMA_ZH_DICT").ok();
-        let dir_paths = [
-            "/mnt/onboard/.adds/sigma-scribe/dict/".to_string(),
+        let search = crate::paths::SearchPaths::current();
+        let mut dirs: Vec<String> = env.iter().cloned().collect();
+        let mut plugin_paths = Vec::new();
+        if let Some(s) = &search {
+            plugin_paths = crate::plugins::enabled_files_in(&s.plugins, &format!("dict/{name}"));
+            dirs.push(s.paths.dict().to_string_lossy().into_owned());
+            for extra in &s.paths.extra_dicts {
+                dirs.push(extra.to_string_lossy().into_owned());
+            }
+        } else {
             // A development checkout (the emulator runs from its root).
-            "assets/zh/".to_string(),
-        ];
-        let plugin_paths = crate::plugins::enabled_files(&format!("dict/{name}"));
-        let loose = env
-            .iter()
-            .chain(dir_paths.iter())
-            .map(|dir| std::path::PathBuf::from(format!("{}/{name}", dir.trim_end_matches('/'))));
+            dirs.push("assets/zh".to_string());
+        }
+        let loose = dirs.iter().map(|dir| {
+            let dir = dir.trim_end_matches('/');
+            let p = std::path::Path::new(dir);
+            if p.extension().is_some() {
+                p.to_path_buf()
+            } else {
+                p.join(name)
+            }
+        });
         // The env override first, then enabled plugins, then the loose files.
         let mut candidates: Vec<_> = loose.collect();
         let at = usize::from(env.is_some());

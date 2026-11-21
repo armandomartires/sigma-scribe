@@ -461,19 +461,29 @@ fn dict() -> &'static RwLock<Dict> {
         let mut d = Dict::default();
         d.load_seed();
         // A fuller SKK dictionary, when one is installed (docs/dev/japanese-internals.md).
+        // The env override first, then enabled plugins, then Paths, then a
+        // development checkout (the emulator runs from the repo root).
         let extra = std::env::var("SIGMA_SKK_DICT").ok();
-        // The env override first, then enabled plugins, then the loose files.
-        let plugins = crate::plugins::enabled_files("dict/skk-jisyo.txt");
-        let paths = extra
-            .iter()
-            .map(std::path::PathBuf::from)
-            .chain(plugins)
-            .chain([
-                "/mnt/onboard/.adds/sigma-scribe/dict/skk-jisyo.txt".into(),
-                // A development checkout (the emulator runs from its root).
-                "assets/ja/skk-jisyo.txt".into(),
-            ]);
-        for path in paths {
+        let search = crate::paths::SearchPaths::current();
+        let mut candidates: Vec<std::path::PathBuf> =
+            extra.iter().map(std::path::PathBuf::from).collect();
+        if let Some(s) = &search {
+            candidates.extend(crate::plugins::enabled_files_in(
+                &s.plugins,
+                "dict/skk-jisyo.txt",
+            ));
+            candidates.push(s.paths.skk_dict());
+            for extra in &s.paths.extra_dicts {
+                if extra.extension().is_some() {
+                    candidates.push(extra.clone());
+                } else {
+                    candidates.push(extra.join("skk-jisyo.txt"));
+                }
+            }
+        } else {
+            candidates.push("assets/ja/skk-jisyo.txt".into());
+        }
+        for path in candidates {
             if let Ok(text) = std::fs::read_to_string(path) {
                 d.load_skk(&text);
                 break;

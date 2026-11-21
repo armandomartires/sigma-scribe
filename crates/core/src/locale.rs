@@ -1,15 +1,12 @@
-//! The Kobo's interface language (v1.4, S14, decision 31).
+//! The reader's interface language (v1.4, S14, decision 31).
 //!
-//! Nickel keeps it in `/mnt/onboard/.kobo/Kobo/Kobo eReader.conf`, section
-//! `[ApplicationPreferences]`, key `CurrentLocale` (this Forma: `en`, seen
-//! in the 2026-10-20 backup). The app only **reads** that file — Nickel
-//! owns it and we never write it. Reading the real file on the device is
-//! a device check; the parser is tested against a fixture.
+//! On a Kobo, Nickel keeps it in `Kobo eReader.conf`, section
+//! `[ApplicationPreferences]`, key `CurrentLocale`. The app only **reads**
+//! that file — Nickel owns it and we never write it. The path comes from
+//! [`crate::paths::Paths::locale_conf`]. The parser is tested against a
+//! fixture.
 
-use std::path::{Path, PathBuf};
-
-/// Where Nickel keeps its settings on a Kobo.
-pub const KOBO_CONF: &str = "/mnt/onboard/.kobo/Kobo/Kobo eReader.conf";
+use std::path::Path;
 
 /// `CurrentLocale` from the text of `Kobo eReader.conf`, if present.
 #[must_use]
@@ -32,12 +29,6 @@ pub fn current_locale(conf: &str) -> Option<String> {
         }
     }
     None
-}
-
-/// The config path: `SIGMA_KOBO_CONF` (emulator, tests) or [`KOBO_CONF`].
-#[must_use]
-pub fn conf_path() -> PathBuf {
-    std::env::var_os("SIGMA_KOBO_CONF").map_or_else(|| PathBuf::from(KOBO_CONF), PathBuf::from)
 }
 
 /// Reads the locale (read-only); missing or unreadable → `None` (English).
