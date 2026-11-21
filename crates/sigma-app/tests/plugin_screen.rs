@@ -1,0 +1,627 @@
+//! The Graph as a WASM screen plugin: the gate, the events the plugin
+//! receives, the actions it can take, host-owned controls, and the fall
+//! back to the built-in Graph when a plugin is missing or fails.
+//!
+//! The plugin here is a tiny WAT module that answers each event with a
+//! fixed frame and records every event it receives in its cache, so the
+//! tests can decode exactly what the host sent.
+
+use sigma_app::App;
+use sigma_core::NotePath;
+use sigma_device::desktop::DesktopDevice;
+use sigma_device::pointer::{raw_wheel, PointerDecoder};
+use sigma_device::{Event, Phase, Refresh};
+use sigma_plugin_api::{
+    Action, Event as PEvent, Frame, Hit, Op, Phase as PPhase, Rect, Redraw, Tone,
+};
+use std::path::PathBuf;
+
+/// Memory and the two entry points every module has; the ABI is the API's.
+fn mem() -> String {
+    format!(
+        r#"(memory (export "memory") 4)
+  (func (export "sigma_abi") (result i32) i32.const {})
+  (func (export "sigma_alloc") (param i32) (result i32) i32.const 16384)"#,
+        sigma_plugin_api::ABI
+    )
+}
+
+fn esc(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("\\{b:02x}")).collect()
+}
+
+/// A plugin that answers event tag k (0 open, 1 tap, 2 drag, 3 wheel,
+/// 4 page, 5 back, 6 step) with `frames[k]`, and saves every event it gets.
+fn guest(frames: &[Frame; 7], trap_on_wheel: bool) -> Vec<u8> {
+    let mut data = String::new();
+    let mut lens = Vec::new();
+    for (k, f) in frames.iter().enumerate() {
+        let b = f.encode();
+        assert!(b.len() < 1024);
+        data += &format!(r#"(data (i32.const {}) "{}")"#, 8192 + 1024 * k, esc(&b));
+        lens.extend_from_slice(&(b.len() as u32).to_le_bytes());
+    }
+    data += &format!(r#"(data (i32.const 4096) "{}")"#, esc(&lens));
+    let trap = if trap_on_wheel {
+        "(if (i32.eq (local.get $tag) (i32.const 3)) (then unreachable))"
+    } else {
+        ""
+    };
+    let mem = mem();
+    let wat = format!(
+        r#"(module
+  (import "sigma" "cache_put" (func $put (param i64 i32 i32) (result i32)))
+  {mem}
+  {data}
+  (global $n (mut i32) (i32.const 0))
+  (func (export "sigma_call") (param $p i32) (param $l i32) (result i64)
+    (local $tag i32)
+    (local.set $tag (i32.load8_u (local.get $p)))
+    (drop (call $put (i64.extend_i32_u (i32.add (i32.const 1000) (global.get $n)))
+                     (local.get $p) (local.get $l)))
+    (global.set $n (i32.add (global.get $n) (i32.const 1)))
+    {trap}
+    (i64.or
+      (i64.shl (i64.extend_i32_u (i32.add (i32.const 8192) (i32.shl (local.get $tag) (i32.const 10))))
+               (i64.const 32))
+      (i64.extend_i32_u (i32.load (i32.add (i32.const 4096) (i32.shl (local.get $tag) (i32.const 2))))))))"#
+    );
+    wat::parse_str(wat).unwrap()
+}
+
+fn redraw(r: Redraw) -> Frame {
+    Frame {
+        redraw: r,
+        ..Frame::default()
+    }
+}
+
+fn open_frame() -> Frame {
+    Frame {
+        ops: vec![
+            Op::Fill {
+                r: Rect::new(0, 0, 1440, 1920),
+                c: Tone::Rule,
+            },
+            Op::Pill {
+                r: Rect::new(200, 400, 60, 60),
+                c: Tone::Ink,
+            },
+        ],
+        hits: vec![
+            Hit {
+                id: 1,
+                rect: Rect::new(200, 400, 60, 60),
+                label: "Node:b.md".into(),
+            },
+            Hit {
+                id: 2,
+                rect: Rect::new(1000, 300, 80, 56),
+                label: "Zoom+".into(),
+            },
+        ],
+        // Opening repaints the whole screen, as the real plugin's does.
+        redraw: Redraw::Full,
+        ..Frame::default()
+    }
+}
+
+fn frames(tap: Vec<Action>) -> [Frame; 7] {
+    [
+        open_frame(),
+        Frame {
+            actions: tap,
+            ..Frame::default()
+        },
+        redraw(Redraw::Partial),
+        redraw(Redraw::Full),
+        redraw(Redraw::Clean),
+        Frame {
+            actions: vec![Action::Close],
+            ..Frame::default()
+        },
+        redraw(Redraw::Full),
+    ]
+}
+
+struct Rig {
+    app: App,
+    dev: DesktopDevice,
+    plugins: PathBuf,
+    t: u64,
+}
+
+fn dirs(tag: &str) -> (PathBuf, PathBuf) {
+    let d = std::env::temp_dir().join(format!("sigma-plug-{tag}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(d.join("notes")).unwrap();
+    std::fs::create_dir_all(d.join("plugins/graph-map")).unwrap();
+    (d.join("notes"), d.join("plugins"))
+}
+
+impl Rig {
+    /// `wasm`: the plugin module, or `None` for no plugin installed.
+    fn new(tag: &str, wasm: Option<Vec<u8>>, state: &str) -> Self {
+        let (notes, plugins) = dirs(tag);
+        for (n, body) in [
+            ("a.md", "[[b]] [[c]]"),
+            ("b.md", "[[c]]"),
+            ("c.md", "[[a]]"),
+            ("lone.md", "no links"),
+        ] {
+            std::fs::write(notes.join(n), body).unwrap();
+        }
+        if let Some(w) = wasm {
+            std::fs::write(plugins.join("graph-map/graph.wasm"), w).unwrap();
+            std::fs::write(
+                plugins.join("graph-map/plugin.conf"),
+                "id=graph-map\nname=Graph\nversion=1.0.0\nkind=screen\nentry=graph.wasm\n\
+setting=view|Start on|Map,List|Map\n\
+setting=labels|Labels|Auto,All|Auto\n\
+setting=layout|Layout|Quick,Best|Best\n",
+            )
+            .unwrap();
+            std::fs::write(plugins.join("plugins.state"), state).unwrap();
+        }
+        let mut app = App::new(1440, 1920, notes);
+        app.set_plugins_root(plugins.clone());
+        app.open(&NotePath::parse("a.md").unwrap());
+        let mut dev = DesktopDevice::new(1440, 1920);
+        app.render(&mut dev, Refresh::Full).unwrap();
+        Self {
+            app,
+            dev,
+            plugins,
+            t: 0,
+        }
+    }
+    fn on(tag: &str, frames: [Frame; 7]) -> Self {
+        Self::new(
+            tag,
+            Some(guest(&frames, false)),
+            "graph-map=1.0.0,enabled\n",
+        )
+    }
+    fn send(&mut self, e: Event) -> Option<Refresh> {
+        let r = self.app.handle(e);
+        if let Some(r) = r {
+            self.app.render(&mut self.dev, r).unwrap();
+        }
+        r
+    }
+    fn tap_on(&mut self, label: &str) -> Option<Refresh> {
+        let (x, y) = self.app.control_centre(label).expect(label);
+        self.send(Event::Tap { x, y })
+    }
+    fn touch(&mut self, phase: Phase, x: i32, y: i32) {
+        self.t += 30;
+        let t = self.t;
+        self.send(Event::Touch { phase, x, y, t });
+    }
+    /// Every event the plugin received, in order.
+    fn received(&self) -> Vec<PEvent> {
+        (0..16u64)
+            .map_while(|n| {
+                std::fs::read(
+                    self.plugins
+                        .join(format!("graph-map/.cache/{:016x}", 1000 + n)),
+                )
+                .ok()
+            })
+            .map(|b| PEvent::decode(&b).unwrap())
+            .collect()
+    }
+    /// Taps the Graph icon and lets the idle ticks load and build the screen,
+    /// as the main loop does between events.
+    fn open_graph(&mut self) {
+        self.tap_on("Graph");
+        self.app.plugin_settle(&mut self.dev);
+    }
+
+    /// Whether the plugin has saved the event with this number (the guest
+    /// numbers its events from 1000 per instance).
+    fn saved(&self, n: u64) -> bool {
+        self.plugins
+            .join(format!("graph-map/.cache/{:016x}", 1000 + n))
+            .exists()
+    }
+    fn note_index(&self, name: &str) -> u32 {
+        let g = self.app.link_graph();
+        g.notes.iter().position(|n| n.as_str() == name).unwrap() as u32
+    }
+}
+
+#[test]
+fn the_graph_icon_opens_the_plugin_and_gives_it_the_library() {
+    let mut r = Rig::on("open", frames(vec![]));
+    r.open_graph();
+    assert!(r.app.plugin_screen_open());
+    assert!(r.app.graph.is_none(), "the built-in Graph stays closed");
+    let PEvent::Open(s) = &r.received()[0] else {
+        panic!("first event is Open")
+    };
+    assert_eq!((s.width, s.height), (1440, 1920));
+    assert!(s.top > 0 && s.bottom == 1920);
+    let idx = |n: &str| s.notes.iter().position(|x| x.name == n).unwrap() as u32;
+    assert!(s.notes[idx("a.md") as usize].current);
+    assert!(!s.notes[idx("b.md") as usize].current);
+    assert!(s
+        .notes
+        .iter()
+        .any(|n| n.name == "lone.md" && n.detail == "No links"));
+    assert!(s.edges.contains(&(idx("a.md"), idx("b.md"))));
+    assert!(s.edges.contains(&(idx("a.md"), idx("c.md"))));
+    assert!(s.edges.contains(&(idx("c.md"), idx("a.md"))));
+    assert!(!s.notes.iter().any(|n| n.name.contains(".scratchpad")));
+}
+
+#[test]
+fn the_plugins_hit_list_names_emulator_controls() {
+    let mut r = Rig::on("hits", frames(vec![]));
+    r.open_graph();
+    assert_eq!(r.app.control_centre("Node:b.md"), Some((230, 430)));
+    assert_eq!(r.app.control_centre("Zoom+"), Some((1040, 328)));
+    assert!(r.app.control_centre("Close").is_some());
+    assert!(r.app.control_centre("Nope").is_none());
+}
+
+#[test]
+fn a_tap_reaches_the_plugin_and_open_note_applies() {
+    let b = Rig::new("tap", None, "").note_index("b.md");
+    let mut r = Rig::on("tap2", frames(vec![Action::OpenNote(b)]));
+    assert_eq!(r.note_index("b.md"), b, "same library, same order");
+    r.open_graph();
+    assert_eq!(r.tap_on("Node:b.md"), Some(Refresh::Full));
+    assert!(!r.app.plugin_screen_open() && r.app.graph.is_none());
+    assert_eq!(r.app.current.as_str(), "b.md");
+    assert!(r.app.preview.is_none());
+    assert!(!r.app.history.is_empty(), "Back returns to a.md");
+    let got = r.received();
+    assert!(
+        matches!(got[1], PEvent::Tap { x: 230, y: 430 }),
+        "{:?}",
+        got[1]
+    );
+}
+
+#[test]
+fn preview_note_opens_the_note_in_preview() {
+    let b = Rig::new("pv0", None, "").note_index("b.md");
+    let mut r = Rig::on("pv", frames(vec![Action::PreviewNote(b)]));
+    r.open_graph();
+    assert_eq!(r.tap_on("Node:b.md"), Some(Refresh::Full));
+    assert!(r.app.preview.is_some() && !r.app.plugin_screen_open());
+    assert_eq!(r.app.current.as_str(), "b.md");
+}
+
+#[test]
+fn close_and_escape_belong_to_the_host() {
+    let mut r = Rig::on("close", frames(vec![Action::OpenNote(0)]));
+    r.open_graph();
+    assert_eq!(r.tap_on("Close"), Some(Refresh::Full));
+    assert!(!r.app.plugin_screen_open());
+    assert_eq!(r.app.current.as_str(), "a.md");
+    assert!(
+        !r.received().iter().any(|e| matches!(e, PEvent::Tap { .. })),
+        "the plugin never saw the close tap"
+    );
+    r.open_graph();
+    assert!(r.app.plugin_screen_open());
+    assert_eq!(
+        r.send(Event::Key(sigma_device::HwKey::Escape)),
+        Some(Refresh::Full)
+    );
+    assert!(!r.app.plugin_screen_open());
+}
+
+#[test]
+fn the_plugin_can_close_itself() {
+    let mut f = frames(vec![]);
+    f[1].actions = vec![Action::Close];
+    let mut r = Rig::on("self-close", f);
+    r.open_graph();
+    assert_eq!(r.tap_on("Zoom+"), Some(Refresh::Full));
+    assert!(!r.app.plugin_screen_open());
+}
+
+#[test]
+fn wheel_page_and_finger_drag_reach_the_plugin() {
+    let mut r = Rig::on("input", frames(vec![]));
+    r.send(Event::PointerPlug(true));
+    r.open_graph();
+    // Page buttons: the plugin's Clean redraw becomes the cleanup refresh.
+    assert_eq!(
+        r.send(Event::PageTurn { forward: true }),
+        Some(Refresh::PointerCleanup)
+    );
+    // Mouse wheel.
+    let mut dec = PointerDecoder::default();
+    let mut full = false;
+    for raw in raw_wheel(1) {
+        r.t += 20;
+        for e in dec.feed(raw, r.t) {
+            full |= r.send(e) == Some(Refresh::Full);
+        }
+    }
+    assert!(full, "the wheel got the plugin's Full redraw");
+    // A finger drag: Start at the press point, End at the release.
+    r.touch(Phase::Down, 700, 1000);
+    for k in 1..=6 {
+        r.touch(Phase::Move, 700 - 50 * k, 1000);
+    }
+    r.touch(Phase::Up, 400, 1000);
+    assert!(r.app.plugin_screen_open(), "a drag never opens anything");
+    let got = r.received();
+    let drags: Vec<_> = got
+        .iter()
+        .filter_map(|e| match e {
+            PEvent::Drag { phase, x, y } => Some((*phase, *x, *y)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        drags.first(),
+        Some(&(PPhase::Start, 700, 1000)),
+        "{drags:?}"
+    );
+    assert_eq!(drags.last(), Some(&(PPhase::End, 400, 1000)), "{drags:?}");
+    assert!(drags.iter().any(|d| d.0 == PPhase::Move));
+    assert!(got
+        .iter()
+        .any(|e| matches!(e, PEvent::PageTurn { forward: true })));
+    assert!(got.iter().any(|e| matches!(e, PEvent::Wheel { dy: 1, .. })));
+    assert!(
+        !got.iter().any(|e| matches!(e, PEvent::Tap { .. })),
+        "{got:?}"
+    );
+}
+
+#[test]
+fn without_an_enabled_plugin_there_is_no_graph_icon() {
+    // No plugin installed.
+    let r = Rig::new("none", None, "");
+    assert!(r.app.control_centre("Graph").is_none(), "no icon");
+    assert!(r.app.touch_targets().iter().all(|(n, _)| n != "Graph"));
+    // Installed but switched off.
+    let w = guest(&frames(vec![]), false);
+    let r = Rig::new("off", Some(w), "graph-map=1.0.0,disabled\n");
+    assert!(r.app.control_centre("Graph").is_none());
+    // Installed and on: the icon is there.
+    let w = guest(&frames(vec![]), false);
+    let r = Rig::new("on", Some(w), "graph-map=1.0.0,enabled\n");
+    assert!(r.app.control_centre("Graph").is_some());
+    // The built-in Graph (the emulator's, and the plugin's test reference) is
+    // opted into explicitly, and then opens with no plugin at all.
+    let mut r = Rig::new("builtin", None, "");
+    r.app.set_builtin_graph(true);
+    r.open_graph();
+    assert!(r.app.graph.is_some() && !r.app.plugin_screen_open());
+}
+
+#[test]
+fn a_plugin_that_does_not_load_falls_back_to_the_builtin_graph() {
+    let mut r = Rig::new(
+        "bad",
+        Some(b"not wasm".to_vec()),
+        "graph-map=1.0.0,enabled\n",
+    );
+    r.open_graph();
+    assert!(r.app.graph.is_some() && !r.app.plugin_screen_open());
+}
+
+#[test]
+fn a_plugin_that_traps_is_dropped_for_the_session() {
+    let w = guest(&frames(vec![]), true);
+    let mut r = Rig::new("trap", Some(w), "graph-map=1.0.0,enabled\n");
+    r.send(Event::PointerPlug(true));
+    r.open_graph();
+    assert!(r.app.plugin_screen_open());
+    let mut dec = PointerDecoder::default();
+    for raw in raw_wheel(1) {
+        r.t += 20;
+        for e in dec.feed(raw, r.t) {
+            r.send(e);
+        }
+    }
+    assert!(!r.app.plugin_screen_open(), "the failed plugin is gone");
+    assert!(r.app.graph.is_some(), "the built-in Graph took over");
+    // It stays off until the plugin is set up again.
+    r.send(Event::Key(sigma_device::HwKey::Escape));
+    r.open_graph();
+    assert!(r.app.graph.is_some() && !r.app.plugin_screen_open());
+}
+
+#[test]
+fn a_loaded_plugin_is_kept_between_opens() {
+    let mut r = Rig::on("keep", frames(vec![]));
+    r.open_graph();
+    r.tap_on("Close");
+    r.open_graph();
+    assert!(r.app.plugin_screen_open());
+    // One instance served both opens: its event counter went on (1001).
+    assert!(r.saved(0) && r.saved(1), "two Open events in one instance");
+    let got = r.received();
+    assert!(
+        got.len() == 2 && got.iter().all(|e| matches!(e, PEvent::Open(_))),
+        "{got:?}"
+    );
+}
+
+#[test]
+fn a_changed_module_is_loaded_afresh() {
+    let mut r = Rig::on("fresh", frames(vec![]));
+    r.open_graph();
+    r.tap_on("Close");
+    // Forget what the first instance saved, then replace the module.
+    std::fs::remove_dir_all(r.plugins.join("graph-map/.cache")).unwrap();
+    std::fs::write(
+        r.plugins.join("graph-map/graph.wasm"),
+        guest(&frames(vec![Action::Close]), false),
+    )
+    .unwrap();
+    r.open_graph();
+    assert!(r.app.plugin_screen_open());
+    // A new instance numbers its events from 1000 again; a kept one would
+    // have written 1001.
+    assert!(r.saved(0) && !r.saved(1));
+}
+
+#[test]
+fn a_plugin_that_failed_is_not_kept() {
+    let w = guest(&frames(vec![]), true);
+    let mut r = Rig::new("nokeep", Some(w), "graph-map=1.0.0,enabled\n");
+    r.send(Event::PointerPlug(true));
+    r.open_graph();
+    let mut dec = PointerDecoder::default();
+    for raw in raw_wheel(1) {
+        r.t += 20;
+        for e in dec.feed(raw, r.t) {
+            r.send(e);
+        }
+    }
+    assert!(
+        !r.app.plugin_screen_open() && r.app.graph.is_some(),
+        "fell back"
+    );
+    r.send(Event::Key(sigma_device::HwKey::Escape));
+    // Setting the plugin root again clears the failure and any kept instance.
+    r.app.set_plugins_root(r.plugins.clone());
+    r.open_graph();
+    assert!(r.app.plugin_screen_open(), "a fresh instance opened");
+}
+
+#[test]
+fn the_screen_appears_at_once_and_the_module_loads_on_the_next_idle_tick() {
+    let mut r = Rig::on("loading", frames(vec![]));
+    r.tap_on("Graph");
+    assert!(r.app.plugin_screen_open() && r.app.plugin_busy());
+    assert!(
+        r.app.control_centre("Close").is_some(),
+        "the host's own controls work"
+    );
+    assert!(
+        r.received().is_empty(),
+        "the plugin has not even been loaded yet"
+    );
+    // The next idle tick loads it and sends Open.
+    let t = 1_000;
+    assert_eq!(r.send(Event::Tick { t }), Some(Refresh::Full));
+    assert!(matches!(r.received()[0], PEvent::Open(_)));
+    assert!(!r.app.plugin_busy());
+    // Leaving while it loads is fine too.
+    r.tap_on("Close");
+    r.tap_on("Graph");
+    assert!(
+        !r.app.plugin_busy(),
+        "a second open of a loaded plugin has no load to wait for"
+    );
+}
+
+#[test]
+fn a_loaded_plugin_opens_straight_away() {
+    let mut r = Rig::on("fast", frames(vec![]));
+    r.open_graph();
+    r.tap_on("Close");
+    let before = r.received().len();
+    r.tap_on("Graph");
+    assert!(!r.app.plugin_busy(), "no loading picture, no wait");
+    assert_eq!(
+        r.received().len(),
+        before + 1,
+        "Open was sent in the tap itself"
+    );
+}
+
+/// A plugin that asks for steps: Open gives a pending frame, and Step a
+/// finished one (or another pending one, for `endless`).
+fn stepping(endless: bool) -> [Frame; 7] {
+    let mut f = frames(vec![]);
+    f[0].pending = true;
+    f[0].redraw = Redraw::Full;
+    f[6].redraw = Redraw::Partial;
+    f[6].pending = endless;
+    // While it builds, every answer keeps asking for steps, like the real one.
+    f[1].pending = endless;
+    f
+}
+
+#[test]
+fn a_pending_frame_is_stepped_on_idle_ticks_until_it_is_done() {
+    let mut r = Rig::on("steps", stepping(false));
+    r.tap_on("Graph");
+    r.send(Event::Tick { t: 1_000 }); // load and Open: a pending frame
+    assert!(r.app.plugin_busy(), "the plugin asked for steps");
+    assert_eq!(
+        r.send(Event::Tick { t: 1_050 }),
+        Some(Refresh::Partial),
+        "a step"
+    );
+    assert!(!r.app.plugin_busy(), "done");
+    assert_eq!(r.send(Event::Tick { t: 1_100 }), None, "nothing more to do");
+    let got = r.received();
+    assert!(
+        matches!(got[0], PEvent::Open(_)) && matches!(got[1], PEvent::Step),
+        "{got:?}"
+    );
+    assert_eq!(got.len(), 2);
+}
+
+#[test]
+fn leaving_while_it_builds_stops_the_steps() {
+    let mut r = Rig::on("leave", stepping(true));
+    r.tap_on("Graph");
+    r.send(Event::Tick { t: 1_000 });
+    for t in [1_050, 1_100, 1_150] {
+        assert_eq!(r.send(Event::Tick { t }), Some(Refresh::Partial));
+    }
+    let steps = r.received().len();
+    assert!(r.app.plugin_busy());
+    // A tap on the plugin's area meanwhile does not stop the steps.
+    r.send(Event::Tap { x: 700, y: 900 });
+    assert!(r.app.plugin_busy());
+    // The host's Close leaves, and nothing more is sent.
+    r.tap_on("Close");
+    assert!(!r.app.plugin_screen_open() && !r.app.plugin_busy());
+    for t in [1_200, 1_250] {
+        r.send(Event::Tick { t });
+    }
+    assert_eq!(
+        r.received().len(),
+        steps + 1,
+        "only the tap; no steps after leaving"
+    );
+}
+
+#[test]
+fn the_plugins_settings_reach_it_in_the_scene() {
+    let mut r = Rig::on("settings", frames(vec![]));
+    r.open_graph();
+    let PEvent::Open(s) = &r.received()[0] else {
+        panic!("Open first")
+    };
+    // Nothing chosen: every declared setting, at its default.
+    assert_eq!(
+        s.settings,
+        [("view", "Map"), ("labels", "Auto"), ("layout", "Best")]
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+    );
+    r.tap_on("Close");
+    // The reader's choices (the file Settings writes) are sent on the next open.
+    std::fs::write(
+        r.plugins.join("graph-map/settings"),
+        "view=List\nlayout=Quick\nlabels=Sideways\n",
+    )
+    .unwrap();
+    r.open_graph();
+    let got = r.received();
+    let PEvent::Open(s) = got.last().unwrap() else {
+        panic!("Open")
+    };
+    assert_eq!(s.settings[0], ("view".into(), "List".into()));
+    assert_eq!(
+        s.settings[1],
+        ("labels".into(), "Auto".into()),
+        "a junk value is the default"
+    );
+    assert_eq!(s.settings[2], ("layout".into(), "Quick".into()));
+}

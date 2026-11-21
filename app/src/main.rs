@@ -15,8 +15,8 @@ compile_error!("building sigma-scribe requires the `kobo` or `desktop` feature")
 #[path = "window.rs"]
 mod window;
 
+use sigma_app::{notes_dir, App};
 use sigma_device::Device;
-use sigma_scribe::{notes_dir, App};
 use std::process::ExitCode;
 
 fn open() -> std::io::Result<Box<dyn Device>> {
@@ -56,7 +56,7 @@ fn main() -> ExitCode {
         }
     };
     let notes = notes_dir();
-    let mut splash = sigma_scribe::Splash::show(dev.as_mut(), &notes);
+    let mut splash = sigma_app::Splash::show(dev.as_mut(), &notes);
     let (w, h) = dev.size();
     splash.progress(dev.as_mut(), 0.3);
     let mut app = App::new(w, h, notes);
@@ -71,5 +71,15 @@ fn main() -> ExitCode {
             sigma_core::critical!("sigma-scribe", "{e}");
             ExitCode::FAILURE
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn host_tests_use_the_desktop_feature_not_kobo() {
+        // CI and `cargo test` run with default features.
+        const { assert!(cfg!(feature = "desktop")) };
+        const { assert!(!cfg!(feature = "kobo")) };
     }
 }

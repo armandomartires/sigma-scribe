@@ -3,7 +3,7 @@
 - **Status:** Accepted. The Cargo-feature half landed in P2-01. The
   `Paths` struct, device-layer constructors, and the `Platform` trait
   land in P2-02. Moving Kobo path literals out of `core` and `render`
-  lands in P2-03.
+  lands in P2-03. Extracting `sigma-app` lands in P2-05.
 - **Date:** 2026-11-21 (Europe/Brussels)
 - **Plan items:** [P2-01](https://gtlb.sigmareconpt.duckdns.org/sigmarecon/products/sigma-scribe/app/-/issues/10)
   (this MR), [P2-02](https://gtlb.sigmareconpt.duckdns.org/sigmarecon/products/sigma-scribe/app/-/issues/11),
@@ -269,8 +269,23 @@ narrow trait (or callbacks) crossing the boundary.
   `aarch64-unknown-linux-gnu` check can be added in the P2-04 follow-up.
   iOS still needs a macOS runner; the job is documented as a follow-up,
   not added here.
-- P2-05 (extracting `sigma-app` as a library) waits until the seam is
-  stable.
+- P2-05 extracts `sigma-app` as a library crate. The `sigma-scribe` and
+  `sigma-emu` binaries in `app/` are thin shells over it (Kobo / desktop
+  window / headless). Features `kobo` and `desktop` stay on the binary
+  package. Integration tests and plugin fixtures live with `sigma-app`.
+
+## Implementation (P2-05)
+
+- New crate `crates/sigma-app` (`sigma-app`) holds the former `app/src`
+  library, the first-run seed notes, and the integration tests.
+- `app/` keeps `src/main.rs`, `src/window.rs` (minifb desktop window) and
+  `src/bin/sigma-emu.rs`. Those depend on `sigma-app` and `sigma-device`.
+- Tests that used `CARGO_MANIFEST_DIR` to reach the repository root now
+  walk up two directories (`crates/sigma-app` → repo root). Plugin
+  packaging scripts copy fixtures from `crates/sigma-app/tests/fixtures`.
+- No behaviour change is intended; the Kobo, desktop and emulator shells
+  call the same `App` as before.
+
 
 ## Rollback
 
