@@ -213,8 +213,9 @@ package:kobo:
       - dist/sigma-scribe-*-kobo.sha256
     expire_in: 2 weeks
 
-# Portable-crate checks (also the P2-04 acceptance, minus iOS).
-# iOS is a follow-up: the instance runner is Linux amd64 and has no SDK.
+# Portable-crate checks (P2-04). wasm32, Android and Windows landed with
+# P1-03; this adds aarch64-unknown-linux-gnu. iOS is still a follow-up:
+# the instance runner is Linux amd64 and has no SDK.
 check:wasm32:
   stage: test
   extends:
@@ -255,6 +256,21 @@ check:windows:
     - cargo check --locked --target x86_64-pc-windows-gnu
         -p sigma-core -p sigma-render -p sigma-hwr
         -p sigma-plugin-api -p sigma-plugin-host
+
+check:aarch64:
+  stage: test
+  extends:
+    - .cargo_cache
+    - .regular_rules
+  timeout: 30 minutes
+  before_script:
+    - rustup target add aarch64-unknown-linux-gnu
+  script:
+    # cargo check does not link, so no aarch64 C toolchain is required.
+    # The kobo feature is off, so device's FBInk build.rs is skipped.
+    - cargo check --locked --target aarch64-unknown-linux-gnu
+        -p sigma-core -p sigma-render -p sigma-hwr
+        -p sigma-plugin-api -p sigma-plugin-host -p sigma-device
 
 # Inert until RENOVATE_TOKEN is set as a masked CI/CD variable and a
 # weekly pipeline schedule is created on the default branch. This job

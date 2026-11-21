@@ -117,17 +117,44 @@ impl Fonts {
 
     fn load_pack() -> Option<FontFile> {
         let env = std::env::var("SIGMA_FONT_PACK").ok();
+        let search = sigma_core::paths::SearchPaths::current();
         // Enabled plugins come before the loose files, so a plugin wins.
-        let plugins: Vec<String> = ["fonts/cjk.ttf", "fonts/korean.ttf"]
-            .into_iter()
-            .flat_map(sigma_core::plugins::enabled_files)
-            .map(|p| p.to_string_lossy().into_owned())
-            .collect();
-        let spec = env.iter().chain(plugins.iter()).map(String::as_str).chain([
-            "/mnt/onboard/.adds/sigma-scribe/fonts/cjk.ttf",
-            "/mnt/onboard/.adds/sigma-scribe/fonts/korean.ttf",
-            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc#0",
-        ]);
+        let mut plugins: Vec<String> = Vec::new();
+        let mut loose: Vec<String> = Vec::new();
+        if let Some(s) = &search {
+            for rel in ["fonts/cjk.ttf", "fonts/korean.ttf"] {
+                plugins.extend(
+                    sigma_core::plugins::enabled_files_in(&s.plugins, rel)
+                        .into_iter()
+                        .map(|p| p.to_string_lossy().into_owned()),
+                );
+            }
+            loose.push(
+                s.paths
+                    .fonts()
+                    .join("cjk.ttf")
+                    .to_string_lossy()
+                    .into_owned(),
+            );
+            loose.push(
+                s.paths
+                    .fonts()
+                    .join("korean.ttf")
+                    .to_string_lossy()
+                    .into_owned(),
+            );
+            loose.extend(
+                s.paths
+                    .extra_fonts
+                    .iter()
+                    .map(|p| p.to_string_lossy().into_owned()),
+            );
+        }
+        let spec = env
+            .iter()
+            .chain(plugins.iter())
+            .chain(loose.iter())
+            .map(String::as_str);
         for s in spec {
             let (path, index) = s
                 .split_once('#')

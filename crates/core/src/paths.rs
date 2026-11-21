@@ -21,6 +21,11 @@ pub struct Paths {
     pub adds: PathBuf,
     /// Nickel's `Kobo eReader.conf`, or a dummy path when there isn't one.
     pub locale_conf: PathBuf,
+    /// Extra font files to try (for example a system Noto CJK on a desktop).
+    pub extra_fonts: Vec<PathBuf>,
+    /// Extra dictionary files or directories (for example `assets/ja` and
+    /// `assets/zh` in a development checkout).
+    pub extra_dicts: Vec<PathBuf>,
 }
 
 impl Paths {
@@ -37,7 +42,23 @@ impl Paths {
             log: log.into(),
             adds: adds.into(),
             locale_conf: locale_conf.into(),
+            extra_fonts: Vec::new(),
+            extra_dicts: Vec::new(),
         }
+    }
+
+    /// Sets [`Self::extra_fonts`].
+    #[must_use]
+    pub fn with_extra_fonts(mut self, fonts: Vec<PathBuf>) -> Self {
+        self.extra_fonts = fonts;
+        self
+    }
+
+    /// Sets [`Self::extra_dicts`].
+    #[must_use]
+    pub fn with_extra_dicts(mut self, dicts: Vec<PathBuf>) -> Self {
+        self.extra_dicts = dicts;
+        self
     }
 
     /// Where plugins are installed: `<adds>/plugins`.
@@ -62,6 +83,33 @@ impl Paths {
     #[must_use]
     pub fn skk_dict(&self) -> PathBuf {
         self.dict().join("skk-jisyo.txt")
+    }
+}
+
+/// The process-wide search roots, set by the app at start from the
+/// platform constructors. Portable crates read this instead of hard-coding
+/// device paths. A later call replaces the previous value, so tests can
+/// change environment overrides between cases.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SearchPaths {
+    /// The platform roots.
+    pub paths: Paths,
+    /// Plugin folder, after `SIGMA_PLUGINS`.
+    pub plugins: PathBuf,
+}
+
+static SEARCH: std::sync::RwLock<Option<SearchPaths>> = std::sync::RwLock::new(None);
+
+impl SearchPaths {
+    /// Stores these roots for this process.
+    pub fn install(self) {
+        *SEARCH.write().unwrap_or_else(|e| e.into_inner()) = Some(self);
+    }
+
+    /// The roots last passed to [`Self::install`], if any.
+    #[must_use]
+    pub fn current() -> Option<Self> {
+        SEARCH.read().unwrap_or_else(|e| e.into_inner()).clone()
     }
 }
 

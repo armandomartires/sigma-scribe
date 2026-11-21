@@ -41,7 +41,7 @@ pub mod zh;
 pub use buffer::Buffer;
 pub use keyboard::{Key, KeyAction, Keyboard, Layer};
 pub use library::{Entry, Kind, Library, NotePath, Trashed};
-pub use paths::Paths;
+pub use paths::{Paths, SearchPaths};
 pub use settings::{Change, Settings};
 pub use store::{Autosave, FsNoteStore, MemoryNoteStore, NoteStore, SaveState};
 pub use wrap::{wrap, MonoMeasure, TextMeasure, VisualLine};

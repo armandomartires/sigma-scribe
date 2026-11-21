@@ -3,7 +3,7 @@
 - **Status:** Accepted. The Cargo-feature half landed in P2-01. The
   `Paths` struct, device-layer constructors, and the `Platform` trait
   land in P2-02. Moving Kobo path literals out of `core` and `render`
-  remains P2-03.
+  lands in P2-03.
 - **Date:** 2026-11-21 (Europe/Brussels)
 - **Plan items:** [P2-01](https://gtlb.sigmareconpt.duckdns.org/sigmarecon/products/sigma-scribe/app/-/issues/10)
   (this MR), [P2-02](https://gtlb.sigmareconpt.duckdns.org/sigmarecon/products/sigma-scribe/app/-/issues/11),
@@ -229,6 +229,22 @@ narrow trait (or callbacks) crossing the boundary.
   the Wi-Fi service in `main`) goes through `paths::current` /
   `platform::current`. The six core/render files still have their own
   defaults until P2-03.
+
+
+## Implementation (P2-03)
+
+- `sigma-core` and `sigma-render` no longer contain `/mnt/onboard`,
+  `/sys/class`, `/dev/input`, or `wpa_supplicant`. Locale, plugins,
+  dictionaries and font packs take a [`Paths`] from
+  `sigma_core::paths::SearchPaths`, installed by the app at start from
+  the device-layer constructors.
+- Desktop constructors may add extra font and dictionary locations (a
+  system Noto CJK file, and `assets/ja` / `assets/zh` in a checkout).
+  Those literals live in `sigma-device`, not in the portable crates.
+- A unit test in each of `sigma-core` and `sigma-render` walks `src/`
+  and fails if the forbidden literals return.
+- `Command::new(&cfg.binary)` in the Syncthing supervisor is unchanged
+  (see P2-02): it is a configured path, not a device literal.
 
 
 ## Consequences
