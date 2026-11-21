@@ -21,9 +21,11 @@ cargo test --workspace
 
 ## Non-obvious rules
 
-- Kobo-only code is behind `cfg(target_arch = "arm")` and is not compiled on
-  the desktop. A green desktop build says nothing about it; the ARMv7 job in
-  CI is the check.
+- Kobo-only code is behind `cfg(feature = "kobo")` and is not compiled on
+  the desktop (the default `desktop` feature). A green desktop build says
+  nothing about it; the ARMv7 package job in CI, which passes
+  `--no-default-features --features kobo`, is the check. See
+  `docs/adr/0001-platform-seam.md`.
 - Day-to-day Rust is pinned in `rust-toolchain.toml` (currently 1.100.0).
   The MSRV is `rust-version` in `Cargo.toml` (1.88), checked by the `msrv`
   job in CI. Do not use newer language or library features, and do not

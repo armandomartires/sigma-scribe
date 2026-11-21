@@ -22,7 +22,7 @@ pub fn notes_dir() -> PathBuf {
     if let Ok(p) = std::env::var("SIGMA_NOTES") {
         return p.into();
     }
-    if cfg!(target_arch = "arm") {
+    if cfg!(feature = "kobo") {
         "/mnt/onboard/sigma-scribe/notes".into()
     } else {
         "target/emu-notes".into()
@@ -37,9 +37,19 @@ pub fn log_dir() -> PathBuf {
     if let Ok(p) = std::env::var("SIGMA_LOG_DIR") {
         return p.into();
     }
-    if cfg!(target_arch = "arm") {
+    if cfg!(feature = "kobo") {
         "/mnt/onboard/.adds/sigma-scribe/log".into()
     } else {
         "target/emu-log".into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn host_tests_use_the_desktop_feature_not_kobo() {
+        // CI and `cargo test` run with default features.
+        const { assert!(cfg!(feature = "desktop")) };
+        const { assert!(!cfg!(feature = "kobo")) };
     }
 }

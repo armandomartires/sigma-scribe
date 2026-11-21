@@ -1,5 +1,7 @@
 #!/bin/sh
 # Static ARMv7 (Kobo) build of sigma-scribe with FBInk.
+# Enables the `kobo` Cargo feature and disables the default `desktop`
+# feature (minifb), which is mutually exclusive with `kobo`.
 # Needs: rustup target armv7-unknown-linux-musleabihf; an ARM gcc (Debian
 # gcc-arm-linux-gnueabihf, or the musl.cc toolchain in ~/.local/toolchains);
 # FBInk built as a static lib:
@@ -11,5 +13,5 @@ else CC=arm-linux-gnueabihf-gcc; AR=arm-linux-gnueabihf-ar; fi
 export CC_armv7_unknown_linux_musleabihf="$CC" AR_armv7_unknown_linux_musleabihf="$AR"
 export FBINK_DIR="${FBINK_DIR:-$HOME/src/FBInk}"
 test -f "$FBINK_DIR/Release/libfbink.a" || { echo "missing $FBINK_DIR/Release/libfbink.a" >&2; exit 1; }
-cargo build --release --locked --target armv7-unknown-linux-musleabihf -p sigma-scribe --bin sigma-scribe
+cargo build --release --locked --target armv7-unknown-linux-musleabihf -p sigma-scribe --bin sigma-scribe --no-default-features --features kobo
 file target/armv7-unknown-linux-musleabihf/release/sigma-scribe

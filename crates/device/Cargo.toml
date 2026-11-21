@@ -9,6 +9,11 @@ authors.workspace = true
 publish = false
 build = "build.rs"
 
+[features]
+default = []
+# FBInk + evdev Kobo backend, and the real Wi-Fi radio.
+kobo = []
+
 [dependencies]
 sigma-render = { path = "../render" }
 sigma-core = { path = "../core" }

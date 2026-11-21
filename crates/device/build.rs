@@ -7,7 +7,10 @@ use std::path::PathBuf;
 fn main() {
     println!("cargo:rerun-if-changed=csrc/sg_fbink.c");
     println!("cargo:rerun-if-env-changed=FBINK_DIR");
-    if env::var("CARGO_CFG_TARGET_ARCH").as_deref() != Ok("arm") {
+    println!("cargo:rerun-if-env-changed=CARGO_FEATURE_KOBO");
+    // The kobo feature, not target_arch, selects the FBInk backend
+    // (see docs/adr/0001-platform-seam.md).
+    if env::var("CARGO_FEATURE_KOBO").is_err() {
         return;
     }
     let dir = env::var("FBINK_DIR")

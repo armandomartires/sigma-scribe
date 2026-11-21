@@ -1,7 +1,17 @@
-//! `sigma-scribe`: on the Kobo, FBInk + evdev; on a desktop, a live window
-//! (see `scripts/sim.sh`).
+//! `sigma-scribe`: on the Kobo (`--features kobo`), FBInk + evdev; on a
+//! desktop (the default `desktop` feature), a live window (see
+//! `scripts/sim.sh`).
 
-#[cfg(not(target_arch = "arm"))]
+#[cfg(all(feature = "kobo", feature = "desktop"))]
+compile_error!(
+    "features `kobo` and `desktop` are mutually exclusive; \
+     build the device binary with --no-default-features --features kobo"
+);
+
+#[cfg(not(any(feature = "kobo", feature = "desktop")))]
+compile_error!("building sigma-scribe requires the `kobo` or `desktop` feature");
+
+#[cfg(feature = "desktop")]
 #[path = "window.rs"]
 mod window;
 
@@ -10,11 +20,11 @@ use sigma_scribe::{notes_dir, App};
 use std::process::ExitCode;
 
 fn open() -> std::io::Result<Box<dyn Device>> {
-    #[cfg(target_arch = "arm")]
+    #[cfg(feature = "kobo")]
     {
         Ok(Box::new(sigma_device::fbink::KoboDevice::open()?))
     }
-    #[cfg(not(target_arch = "arm"))]
+    #[cfg(feature = "desktop")]
     {
         Ok(Box::new(window::WindowDevice::open(1440, 1920)?))
     }
@@ -23,11 +33,11 @@ fn open() -> std::io::Result<Box<dyn Device>> {
 /// The radio: the Kobo's own, or on a desktop a pretend one so the Wi-Fi
 /// menu can be tried.
 fn wifi() -> sigma_device::wifi::Service {
-    #[cfg(target_arch = "arm")]
+    #[cfg(feature = "kobo")]
     {
         sigma_device::wifi::Service::spawn(sigma_device::wifi::kobo::KoboWifi::from_env())
     }
-    #[cfg(not(target_arch = "arm"))]
+    #[cfg(feature = "desktop")]
     {
         sigma_device::wifi::Service::inline(sigma_device::wifi::fake::FakeWifi::demo())
     }

@@ -1,5 +1,5 @@
 //! Kobo backend: FBInk for the framebuffer and EPDC refreshes, evdev for
-//! touch and buttons. Built only for `target_arch = "arm"`.
+//! touch and buttons. Built only with the `kobo` feature.
 #![allow(unsafe_code)]
 
 use crate::evdev::{
