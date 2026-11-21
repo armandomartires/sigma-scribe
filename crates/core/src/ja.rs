@@ -475,7 +475,9 @@ fn dict() -> &'static RwLock<Dict> {
             candidates.push(s.paths.skk_dict());
             for extra in &s.paths.extra_dicts {
                 if extra.extension().is_some() {
-                    candidates.push(extra.clone());
+                    if extra.file_name().is_some_and(|n| n == "skk-jisyo.txt") {
+                        candidates.push(extra.clone());
+                    }
                 } else {
                     candidates.push(extra.join("skk-jisyo.txt"));
                 }

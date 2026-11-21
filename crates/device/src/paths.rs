@@ -47,10 +47,7 @@ pub fn desktop() -> Paths {
     .with_extra_fonts(vec![PathBuf::from(
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc#0",
     )])
-    .with_extra_dicts(vec![
-        PathBuf::from("assets/ja/skk-jisyo.txt"),
-        PathBuf::from("assets/zh"),
-    ])
+    .with_extra_dicts(vec![PathBuf::from("assets/ja"), PathBuf::from("assets/zh")])
 }
 
 /// [`kobo`] when the `kobo` feature is on, otherwise [`desktop`].
@@ -118,7 +115,7 @@ mod tests {
         );
         assert_eq!(
             p.extra_dicts,
-            [Path::new("assets/ja/skk-jisyo.txt"), Path::new("assets/zh")]
+            [Path::new("assets/ja"), Path::new("assets/zh")]
         );
     }
 }

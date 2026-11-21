@@ -125,13 +125,13 @@ fn dict(script: Script) -> &'static RwLock<Dict> {
             // A development checkout (the emulator runs from its root).
             dirs.push("assets/zh".to_string());
         }
-        let loose = dirs.iter().map(|dir| {
+        let loose = dirs.iter().filter_map(|dir| {
             let dir = dir.trim_end_matches('/');
             let p = std::path::Path::new(dir);
             if p.extension().is_some() {
-                p.to_path_buf()
+                (p.file_name().is_some_and(|n| n == name)).then(|| p.to_path_buf())
             } else {
-                p.join(name)
+                Some(p.join(name))
             }
         });
         // The env override first, then enabled plugins, then the loose files.
