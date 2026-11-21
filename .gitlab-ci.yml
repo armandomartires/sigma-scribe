@@ -237,7 +237,7 @@ check:android:
   before_script:
     - rustup target add aarch64-linux-android
   script:
-    # aarch64 is not target_arch = "arm", so device's FBInk build.rs is skipped.
+    # The kobo feature is off by default, so device's FBInk build.rs is skipped.
     - cargo check --locked --target aarch64-linux-android
         -p sigma-core -p sigma-render -p sigma-device
 

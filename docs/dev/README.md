@@ -18,4 +18,5 @@ For people who build, test, release and extend Σscribe. Start with [../../CONTR
 | [japanese-internals.md](japanese-internals.md) | Japanese conversion and dictionaries (user page: [../user/08-keyboards-and-languages/japanese.md](../user/08-keyboards-and-languages/japanese.md)) |
 | [font-pack-build.md](font-pack-build.md) | Font packs: where the app looks, building the CJK pack (user page: [../user/08-keyboards-and-languages/font-packs.md](../user/08-keyboards-and-languages/font-packs.md)) |
 | [chinese-internals.md](chinese-internals.md) | Chinese dictionaries and fonts (user page: [../user/08-keyboards-and-languages/chinese.md](../user/08-keyboards-and-languages/chinese.md)) |
+| [../adr/](../adr/README.md) | Architecture decision records (platform seam first; full `ARCHITECTURE.md` is P3-05) |
 | [plugin-api.md](plugin-api.md) | Plugin kinds, the API, host, speed, tests, logging for plugin authors (user page: [../user/11-plugins/index.md](../user/11-plugins/index.md)) |

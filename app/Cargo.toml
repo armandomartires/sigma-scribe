@@ -16,6 +16,14 @@ path = "src/main.rs"
 name = "sigma-emu"
 path = "src/bin/sigma-emu.rs"
 
+[features]
+default = ["desktop"]
+# Live minifb window (scripts/sim.sh). Mutually exclusive with `kobo`.
+desktop = ["dep:minifb"]
+# Kobo Forma backend (FBInk + evdev, device default paths). Build with
+# --no-default-features --features kobo; see scripts/build-armv7.sh.
+kobo = ["sigma-device/kobo"]
+
 [dependencies]
 sigma-core = { path = "../crates/core" }
 sigma-render = { path = "../crates/render" }
@@ -24,9 +32,7 @@ sigma-hwr = { path = "../crates/hwr" }
 sigma-plugin-api = { path = "../crates/plugin-api" }
 sigma-plugin-host = { path = "../crates/plugin-host" }
 ureq = { version = "3", default-features = false, features = ["rustls"] }
-
-[target.'cfg(not(target_arch = "arm"))'.dependencies]
-minifb = { version = "0.27", default-features = false, features = ["x11"] }
+minifb = { version = "0.27", optional = true, default-features = false, features = ["x11"] }
 
 [lints]
 workspace = true

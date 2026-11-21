@@ -34,7 +34,7 @@ pub(crate) fn text_hash(s: &str) -> u64 {
 const WATCH_MS: u64 = 1000;
 
 fn adds_dir() -> PathBuf {
-    if cfg!(target_arch = "arm") {
+    if cfg!(feature = "kobo") {
         "/mnt/onboard/.adds/sigma-scribe".into()
     } else {
         "target/emu-sync".into()
@@ -75,7 +75,7 @@ pub fn sync_config(notes: &Path, log_dir: &Path) -> Config {
     {
         c.port = p;
     }
-    c.kill_by_name = cfg!(target_arch = "arm");
+    c.kill_by_name = cfg!(feature = "kobo");
     c.ca_file = ca_file_beside(&c.binary);
     c
 }

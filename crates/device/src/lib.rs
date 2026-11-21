@@ -4,7 +4,7 @@
 //! Backends implement [`Device`]:
 //! - [`desktop`]: an in-memory panel that writes PNGs, used by the
 //!   emulator and every test; the live window lives in the app.
-//! - `fbink` (only when `target_arch = "arm"`): the Kobo panel through
+//! - `fbink` (only with the `kobo` feature): the Kobo panel through
 //!   FBInk, with evdev input. It is the one module allowed `unsafe`, for
 //!   the FFI.
 
@@ -12,7 +12,7 @@
 
 pub mod desktop;
 pub mod evdev;
-#[cfg(target_arch = "arm")]
+#[cfg(feature = "kobo")]
 pub mod fbink;
 pub mod gsensor;
 pub mod light;

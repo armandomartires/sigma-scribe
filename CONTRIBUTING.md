@@ -46,10 +46,15 @@ Planning and working notes (plan, design brief, sprints, the sprint board `GOALS
     It needs the musl cross toolchain and a pinned FBInk build; see
     `.gitlab-ci.yml` (canonical), `.github/workflows/ci.yml`, and
     `.ai/s0-findings.md`.
-- Code for the Kobo only sits behind `#[cfg(target_arch = "arm")]`. The
-  FBInk backend is never compiled on the desktop, so a desktop build passing
-  is not evidence that the ARM build does. CI runs both.
-- There are no Cargo feature flags.
+- Code for the Kobo only sits behind `#[cfg(feature = "kobo")]` on the
+  `sigma-scribe` and `sigma-device` crates (ADR 0001). The FBInk backend is
+  never compiled on the default desktop build, so a desktop build passing
+  is not evidence that the Kobo build does. CI runs both. Build the device
+  binary with `scripts/build-armv7.sh`, which passes
+  `--no-default-features --features kobo`. Do not enable `kobo` and
+  `desktop` together; they are mutually exclusive. There are no feature
+  flags on the portable crates (`sigma-core`, `sigma-render`, `sigma-hwr`,
+  the plugin crates).
 
 ## Checks before a pull request
 
@@ -183,8 +188,8 @@ crate is for.
 **Other crates.**
 - `sigma-core`, `sigma-render`, `sigma-device` and `sigma-hwr` are also
   fully documented and set `#![warn(missing_docs)]`. Keep them that way.
-- `sigma-device`'s `fbink.rs` is built only for ARM, so the desktop checks
-  do not see it. Document its public items by hand.
+- `sigma-device`'s `fbink.rs` is built only with the `kobo` feature, so the
+  desktop checks do not see it. Document its public items by hand.
 - The app and `hwr-train` are binaries and not fully documented. Document
   what you add or change.
 

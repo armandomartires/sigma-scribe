@@ -9,7 +9,7 @@
 //!   supplicant. There is no `wpa_cli` dependency.
 //! - [`Backend`]: what the menu needs, as blocking calls. [`fake::FakeWifi`]
 //!   serves the desktop window, the emulator and the tests; `kobo::KoboWifi`
-//!   (ARM only) drives the real radio.
+//!   (`kobo` feature) drives the real radio.
 //! - [`Service`]: runs a backend on its own thread (never on the input
 //!   loop) or inline (tests), and keeps the last [`View`] for the app to
 //!   take in on its ticks, as the Syncthing supervisor does.
@@ -18,7 +18,7 @@
 //! `docs/dev/wifi-design.md` has the design.
 
 pub mod fake;
-#[cfg(target_arch = "arm")]
+#[cfg(feature = "kobo")]
 pub mod kobo;
 pub mod wpa;
 
@@ -263,7 +263,7 @@ pub fn parse_ifconfig_address(out: &str) -> Option<String> {
 }
 
 /// A line of the Wi-Fi log (`wifi: …`, INFO); never a key or an address.
-#[cfg(target_arch = "arm")]
+#[cfg(feature = "kobo")]
 pub(crate) fn log_line(text: &str) {
     sigma_core::info!("wifi", "{text}");
 }
