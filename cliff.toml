@@ -1,0 +1,56 @@
+# git-cliff configuration for a Keep a Changelog draft (P3-05).
+# This does not overwrite CHANGELOG.md on its own. From the repository
+# root, with git-cliff installed:
+#
+#   git cliff --unreleased --prepend CHANGELOG.md
+#
+# Review the draft before committing. Existing history is not rewritten
+# to Conventional Commits, so older tags may produce thin or empty
+# sections; that is expected.
+
+[changelog]
+header = """# Changelog
+
+All notable changes to Σscribe. Versions are tagged after they pass on the Kobo Forma.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+New commits use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/);
+see `CONTRIBUTING.md`.
+"""
+body = """
+{%- if version %}
+## {{ version | trim_start_matches(pat="v") }} — {{ timestamp | date(format="%Y-%m-%d") }}
+{%- else %}
+## Unreleased
+{%- endif %}
+{%- for group, commits in commits | group_by(attribute="group") %}
+### {{ group }}
+{% for commit in commits -%}
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{{ commit.message | split(pat="\n") | first }}
+{% endfor %}
+{% endfor %}
+"""
+trim = true
+footer = ""
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+protect_breaking_commits = true
+filter_commits = false
+tag_pattern = "v[0-9].*"
+skip_tags = ""
+commit_parsers = [
+  { message = "^feat", group = "Added" },
+  { message = "^fix", group = "Fixed" },
+  { message = "^perf", group = "Changed" },
+  { message = "^refactor", group = "Changed" },
+  { message = "^docs", group = "Changed" },
+  { message = "^ci", group = "Changed" },
+  { message = "^build", group = "Changed" },
+  { message = "^chore", group = "Changed" },
+  { message = "^style", skip = true },
+  { message = "^test", skip = true },
+  { message = "^revert", group = "Changed" },
+]

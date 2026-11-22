@@ -101,6 +101,22 @@ lint:pins:
   script:
     - python3 scripts/check-ci-pins.py
 
+# Conventional Commits for new work only (P3-05). Existing history is
+# not rewritten. On the default branch this job is a no-op. GIT_DEPTH
+# is 0 so the merge-request range includes the merge base.
+lint:commits:
+  extends: .regular_rules
+  stage: lint
+  needs: []
+  variables:
+    GIT_DEPTH: "0"
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends git python3
+  script:
+    - python3 scripts/check-commits.py --self-test
+    - python3 scripts/check-commits.py
+
 # clippy, rustdoc, workspace tests, handwriting figures, and the 65
 # emulator scripts share one job so they reuse one compile, matching
 # the GitHub Actions `test` job (the GitLab runner is a single host).
