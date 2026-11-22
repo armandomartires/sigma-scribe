@@ -34,3 +34,8 @@ The `fuzz:smoke` job installs the pinned nightly and cargo-fuzz binary,
 then runs each target for a few seconds (`-max_total_time=8 -runs=256`).
 That is a smoke test, not a long campaign. It uses the same bookworm
 image as the other jobs, plus `rustup toolchain install nightly-2026-11-19`.
+The job sets `RUSTUP_TOOLCHAIN` to that nightly (so cargo-fuzz's inner
+`cargo build` is not pinned back to stable by `rust-toolchain.toml`) and
+passes `--target x86_64-unknown-linux-gnu` because the pinned cargo-fuzz
+binary is musl and would otherwise try to fuzz on musl, which is
+incompatible with AddressSanitizer.
