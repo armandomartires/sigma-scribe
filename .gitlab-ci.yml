@@ -17,6 +17,9 @@
 # The renovate job is inert until RENOVATE_TOKEN is set and a weekly
 # pipeline schedule exists (see the P1-05 merge request). Do not put a
 # token in this file.
+#
+# The sbom job (P3-01, keyless slice) attaches a CycloneDX JSON artifact.
+# Signatures, provenance, and tag/release publish are not in this file.
 
 variables:
   RUST_IMAGE: rust:1.100.0-bookworm@sha256:ade39a710ef85f3506cffcfec3e8a24ba090badef1dff2fb798f71d878833fea
@@ -34,6 +37,11 @@ variables:
   FBINK_SHA: 886f25f13368859ad8a899b88d04c26e19cda32e
   CARGO_DENY_VERSION: "0.21.0"
   CARGO_DENY_SHA256: a2170b854ff697e79e39c4c538981c9c1bdd803addbae6719a4cb66b4585a903
+  # cargo-cyclonedx 0.5.10, Apache-2.0. sha256 from the upstream
+  # cargo-cyclonedx-x86_64-unknown-linux-musl.tar.xz.sha256 on the
+  # cargo-cyclonedx-0.5.10 release (recorded 2026-11-22).
+  CARGO_CYCLONEDX_VERSION: "0.5.10"
+  CARGO_CYCLONEDX_SHA256: 528be9dd99ae522c3ee14fb881fd0cbf51767e8f12b74248f437e6a66b1a3c1b
 
 default:
   image: $RUST_IMAGE
@@ -153,6 +161,16 @@ msrv:
   install -m 0755 "/tmp/cargo-deny-${ver}-x86_64-unknown-linux-musl/cargo-deny" /usr/local/bin/cargo-deny
   cargo deny --version
 
+.install_cyclonedx_script: &install_cyclonedx_script |
+  ver="$CARGO_CYCLONEDX_VERSION"
+  archive="cargo-cyclonedx-x86_64-unknown-linux-musl.tar.xz"
+  url="https://github.com/CycloneDX/cyclonedx-rust-cargo/releases/download/cargo-cyclonedx-${ver}/${archive}"
+  curl -fsSL --retry 3 -o "/tmp/${archive}" "$url"
+  echo "${CARGO_CYCLONEDX_SHA256}  /tmp/${archive}" | sha256sum -c -
+  tar -xJf "/tmp/${archive}" -C /tmp
+  install -m 0755 "/tmp/cargo-cyclonedx-x86_64-unknown-linux-musl/cargo-cyclonedx" /usr/local/bin/cargo-cyclonedx
+  cargo cyclonedx -V
+
 # A new RustSec advisory can appear without any change here, so this
 # job does not block the merge request. bans / licences / sources do.
 deny:advisories:
@@ -177,6 +195,30 @@ deny:bans:
     - *install_deny_script
   script:
     - cargo deny check bans licenses sources
+
+# CycloneDX 1.6 JSON SBOM for the Kobo sigma-scribe binary (P3-01,
+# keyless slice). Signatures, provenance, and tag/release attach wait
+# on D7 and a separate tag approval. See docs/dev/sbom.md.
+sbom:
+  extends: .regular_rules
+  stage: lint
+  needs: []
+  timeout: 15 minutes
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends ca-certificates curl xz-utils python3
+    - rustup target add armv7-unknown-linux-musleabihf
+    - *install_cyclonedx_script
+  script:
+    - ./scripts/generate-sbom.sh
+    - python3 -c "import json,sys; d=json.load(open('dist/sbom/sigma-scribe-kobo.cdx.json')); assert d.get('bomFormat')=='CycloneDX' and d.get('specVersion')=='1.6', d; c=d['metadata']['component']; assert c.get('name')=='sigma-scribe', c; print('sbom ok', c.get('name'), c.get('version'), 'components', len(d.get('components') or []))"
+    - sha256sum -c dist/sbom/sigma-scribe-kobo.cdx.json.sha256
+  artifacts:
+    name: sigma-scribe-sbom-$CI_COMMIT_SHORT_SHA
+    paths:
+      - dist/sbom/sigma-scribe-kobo.cdx.json
+      - dist/sbom/sigma-scribe-kobo.cdx.json.sha256
+    expire_in: 2 weeks
 
 # Static ARMv7 musl package, including Syncthing and the CA bundle.
 # Uses the pinned musl.cc gcc (checksummed) and the pinned FBInk commit,

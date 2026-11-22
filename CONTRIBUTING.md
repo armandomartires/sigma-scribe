@@ -110,6 +110,11 @@ it locally, install it once with `cargo install --locked cargo-deny`.
 - A new advisory does not block a pull request, but fix it or add it to
   `ignore` in `deny.toml` with a reason.
 
+**SBOM.** The `sbom` job in CI writes a CycloneDX 1.6 JSON bill of
+materials for the Kobo `sigma-scribe` binary to `dist/sbom/`. It lists
+Cargo crates and their licences only. How to generate one locally, and
+what is not yet signed or attested, is in `docs/dev/sbom.md`.
+
 A UI change also follows `docs/dev/ui-rulebook.md`. A release follows
 `docs/dev/release/checklist.md`.
 
