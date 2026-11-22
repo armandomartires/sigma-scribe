@@ -816,6 +816,7 @@ dependencies = [
 name = "sigma-core"
 version = "1.21.1"
 dependencies = [
+ "sigma-plugin-api",
  "unicode-segmentation",
 ]
 
@@ -836,6 +837,9 @@ version = "1.21.1"
 [[package]]
 name = "sigma-plugin-api"
 version = "1.21.1"
+dependencies = [
+ "unicode-segmentation",
+]
 
 [[package]]
 name = "sigma-plugin-host"
