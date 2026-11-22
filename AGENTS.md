@@ -40,14 +40,16 @@ that the Kobo build works; that is `scripts/build-armv7.sh` (the
 ## House rules that often get missed
 
 - One branch per change; open a GitLab merge request against `main`.
-  Do not push to `main` or other protected branches. Alcott
-  (`alcott.grokbot`) reviews and merges agent merge requests.
-  Armando's order, 2026-11-22 17:32 Europe/London: "From now on ask
-  Alcott to review and approve your merge request. He should only
-  ask if something requires my exclusive approval."
+  Do not push to `main` or other protected branches, do not
+  force-push, and do not merge your own merge request. Alcott
+  (`alcott.grokbot`) reviews, approves and merges agent merge
+  requests. Armando's order, 2026-11-22 17:32 Europe/London: "From
+  now on ask Alcott to review and approve your merge request. He
+  should only ask if something requires my exclusive approval."
   Escalate to Armando only for what needs his exclusive approval:
   signing keys, tags and releases, device installs, deletions,
-  force-pushes, and protected-branch or settings changes.
+  force-pushes, secrets or credentials, widening access, and
+  protected-branch or settings changes.
 - Development is emulator-first. Do not install on a device or write
   to a Forma without a separate, explicit approval, a
   checksum-verified backup, and a serial check. Mask device serials
