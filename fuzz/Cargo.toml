@@ -1,0 +1,48 @@
+[package]
+name = "sigma-scribe-fuzz"
+version = "0.0.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+sigma-plugin-api = { path = "../crates/plugin-api" }
+sigma-core = { path = "../crates/core" }
+
+# Separate workspace so we do not inherit the main tree's
+# `unsafe_code = "forbid"` (libFuzzer needs unsafe) and so
+# `cargo test --workspace` on stable never builds these targets.
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "plugin_api_frame"
+path = "fuzz_targets/plugin_api_frame.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "plugin_api_event"
+path = "fuzz_targets/plugin_api_event.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pluginpkg_tar"
+path = "fuzz_targets/pluginpkg_tar.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "settings_parse"
+path = "fuzz_targets/settings_parse.rs"
+test = false
+doc = false
+bench = false
