@@ -34,6 +34,13 @@ variables:
   FBINK_SHA: 886f25f13368859ad8a899b88d04c26e19cda32e
   CARGO_DENY_VERSION: "0.21.0"
   CARGO_DENY_SHA256: a2170b854ff697e79e39c4c538981c9c1bdd803addbae6719a4cb66b4585a903
+  # cargo-fuzz 0.13.2, Apache-2.0/MIT. sha256 of the upstream
+  # cargo-fuzz-0.13.2-x86_64-unknown-linux-musl.tar.gz (recorded 2026-11-22).
+  CARGO_FUZZ_VERSION: "0.13.2"
+  CARGO_FUZZ_SHA256: b5b704018b63e0f151c17a057ac53b5111e1db545d1b9f72fee79f08a545931c
+  # Dated nightly for libFuzzer. The repo rust-toolchain.toml stays on
+  # stable 1.100.0; the fuzz job selects this with `cargo +$RUST_NIGHTLY`.
+  RUST_NIGHTLY: "nightly-2026-11-19"
 
 default:
   image: $RUST_IMAGE
@@ -153,6 +160,16 @@ msrv:
   install -m 0755 "/tmp/cargo-deny-${ver}-x86_64-unknown-linux-musl/cargo-deny" /usr/local/bin/cargo-deny
   cargo deny --version
 
+.install_fuzz_script: &install_fuzz_script |
+  ver="$CARGO_FUZZ_VERSION"
+  archive="cargo-fuzz-${ver}-x86_64-unknown-linux-musl.tar.gz"
+  url="https://github.com/rust-fuzz/cargo-fuzz/releases/download/${ver}/${archive}"
+  curl -fsSL --retry 3 -o "/tmp/${archive}" "$url"
+  echo "${CARGO_FUZZ_SHA256}  /tmp/${archive}" | sha256sum -c -
+  tar -xzf "/tmp/${archive}" -C /tmp
+  install -m 0755 /tmp/cargo-fuzz /usr/local/bin/cargo-fuzz
+  cargo fuzz --version
+
 # A new RustSec advisory can appear without any change here, so this
 # job does not block the merge request. bans / licences / sources do.
 deny:advisories:
@@ -177,6 +194,34 @@ deny:bans:
     - *install_deny_script
   script:
     - cargo deny check bans licenses sources
+
+# Short cargo-fuzz smoke for the untrusted-input parsers (P3-02).
+# Needs a dated nightly (libFuzzer); the repo toolchain stays on stable.
+# This is a few seconds per target after the build, not a long campaign.
+fuzz:smoke:
+  extends: .regular_rules
+  stage: test
+  needs: []
+  timeout: 30 minutes
+  cache:
+    key:
+      files:
+        - fuzz/Cargo.lock
+      prefix: rust-nightly-2026-11-19-fuzz
+    paths:
+      - .cargo-home/registry/
+      - .cargo-home/git/
+      - fuzz/target/
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends ca-certificates curl clang
+    - rustup toolchain install "$RUST_NIGHTLY" --profile minimal --component rust-src
+    - *install_fuzz_script
+  script:
+    - |
+      for t in plugin_api_frame plugin_api_event pluginpkg_tar settings_parse; do
+        cargo +"$RUST_NIGHTLY" fuzz run "$t" -- -max_total_time=8 -runs=256 || exit 1
+      done
 
 # Static ARMv7 musl package, including Syncthing and the CA bundle.
 # Uses the pinned musl.cc gcc (checksummed) and the pinned FBInk commit,
