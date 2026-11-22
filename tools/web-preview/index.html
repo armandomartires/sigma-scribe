@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SIGMAscribe — renderer preview</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #1c1c1c;
+        --paper: #f3f0e8;
+        --mute: #5e584e;
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font: 16px/1.4 system-ui, sans-serif;
+      }
+      header {
+        padding: 1rem 1.25rem 0.5rem;
+        max-width: 52rem;
+      }
+      h1 {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin: 0 0 0.35rem;
+      }
+      p,
+      #status {
+        margin: 0 0 0.75rem;
+        color: var(--mute);
+      }
+      label {
+        margin-right: 1rem;
+        color: var(--ink);
+      }
+      #page {
+        display: block;
+        margin: 0 auto 2rem;
+        max-width: min(100%, 720px);
+        height: auto;
+        box-shadow: 0 0 0 1px #c9c2b4;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>SIGMAscribe renderer preview</h1>
+      <p>
+        A static render of a fixture note. This is a development pilot, not a
+        product page, and it is not published.
+      </p>
+      <label><input id="night" type="checkbox" /> Night</label>
+      <label><input id="landscape" type="checkbox" /> Landscape</label>
+      <p id="status">loading…</p>
+    </header>
+    <canvas id="page" width="1440" height="1920"></canvas>
+    <script src="preview.js"></script>
+  </body>
+</html>

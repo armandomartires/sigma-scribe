@@ -287,6 +287,34 @@ check:wasm32:
         -p sigma-core -p sigma-render -p sigma-hwr
         -p sigma-plugin-api -p sigma-plugin-host
 
+# P3-06: build and *run* the static renderer preview under wasm
+# (check:wasm32 only type-checks sigma-render). Not a release or Pages job.
+preview:smoke:
+  stage: test
+  extends:
+    - .cargo_cache
+    - .regular_rules
+  needs: []
+  timeout: 30 minutes
+  variables:
+    WASMTIME_VERSION: "v51.0.0"
+    WASMTIME_ARCHIVE: "wasmtime-v51.0.0-x86_64-linux.tar.xz"
+    WASMTIME_SHA256: a18020674fac4107f329bc9ed720ea9c88e4b30a61e8a527787bcce051123d32
+  before_script:
+    - rustup target add wasm32-unknown-unknown
+    - apt-get update
+    - apt-get install -y --no-install-recommends ca-certificates curl xz-utils
+    - |
+      url="https://github.com/bytecodealliance/wasmtime/releases/download/${WASMTIME_VERSION}/${WASMTIME_ARCHIVE}"
+      curl -fsSL --retry 3 -o "/tmp/${WASMTIME_ARCHIVE}" "$url"
+      echo "${WASMTIME_SHA256}  /tmp/${WASMTIME_ARCHIVE}" | sha256sum -c -
+      tar -xJf "/tmp/${WASMTIME_ARCHIVE}" -C /tmp
+      install -m 0755 "/tmp/wasmtime-${WASMTIME_VERSION}-x86_64-linux/wasmtime" /usr/local/bin/wasmtime
+      wasmtime --version
+  script:
+    - cargo build --locked --release --target wasm32-unknown-unknown -p sigma-web-preview
+    - tools/web-preview/ci-smoke.sh target/wasm32-unknown-unknown/release/sigma_web_preview.wasm
+
 check:android:
   stage: test
   extends:
