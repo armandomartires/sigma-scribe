@@ -1,7 +1,9 @@
 # Σscribe
 
 Rust Markdown notebook for the Kobo Forma. Engineering rules, layout and
-conventions are in `CONTRIBUTING.md`; read it before changing code. Folder
+conventions are in `CONTRIBUTING.md`; read it before changing code.
+Agents should start with `AGENTS.md`, which points at that file, at
+`docs/architecture/ARCHITECTURE.md`, and at `docs/adr/`. Folder
 rules (worktrees, never delete, archive) are in `../CLAUDE.md`.
 
 Planning and working documents (plan, design brief, sprints, sprint board
