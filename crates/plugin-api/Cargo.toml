@@ -1,6 +1,6 @@
 [package]
 name = "sigma-plugin-api"
-description = "Wire format between Sigma Scribe and its WASM screen plugins."
+description = "Wire format and stable helpers between Sigma Scribe and its WASM plugins."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,6 +9,7 @@ authors.workspace = true
 publish = false
 
 [dependencies]
+unicode-segmentation = "1"
 
 [lints]
 workspace = true
