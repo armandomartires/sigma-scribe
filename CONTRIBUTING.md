@@ -113,6 +113,25 @@ it locally, install it once with `cargo install --locked cargo-deny`.
 A UI change also follows `docs/dev/ui-rulebook.md`. A release follows
 `docs/dev/release/checklist.md`.
 
+**Commit messages.** New commits use
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
+`type(scope): subject`. The type is required; the scope is optional.
+Allowed types are `feat`, `fix`, `docs`, `style`, `refactor`, `perf`,
+`test`, `build`, `ci`, `chore`, and `revert`. A breaking change may add
+a `!` after the type or scope (`feat(api)!: ...`). Merge commits are
+ignored. Existing history is not rewritten to this form.
+
+The `lint:commits` job checks only the commits on the merge request
+(locally: `python3 scripts/check-commits.py`, which compares
+`origin/main..HEAD`). It does not scan the rest of the history, and it
+is a no-op on the default branch.
+
+To draft changelog notes from those commits, install
+[git-cliff](https://git-cliff.org/) and run `git cliff --unreleased`
+(see `cliff.toml`). The draft is for review; it does not overwrite
+`CHANGELOG.md` on its own. `CHANGELOG.md` follows Keep a Changelog
+(the heading structure lands with the rest of P3-05).
+
 ## Code conventions
 
 These describe how the code is already written. Keep new code consistent.
@@ -228,7 +247,8 @@ crate is for.
 
 The git history was cleaned for publication (author identities unified,
 machine names removed). Device serial numbers are masked as `<FORMA-SERIAL>`
-in the docs.
+in the docs. New commits follow Conventional Commits (see above);
+existing subjects are left as they are.
 
 ## Repository folders
 
