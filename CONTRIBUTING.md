@@ -1,7 +1,9 @@
 # Contributing to Σscribe
 
 How to build, check and change this repository. The user-facing overview is
-in `README.md`; the test layers are in `docs/dev/testing.md`.
+in `README.md`; the test layers are in `docs/dev/testing.md`. The crate
+map and platform seam are in `docs/architecture/ARCHITECTURE.md`. Agents
+should also read `AGENTS.md`.
 
 ## Layout
 
@@ -220,8 +222,11 @@ crate is for.
 
 **User-facing docs.**
 - User-facing behaviour goes in `README.md`, `docs/user/` and `CHANGELOG.md`
-  (under "Unreleased"); design, internals and device-trial notes go in
-  `docs/dev/`. A page that serves both is split and each half links the other.
+  (under "Unreleased", in the Keep a Changelog headings `### Added`,
+  `### Changed`, `### Fixed`, and the others when they apply); design,
+  internals and device-trial notes go in `docs/dev/`. Architecture is in
+  `docs/architecture/ARCHITECTURE.md` and `docs/adr/`. A page that serves
+  both is split and each half links the other.
 - Keep them in step with the code in the same pull request.
 
 ## Tests
