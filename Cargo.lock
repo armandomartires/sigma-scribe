@@ -798,6 +798,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
 
 [[package]]
+name = "sigma-app"
+version = "1.21.1"
+dependencies = [
+ "rqrr",
+ "sigma-core",
+ "sigma-device",
+ "sigma-hwr",
+ "sigma-plugin-api",
+ "sigma-plugin-host",
+ "sigma-render",
+ "ureq",
+ "wat",
+]
+
+[[package]]
 name = "sigma-core"
 version = "1.21.1"
 dependencies = [
@@ -854,15 +869,10 @@ name = "sigma-scribe"
 version = "1.21.1"
 dependencies = [
  "minifb",
- "rqrr",
+ "sigma-app",
  "sigma-core",
  "sigma-device",
- "sigma-hwr",
- "sigma-plugin-api",
- "sigma-plugin-host",
  "sigma-render",
- "ureq",
- "wat",
 ]
 
 [[package]]

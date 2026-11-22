@@ -22,8 +22,8 @@ cp assets/zh/pinyin-hans.txt assets/zh/pinyin-hant.txt assets/zh/PINYIN-NOTICE.t
 # with these on when there is none (a new install).
 for id in $BUNDLED_PLUGINS; do
   mkdir -p "$OUT/.adds/sigma-scribe/plugins/$id"
-  cp "app/tests/fixtures/$id/plugin.conf" "app/tests/fixtures/$id/SOURCE.txt" \
-     "app/tests/fixtures/$id/"*.wasm "$OUT/.adds/sigma-scribe/plugins/$id/"
+  cp "crates/sigma-app/tests/fixtures/$id/plugin.conf" "crates/sigma-app/tests/fixtures/$id/SOURCE.txt" \
+     "crates/sigma-app/tests/fixtures/$id/"*.wasm "$OUT/.adds/sigma-scribe/plugins/$id/"
 done
 # Syncthing for Settings -> Sync (docs/dev/sync-design.md): the pinned release's binary,
 # unmodified, with its licence (MPL-2.0) and the notice from packaging/. No

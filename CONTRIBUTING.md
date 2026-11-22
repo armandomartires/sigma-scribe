@@ -13,7 +13,8 @@ in `README.md`; the test layers are in `docs/dev/testing.md`.
 | `crates/hwr` | `sigma-hwr` | Offline handwriting recognition, no dependencies. |
 | `crates/plugin-api` | `sigma-plugin-api` | Wire format between the app and its WASM plugins. Plugin authors depend on it. |
 | `crates/plugin-host` | `sigma-plugin-host` | Runs plugins under `wasmi` with fuel, memory and message limits. |
-| `app` | `sigma-scribe` | The app, plus the `sigma-emu` headless emulator. |
+| `crates/sigma-app` | `sigma-app` | Portable app logic (UI state, settings, screens). The Kobo, desktop and emulator binaries are thin shells over it. |
+| `app` | `sigma-scribe` | Thin shells: the `sigma-scribe` device/desktop binary and the `sigma-emu` headless emulator. |
 | `tools/hwr-train` | `hwr-train` | Builds and measures the default handwriting model. |
 
 No crate is published to crates.io (`publish = false`).

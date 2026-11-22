@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Rebuilds the plugins from a sigma-scribe-plugins checkout and copies each
-# into app/tests/fixtures/<id>/, the modules the plugin tests and the
-# equivalence tests (app/tests/*_equivalence.rs) load.
+# into crates/sigma-app/tests/fixtures/<id>/, the modules the plugin tests and the
+# equivalence tests (crates/sigma-app/tests/*_equivalence.rs) load.
 # Usage: scripts/update-plugin-fixtures.sh [path/to/sigma-scribe-plugins]
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
@@ -13,7 +13,7 @@ fi
 for id in graph-map contents-pane todo-pane scratch-pane; do
   "$repo/scripts/build-plugin.sh" "$id"
   entry="$(sed -n 's/^entry=//p' "$repo/plugins/$id/plugin.conf")"
-  dest="$here/app/tests/fixtures/$id"
+  dest="$here/crates/sigma-app/tests/fixtures/$id"
   mkdir -p "$dest"
   cp "$repo/dist/$id/plugin.conf" "$repo/dist/$id/$entry" "$dest/"
   {

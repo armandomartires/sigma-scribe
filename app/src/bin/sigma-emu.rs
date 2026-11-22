@@ -38,13 +38,13 @@
 //! Coordinates are screen coordinates (landscape is 1920×1440); shots are
 //! written the way the reader sees them, turned upright.
 
+use sigma_app::App;
 use sigma_device::desktop::DesktopDevice;
 use sigma_device::evdev::{RawEvent, EV_KEY};
 use sigma_device::pointer::{raw_button, raw_move, raw_wheel, PointerDecoder, BTN_LEFT, BTN_RIGHT};
 use sigma_device::usbkbd::{code_for_name, raw_for_char_in, KeyMapper};
 use sigma_device::Phase;
 use sigma_device::{Device, Event, HwKey};
-use sigma_scribe::App;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -85,7 +85,7 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let notes = notes.unwrap_or_else(sigma_scribe::notes_dir);
+    let notes = notes.unwrap_or_else(sigma_app::notes_dir);
     let root = notes.clone();
     let _ = std::fs::create_dir_all(&shots);
     let mut dev = DesktopDevice::new(size.0, size.1);
@@ -446,7 +446,7 @@ fn main() -> ExitCode {
                 // Times each on-screen key tap (handle + render + present)
                 // and prints p50 / p95 / max; `perf-type N` types N letters.
                 let n: usize = arg.parse().unwrap_or(200);
-                let mut perf = sigma_scribe::Perf::default();
+                let mut perf = sigma_app::Perf::default();
                 for i in 0..n {
                     let label = if i % 6 == 5 {
                         "Space".to_owned()
@@ -808,7 +808,7 @@ fn main() -> ExitCode {
                 }
             }
             "expect-words" => {
-                let n = sigma_scribe::words_per_row(&app);
+                let n = sigma_app::words_per_row(&app);
                 if n.to_string() != arg {
                     return fail(format!("{n} words per row"));
                 }

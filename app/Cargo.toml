@@ -25,18 +25,11 @@ desktop = ["dep:minifb"]
 kobo = ["sigma-device/kobo"]
 
 [dependencies]
+sigma-app = { path = "../crates/sigma-app" }
 sigma-core = { path = "../crates/core" }
 sigma-render = { path = "../crates/render" }
 sigma-device = { path = "../crates/device" }
-sigma-hwr = { path = "../crates/hwr" }
-sigma-plugin-api = { path = "../crates/plugin-api" }
-sigma-plugin-host = { path = "../crates/plugin-host" }
-ureq = { version = "3", default-features = false, features = ["rustls"] }
 minifb = { version = "0.27", optional = true, default-features = false, features = ["x11"] }
 
 [lints]
 workspace = true
-
-[dev-dependencies]
-rqrr = { version = "0.11", default-features = false }
-wat = "1"

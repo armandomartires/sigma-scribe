@@ -1,0 +1,25 @@
+[package]
+name = "sigma-app"
+description = "Portable app logic for Σscribe: UI state, settings, and shells call this crate."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+sigma-core = { path = "../core" }
+sigma-render = { path = "../render" }
+sigma-device = { path = "../device" }
+sigma-hwr = { path = "../hwr" }
+sigma-plugin-api = { path = "../plugin-api" }
+sigma-plugin-host = { path = "../plugin-host" }
+ureq = { version = "3", default-features = false, features = ["rustls"] }
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+rqrr = { version = "0.11", default-features = false }
+wat = "1"
