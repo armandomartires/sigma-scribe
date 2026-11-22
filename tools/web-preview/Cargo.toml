@@ -1,0 +1,26 @@
+[package]
+name = "sigma-web-preview"
+description = "Thin WASM shell that draws a fixture note with sigma-render (P3-06)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+sigma-core = { path = "../../crates/core" }
+sigma-render = { path = "../../crates/render" }
+
+# Not `lints.workspace = true`: the workspace forbids `unsafe_code`, and
+# `#[no_mangle]` (needed for raw wasm exports) is an unsafe attribute.
+# This crate still has no `unsafe` blocks; clippy is kept at the workspace
+# warning level.
+[lints.rust]
+unsafe_code = "allow"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }

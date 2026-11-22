@@ -17,6 +17,36 @@
 //! The host provides (module `sigma`): `text_width`, `ascent`, `tr`,
 //! `cache_get`, `cache_put`, `log` and `log_level` (see `sigma-plugin-host`).
 //!
+//! # Stable helpers
+//!
+//! This crate also holds the helpers plugins actually used from
+//! `sigma-core`, so a plugin can depend only on `sigma-plugin-api`:
+//!
+//! - [`wrap`]: measured soft wrapping ([`wrap::wrap`], [`wrap::TextMeasure`])
+//! - [`outline::Filter`]: the to-dos pane All → Open → Done cycle
+//! - [`graphmap`]: deterministic graph-map layout ([`graphmap::layout`],
+//!   [`graphmap::layout_key`])
+//!
+//! `sigma-core` re-exports the same items, with the same behaviour, so the
+//! app's existing imports keep compiling.
+//!
+//! ```
+//! use sigma_plugin_api::outline::Filter;
+//! use sigma_plugin_api::wrap::{wrap, MonoMeasure, TextMeasure};
+//! use sigma_plugin_api::graphmap::{layout, layout_key};
+//!
+//! assert_eq!(Filter::All.next(), Filter::Open);
+//! let rows = wrap("hello world", 8, &MonoMeasure::default());
+//! assert_eq!(rows.len(), 2);
+//! let names = vec!["a.md".into(), "b.md".into()];
+//! assert_eq!(
+//!     layout_key(&names, &[(0, 1)]),
+//!     layout_key(&names, &[(0, 1)])
+//! );
+//! let map = layout(2, &[(0, 1)], 1);
+//! assert_eq!(map.pos.len(), 2);
+//! ```
+//!
 //! # Example
 //!
 //! A plugin decodes the host's event and answers with a frame; the host
@@ -46,6 +76,10 @@
 //! ```
 
 #![warn(missing_docs)]
+
+pub mod graphmap;
+pub mod outline;
+pub mod wrap;
 
 /// Wire format version. Bumped on any incompatible change.
 pub const ABI: u32 = 4;

@@ -1,7 +1,9 @@
 # Contributing to Σscribe
 
 How to build, check and change this repository. The user-facing overview is
-in `README.md`; the test layers are in `docs/dev/testing.md`.
+in `README.md`; the test layers are in `docs/dev/testing.md`. The crate
+map and platform seam are in `docs/architecture/ARCHITECTURE.md`. Agents
+should also read `AGENTS.md`.
 
 ## Layout
 
@@ -110,8 +112,32 @@ it locally, install it once with `cargo install --locked cargo-deny`.
 - A new advisory does not block a pull request, but fix it or add it to
   `ignore` in `deny.toml` with a reason.
 
+**SBOM.** The `sbom` job in CI writes a CycloneDX 1.6 JSON bill of
+materials for the Kobo `sigma-scribe` binary to `dist/sbom/`. It lists
+Cargo crates and their licences only. How to generate one locally, and
+what is not yet signed or attested, is in `docs/dev/sbom.md`.
+
 A UI change also follows `docs/dev/ui-rulebook.md`. A release follows
 `docs/dev/release/checklist.md`.
+
+**Commit messages.** New commits use
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
+`type(scope): subject`. The type is required; the scope is optional.
+Allowed types are `feat`, `fix`, `docs`, `style`, `refactor`, `perf`,
+`test`, `build`, `ci`, `chore`, and `revert`. A breaking change may add
+a `!` after the type or scope (`feat(api)!: ...`). Merge commits are
+ignored. Existing history is not rewritten to this form.
+
+The `lint:commits` job checks only the commits on the merge request
+(locally: `python3 scripts/check-commits.py`, which compares
+`origin/main..HEAD`). It does not scan the rest of the history, and it
+is a no-op on the default branch.
+
+To draft changelog notes from those commits, install
+[git-cliff](https://git-cliff.org/) and run `git cliff --unreleased`
+(see `cliff.toml`). The draft is for review; it does not overwrite
+`CHANGELOG.md` on its own. `CHANGELOG.md` follows Keep a Changelog
+(the heading structure lands with the rest of P3-05).
 
 ## Code conventions
 
@@ -196,8 +222,11 @@ crate is for.
 
 **User-facing docs.**
 - User-facing behaviour goes in `README.md`, `docs/user/` and `CHANGELOG.md`
-  (under "Unreleased"); design, internals and device-trial notes go in
-  `docs/dev/`. A page that serves both is split and each half links the other.
+  (under "Unreleased", in the Keep a Changelog headings `### Added`,
+  `### Changed`, `### Fixed`, and the others when they apply); design,
+  internals and device-trial notes go in `docs/dev/`. Architecture is in
+  `docs/architecture/ARCHITECTURE.md` and `docs/adr/`. A page that serves
+  both is split and each half links the other.
 - Keep them in step with the code in the same pull request.
 
 ## Tests
@@ -228,7 +257,8 @@ crate is for.
 
 The git history was cleaned for publication (author identities unified,
 machine names removed). Device serial numbers are masked as `<FORMA-SERIAL>`
-in the docs.
+in the docs. New commits follow Conventional Commits (see above);
+existing subjects are left as they are.
 
 ## Repository folders
 

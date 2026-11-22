@@ -10,6 +10,7 @@ publish = false
 
 [dependencies]
 unicode-segmentation = "1"
+sigma-plugin-api = { path = "../plugin-api" }
 
 [dev-dependencies]
 
