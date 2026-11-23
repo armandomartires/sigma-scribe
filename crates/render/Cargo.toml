@@ -12,11 +12,11 @@ publish = false
 sigma-hwr = { path = "../hwr" }
 sigma-core = { path = "../core" }
 sigma-plugin-api = { path = "../plugin-api" }
-harfrust = "0.15"
-skrifa = "0.49"
+harfrust = "0.16"
+skrifa = "0.50"
 zeno = "0.3"
 # v1.5.1: ink SVGs drawn in preview (same version as the icon bake).
-resvg = { version = "0.45", default-features = false }
+resvg = { version = "0.50", default-features = false }
 unicode-bidi = "0.3"
 unicode-properties = "0.1"
 qrcodegen = "1.8"
@@ -26,7 +26,7 @@ workspace = true
 
 # v1.1: Lucide SVG icons are baked into greyscale masks at build time.
 [build-dependencies]
-resvg = { version = "0.45", default-features = false }
+resvg = { version = "0.50", default-features = false }
 
 [dev-dependencies]
 rqrr = { version = "0.11", default-features = false }

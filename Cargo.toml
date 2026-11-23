@@ -10,7 +10,7 @@ license = "AGPL-3.0-only"
 authors = ["SIGMArecon"]
 
 [workspace.dependencies]
-png = "0.17"
+png = "0.18"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

@@ -29,7 +29,7 @@ sigma-app = { path = "../crates/sigma-app" }
 sigma-core = { path = "../crates/core" }
 sigma-render = { path = "../crates/render" }
 sigma-device = { path = "../crates/device" }
-minifb = { version = "0.27", optional = true, default-features = false, features = ["x11"] }
+minifb = { version = "0.29", optional = true, default-features = false, features = ["x11"] }
 
 [lints]
 workspace = true
